@@ -1,0 +1,8 @@
+name: 1vs1
+version: '${version}'
+main: net.ninebolt.onevsone.OneVsOnePlugin
+api-version: '1.21'
+
+commands:
+  1vs1:
+    description: 1vs1 arena command
