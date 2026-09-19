@@ -20,7 +20,7 @@ import java.util.logging.Logger
  * 共通 YAML I/O とファイル配置。temp+replace の原子的保存を維持する。
  * 破損・I/O 失敗は PersistenceFailure に変換する。
  */
-class YamlStore(private val folder: File, private val logger: Logger) {
+class YamlStore(folder: File, private val logger: Logger) {
 
     internal val arenaDir = File(folder, "arena")
     internal val statusDir = File(folder, "status")
@@ -56,6 +56,8 @@ class YamlStore(private val folder: File, private val logger: Logger) {
         }
         return yaml
     }
+
+    internal fun warn(message: String) = logger.warning(message)
 
     internal fun save(yaml: YamlConfiguration, file: File) {
         file.parentFile?.mkdirs()

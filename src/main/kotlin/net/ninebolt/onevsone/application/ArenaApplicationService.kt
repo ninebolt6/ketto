@@ -23,8 +23,6 @@ import net.ninebolt.onevsone.domain.MatchId
 import net.ninebolt.onevsone.domain.Participant
 import net.ninebolt.onevsone.domain.PlayerStats
 import net.ninebolt.onevsone.domain.QuitOutcome
-import net.ninebolt.onevsone.domain.isValidArenaName
-import java.util.Locale
 import java.util.UUID
 
 /**
@@ -54,25 +52,13 @@ class ArenaApplicationService(
     // ---- 起動・停止 -------------------------------------------------------
 
     fun load() {
-        val seen = mutableSetOf<String>()
-        for (name in arenas.arenaNames()) {
-            if (!isValidArenaName(name)) {
-                failures.warn("Ignoring invalid arena name '$name' in arenalist.yml")
-                continue
-            }
-            if (!seen.add(name.lowercase(Locale.ROOT))) {
-                failures.warn("Ignoring duplicate arena name '$name' in arenalist.yml")
-                continue
-            }
-            val definition = try {
-                arenas.find(name)
-            } catch (e: PersistenceFailure) {
-                null
-            }
-            if (definition == null) {
-                failures.warn("Arena '$name' could not be loaded; skipping")
-                continue
-            }
+        val definitions = try {
+            arenas.loadAll()
+        } catch (e: PersistenceFailure) {
+            failures.warn("arenalist.yml is unreadable; no arenas loaded this session")
+            emptyList()
+        }
+        for (definition in definitions) {
             registry.putDefinition(definition)
             val match = ArenaMatch(definition.id, requiredWins)
             registry.installMatch(match)

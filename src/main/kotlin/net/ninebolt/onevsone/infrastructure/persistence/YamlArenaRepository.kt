@@ -1,20 +1,40 @@
 package net.ninebolt.onevsone.infrastructure.persistence
 
 import net.ninebolt.onevsone.application.port.ArenaRepository
+import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.domain.ArenaDefinition
 import net.ninebolt.onevsone.domain.ArenaId
 import net.ninebolt.onevsone.domain.isValidArenaName
+import java.util.Locale
 
-/** arenalist.yml・arena/<name>.yml の永続化。 */
+/** arenalist.yml・arena/<name>.yml の永続化。arenalist は登録順の index として内部管理する。 */
 class YamlArenaRepository(private val store: YamlStore) : ArenaRepository {
 
-    override fun arenaNames(): List<String> =
-        store.load(store.arenaListFile).getStringList("arenas")
-
-    override fun saveArenaNames(names: List<String>) {
-        val yaml = store.load(store.arenaListFile)
-        yaml.set("arenas", names)
-        store.save(yaml, store.arenaListFile)
+    override fun loadAll(): List<ArenaDefinition> {
+        val names = store.load(store.arenaListFile).getStringList("arenas")
+        val seen = mutableSetOf<String>()
+        val definitions = mutableListOf<ArenaDefinition>()
+        for (name in names) {
+            if (!isValidArenaName(name)) {
+                store.warn("Ignoring invalid arena name '$name' in arenalist.yml")
+                continue
+            }
+            if (!seen.add(name.lowercase(Locale.ROOT))) {
+                store.warn("Ignoring duplicate arena name '$name' in arenalist.yml")
+                continue
+            }
+            val definition = try {
+                find(name)
+            } catch (e: PersistenceFailure) {
+                null
+            }
+            if (definition == null) {
+                store.warn("Arena '$name' could not be loaded; skipping")
+                continue
+            }
+            definitions += definition
+        }
+        return definitions
     }
 
     override fun find(name: String): ArenaDefinition? {
@@ -36,10 +56,29 @@ class YamlArenaRepository(private val store: YamlStore) : ArenaRepository {
         arena.spawn1?.let { store.writeLocation(yaml, "spawn1", it) }
         arena.spawn2?.let { store.writeLocation(yaml, "spawn2", it) }
         store.save(yaml, file)
+        registerName(arena.name)
     }
 
     override fun delete(name: String) {
         store.arenaFile(name).delete()
         store.statusFile(name).delete()
+        unregisterName(name)
+    }
+
+    private fun registerName(name: String) {
+        val yaml = store.load(store.arenaListFile)
+        val names = yaml.getStringList("arenas")
+        if (names.any { it.equals(name, ignoreCase = true) }) return
+        yaml.set("arenas", names + name)
+        store.save(yaml, store.arenaListFile)
+    }
+
+    private fun unregisterName(name: String) {
+        val yaml = store.load(store.arenaListFile)
+        val names = yaml.getStringList("arenas")
+        val remaining = names.filterNot { it.equals(name, ignoreCase = true) }
+        if (remaining.size == names.size) return
+        yaml.set("arenas", remaining)
+        store.save(yaml, store.arenaListFile)
     }
 }

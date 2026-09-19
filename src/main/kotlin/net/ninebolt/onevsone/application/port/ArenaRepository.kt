@@ -6,13 +6,18 @@ import net.ninebolt.onevsone.domain.ArenaDefinition
  * アリーナ定義の永続化。
  * 装備(キット)の中身は扱わず、アリーナ ID 経由で KitPort が触れる。
  * ロビーは LobbyRepository、看板座標は ArenaSignRepository が担う。
+ * 永続化形式(index ファイルや個別ファイルの配置)は実装の内部事情とする。
  */
 interface ArenaRepository {
-    /** arenalist 上の名前一覧(無効名を含み得る。呼び出し側が検証する)。 */
-    fun arenaNames(): List<String>
-    fun saveArenaNames(names: List<String>)
+    /** 登録順の全アリーナ定義。無効名・重複・読み取り不能な項目はスキップされる。 */
+    fun loadAll(): List<ArenaDefinition>
+
     /** 無効名は null。ファイル欠損は PersistenceFailure。未作成ファイルは既定値の定義を返す。 */
     fun find(name: String): ArenaDefinition?
+
+    /** 定義を保存し、未登録なら登録順の末尾に追加する。 */
     fun save(arena: ArenaDefinition)
+
+    /** 定義と関連する永続データを削除し、登録一覧から除外する。 */
     fun delete(name: String)
 }

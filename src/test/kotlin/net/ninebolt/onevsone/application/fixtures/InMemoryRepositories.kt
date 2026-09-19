@@ -12,6 +12,8 @@ import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.Participant
 import net.ninebolt.onevsone.domain.PlayerStats
 import net.ninebolt.onevsone.domain.WorldPosition
+import net.ninebolt.onevsone.domain.isValidArenaName
+import java.util.Locale
 import java.util.UUID
 
 class InMemoryArenaRepository : ArenaRepository, LobbyRepository, ArenaSignRepository {
@@ -21,20 +23,25 @@ class InMemoryArenaRepository : ArenaRepository, LobbyRepository, ArenaSignRepos
     val signs = mutableMapOf<String, WorldPosition>()
     var failOnSave = false
 
-    override fun arenaNames(): List<String> = names.toList()
-    override fun saveArenaNames(names: List<String>) {
-        this.names.clear()
-        this.names += names
+    override fun loadAll(): List<ArenaDefinition> {
+        val seen = mutableSetOf<String>()
+        return names.mapNotNull { name ->
+            if (!isValidArenaName(name) || !seen.add(name.lowercase(Locale.ROOT))) null else find(name)
+        }
     }
 
-    override fun find(name: String): ArenaDefinition? = definitions[name] ?: ArenaDefinition(ArenaId(name))
+    override fun find(name: String): ArenaDefinition =
+        definitions[name] ?: ArenaDefinition(ArenaId(name))
+
     override fun save(arena: ArenaDefinition) {
         if (failOnSave) throw PersistenceFailure("save failed")
         definitions[arena.name] = arena
+        if (names.none { it.equals(arena.name, ignoreCase = true) }) names += arena.name
     }
 
     override fun delete(name: String) {
         definitions.remove(name)
+        names.removeIf { it.equals(name, ignoreCase = true) }
     }
 
     override fun lobby(): WorldPosition? = lobbyPosition

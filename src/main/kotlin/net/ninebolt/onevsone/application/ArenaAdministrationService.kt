@@ -39,7 +39,6 @@ class ArenaAdministrationService(
         registry.putDefinition(definition)
         registry.installMatch(ArenaMatch(definition.id, matches.requiredWins))
         arenas.save(definition)
-        arenas.saveArenaNames(arenaNames())
         return true
     }
 
@@ -49,7 +48,6 @@ class ArenaAdministrationService(
         matches.abort(id)
         registry.removeDefinition(id)
         registry.removeMatch(id)
-        arenas.saveArenaNames(arenaNames())
         arenas.delete(name)
         signs.clearSign(name)
         return true

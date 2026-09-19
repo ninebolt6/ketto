@@ -274,7 +274,6 @@ class PaperArenaMembershipTest {
     @Test
     fun `enabled persists across service load`() {
         env.arenaRepo.save(ArenaDefinition(ArenaId("arena1"), enabled = true))
-        env.arenaRepo.saveArenaNames(listOf("arena1"))
         env.service.load()
         assertTrue(env.service.definition("arena1")!!.enabled)
     }

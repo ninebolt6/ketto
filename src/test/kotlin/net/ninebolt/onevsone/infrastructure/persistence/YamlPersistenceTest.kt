@@ -63,11 +63,32 @@ class YamlPersistenceTest {
 
     @Test
     fun `missing arena file loads disabled defaults`() {
-        val repo = arenas()
-        repo.saveArenaNames(listOf("ghost"))
-        val arena = repo.find("ghost")!!
+        val arena = arenas().find("ghost")!!
         assertFalse(arena.enabled)
         assertNull(arena.spawn1)
+    }
+
+    @Test
+    fun `loadAll follows index order and skips duplicates`() {
+        val repo = arenas()
+        repo.save(ArenaDefinition(ArenaId("b1")))
+        repo.save(ArenaDefinition(ArenaId("a1"), enabled = true))
+        repo.save(ArenaDefinition(ArenaId("b1"), enabled = true))
+
+        val loaded = arenas().loadAll()
+        assertEquals(listOf("b1", "a1"), loaded.map { it.name })
+        assertTrue(loaded[1].enabled)
+
+        repo.delete("b1")
+        assertEquals(listOf("a1"), arenas().loadAll().map { it.name })
+        assertFalse(File(folder, "arena/b1.yml").exists())
+    }
+
+    @Test
+    fun `loadAll skips invalid and duplicate index entries`() {
+        File(folder, "arenalist.yml").writeText("arenas: [a1, 'a/b', A1]")
+        arenas().save(ArenaDefinition(ArenaId("a1")))
+        assertEquals(listOf("a1"), arenas().loadAll().map { it.name })
     }
 
     @Test
