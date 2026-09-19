@@ -1,8 +1,10 @@
 package net.ninebolt.onevsone.application
 
 import net.ninebolt.onevsone.application.port.ArenaRepository
+import net.ninebolt.onevsone.application.port.ArenaSignRepository
+import net.ninebolt.onevsone.application.port.KitPort
+import net.ninebolt.onevsone.application.port.LobbyRepository
 import net.ninebolt.onevsone.application.port.MatchPresentationPort
-import net.ninebolt.onevsone.application.port.PlayerEquipmentPort
 import net.ninebolt.onevsone.domain.ArenaDefinition
 import net.ninebolt.onevsone.domain.ArenaId
 import net.ninebolt.onevsone.domain.ArenaMatch
@@ -17,7 +19,9 @@ import java.util.UUID
 class ArenaAdministrationService(
     private val registry: ArenaRegistry,
     private val arenas: ArenaRepository,
-    private val equipment: PlayerEquipmentPort,
+    private val signs: ArenaSignRepository,
+    private val lobby: LobbyRepository,
+    private val kit: KitPort,
     private val presentation: MatchPresentationPort,
     private val matches: ArenaApplicationService
 ) {
@@ -47,7 +51,7 @@ class ArenaAdministrationService(
         registry.removeMatch(id)
         arenas.saveArenaNames(arenaNames())
         arenas.delete(name)
-        arenas.clearSign(name)
+        signs.clearSign(name)
         return true
     }
 
@@ -78,22 +82,22 @@ class ArenaAdministrationService(
     /** 実行者の現在装備をアリーナ装備として保存する。 */
     fun setKit(name: String, playerId: UUID): Boolean {
         val definition = registry.definition(ArenaId(name)) ?: return false
-        equipment.saveKit(definition.id, playerId)
+        kit.saveKit(definition.id, playerId)
         return true
     }
 
     fun setLobby(position: WorldPosition) {
-        arenas.setLobby(position)
+        lobby.setLobby(position)
     }
 
-    fun signLocation(arenaName: String): WorldPosition? = arenas.signLocation(arenaName)
+    fun signLocation(arenaName: String): WorldPosition? = signs.signLocation(arenaName)
 
     fun signOwner(world: String, x: Double, y: Double, z: Double): String? =
-        arenas.signOwner(world, x, y, z)
+        signs.signOwner(world, x, y, z)
 
     fun setSign(name: String, position: WorldPosition): Boolean {
         val definition = registry.definition(ArenaId(name)) ?: return false
-        arenas.setSign(name, position)
+        signs.setSign(name, position)
         val state = registry.match(definition.id)?.state ?: return true
         presentation.updateSign(definition.id, state)
         return true

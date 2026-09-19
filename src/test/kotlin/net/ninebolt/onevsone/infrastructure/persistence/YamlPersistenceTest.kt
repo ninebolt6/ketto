@@ -30,6 +30,8 @@ class YamlPersistenceTest {
 
     private fun store() = YamlStore(folder, Logger.getLogger("test"))
     private fun arenas() = YamlArenaRepository(store())
+    private fun lobby() = YamlLobbyRepository(store())
+    private fun signs() = YamlSignRepository(store())
     private fun matchState() = YamlMatchStateRepository(store())
     private fun stats() = YamlPlayerStatsRepository(store())
 
@@ -236,18 +238,16 @@ class YamlPersistenceTest {
 
     @Test
     fun `lobby and sign locations persist`() {
-        val repo = arenas()
-        repo.setLobby(WorldPosition("lobby", 1.0, 2.0, 3.0, 45.5f, 10.25f))
-        repo.setSign("a1", WorldPosition("world", 5.0, 64.0, 5.0))
-        val repo2 = arenas()
-        val lobby = repo2.lobby()!!
+        lobby().setLobby(WorldPosition("lobby", 1.0, 2.0, 3.0, 45.5f, 10.25f))
+        signs().setSign("a1", WorldPosition("world", 5.0, 64.0, 5.0))
+        val lobby = lobby().lobby()!!
         assertEquals("lobby", lobby.world)
         assertEquals(45.5f, lobby.yaw, 0.001f)
-        val sign = repo2.signLocation("a1")!!
+        val sign = signs().signLocation("a1")!!
         assertEquals(5.0, sign.x)
-        assertEquals("a1", repo2.signOwner("world", 5.0, 64.0, 5.0))
-        repo2.clearSign("a1")
-        assertNull(arenas().signLocation("a1"))
+        assertEquals("a1", signs().signOwner("world", 5.0, 64.0, 5.0))
+        signs().clearSign("a1")
+        assertNull(signs().signLocation("a1"))
     }
 
     @Test

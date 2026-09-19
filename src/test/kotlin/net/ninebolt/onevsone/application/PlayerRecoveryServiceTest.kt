@@ -1,5 +1,6 @@
 package net.ninebolt.onevsone.application
 
+import net.ninebolt.onevsone.application.fixtures.TestApp
 import net.ninebolt.onevsone.application.port.BackupRef
 import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.domain.ArenaId
@@ -18,16 +19,6 @@ class PlayerRecoveryServiceTest {
     private fun backupRef(id: UUID, name: String, match: MatchId = MatchId.newId()) =
         BackupRef(UUID.randomUUID(), match, id, name)
 
-    private fun startedMatch(app: TestApp): Pair<FakePlayers.FakeHandle, FakePlayers.FakeHandle> {
-        app.newArena()
-        val p1 = app.players.add("Alice")
-        val p2 = app.players.add("Bob")
-        app.service.join(p1.id, p1.name, ArenaId("arena1"))
-        app.service.join(p2.id, p2.name, ArenaId("arena1"))
-        app.scheduler.tick(6)
-        return p1 to p2
-    }
-
     @Test
     fun `persisted backups load into tickets on startup`() {
         val app = TestApp()
@@ -40,7 +31,7 @@ class PlayerRecoveryServiceTest {
     @Test
     fun `quit right after match end still restores via quitting scope`() {
         val app = TestApp(requiredWins = 1)
-        val (p1, p2) = startedMatch(app)
+        val (p1, p2) = app.startMatch()
         p2.dead = true
         app.service.defeat(p2.id, DefeatCause.DEATH)
         assertEquals(ArenaState.WAITING, app.state())
@@ -59,7 +50,7 @@ class PlayerRecoveryServiceTest {
     @Test
     fun `deferred restore after final death respawns before restoring`() {
         val app = TestApp(requiredWins = 1)
-        val (p1, p2) = startedMatch(app)
+        val (p1, p2) = app.startMatch()
         p2.dead = true
         app.service.defeat(p2.id, DefeatCause.DEATH)
         app.scheduler.runOneShots()
@@ -85,7 +76,7 @@ class PlayerRecoveryServiceTest {
     @Test
     fun `offline participant retains pending restore for next login`() {
         val app = TestApp()
-        val (p1, p2) = startedMatch(app)
+        val (p1, p2) = app.startMatch()
         app.players.disconnect(p2)
         app.service.abort(ArenaId("arena1"))
         // オフラインなので復元は p1 のみ
@@ -157,7 +148,7 @@ class PlayerRecoveryServiceTest {
     @Test
     fun `stale deferred callback after abort cannot reapply`() {
         val app = TestApp()
-        val (p1, p2) = startedMatch(app)
+        val (p1, p2) = app.startMatch()
         p2.dead = true
         app.service.defeat(p2.id, DefeatCause.DEATH)
         // ROUNDCOUNTDOWN 中の再装備予約を中断で無効化
@@ -173,7 +164,7 @@ class PlayerRecoveryServiceTest {
     @Test
     fun `restore ticket survives abort and completes on rejoin`() {
         val app = TestApp()
-        val (p1, p2) = startedMatch(app)
+        val (p1, p2) = app.startMatch()
         p2.dead = true
         app.service.defeat(p2.id, DefeatCause.DEATH)
         // 遅延リスポーンコールバックを残したまま disconnect
@@ -199,7 +190,7 @@ class PlayerRecoveryServiceTest {
     @Test
     fun `shutdown keeps records for dead players and restores online ones`() {
         val app = TestApp()
-        val (p1, p2) = startedMatch(app)
+        val (p1, p2) = app.startMatch()
         p2.dead = true
         app.service.shutdown()
         // 生存者は復元+acknowledge、死者は復元のみで記録残存

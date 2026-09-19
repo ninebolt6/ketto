@@ -14,7 +14,9 @@ import net.ninebolt.onevsone.infrastructure.paper.PaperPlayerLookup
 import net.ninebolt.onevsone.infrastructure.paper.PaperScheduler
 import net.ninebolt.onevsone.infrastructure.paper.PluginFailureReporter
 import net.ninebolt.onevsone.infrastructure.persistence.YamlArenaRepository
+import net.ninebolt.onevsone.infrastructure.persistence.YamlLobbyRepository
 import net.ninebolt.onevsone.infrastructure.persistence.YamlMatchStateRepository
+import net.ninebolt.onevsone.infrastructure.persistence.YamlSignRepository
 import net.ninebolt.onevsone.infrastructure.persistence.YamlPlayerStatsRepository
 import net.ninebolt.onevsone.infrastructure.persistence.YamlStore
 import org.bukkit.plugin.java.JavaPlugin
@@ -39,6 +41,8 @@ class OneVsOnePlugin : JavaPlugin() {
         val failures = PluginFailureReporter { logger }
         val store = YamlStore(dataFolder, logger)
         val arenaRepository = YamlArenaRepository(store)
+        val lobbyRepository = YamlLobbyRepository(store)
+        val signRepository = YamlSignRepository(store)
         val matchState = YamlMatchStateRepository(store)
         val stats = YamlPlayerStatsRepository(store)
         val messages = Messages(config.getString("prefix") ?: "&8[&61vs1&8] ")
@@ -47,16 +51,17 @@ class OneVsOnePlugin : JavaPlugin() {
         val playerPort = PaperPlayerAdapter(lookup, server, failures)
         val equipment = PaperEquipmentAdapter(store, lookup, server, messages)
         val scheduler = PaperScheduler(this)
-        val presentation = PaperMatchPresentation(server, messages, arenaRepository, failures)
+        val presentation = PaperMatchPresentation(server, messages, signRepository, failures)
 
         val registry = ArenaRegistry()
-        val recovery = PlayerRecoveryService(equipment, playerPort, arenaRepository, presentation, failures)
+        val recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepository, presentation, failures)
         val service = ArenaApplicationService(
             registry = registry,
             arenas = arenaRepository,
             matchState = matchState,
             stats = stats,
-            equipment = equipment,
+            backups = equipment,
+            kit = equipment,
             players = playerPort,
             scheduler = scheduler,
             presentation = presentation,
@@ -64,7 +69,7 @@ class OneVsOnePlugin : JavaPlugin() {
             failures = failures,
             requiredWins = requiredWins
         )
-        val admin = ArenaAdministrationService(registry, arenaRepository, equipment, presentation, service)
+        val admin = ArenaAdministrationService(registry, arenaRepository, signRepository, lobbyRepository, equipment, presentation, service)
         this.service = service
         service.load()
 

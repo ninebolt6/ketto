@@ -5,8 +5,9 @@ import net.ninebolt.onevsone.application.port.Cancellation
 import net.ninebolt.onevsone.application.port.FailureReporter
 import net.ninebolt.onevsone.application.port.MatchPresentationPort
 import net.ninebolt.onevsone.application.port.MatchStateRepository
+import net.ninebolt.onevsone.application.port.InventoryBackupPort
+import net.ninebolt.onevsone.application.port.KitPort
 import net.ninebolt.onevsone.application.port.PersistenceFailure
-import net.ninebolt.onevsone.application.port.PlayerEquipmentPort
 import net.ninebolt.onevsone.application.port.PlayerHandle
 import net.ninebolt.onevsone.application.port.PlayerPort
 import net.ninebolt.onevsone.application.port.PlayerStatsRepository
@@ -39,7 +40,8 @@ class ArenaApplicationService(
     private val arenas: ArenaRepository,
     private val matchState: MatchStateRepository,
     private val stats: PlayerStatsRepository,
-    private val equipment: PlayerEquipmentPort,
+    private val backups: InventoryBackupPort,
+    private val kit: KitPort,
     private val players: PlayerPort,
     private val scheduler: SchedulerPort,
     private val presentation: MatchPresentationPort,
@@ -299,7 +301,7 @@ class ArenaApplicationService(
         val winnerHandle = players.handle(outcome.winner.id)
         if (winnerHandle != null) {
             winnerHandle.prepareForMatch()
-            equipment.applyKit(arenaId, outcome.winner.id)
+            kit.applyKit(arenaId, outcome.winner.id)
         }
 
         players.handle(outcome.loser.id)?.position()?.let { presentation.roundEndSound(it) }
@@ -317,13 +319,13 @@ class ArenaApplicationService(
                 val h = players.handle(outcome.loser.id)?.takeIf { it.online } ?: return@schedule
                 if (h.dead) h.respawn()
                 h.prepareForMatch()
-                equipment.applyKit(arenaId, outcome.loser.id)
+                kit.applyKit(arenaId, outcome.loser.id)
                 teleportToSlot(current, outcome.loser, h)
                 registry.updateMatch(arenaId) { it.releaseResolution(gen) }
             }
         } else if (loserHandle != null) {
             loserHandle.prepareForMatch()
-            equipment.applyKit(arenaId, outcome.loser.id)
+            kit.applyKit(arenaId, outcome.loser.id)
             teleportToSlot(match, outcome.loser, loserHandle)
             scheduler.schedule(0) {
                 registry.updateMatch(arenaId) { it.releaseResolution(gen) }
@@ -455,7 +457,7 @@ class ArenaApplicationService(
                 if (p1.dead || p2.dead) return@repeat
                 // 両者の持ち物を一括保存してから装備を交換する
                 val refs = try {
-                    equipment.backupBeforeMatch(MatchId.newId(), match.participants)
+                    backups.backupBeforeMatch(MatchId.newId(), match.participants)
                 } catch (e: PersistenceFailure) {
                     failures.report("Could not save inventories before starting arena ${arenaId.name}; match aborted", e)
                     task.cancel()
@@ -464,8 +466,8 @@ class ArenaApplicationService(
                 }
                 recovery.register(refs)
                 try {
-                    equipment.applyKit(arenaId, first.id)
-                    equipment.applyKit(arenaId, second.id)
+                    kit.applyKit(arenaId, first.id)
+                    kit.applyKit(arenaId, second.id)
                     p1.prepareForMatch()
                     p2.prepareForMatch()
                     teleportToSlot(match, first, p1)
@@ -515,8 +517,8 @@ class ArenaApplicationService(
             val ids = match.participants.map { it.id }
             when (remaining) {
                 7 -> {
-                    equipment.applyKit(arenaId, first.id)
-                    equipment.applyKit(arenaId, second.id)
+                    kit.applyKit(arenaId, first.id)
+                    kit.applyKit(arenaId, second.id)
                     p1.prepareForMatch()
                     p2.prepareForMatch()
                 }

@@ -1,8 +1,9 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
 import net.ninebolt.onevsone.application.port.BackupRef
+import net.ninebolt.onevsone.application.port.InventoryBackupPort
+import net.ninebolt.onevsone.application.port.KitPort
 import net.ninebolt.onevsone.application.port.PersistenceFailure
-import net.ninebolt.onevsone.application.port.PlayerEquipmentPort
 import net.ninebolt.onevsone.domain.ArenaId
 import net.ninebolt.onevsone.domain.MatchId
 import net.ninebolt.onevsone.domain.Participant
@@ -23,7 +24,7 @@ class PaperEquipmentAdapter(
     private val lookup: PaperPlayerLookup,
     private val server: Server,
     private val messages: Messages
-) : PlayerEquipmentPort {
+) : KitPort, InventoryBackupPort {
 
     /** アリーナ装備のメモリキャッシュ(arena/<name>.yml の inventory)。 */
     private val kits = mutableMapOf<ArenaId, PaperInventorySnapshot>()

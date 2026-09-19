@@ -1,6 +1,6 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
-import net.ninebolt.onevsone.application.port.ArenaRepository
+import net.ninebolt.onevsone.application.port.ArenaSignRepository
 import net.ninebolt.onevsone.application.port.FailureReporter
 import net.ninebolt.onevsone.application.port.MatchPresentationPort
 import net.ninebolt.onevsone.domain.ArenaId
@@ -25,7 +25,7 @@ import java.util.UUID
 class PaperMatchPresentation(
     private val server: Server,
     private val messages: Messages,
-    private val arenas: ArenaRepository,
+    private val signs: ArenaSignRepository,
     private val failures: FailureReporter
 ) : MatchPresentationPort {
 
@@ -127,7 +127,7 @@ class PaperMatchPresentation(
     }
 
     override fun updateSign(arena: ArenaId, state: ArenaState) {
-        val sign = arenas.signLocation(arena.name) ?: return
+        val sign = signs.signLocation(arena.name) ?: return
         val world = server.getWorld(sign.world)
         if (world == null) {
             failures.warn("Sign world '${sign.world}' for arena ${arena.name} is not loaded")

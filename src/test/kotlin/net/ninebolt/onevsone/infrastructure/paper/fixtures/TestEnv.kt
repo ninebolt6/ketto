@@ -1,4 +1,4 @@
-package net.ninebolt.onevsone.infrastructure.paper
+package net.ninebolt.onevsone.infrastructure.paper.fixtures
 
 import io.mockk.EqMatcher
 import io.mockk.Runs
@@ -21,8 +21,20 @@ import net.ninebolt.onevsone.domain.ArenaDefinition
 import net.ninebolt.onevsone.domain.ArenaId
 import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.WorldPosition
+import net.ninebolt.onevsone.infrastructure.paper.ArenaListener
+import net.ninebolt.onevsone.infrastructure.paper.Messages
+import net.ninebolt.onevsone.infrastructure.paper.OneVsOneCommand
+import net.ninebolt.onevsone.infrastructure.paper.PaperEquipmentAdapter
+import net.ninebolt.onevsone.infrastructure.paper.PaperInventorySnapshot
+import net.ninebolt.onevsone.infrastructure.paper.PaperMatchPresentation
+import net.ninebolt.onevsone.infrastructure.paper.PaperPlayerAdapter
+import net.ninebolt.onevsone.infrastructure.paper.PaperPlayerLookup
+import net.ninebolt.onevsone.infrastructure.paper.PaperScheduler
+import net.ninebolt.onevsone.infrastructure.paper.PluginFailureReporter
 import net.ninebolt.onevsone.infrastructure.persistence.YamlArenaRepository
+import net.ninebolt.onevsone.infrastructure.persistence.YamlLobbyRepository
 import net.ninebolt.onevsone.infrastructure.persistence.YamlMatchStateRepository
+import net.ninebolt.onevsone.infrastructure.persistence.YamlSignRepository
 import net.ninebolt.onevsone.infrastructure.persistence.YamlPlayerStatsRepository
 import net.ninebolt.onevsone.infrastructure.persistence.YamlStore
 import org.bukkit.Bukkit
@@ -51,14 +63,13 @@ import java.util.logging.Logger
  * Bukkit モック上に実アダプター・実サービスを配線する統合テスト環境。
  * Paper 依存は infrastructure テストに限定する。
  */
-class TestEnv(folder: File, requiredWins: Int = 3) {
+class TestEnv(val folder: File, val requiredWins: Int = 3) {
     val server: Server = mockk(relaxed = true)
     val plugin: JavaPlugin = mockk(relaxed = true)
     val scheduler: BukkitScheduler = mockk(relaxed = true)
     val scoreboardManager: ScoreboardManager = mockk(relaxed = true)
     val itemFactory: ItemFactory = mockk(relaxed = true)
 
-    val requiredWins = requiredWins
     val messages = Messages("&8[&61vs1&8] ")
     val failures = PluginFailureReporter { plugin.logger }
     val lookup = PaperPlayerLookup(server)
@@ -69,27 +80,31 @@ class TestEnv(folder: File, requiredWins: Int = 3) {
         private set
     var arenaRepo: YamlArenaRepository = YamlArenaRepository(store)
         private set
+    var lobbyRepo: YamlLobbyRepository = YamlLobbyRepository(store)
+        private set
+    var signRepo: YamlSignRepository = YamlSignRepository(store)
+        private set
     var matchStateRepo: MatchStateRepository = YamlMatchStateRepository(store)
         private set
     var statsRepo: PlayerStatsRepository = YamlPlayerStatsRepository(store)
         private set
     var equipment = PaperEquipmentAdapter(store, lookup, server, messages)
         private set
-    var presentation = PaperMatchPresentation(server, messages, arenaRepo, failures)
+    var presentation = PaperMatchPresentation(server, messages, signRepo, failures)
         private set
     var registry = ArenaRegistry()
         private set
-    var recovery = PlayerRecoveryService(equipment, playerPort, arenaRepo, presentation, failures)
+    var recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepo, presentation, failures)
         private set
     var service = buildService()
         private set
-    var admin = ArenaAdministrationService(registry, arenaRepo, equipment, presentation, service)
+    var admin = ArenaAdministrationService(registry, arenaRepo, signRepo, lobbyRepo, equipment, presentation, service)
         private set
     val listener: ArenaListener by lazy { ArenaListener(service, admin, lookup, messages) }
     val command: OneVsOneCommand by lazy { OneVsOneCommand(plugin, service, admin, messages) }
 
     private fun buildService() = ArenaApplicationService(
-        registry, arenaRepo, matchStateRepo, statsRepo, equipment, playerPort,
+        registry, arenaRepo, matchStateRepo, statsRepo, equipment, equipment, playerPort,
         schedulerPort, presentation, recovery, failures, requiredWins
     )
 
@@ -101,14 +116,16 @@ class TestEnv(folder: File, requiredWins: Int = 3) {
     ) {
         store = newStore
         arenaRepo = YamlArenaRepository(store)
+        lobbyRepo = YamlLobbyRepository(store)
+        signRepo = YamlSignRepository(store)
         matchStateRepo = matchState
         this.statsRepo = statsRepo
         equipment = PaperEquipmentAdapter(store, lookup, server, messages)
-        presentation = PaperMatchPresentation(server, messages, arenaRepo, failures)
+        presentation = PaperMatchPresentation(server, messages, signRepo, failures)
         registry = ArenaRegistry()
-        recovery = PlayerRecoveryService(equipment, playerPort, arenaRepo, presentation, failures)
+        recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepo, presentation, failures)
         service = buildService()
-        admin = ArenaAdministrationService(registry, arenaRepo, equipment, presentation, service)
+        admin = ArenaAdministrationService(registry, arenaRepo, signRepo, lobbyRepo, equipment, presentation, service)
     }
 
     data class TimerRecord(val runnable: BukkitRunnable, val delay: Long, val period: Long, val taskId: Int)

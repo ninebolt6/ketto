@@ -2,6 +2,7 @@ package net.ninebolt.onevsone.infrastructure.paper
 
 import io.mockk.every
 import io.mockk.verify
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import org.bukkit.Material
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals

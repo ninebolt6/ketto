@@ -1,11 +1,11 @@
 package net.ninebolt.onevsone.application
 
-import net.ninebolt.onevsone.application.port.ArenaRepository
 import net.ninebolt.onevsone.application.port.BackupRef
 import net.ninebolt.onevsone.application.port.FailureReporter
+import net.ninebolt.onevsone.application.port.InventoryBackupPort
+import net.ninebolt.onevsone.application.port.LobbyRepository
 import net.ninebolt.onevsone.application.port.MatchPresentationPort
 import net.ninebolt.onevsone.application.port.PersistenceFailure
-import net.ninebolt.onevsone.application.port.PlayerEquipmentPort
 import net.ninebolt.onevsone.application.port.PlayerHandle
 import net.ninebolt.onevsone.application.port.PlayerPort
 import java.util.UUID
@@ -18,9 +18,9 @@ import java.util.UUID
  * 試合の世代トークン(MatchToken)とは分離する。
  */
 class PlayerRecoveryService(
-    private val equipment: PlayerEquipmentPort,
+    private val backups: InventoryBackupPort,
     private val players: PlayerPort,
-    private val arenas: ArenaRepository,
+    private val lobby: LobbyRepository,
     private val presentation: MatchPresentationPort,
     private val failures: FailureReporter
 ) {
@@ -32,7 +32,7 @@ class PlayerRecoveryService(
 
     /** 起動時。前回の未復元バックアップを読み込み台帳に登録する。 */
     fun loadPersisted() {
-        for (ref in equipment.pendingBackups()) {
+        for (ref in backups.pendingBackups()) {
             val ticket = RestoreTicket(ref)
             ref.playerId?.let { ticketsByUuid[it] = ticket }
             ticketsByName[ref.playerName] = ticket
@@ -72,7 +72,7 @@ class PlayerRecoveryService(
         if (!ownedBy(handle, ticket)) return
         if (respawn && handle.dead) handle.respawn()
         try {
-            equipment.restore(ticket.ref)
+            backups.restore(ticket.ref)
         } catch (e: PersistenceFailure) {
             failures.report("Could not restore inventory for ${handle.name} (${handle.id}); backup retained", e)
             return
@@ -81,7 +81,7 @@ class PlayerRecoveryService(
         if (lobby) teleportLobby(handle)
         forget(ticket)
         try {
-            equipment.acknowledge(ticket.ref)
+            backups.acknowledge(ticket.ref)
         } catch (e: PersistenceFailure) {
             // 削除失敗時はディスク上の記録が残る(次回起動で再復元=安全側)
             failures.report("Could not discard restored backup for ${handle.name} (${handle.id}); record retained", e)
@@ -94,7 +94,7 @@ class PlayerRecoveryService(
     }
 
     private fun teleportLobby(handle: PlayerHandle) {
-        val lobby = arenas.lobby()
+        val lobby = lobby.lobby()
         if (lobby == null) {
             failures.warn("Lobby is not set; skipping teleport for ${handle.name}")
             return
@@ -112,7 +112,7 @@ class PlayerRecoveryService(
             val handle = players.handle(id) ?: continue
             if (handle.dead) {
                 try {
-                    equipment.restore(ticket.ref)
+                    backups.restore(ticket.ref)
                 } catch (e: PersistenceFailure) {
                     failures.report("Could not restore inventory for ${handle.name} (${handle.id}); backup retained", e)
                     continue

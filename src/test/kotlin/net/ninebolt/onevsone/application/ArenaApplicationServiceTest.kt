@@ -1,6 +1,6 @@
 package net.ninebolt.onevsone.application
 
-import net.ninebolt.onevsone.application.port.PersistenceFailure
+import net.ninebolt.onevsone.application.fixtures.TestApp
 import net.ninebolt.onevsone.domain.ArenaId
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatCause
@@ -10,23 +10,8 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
+/** 参加・退出・カウントダウン・ラウンド・終了の正常系フロー。 */
 class ArenaApplicationServiceTest {
-
-    private fun joinedTwo(app: TestApp): Pair<FakePlayers.FakeHandle, FakePlayers.FakeHandle> {
-        app.newArena()
-        val p1 = app.players.add("Alice")
-        val p2 = app.players.add("Bob")
-        assertEquals(JoinReply.JoinedWaiting, app.service.join(p1.id, p1.name, ArenaId("arena1")))
-        assertEquals(JoinReply.JoinedStarting, app.service.join(p2.id, p2.name, ArenaId("arena1")))
-        return p1 to p2
-    }
-
-    private fun startMatch(app: TestApp): Pair<FakePlayers.FakeHandle, FakePlayers.FakeHandle> {
-        val pair = joinedTwo(app)
-        app.scheduler.tick(6)
-        assertEquals(ArenaState.INGAME, app.state())
-        return pair
-    }
 
     @Test
     fun `first join waits and second starts countdown`() {
@@ -92,7 +77,7 @@ class ArenaApplicationServiceTest {
     @Test
     fun `initial countdown ticks then batch backup then equip and INGAME`() {
         val app = TestApp()
-        val (p1, p2) = joinedTwo(app)
+        val (p1, p2) = app.joinedTwo()
         for (n in 5 downTo 1) {
             app.scheduler.tick()
             assertEquals(n, app.presentation.countdownTicks.last().seconds)
@@ -115,55 +100,9 @@ class ArenaApplicationServiceTest {
     }
 
     @Test
-    fun `abort during countdown stops timer and never equips`() {
-        val app = TestApp()
-        val (p1, p2) = joinedTwo(app)
-        app.scheduler.tick(2)
-        app.service.abort(ArenaId("arena1"))
-        assertEquals(ArenaState.WAITING, app.state())
-        assertNull(app.service.arenaIdOf(p1.id))
-        app.scheduler.tick(6)
-        assertEquals(0, app.equipment.backupCalls)
-        assertTrue(app.equipment.kitApplies.isEmpty())
-        assertTrue(p1.teleports.isEmpty())
-        assertTrue(p2.teleports.isEmpty())
-        assertTrue(app.equipment.restored.isEmpty())
-    }
-
-    @Test
-    fun `backup persistence failure aborts before any equipment change`() {
-        val app = TestApp()
-        app.equipment.failOnBackup = PersistenceFailure("disk full")
-        val (p1, p2) = joinedTwo(app)
-        app.scheduler.tick(6)
-        assertEquals(ArenaState.WAITING, app.state())
-        assertNull(app.service.arenaIdOf(p1.id))
-        assertNull(app.service.arenaIdOf(p2.id))
-        assertTrue(app.equipment.kitApplies.isEmpty())
-        assertTrue(app.equipment.restored.isEmpty())
-        assertTrue(app.failures.reports.any { it.first.contains("Could not save inventories") })
-        app.scheduler.tick(3)
-        assertTrue(p1.teleports.isEmpty())
-    }
-
-    @Test
-    fun `equipment apply failure after backup aborts and restores`() {
-        val app = TestApp()
-        // 2 回目の applyKit で失敗させる
-        app.equipment.failOnApplyAt = 2
-        val (p1, p2) = joinedTwo(app)
-        app.scheduler.tick(6)
-        assertEquals(ArenaState.WAITING, app.state())
-        assertNull(app.service.arenaIdOf(p1.id))
-        // 取得済みバックアップで両者復元される
-        assertEquals(2, app.equipment.restored.size)
-        assertTrue(app.failures.reports.any { it.first.contains("Could not apply equipment") })
-    }
-
-    @Test
     fun `round flow never re-backs-up`() {
         val app = TestApp()
-        val (p1, p2) = startMatch(app)
+        val (p1, p2) = app.startMatch()
         assertEquals(1, app.equipment.backupCalls)
 
         assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
@@ -180,7 +119,7 @@ class ArenaApplicationServiceTest {
     @Test
     fun `round countdown timing and release resolution`() {
         val app = TestApp()
-        val (p1, p2) = startMatch(app)
+        val (p1, p2) = app.startMatch()
         assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
         assertEquals(ArenaState.ROUNDCOUNTDOWN, app.state())
         assertEquals(1, app.presentation.roundWins.size)
@@ -194,21 +133,9 @@ class ArenaApplicationServiceTest {
     }
 
     @Test
-    fun `same tick duplicate defeat does not double score`() {
-        val app = TestApp()
-        val (p1, p2) = startMatch(app)
-        p2.dead = true
-        assertTrue(app.service.defeat(p2.id, DefeatCause.DEATH))
-        assertFalse(app.service.defeat(p2.id, DefeatCause.DEATH))
-        assertFalse(app.service.defeat(p2.id, DefeatCause.FALL))
-        assertEquals(1, app.service.matchOf("arena1")!!.winsOf(p1.id))
-        assertTrue(app.stats.stats.isEmpty())
-    }
-
-    @Test
     fun `final defeat finishes match restores and records stats`() {
         val app = TestApp(requiredWins = 1)
-        val (p1, p2) = startMatch(app)
+        val (p1, p2) = app.startMatch()
         assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
         assertEquals(ArenaState.WAITING, app.state())
         assertNull(app.service.arenaIdOf(p1.id))
@@ -226,7 +153,7 @@ class ArenaApplicationServiceTest {
     @Test
     fun `quit during countdown forfeits without touching inventories`() {
         val app = TestApp()
-        val (p1, p2) = joinedTwo(app)
+        val (p1, p2) = app.joinedTwo()
         app.players.disconnect(p1)
         app.players.quittingScope(p1) {
             app.service.quit(p1.id, p1.name)
@@ -287,7 +214,7 @@ class ArenaApplicationServiceTest {
     @Test
     fun `shutdown aborts matches and restores online pendings`() {
         val app = TestApp()
-        val (p1, p2) = startMatch(app)
+        val (p1, p2) = app.startMatch()
         app.service.shutdown()
         assertEquals(ArenaState.WAITING, app.state())
         assertNull(app.service.arenaIdOf(p1.id))
@@ -297,88 +224,9 @@ class ArenaApplicationServiceTest {
     }
 
     @Test
-    fun `countdown aborts when participant disconnects mid countdown`() {
-        val app = TestApp()
-        val (p1, p2) = joinedTwo(app)
-        app.scheduler.tick(2)
-        app.players.disconnect(p2)
-        app.scheduler.tick()
-        // 次回タイマー実行で不在を検出して中断
-        assertEquals(ArenaState.WAITING, app.state())
-        assertTrue(app.equipment.kitApplies.isEmpty())
-    }
-
-    @Test
-    fun `stats failure for winner does not block loser record or restores`() {
-        val app = TestApp(requiredWins = 1)
-        val (p1, p2) = startMatch(app)
-        app.stats.failOnWin = PersistenceFailure("write failed")
-        assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
-        assertEquals(ArenaState.WAITING, app.state())
-        // 敗者側の記録は続行される
-        assertEquals(1, app.stats.stats[p2.id]?.losses)
-        assertNull(app.stats.stats[p1.id])
-        assertEquals(2, app.equipment.restored.size)
-        assertTrue(app.failures.reports.any { it.first.startsWith("Failed to record win") })
-    }
-
-    @Test
-    fun `stats failure for loser does not block winner record`() {
-        val app = TestApp(requiredWins = 1)
-        val (p1, p2) = startMatch(app)
-        app.stats.failOnLoss = PersistenceFailure("write failed")
-        assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
-        assertEquals(1, app.stats.stats[p1.id]?.wins)
-        assertTrue(app.failures.reports.any { it.first.startsWith("Failed to record loss") })
-    }
-
-    @Test
-    fun `status save failure does not prevent registration cleanup`() {
-        val app = TestApp()
-        val (p1, p2) = startMatch(app)
-        app.matchState.failOnSaveStatus = true
-        org.junit.jupiter.api.Assertions.assertThrows(PersistenceFailure::class.java) {
-            app.service.abort(ArenaId("arena1"))
-        }
-        // メモリ上の登録解除は済んでいる
-        assertNull(app.service.arenaIdOf(p1.id))
-        assertTrue(app.matchState.registrations.isEmpty())
-    }
-
-    @Test
-    fun `stale countdown callback after abort does nothing`() {
-        val app = TestApp()
-        val (p1, p2) = joinedTwo(app)
-        val timer = app.scheduler.timers.last()
-        app.service.abort(ArenaId("arena1"))
-        // 中断後に古いタイマーが走っても自己キャンセルのみ
-        timer.run()
-        assertTrue(timer.cancelled)
-        assertTrue(app.equipment.kitApplies.isEmpty())
-        // 新規参加は可能
-        val p3 = app.players.add("Carol")
-        assertEquals(JoinReply.JoinedWaiting, app.service.join(p3.id, p3.name, ArenaId("arena1")))
-    }
-
-    @Test
-    fun `dead player keeps countdown waiting without consuming the start tick`() {
-        val app = TestApp()
-        val (p1, p2) = joinedTwo(app)
-        app.scheduler.tick(5)
-        p2.dead = true
-        app.scheduler.tick()
-        // 死亡中は開始しないがカウントダウンは継続
-        assertEquals(ArenaState.COUNTDOWN, app.state())
-        assertEquals(0, app.equipment.backupCalls)
-        p2.dead = false
-        app.scheduler.tick()
-        assertEquals(ArenaState.INGAME, app.state())
-    }
-
-    @Test
     fun `round countdown restores INGAME and releases resolution at completion`() {
         val app = TestApp()
-        val (p1, p2) = startMatch(app)
+        val (p1, p2) = app.startMatch()
         app.service.defeat(p2.id, DefeatCause.FALL)
         // tick7: 再装備 / tick50以降: 5→1 / tick150: 再開
         app.scheduler.tick()   // remaining 7: kit reapply
@@ -398,7 +246,7 @@ class ArenaApplicationServiceTest {
     @Test
     fun `forfeit during roundcountdown ends match`() {
         val app = TestApp()
-        val (p1, p2) = startMatch(app)
+        val (p1, p2) = app.startMatch()
         app.service.defeat(p2.id, DefeatCause.FALL)
         assertEquals(ArenaState.ROUNDCOUNTDOWN, app.state())
         app.players.disconnect(p1)

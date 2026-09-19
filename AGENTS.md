@@ -30,18 +30,23 @@ composition root として手動で全依存を配線する(DI フレームワ�
 - `.../application/` — domain + `application/port` のみに依存。
   `ArenaApplicationService`(参加/開始/決着/終了/中断のオーケストレーション)、
   `PlayerRecoveryService`(未復元バックアップの台帳・復元)、`ArenaAdministrationService`、
-  `ArenaRegistry`(共有レジストリ)。`port/` に repository・equipment・player・scheduler・
-  presentation・failure の各 interface と DTO(`BackupRef` 等)
+  `ArenaRegistry`(共有レジストリ)。`port/` に repository(`ArenaRepository`・
+  `LobbyRepository`・`ArenaSignRepository`・`MatchStateRepository`・`PlayerStatsRepository`)・
+  kit(`KitPort`)・backup(`InventoryBackupPort`)・player・scheduler・presentation・failure の
+  各 interface と DTO(`BackupRef` 等)。1 アダプターが複数 port を実装してよい
+  (`PaperEquipmentAdapter` = キット+バックアップ)
 - `.../infrastructure/paper/` — Bukkit/Paper 実装。`ArenaListener`、`OneVsOneCommand`、
   `Messages`、`PaperPlayerAdapter`/`PaperPlayerLookup`(QuitEvent 中の切断者解決)、
   `PaperEquipmentAdapter` + `PaperInventorySnapshot`(ItemStack をここに閉じ込める)、
   `PaperScheduler`、`PaperMatchPresentation`、`PluginFailureReporter`
 - `.../infrastructure/persistence/` — `YamlStore`(共通 I/O と backup コーデック) +
-  `YamlArenaRepository`/`YamlMatchStateRepository`/`YamlPlayerStatsRepository`
+  `YamlArenaRepository`/`YamlLobbyRepository`/`YamlSignRepository`/
+  `YamlMatchStateRepository`/`YamlPlayerStatsRepository`
 - `src/main/resources/` — plugin.yml(version は processResources で展開), config.yml
 - `src/test/kotlin/...` — domain/application は純粋テスト + fake、infrastructure は
   JUnit5 + MockK(モック Server/Player/Scheduler、静的 Bukkit を mockkStatic)の TestEnv 統合。
-  `ArchitectureTest` が内側層の禁止参照を検査
+  `ArchitectureTest` が内側層の禁止参照を検査。
+  テストヘルパー(fake/fixture/TestApp/TestEnv 等)は各層の `fixtures/` サブパッケージに隔離する
 - 状態はメモリ(domain の `ArenaMatch` + `ArenaRegistry`)、YAML は永続化専用。詳細仕様は docs/ を参照
 - インベントリスナップショットは**マッチ開始時**(初期カウントダウン終了、キット適用直前)に
   両者分を取得し、一括保存に成功してからキットを適用する。参加登録・開始前の退出では持ち物を変更しない。
