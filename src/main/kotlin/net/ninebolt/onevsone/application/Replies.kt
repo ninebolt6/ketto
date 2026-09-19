@@ -12,7 +12,6 @@ sealed interface JoinReply {
     data object NotEnabled : JoinReply
     /** 試合中/満員/未復元バックアップ保持者の死亡中等、参加不能。 */
     data object InMatch : JoinReply
-    /** アリーナ自体が存在しない。 */
     data object NotFound : JoinReply
 }
 

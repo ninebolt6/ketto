@@ -9,6 +9,5 @@ interface ArenaSignRepository {
     fun signLocation(arenaName: String): WorldPosition?
     fun setSign(arenaName: String, position: WorldPosition)
     fun clearSign(arenaName: String)
-    /** 座標から看板の所有アリーナ名を逆引きする。 */
     fun signOwner(world: String, x: Double, y: Double, z: Double): String?
 }

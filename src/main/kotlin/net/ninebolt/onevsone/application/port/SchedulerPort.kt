@@ -11,9 +11,8 @@ fun interface Cancellation {
  * BukkitTask はアダプター内に限定する。
  */
 interface SchedulerPort {
-    /** delayTicks 後(0 = 次 tick)に一度だけ実行。 */
+    /** 一度だけ実行。delayTicks=0 は次 tick。 */
     fun schedule(delayTicks: Long, action: () -> Unit): Cancellation
 
-    /** initialDelayTicks 後に開始し periodTicks 間隔で繰り返す。 */
     fun repeat(initialDelayTicks: Long, periodTicks: Long, action: (Cancellation) -> Unit): Cancellation
 }

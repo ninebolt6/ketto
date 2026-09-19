@@ -25,14 +25,13 @@ sealed interface JoinOutcome {
 }
 
 sealed interface LeaveOutcome {
-    /** 退出成立。participant は退出者(参加者不一致の到達不能ケースでは null)。 */
+    /** participant は退出者(参加者不一致の到達不能ケースでは null)。 */
     data class Left(val participant: Participant?) : LeaveOutcome
     /** ONEMORE 以外では退出できない */
     data object NotWaiting : LeaveOutcome
 }
 
 sealed interface QuitOutcome {
-    /** 参加者台帳に無い */
     data object NotParticipant : QuitOutcome
     /** 未開始(ONEMORE/WAITING/人数不足)の退出: 登録解除のみ */
     data class WaitingExit(val participant: Participant) : QuitOutcome

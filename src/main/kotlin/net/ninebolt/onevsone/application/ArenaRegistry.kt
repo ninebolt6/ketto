@@ -43,7 +43,7 @@ class ArenaRegistry {
     /** 登録順の全試合(シャットダウン処理用)。 */
     fun matches(): List<ArenaMatch> = matches.values.toList()
 
-    /** 新しい試合状態で置き換える(新規登録・ immutable 集約の書き戻し)。 */
+    /** 新規登録および immutable 集約の書き戻し。 */
     fun installMatch(match: ArenaMatch) {
         matches[match.arenaId] = match
     }
@@ -52,9 +52,7 @@ class ArenaRegistry {
         matches.remove(id)
     }
 
-    /**
-     * match を変換して書き戻す。アリーナが無ければ何もせず null。
-     */
+    /** アリーナが無ければ変換せず null。 */
     fun updateMatch(id: ArenaId, transform: (ArenaMatch) -> ArenaMatch): ArenaMatch? {
         val current = matches[id] ?: return null
         return transform(current).also { matches[id] = it }

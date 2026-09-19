@@ -3,8 +3,11 @@ package net.ninebolt.onevsone.infrastructure.paper.fixtures
 import io.mockk.every
 import io.mockk.mockk
 import org.bukkit.Location
+import org.bukkit.Material
 import org.bukkit.block.Block
 import org.bukkit.block.Sign
+import org.bukkit.block.sign.Side
+import org.bukkit.block.sign.SignSide
 import org.bukkit.entity.Player
 import org.bukkit.event.block.Action
 import org.bukkit.event.entity.PlayerDeathEvent
@@ -16,13 +19,13 @@ import org.bukkit.inventory.EquipmentSlot
 
 internal fun TestEnv.deathEvent(player: Player): PlayerDeathEvent {
     val event = mockk<PlayerDeathEvent>(relaxed = true)
-    val drops = mutableListOf(item(org.bukkit.Material.STONE))
+    val drops = mutableListOf(item(Material.STONE))
     every { event.entity } returns player
     every { event.drops } returns drops
     return event
 }
 
-internal fun TestEnv.moveEvent(player: Player, from: Location, to: Location): PlayerMoveEvent {
+internal fun moveEvent(player: Player, from: Location, to: Location): PlayerMoveEvent {
     val event = mockk<PlayerMoveEvent>(relaxed = true)
     every { event.player } returns player
     every { event.from } returns from
@@ -43,9 +46,9 @@ internal fun TestEnv.twoPlayerIngame(): Pair<Player, Player> {
 internal fun TestEnv.signBlock(x: Int, y: Int, z: Int): Block {
     val block = mockk<Block>(relaxed = true)
     val sign = mockk<Sign>(relaxed = true)
-    val side = mockk<org.bukkit.block.sign.SignSide>(relaxed = true)
+    val side = mockk<SignSide>(relaxed = true)
     val w = world()
-    every { sign.getSide(org.bukkit.block.sign.Side.FRONT) } returns side
+    every { sign.getSide(Side.FRONT) } returns side
     every { block.state } returns sign
     every { block.world } returns w
     every { block.x } returns x
@@ -55,7 +58,7 @@ internal fun TestEnv.signBlock(x: Int, y: Int, z: Int): Block {
     return block
 }
 
-internal fun TestEnv.interact(
+internal fun interact(
     player: Player,
     block: Block,
     hand: EquipmentSlot = EquipmentSlot.HAND

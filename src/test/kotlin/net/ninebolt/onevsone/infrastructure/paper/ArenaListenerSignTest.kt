@@ -12,7 +12,9 @@ import net.ninebolt.onevsone.infrastructure.paper.fixtures.signBlock
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.twoPlayerIngame
 import org.bukkit.Material
 import org.bukkit.block.Block
+import org.bukkit.block.BlockState
 import org.bukkit.event.block.Action
+import org.bukkit.event.player.PlayerJoinEvent
 import org.bukkit.inventory.EquipmentSlot
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -46,15 +48,15 @@ class ArenaListenerSignTest {
         env.signRepo.setSign("arena1", WorldPosition("world", 3.0, 64.0, 3.0))
         val p1 = env.player("Alice")
 
-        val unregistered = env.interact(p1, env.signBlock(9, 64, 9))
+        val unregistered = interact(p1, env.signBlock(9, 64, 9))
         env.listener.onInteract(unregistered)
         assertNull(env.service.arenaIdOf(p1.uniqueId))
 
-        val registered = env.interact(p1, env.signBlock(3, 64, 3))
+        val registered = interact(p1, env.signBlock(3, 64, 3))
         env.listener.onInteract(registered)
         assertEquals(arena, env.service.arenaIdOf(p1.uniqueId))
 
-        val offhand = env.interact(env.player("Bob"), env.signBlock(3, 64, 3), EquipmentSlot.OFF_HAND)
+        val offhand = interact(env.player("Bob"), env.signBlock(3, 64, 3), EquipmentSlot.OFF_HAND)
         env.listener.onInteract(offhand)
         assertNull(env.service.arenaIdOf(env.players.values.first { it.name == "Bob" }.uniqueId))
     }
@@ -70,7 +72,7 @@ class ArenaListenerSignTest {
         env.join(p2, arena)
 
         val p3 = env.player("Carol")
-        env.listener.onInteract(env.interact(p3, block))
+        env.listener.onInteract(interact(p3, block))
         verify(exactly = 1) { p3.sendMessage(contains("このアリーナは現在ゲーム中です")) }
     }
 
@@ -81,11 +83,11 @@ class ArenaListenerSignTest {
         val p1 = env.player("Alice")
 
         val block = mockk<Block>(relaxed = true)
-        every { block.state } returns mockk<org.bukkit.block.BlockState>(relaxed = true)
+        every { block.state } returns mockk<BlockState>(relaxed = true)
         every { block.world } returns env.world()
-        env.listener.onInteract(env.interact(p1, block))
+        env.listener.onInteract(interact(p1, block))
 
-        val leftClick = env.interact(p1, env.signBlock(3, 64, 3))
+        val leftClick = interact(p1, env.signBlock(3, 64, 3))
         every { leftClick.action } returns Action.LEFT_CLICK_BLOCK
         env.listener.onInteract(leftClick)
         assertNull(env.service.arenaIdOf(p1.uniqueId))
@@ -103,7 +105,7 @@ class ArenaListenerSignTest {
         every { p2.isOnline } returns true
         p2.inventory.setItem(0, null)
         env.players[p2.uniqueId] = p2
-        val join = mockk<org.bukkit.event.player.PlayerJoinEvent>(relaxed = true)
+        val join = mockk<PlayerJoinEvent>(relaxed = true)
         every { join.player } returns p2
         env.listener.onJoin(join)
         assertEquals(Material.COMPASS, p2.inventory.contents[0]?.type)

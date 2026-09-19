@@ -27,20 +27,16 @@ data class ArenaMatch(
 
     val token: MatchToken get() = MatchToken(epoch)
 
-    /** Join 看板で参加を受け付けられる状態か。 */
     val joinable: Boolean get() = state.isJoinable()
 
-    /** 規定人数(2人)が在籍しているか。 */
     val full: Boolean get() = participants.size == MAX_PARTICIPANTS
 
     /** Y<=0 落下を敗北として解決するか(落下を受理する状態かつ 2 人在籍)。 */
     val resolvesVoidFall: Boolean
         get() = state.acceptsDefeat(DefeatCause.FALL) && full
 
-    /** 初回カウントダウンから INGAME へ進められる状態か。 */
     val canBeginMatch: Boolean get() = state == ArenaState.COUNTDOWN && full
 
-    /** ラウンドカウントダウンから INGAME へ復帰できる状態か。 */
     val canResumeRound: Boolean get() = state == ArenaState.ROUNDCOUNTDOWN && full
 
     fun participant(id: UUID): Participant? = participants.firstOrNull { it.id == id }
@@ -65,7 +61,7 @@ data class ArenaMatch(
         }
     }
 
-    /** ONEMORE 待機中の任意退出。退出しても持ち物には関知しない(未開始のため)。 */
+    /** 退出しても持ち物には関知しない(未開始のため)。 */
     fun leaveWaiting(id: UUID): Transition<LeaveOutcome> {
         if (state != ArenaState.ONEMORE) return Transition(this, LeaveOutcome.NotWaiting)
         val participant = participant(id)
@@ -80,7 +76,7 @@ data class ArenaMatch(
     }
 
     /**
-     * 切断。未開始なら登録解除のみ、進行中なら相手を勝者とする不戦敗でマッチ終了。
+     * 未開始なら登録解除のみ、進行中なら相手を勝者とする不戦敗でマッチ終了。
      */
     fun forfeit(id: UUID): Transition<QuitOutcome> {
         val participant = participant(id) ?: return Transition(this, QuitOutcome.NotParticipant)
@@ -128,7 +124,7 @@ data class ArenaMatch(
         )
     }
 
-    /** COUNTDOWN から INGAME への遷移(初回開始)。受理されたら outcome=true。 */
+    /** 受理されたら outcome=true。 */
     fun beginMatch(): Transition<Boolean> =
         if (canBeginMatch) {
             Transition(copy(state = ArenaState.INGAME), true)
@@ -152,7 +148,7 @@ data class ArenaMatch(
     fun releaseResolution(token: MatchToken): ArenaMatch =
         if (this.token == token) copy(resolving = false) else this
 
-    /** 中断。進行中のカウントダウンや解決待ちコールバックは世代進行で無効化される。 */
+    /** 進行中のカウントダウンや解決待ちコールバックは世代進行で無効化される。 */
     fun abort(): Transition<List<Participant>> =
         Transition(
             copy(

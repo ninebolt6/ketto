@@ -5,13 +5,10 @@ package net.ninebolt.onevsone.domain
  * リスナー側ではイベント変換だけを行い、状態ごとの可否判定はここに集約する。
  */
 data class ParticipantRestrictions(
-    /** ROUNDCOUNTDOWN 中の X/Z 移動凍結 */
     val horizontalMoveFrozen: Boolean,
-    /** ダメージイベントのキャンセル */
     val damageCancelled: Boolean,
-    /** ブロック破壊のキャンセル */
     val blockBreakCancelled: Boolean,
-    /** 全コマンドのキャンセル(ONEMORE 待機中のみ許可) */
+    /** ONEMORE 待機中のみコマンドを許可する */
     val commandsBlocked: Boolean
 ) {
     companion object {

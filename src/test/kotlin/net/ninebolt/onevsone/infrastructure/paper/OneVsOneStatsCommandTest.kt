@@ -7,6 +7,8 @@ import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.contains
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.run
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.writeStats
+import net.kyori.adventure.text.Component
+import org.bukkit.OfflinePlayer
 import org.bukkit.command.BlockCommandSender
 import org.bukkit.command.Command
 import org.junit.jupiter.api.AfterEach
@@ -15,6 +17,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import java.util.UUID
+import java.util.concurrent.CompletableFuture
 
 /** /1vs1 stats と引数なし/権限/未知サブコマンドの検証。 */
 class OneVsOneStatsCommandTest {
@@ -90,7 +93,7 @@ class OneVsOneStatsCommandTest {
         val viewer = env.player("Viewer")
         val uuid = UUID.randomUUID()
         env.writeStats(uuid, 5, 5)
-        val offline = mockk<org.bukkit.OfflinePlayer>(relaxed = true)
+        val offline = mockk<OfflinePlayer>(relaxed = true)
         every { offline.uniqueId } returns uuid
         every { env.server.getOfflinePlayerIfCached("Ghost") } returns offline
         env.run(viewer, "stats", "Ghost")
@@ -103,7 +106,7 @@ class OneVsOneStatsCommandTest {
         val uuid = UUID.randomUUID()
         env.writeStats(uuid, 2, 1)
         val command = OneVsOneCommand(env.plugin, env.service, env.admin, env.messages) {
-            java.util.concurrent.CompletableFuture.completedFuture(uuid)
+            CompletableFuture.completedFuture(uuid)
         }
         command.onCommand(viewer, cmd, "1vs1", arrayOf("stats", "Ghost"))
         verify(exactly = 0) { viewer.sendMessage(contains("Win:")) }
@@ -115,7 +118,7 @@ class OneVsOneStatsCommandTest {
     fun `stats offline lookup failure reports no stats`() {
         val viewer = env.player("Viewer")
         val command = OneVsOneCommand(env.plugin, env.service, env.admin, env.messages) {
-            java.util.concurrent.CompletableFuture.failedFuture<UUID>(RuntimeException("lookup failed"))
+            CompletableFuture.failedFuture<UUID>(RuntimeException("lookup failed"))
         }
         command.onCommand(viewer, cmd, "1vs1", arrayOf("stats", "Ghost"))
         env.runOneShots()
@@ -127,11 +130,11 @@ class OneVsOneStatsCommandTest {
         val viewer = env.player("Viewer")
         every { env.plugin.isEnabled } returns false
         val command = OneVsOneCommand(env.plugin, env.service, env.admin, env.messages) {
-            java.util.concurrent.CompletableFuture.completedFuture(UUID.randomUUID())
+            CompletableFuture.completedFuture(UUID.randomUUID())
         }
         command.onCommand(viewer, cmd, "1vs1", arrayOf("stats", "Ghost"))
         env.runOneShots()
-        verify(exactly = 0) { viewer.sendMessage(any<net.kyori.adventure.text.Component>()) }
+        verify(exactly = 0) { viewer.sendMessage(any<Component>()) }
     }
 
     @Test

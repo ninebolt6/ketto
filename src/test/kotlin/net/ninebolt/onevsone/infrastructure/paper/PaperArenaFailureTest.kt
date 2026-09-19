@@ -14,15 +14,20 @@ import net.ninebolt.onevsone.infrastructure.paper.fixtures.view
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.configuration.file.YamlConfiguration
+import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
+import java.io.IOException
+import java.util.logging.Level
+import java.util.logging.Logger
 
 /** 永続化・戦績・登録解除の失敗注入シナリオ。 */
 class PaperArenaFailureTest {
@@ -51,7 +56,7 @@ class PaperArenaFailureTest {
         env = TestEnv(broken)
         val arena = env.newArena()
         val p = env.player("Alice")
-        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException::class.java) {
+        assertThrows(IllegalStateException::class.java) {
             env.service.join(p.uniqueId, p.name, arena)
         }
         assertNull(env.service.arenaIdOf(p.uniqueId))
@@ -107,7 +112,7 @@ class PaperArenaFailureTest {
     fun `malformed winner stats does not prevent final death cleanup`() {
         env.close()
         env = TestEnv(folder, requiredWins = 1)
-        val logger = mockk<java.util.logging.Logger>(relaxed = true)
+        val logger = mockk<Logger>(relaxed = true)
         every { env.plugin.logger } returns logger
         val arena = env.newArena()
         env.setKit(arena, PaperInventorySnapshot(items = listOf(env.item(Material.IRON_SWORD))))
@@ -122,7 +127,7 @@ class PaperArenaFailureTest {
         winnerStats.writeText("win: [broken")
         every { p2.isDead } returns true
 
-        org.junit.jupiter.api.Assertions.assertDoesNotThrow { env.service.defeat(p2.uniqueId, DefeatCause.DEATH) }
+        assertDoesNotThrow { env.service.defeat(p2.uniqueId, DefeatCause.DEATH) }
         assertEquals(ArenaState.WAITING, env.view().state)
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
         env.runOneShots()
@@ -134,7 +139,7 @@ class PaperArenaFailureTest {
         assertEquals(1, env.statsRepo.find(p2.uniqueId)!!.losses)
         verify(exactly = 1) {
             logger.log(
-                eq(java.util.logging.Level.SEVERE),
+                eq(Level.SEVERE),
                 contains("Failed to record"),
                 any<Throwable>()
             )
@@ -157,7 +162,7 @@ class PaperArenaFailureTest {
         env.tick(6)
         File(folder, "stats/${p2.uniqueId}.yml").writeText("lose: [broken")
 
-        org.junit.jupiter.api.Assertions.assertDoesNotThrow { env.service.defeat(p2.uniqueId, DefeatCause.FALL) }
+        assertDoesNotThrow { env.service.defeat(p2.uniqueId, DefeatCause.FALL) }
         assertEquals(ArenaState.WAITING, env.view().state)
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
         assertEquals(1, env.statsRepo.find(p1.uniqueId)!!.wins)
@@ -178,10 +183,10 @@ class PaperArenaFailureTest {
         env.service.join(p1.uniqueId, p1.name, arena)
         env.service.join(p2.uniqueId, p2.name, arena)
         val winnerId = p1.uniqueId
-        every { spyStats.recordWin(winnerId) } throws IllegalStateException("write failed", java.io.IOException("disk full"))
+        every { spyStats.recordWin(winnerId) } throws IllegalStateException("write failed", IOException("disk full"))
         env.tick(6)
 
-        org.junit.jupiter.api.Assertions.assertDoesNotThrow { env.service.defeat(p2.uniqueId, DefeatCause.FALL) }
+        assertDoesNotThrow { env.service.defeat(p2.uniqueId, DefeatCause.FALL) }
         assertEquals(ArenaState.WAITING, env.service.matchOf("spy-arena")!!.state)
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
@@ -205,7 +210,7 @@ class PaperArenaFailureTest {
         File(folder, "stats/${p1.uniqueId}.yml").writeText("lose: [broken")
         env.removePlayer(p1)
 
-        org.junit.jupiter.api.Assertions.assertDoesNotThrow { env.quit(p1) }
+        assertDoesNotThrow { env.quit(p1) }
         assertEquals(ArenaState.WAITING, env.view().state)
         assertNull(env.service.arenaIdOf(p2.uniqueId))
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)

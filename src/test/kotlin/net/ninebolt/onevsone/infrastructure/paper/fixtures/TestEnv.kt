@@ -37,6 +37,7 @@ import net.ninebolt.onevsone.infrastructure.persistence.YamlMatchStateRepository
 import net.ninebolt.onevsone.infrastructure.persistence.YamlSignRepository
 import net.ninebolt.onevsone.infrastructure.persistence.YamlPlayerStatsRepository
 import net.ninebolt.onevsone.infrastructure.persistence.YamlStore
+import net.kyori.adventure.text.Component
 import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.Material
@@ -48,11 +49,14 @@ import org.bukkit.inventory.ItemFactory
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.PlayerInventory
 import org.bukkit.inventory.meta.ItemMeta
+import org.bukkit.plugin.Plugin
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitRunnable
 import org.bukkit.scheduler.BukkitScheduler
 import org.bukkit.scheduler.BukkitTask
 import org.bukkit.scoreboard.Criteria
+import org.bukkit.scoreboard.Objective
+import org.bukkit.scoreboard.Score
 import org.bukkit.scoreboard.Scoreboard
 import org.bukkit.scoreboard.ScoreboardManager
 import java.io.File
@@ -179,12 +183,12 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
             every {
                 board.registerNewObjective(
                     any<String>(),
-                    any<org.bukkit.scoreboard.Criteria>(),
-                    any<net.kyori.adventure.text.Component>()
+                    any<Criteria>(),
+                    any<Component>()
                 )
             } answers {
-                val objective = mockk<org.bukkit.scoreboard.Objective>(relaxed = true)
-                every { objective.getScore(any<String>()) } answers { mockk<org.bukkit.scoreboard.Score>(relaxed = true) }
+                val objective = mockk<Objective>(relaxed = true)
+                every { objective.getScore(any<String>()) } answers { mockk<Score>(relaxed = true) }
                 objective
             }
             boards += board
@@ -195,7 +199,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
 
         every {
             scheduler.runTaskTimer(
-                any<org.bukkit.plugin.Plugin>(),
+                any<Plugin>(),
                 any<Runnable>(),
                 any<Long>(),
                 any<Long>()
@@ -208,13 +212,13 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
             timers += TimerRecord(runnable, arg(2), arg(3), id)
             task
         }
-        every { scheduler.runTask(any<org.bukkit.plugin.Plugin>(), any<Runnable>()) } answers {
+        every { scheduler.runTask(any<Plugin>(), any<Runnable>()) } answers {
             oneShots += arg<Runnable>(1)
             mockk<BukkitTask>(relaxed = true)
         }
         every {
             scheduler.runTaskLater(
-                any<org.bukkit.plugin.Plugin>(),
+                any<Plugin>(),
                 any<Runnable>(),
                 any<Long>()
             )

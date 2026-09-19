@@ -4,7 +4,7 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.UUID
 
-/** 試合参加者。Bukkit の Player もインベントリも持たず、識別子と表示名だけを持つ。 */
+/** Bukkit の Player もインベントリも持たず、識別子と表示名だけを持つ。 */
 data class Participant(val id: UUID, val name: String)
 
 /** Paper の Location を含まない純粋な座標値。 */
@@ -30,7 +30,7 @@ data class ArenaDefinition(
     fun spawn(slot: Int): WorldPosition? = if (slot == 0) spawn1 else spawn2
 }
 
-/** プレイヤー戦績。勝率の数値計算をここに集約する。 */
+/** 勝率の数値計算をここに集約する。 */
 data class PlayerStats(val wins: Int, val losses: Int) {
     /** win/lose を小数第 2 位 HALF_UP で。lose == 0 のときは win / 1。 */
     val ratio: String

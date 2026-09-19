@@ -3,6 +3,7 @@ package net.ninebolt.onevsone.infrastructure.paper
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import net.ninebolt.onevsone.domain.ArenaId
 import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.contains
@@ -10,9 +11,14 @@ import net.ninebolt.onevsone.infrastructure.paper.fixtures.opPlayer
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.run
 import org.bukkit.Location
 import org.bukkit.Material
+import org.bukkit.block.Block
+import org.bukkit.block.Sign
+import org.bukkit.block.sign.Side
+import org.bukkit.block.sign.SignSide
 import org.bukkit.command.BlockCommandSender
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -81,7 +87,7 @@ class OneVsOneAdminCommandTest {
 
         env.run(op, "arena", "remove", "newarena")
         verify(exactly = 1) { op.sendMessage(contains("アリーナ: newarena を削除しました")) }
-        org.junit.jupiter.api.Assertions.assertNull(env.service.definition("newarena"))
+        assertNull(env.service.definition("newarena"))
 
         env.run(op, "arena", "remove", "newarena")
         verify(exactly = 1) { op.sendMessage(contains("そのアリーナは存在しません")) }
@@ -122,7 +128,7 @@ class OneVsOneAdminCommandTest {
         op.inventory.setItem(0, env.item(Material.DIAMOND_SWORD))
         env.run(op, "arena", "setInv", "arena1")
         verify(exactly = 1) { op.sendMessage(contains("のインベントリを設定しました")) }
-        assertEquals(Material.DIAMOND_SWORD, env.equipment.kitOf(net.ninebolt.onevsone.domain.ArenaId("arena1"))?.items?.get(0)?.type)
+        assertEquals(Material.DIAMOND_SWORD, env.equipment.kitOf(ArenaId("arena1"))?.items?.get(0)?.type)
     }
 
     @Test
@@ -141,8 +147,8 @@ class OneVsOneAdminCommandTest {
         env.newArena("arena1")
         env.newArena("arena2")
 
-        val block = mockk<org.bukkit.block.Block>(relaxed = true)
-        val sign = mockk<org.bukkit.block.Sign>(relaxed = true)
+        val block = mockk<Block>(relaxed = true)
+        val sign = mockk<Sign>(relaxed = true)
         val w = env.world()
         every { block.state } returns sign
         every { block.world } returns w
@@ -151,7 +157,7 @@ class OneVsOneAdminCommandTest {
         every { block.z } returns 4
         every { block.location } returns Location(w, 4.0, 64.0, 4.0)
         every { w.getBlockAt(4, 64, 4) } returns block
-        every { sign.getSide(org.bukkit.block.sign.Side.FRONT) } returns mockk<org.bukkit.block.sign.SignSide>(relaxed = true)
+        every { sign.getSide(Side.FRONT) } returns mockk<SignSide>(relaxed = true)
         every { op.getTargetBlockExact(10) } returns block
         every { second.getTargetBlockExact(10) } returns block
 

@@ -54,3 +54,8 @@ composition root として手動で全依存を配線する(DI フレームワ�
   例外: 前回マッチの pending restore 完了は再参加時にインベントリへ適用し得る)
 - 禁止: domain/application で `org.bukkit`・`io.papermc`・`net.kyori`・`YamlConfiguration`・
   `java.io.File`・`java.nio.file`・`infrastructure` パッケージ参照(ArchitectureTest で検出)
+
+## スタイル / Style
+
+- コメントは命名・シグネチャから読み取れる内容を繰り返さない。意図・制約・非自明な経緯のみ書く
+- 完全修飾名を書かず、import で解決する

@@ -12,6 +12,7 @@ import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.playersYaml
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.view
 import net.ninebolt.onevsone.infrastructure.persistence.PersistedBackup
+import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.inventory.ItemStack
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -55,8 +56,8 @@ class PaperInventoryRecoveryTest {
         assertEquals(ArenaState.WAITING, env.view().state)
         assertTrue(env.view().participants.isEmpty())
         env.tick(6)
-        verify(exactly = 0) { p1.teleport(any<org.bukkit.Location>()) }
-        verify(exactly = 0) { p2.teleport(any<org.bukkit.Location>()) }
+        verify(exactly = 0) { p1.teleport(any<Location>()) }
+        verify(exactly = 0) { p2.teleport(any<Location>()) }
         assertNull(p1.inventory.contents[0])
         val inv1 = p1.inventory
         verify(exactly = 0) { inv1.setItem(0, ofType(ItemStack::class)) }

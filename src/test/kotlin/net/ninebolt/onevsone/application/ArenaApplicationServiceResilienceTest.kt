@@ -8,6 +8,7 @@ import net.ninebolt.onevsone.domain.DefeatCause
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -113,7 +114,7 @@ class ArenaApplicationServiceResilienceTest {
         val app = TestApp()
         val (p1, p2) = app.startMatch()
         app.matchState.failOnSaveStatus = true
-        org.junit.jupiter.api.Assertions.assertThrows(PersistenceFailure::class.java) {
+        assertThrows(PersistenceFailure::class.java) {
             app.service.abort(ArenaId("arena1"))
         }
         // メモリ上の登録解除は済んでいる

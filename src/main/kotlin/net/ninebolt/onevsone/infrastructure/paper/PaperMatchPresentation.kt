@@ -21,7 +21,6 @@ import org.bukkit.scoreboard.Criteria
 import org.bukkit.scoreboard.DisplaySlot
 import java.util.UUID
 
-/** 試合進行の表示・音・スコアボード・看板・花火の Paper 実装。 */
 class PaperMatchPresentation(
     private val server: Server,
     private val messages: Messages,
@@ -113,11 +112,11 @@ class PaperMatchPresentation(
             messages.component(messages.scoreboardTitle(match.arenaId.name))
         )
         objective.displaySlot = DisplaySlot.SIDEBAR
-        for (participant in match.participants) {
-            objective.getScore(messages.scoreboardEntry(participant.name)).score = match.winsOf(participant.id)
+        for ((id, name) in match.participants) {
+            objective.getScore(messages.scoreboardEntry(name)).score = match.winsOf(id)
         }
-        for (participant in match.participants) {
-            player(participant.id)?.scoreboard = board
+        for ((id) in match.participants) {
+            player(id)?.scoreboard = board
         }
     }
 

@@ -119,7 +119,7 @@ class ArenaListenerCombatTest {
         assertEquals(ArenaState.ONEMORE, env.state())
 
         val w = env.world()
-        val event = env.moveEvent(p1, Location(w, 0.0, -1.0, 0.0), Location(w, 0.0, -5.0, 0.0))
+        val event = moveEvent(p1, Location(w, 0.0, -1.0, 0.0), Location(w, 0.0, -5.0, 0.0))
         env.listener.onMove(event)
         assertEquals(ArenaState.ONEMORE, env.state())
 
@@ -127,7 +127,7 @@ class ArenaListenerCombatTest {
         env.join(p2, arena)
         env.tick(6)
 
-        val fall = env.moveEvent(p1, Location(w, 0.0, 1.0, 0.0), Location(w, 0.0, -1.0, 0.0))
+        val fall = moveEvent(p1, Location(w, 0.0, 1.0, 0.0), Location(w, 0.0, -1.0, 0.0))
         env.listener.onMove(fall)
         assertEquals(ArenaState.ROUNDCOUNTDOWN, env.state())
         assertEquals(1, env.service.matchOf("arena1")!!.winsOf(p2.uniqueId))
@@ -140,11 +140,11 @@ class ArenaListenerCombatTest {
 
         val w = env.world()
         val from = Location(w, 0.0, 64.0, 0.0)
-        val horizontal = env.moveEvent(p1, from, Location(w, 1.0, 64.0, 0.0))
+        val horizontal = moveEvent(p1, from, Location(w, 1.0, 64.0, 0.0))
         env.listener.onMove(horizontal)
         verify(exactly = 1) { horizontal.to = from }
 
-        val vertical = env.moveEvent(p1, Location(w, 0.0, 64.0, 0.0), Location(w, 0.0, 65.0, 0.0))
+        val vertical = moveEvent(p1, Location(w, 0.0, 64.0, 0.0), Location(w, 0.0, 65.0, 0.0))
         env.listener.onMove(vertical)
         verify(exactly = 0) { vertical.to = any() }
     }
@@ -171,12 +171,12 @@ class ArenaListenerCombatTest {
 
         env.runOneShots()
         val w = env.world()
-        env.listener.onMove(env.moveEvent(p2, Location(w, 0.0, 1.0, 0.0), Location(w, 0.0, -1.0, 0.0)))
+        env.listener.onMove(moveEvent(p2, Location(w, 0.0, 1.0, 0.0), Location(w, 0.0, -1.0, 0.0)))
         assertEquals(2, env.service.matchOf("arena1")!!.winsOf(p1.uniqueId))
         env.timers.first { it.taskId == roundTimerId }.runnable.run()
         assertTrue(env.cancelledTaskIds.contains(roundTimerId))
 
-        env.listener.onMove(env.moveEvent(p2, Location(w, 0.0, 1.0, 0.0), Location(w, 0.0, -1.0, 0.0)))
+        env.listener.onMove(moveEvent(p2, Location(w, 0.0, 1.0, 0.0), Location(w, 0.0, -1.0, 0.0)))
         assertEquals(2, env.service.matchOf("arena1")!!.winsOf(p1.uniqueId))
     }
 }

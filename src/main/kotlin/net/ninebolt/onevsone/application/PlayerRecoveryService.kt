@@ -30,7 +30,7 @@ class PlayerRecoveryService(
     private val ticketsByUuid = mutableMapOf<UUID, RestoreTicket>()
     private val ticketsByName = mutableMapOf<String, RestoreTicket>()
 
-    /** 起動時。前回の未復元バックアップを読み込み台帳に登録する。 */
+    /** 起動時に呼ばれる。 */
     fun loadPersisted() {
         for (ref in backups.pendingBackups()) {
             val ticket = RestoreTicket(ref)
@@ -39,7 +39,7 @@ class PlayerRecoveryService(
         }
     }
 
-    /** backupBeforeMatch 成功後に呼び、復元台帳へ登録する。 */
+    /** backupBeforeMatch 成功後に呼ぶ。 */
     fun register(refs: List<BackupRef>) {
         for (ref in refs) {
             val ticket = RestoreTicket(ref)

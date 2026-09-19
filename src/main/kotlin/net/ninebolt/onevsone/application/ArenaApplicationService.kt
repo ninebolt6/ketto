@@ -78,18 +78,18 @@ class ArenaApplicationService(
     }
 
     fun shutdown() {
-        for (match in registry.matches()) {
-            timers.remove(match.arenaId)?.cancel()
-            val left = registry.transact(match.arenaId) { it.abort() }?.outcome ?: emptyList()
-            for (participant in left) {
-                registry.unassign(participant.id)
+        for ((arenaId) in registry.matches()) {
+            timers.remove(arenaId)?.cancel()
+            val left = registry.transact(arenaId) { it.abort() }?.outcome ?: emptyList()
+            for ((id, name) in left) {
+                registry.unassign(id)
                 try {
-                    matchState.unregisterParticipant(participant.name)
+                    matchState.unregisterParticipant(name)
                 } catch (e: PersistenceFailure) {
-                    failures.warn("Could not unregister ${participant.name} from players.yml; membership record may be stale")
+                    failures.warn("Could not unregister $name from players.yml; membership record may be stale")
                 }
             }
-            registry.match(match.arenaId)?.let { matchState.saveStatus(it) }
+            registry.match(arenaId)?.let { matchState.saveStatus(it) }
         }
         recovery.restoreAllOnline()
     }
@@ -105,7 +105,7 @@ class ArenaApplicationService(
 
     fun matchOf(name: String): ArenaMatch? = registry.match(ArenaId(name))
 
-    /** stats 問い合わせ。破損時は PersistenceFailure を投げる(呼び出し側で扱う)。 */
+    /** 破損時は PersistenceFailure を投げる(呼び出し側で扱う)。 */
     fun statsFor(playerId: UUID): PlayerStats? = stats.find(playerId)
 
     fun pendingRestore(playerId: UUID) = recovery.pending(playerId)
@@ -169,7 +169,7 @@ class ArenaApplicationService(
     }
 
     /**
-     * ログアウト。QuitEvent 中はアダプターが切断中プレイヤーの操作ハンドルを
+     * QuitEvent 中はアダプターが切断中プレイヤーの操作ハンドルを
      * 提供するので、ここでは UUID だけで処理する。
      */
     fun quit(playerId: UUID, playerName: String) {
@@ -205,7 +205,7 @@ class ArenaApplicationService(
         }
     }
 
-    /** PlayerJoinEvent 相当: 未参加なら未復元バックアップを復元する。 */
+    /** PlayerJoinEvent 相当。 */
     fun restorePending(playerId: UUID, playerName: String) {
         if (registry.isJoined(playerId)) return
         val ticket = recovery.ticketFor(playerId, playerName) ?: return
@@ -215,7 +215,7 @@ class ArenaApplicationService(
 
     // ---- 勝敗 --------------------------------------------------------------
 
-    /** 死亡/落下の敗北通知。受理されれば true。 */
+    /** 受理されれば true。 */
     fun defeat(playerId: UUID, cause: DefeatCause): Boolean {
         val arenaId = registry.arenaOf(playerId) ?: return false
         val step = registry.transact(arenaId) { it.recordDefeat(playerId, cause) } ?: return false
@@ -246,12 +246,12 @@ class ArenaApplicationService(
         val step = registry.transact(arenaId) { it.abort() } ?: return
         val left = step.outcome
         val tickets = left.map { it to recovery.pending(it.id) }
-        for (participant in left) {
-            registry.unassign(participant.id)
+        for ((id, name) in left) {
+            registry.unassign(id)
             try {
-                matchState.unregisterParticipant(participant.name)
+                matchState.unregisterParticipant(name)
             } catch (e: PersistenceFailure) {
-                failures.warn("Could not unregister ${participant.name} from players.yml; pending restore retained in memory")
+                failures.warn("Could not unregister $name from players.yml; pending restore retained in memory")
             }
         }
         for ((participant, ticket) in tickets) {
@@ -342,11 +342,11 @@ class ArenaApplicationService(
         val loserTicket = recovery.pending(loser.id)
         registry.unassign(winner.id)
         registry.unassign(loser.id)
-        for (participant in listOf(winner, loser)) {
+        for ((_, name) in listOf(winner, loser)) {
             try {
-                matchState.unregisterParticipant(participant.name)
+                matchState.unregisterParticipant(name)
             } catch (e: PersistenceFailure) {
-                failures.warn("Could not unregister ${participant.name} from players.yml; pending restore retained in memory")
+                failures.warn("Could not unregister $name from players.yml; pending restore retained in memory")
             }
         }
 

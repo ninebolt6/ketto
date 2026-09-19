@@ -4,6 +4,7 @@ import io.mockk.every
 import io.mockk.verify
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import org.bukkit.Material
+import org.bukkit.inventory.ItemStack
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -15,7 +16,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
-/** PaperInventorySnapshot の単体テスト。 */
 class PaperInventorySnapshotTest {
 
     @TempDir
@@ -37,7 +37,7 @@ class PaperInventorySnapshotTest {
     fun `capture clones items and preserves slots including nulls`() {
         val inv = env.inventory()
         val sword = env.item(Material.DIAMOND_SWORD)
-        val contents = arrayOfNulls<org.bukkit.inventory.ItemStack>(41)
+        val contents = arrayOfNulls<ItemStack>(41)
         contents[0] = sword
         contents[40] = env.item(Material.SHIELD)
         every { inv.contents } returns contents
@@ -101,6 +101,6 @@ class PaperInventorySnapshotTest {
         val inv = env.inventory()
         val helmet = env.item(Material.IRON_HELMET)
         PaperInventorySnapshot(armor = List(6) { helmet }, items = emptyList()).apply(inv)
-        verify(exactly = 1) { inv.armorContents = match<Array<org.bukkit.inventory.ItemStack?>> { it.size == 4 } }
+        verify(exactly = 1) { inv.armorContents = match<Array<ItemStack?>> { it.size == 4 } }
     }
 }

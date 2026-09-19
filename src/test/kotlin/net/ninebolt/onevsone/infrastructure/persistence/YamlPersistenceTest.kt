@@ -11,10 +11,12 @@ import net.ninebolt.onevsone.domain.WorldPosition
 import net.ninebolt.onevsone.domain.isValidArenaName
 import net.ninebolt.onevsone.infrastructure.paper.PaperInventorySnapshot
 import org.bukkit.configuration.file.YamlConfiguration
+import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -195,10 +197,10 @@ class YamlPersistenceTest {
         File(folder, "status").mkdirs()
         file.writeText("players: [unclosed")
         val before = file.readBytes()
-        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException::class.java) {
+        assertThrows(IllegalStateException::class.java) {
             matchState().unregisterParticipant("Alice")
         }
-        org.junit.jupiter.api.Assertions.assertArrayEquals(before, file.readBytes())
+        assertArrayEquals(before, file.readBytes())
     }
 
     @Test
@@ -238,7 +240,7 @@ class YamlPersistenceTest {
         val uuid = UUID.randomUUID()
         File(folder, "stats").mkdirs()
         File(folder, "stats/$uuid.yml").writeText("win: [broken")
-        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException::class.java) {
+        assertThrows(IllegalStateException::class.java) {
             stats().find(uuid)
         }
     }

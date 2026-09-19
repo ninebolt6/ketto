@@ -5,7 +5,6 @@ import net.ninebolt.onevsone.application.port.PlayerPort
 import net.ninebolt.onevsone.domain.WorldPosition
 import java.util.UUID
 
-/** インメモリのプレイヤー操作ポート。 */
 class FakePlayers : PlayerPort {
     class FakeHandle(
         override val id: UUID,

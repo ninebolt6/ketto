@@ -63,7 +63,7 @@ class PaperEquipmentAdapter(
             )
         }
         store.saveBackups(captured)
-        for (backup in captured) pendingSnapshots[backup.ref.backupId] = backup.snapshot
+        for ((ref, snapshot) in captured) pendingSnapshots[ref.backupId] = snapshot
         return captured.map { it.ref }
     }
 
@@ -88,7 +88,7 @@ class PaperEquipmentAdapter(
     private fun resolve(backup: BackupRef): Player? =
         backup.playerId?.let { lookup.resolve(it) } ?: lookup.resolveByName(backup.playerName)
 
-    /** 復元完了後に記録を削除。backupId 一致のみ。 */
+    /** backupId が一致する記録だけを消す。 */
     override fun acknowledge(backup: BackupRef) {
         store.deleteBackup(backup)
         pendingSnapshots.remove(backup.backupId)
