@@ -1,34 +1,28 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
-import net.ninebolt.onevsone.application.ArenaAdministrationService
 import net.ninebolt.onevsone.application.ArenaApplicationService
-import net.ninebolt.onevsone.application.JoinReply
 import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.domain.ParticipantRestrictions
-import org.bukkit.block.Sign
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
-import org.bukkit.event.block.Action
 import org.bukkit.event.block.BlockBreakEvent
 import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.player.PlayerCommandPreprocessEvent
-import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerJoinEvent
 import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.event.player.PlayerTeleportEvent
-import org.bukkit.inventory.EquipmentSlot
 
 /**
  * Bukkit イベントの入力アダプター。イベント/位置/引数の変換に限定し、
  * 状態別の制約判定は domain の ParticipantRestrictions に委譲する。
+ * 参加看板のイベントは ArenaSignListener が担う。
  */
 class ArenaListener(
     private val service: ArenaApplicationService,
-    private val admin: ArenaAdministrationService,
     private val lookup: PaperPlayerLookup,
     private val messages: Messages
 ) : Listener {
@@ -88,41 +82,6 @@ class ArenaListener(
         val match = service.matchOf(event.player.uniqueId) ?: return
         if (ParticipantRestrictions.forState(match.state).blockBreakCancelled) {
             event.isCancelled = true
-        }
-    }
-
-    @EventHandler
-    fun onInteract(event: PlayerInteractEvent) {
-        if (event.action != Action.RIGHT_CLICK_BLOCK) return
-        if (event.hand != EquipmentSlot.HAND) return
-        val block = event.clickedBlock ?: return
-        if (block.state !is Sign) return
-        val name = admin.signOwner(
-            block.world.name,
-            block.x.toDouble(),
-            block.y.toDouble(),
-            block.z.toDouble()
-        ) ?: return
-        val match = service.matchOf(name) ?: return
-        if (match.joinable) {
-            renderJoin(event.player, name, service.join(event.player.uniqueId, event.player.name, match.arenaId))
-        } else {
-            messages.send(event.player, messages.arenaInGame)
-        }
-    }
-
-    /** join ユースケース結果の文言変換。看板参加の経路で共有する。 */
-    fun renderJoin(player: Player, arenaName: String, reply: JoinReply) {
-        when (reply) {
-            JoinReply.JoinedWaiting -> {
-                messages.send(player, messages.joined(arenaName))
-                messages.send(player, messages.waitOneMore)
-            }
-            JoinReply.JoinedStarting -> messages.send(player, messages.joined(arenaName))
-            JoinReply.AlreadyJoined -> messages.send(player, messages.alreadyJoined)
-            JoinReply.NotEnabled -> messages.send(player, messages.notEnabled)
-            JoinReply.InMatch -> messages.send(player, messages.arenaInGame)
-            JoinReply.NotFound -> messages.send(player, messages.noArena)
         }
     }
 

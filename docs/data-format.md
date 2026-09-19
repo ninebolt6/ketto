@@ -4,9 +4,10 @@
 
 ```
 plugins/1vs1/
-├── config.yml            # 全体設定・ロビー・看板位置
+├── config.yml            # 全体設定(管理者編集のみ。プラグインは書き込まない)
+├── lobby.yml             # ロビー座標
 ├── arenalist.yml         # アリーナ名一覧
-├── arena/<name>.yml      # アリーナ定義(有効化・スポーン・装備)
+├── arena/<name>.yml      # アリーナ定義(有効化・スポーン・装備・看板)
 ├── status/<name>.yml     # アリーナ状態スナップショット
 ├── status/players.yml    # 参加登録・未復元バックアップ
 └── stats/<uuid>.yml      # 戦績
@@ -16,23 +17,24 @@ plugins/1vs1/
 
 ## config.yml
 
+管理者が編集する設定のみ。プラグインはこのファイルを書き込まない。
+
 ```yaml
-prefix: "&8[&61vs1&8] "   # メッセージ接頭辞(& 形式)
-required-wins: 3          # マッチ勝利に必要なキル数
+prefix: "&8[&61vs1&8] " # メッセージ接頭辞(& 形式)
+required-wins: 3 # マッチ勝利に必要なキル数
+```
+
+## lobby.yml
+
+```yaml
 # ロビー(/1vs1 setlobby で設定)
-world: world
-x: 0.0
-y: 0.0
-z: 0.0
-yaw: 0.0
-pitch: 0.0
-# 参加看板(/1vs1 arena setsign で設定、アリーナ毎)
-sign:
-  <arena>:
-    world: world
-    x: 0.0
-    y: 0.0
-    z: 0.0
+lobby:
+  world: world
+  x: 0.0
+  y: 0.0
+  z: 0.0
+  yaw: 0.0
+  pitch: 0.0
 ```
 
 ## arenalist.yml
@@ -49,21 +51,25 @@ arenas:
 ```yaml
 enabled: true
 spawn1: { world: world, x: 0.0, y: 0.0, z: 0.0, yaw: 0.0, pitch: 0.0 }
-spawn2: { world: world, x: 0.0, y: 0.0, z: 0.0, yaw: 0.0, pitch: 0.0 }
 inventory:
-  armor: [ItemStack, ...]   # Bukkit YAML シリアライズ形式
-  item:  [ItemStack, ...]
+  armor: [ItemStack, ...] # Bukkit YAML シリアライズ形式
+  item: [ItemStack, ...]
+sign: # 参加看板(/1vs1 arena setsign で設定)
+  world: world
+  x: 0.0
+  y: 0.0
+  z: 0.0
 ```
 
-- `enabled` / `spawnN` の保存時に `inventory` セクションは保持する(装備は `setInv` の責務)。
+- `enabled` / `spawnN` の保存時に `inventory`・`sign` セクションは保持する(それぞれ `setInv`・`setsign` の責務)。
 - yaw/pitch は float 精度で保持・読み出す。
 
 ## status/<name>.yml
 
 ```yaml
-status: WAITING          # ArenaState 名
-players: [<name>, ...]   # 参加者名
-win: { <name>: <wins> }  # 勝数(名前キー)
+status: WAITING # ArenaState 名
+players: [<name>, ...] # 参加者名
+win: { <name>: <wins> } # 勝数(名前キー)
 ```
 
 - 状態遷移のたびに上書きする参照用スナップショット。復元には使わない。
@@ -71,16 +77,16 @@ win: { <name>: <wins> }  # 勝数(名前キー)
 ## status/players.yml
 
 ```yaml
-players: [<name>, ...]   # 参加登録中のプレイヤー名
+players: [<name>, ...] # 参加登録中のプレイヤー名
 arena:
-  <name>: <arena>        # プレイヤー名 → アリーナ名
+  <name>: <arena> # プレイヤー名 → アリーナ名
 inv:
-  <name>:                # 未復元バックアップ(プレイヤー名キー)
+  <name>: # 未復元バックアップ(プレイヤー名キー)
     armor: [ItemStack, ...]
-    item:  [ItemStack, ...]
-    uuid: <uuid>         # 所有者 UUID
-    id: <uuid>           # バックアップ識別子
-    match: <uuid>        # マッチ識別子
+    item: [ItemStack, ...]
+    uuid: <uuid> # 所有者 UUID
+    id: <uuid> # バックアップ識別子
+    match: <uuid> # マッチ識別子
 ```
 
 - `players` / `arena.*`: 参加登録。退出・終了・中断時に解除する(バックアップ `inv.*` には触れない)。起動時に登録はクリアする。

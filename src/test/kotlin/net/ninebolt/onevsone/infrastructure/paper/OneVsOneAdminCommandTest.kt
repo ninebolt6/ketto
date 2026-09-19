@@ -5,6 +5,7 @@ import io.mockk.mockk
 import io.mockk.verify
 import net.ninebolt.onevsone.domain.ArenaId
 import net.ninebolt.onevsone.domain.DefeatCause
+import net.ninebolt.onevsone.domain.WorldPosition
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.contains
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.opPlayer
@@ -166,6 +167,24 @@ class OneVsOneAdminCommandTest {
 
         env.run(second, "arena", "setsign", "arena2")
         verify(exactly = 1) { second.sendMessage(contains("その看板はすでに登録されています")) }
+    }
+
+    @Test
+    fun `arena removesign unregisters sign`() {
+        val op = env.opPlayer("Op")
+        env.newArena()
+        env.signRepo.setSign("arena1", WorldPosition("world", 4.0, 64.0, 4.0))
+
+        env.run(op, "arena", "removesign", "arena1")
+        verify(exactly = 1) { op.sendMessage(contains("の看板登録を解除しました")) }
+        assertNull(env.signRepo.signOwner("world", 4.0, 64.0, 4.0))
+        assertNull(env.signRepo.signLocation("arena1"))
+
+        env.run(op, "arena", "removesign", "arena1")
+        verify(exactly = 1) { op.sendMessage(contains("そのアリーナには看板が登録されていません")) }
+
+        env.run(op, "arena", "removesign", "missing")
+        verify(exactly = 1) { op.sendMessage(contains("そのアリーナは存在しません")) }
     }
 
     @Test

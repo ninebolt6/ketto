@@ -100,4 +100,11 @@ class ArenaAdministrationService(
         presentation.updateSign(definition.id, state)
         return true
     }
+
+    /** 看板登録だけを解除する。看板ブロック自体は残り、破壊可能になる。 */
+    fun clearSign(name: String): Boolean {
+        registry.definition(ArenaId(name)) ?: return false
+        signs.clearSign(name)
+        return true
+    }
 }

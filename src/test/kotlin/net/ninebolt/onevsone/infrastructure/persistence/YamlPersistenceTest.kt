@@ -263,6 +263,11 @@ class YamlPersistenceTest {
     fun `lobby and sign locations persist`() {
         lobby().setLobby(WorldPosition("lobby", 1.0, 2.0, 3.0, 45.5f, 10.25f))
         signs().setSign("a1", WorldPosition("world", 5.0, 64.0, 5.0))
+        assertTrue(File(folder, "lobby.yml").exists())
+        assertNotNull(
+            YamlConfiguration.loadConfiguration(File(folder, "arena/a1.yml"))
+                .getConfigurationSection("sign")
+        )
         val lobby = lobby().lobby()!!
         assertEquals("lobby", lobby.world)
         assertEquals(45.5f, lobby.yaw, 0.001f)
@@ -271,19 +276,57 @@ class YamlPersistenceTest {
         assertEquals("a1", signs().signOwner("world", 5.0, 64.0, 5.0))
         signs().clearSign("a1")
         assertNull(signs().signLocation("a1"))
+        assertNull(signs().signOwner("world", 5.0, 64.0, 5.0))
     }
 
     @Test
-    fun `config writes do not clobber external edits`() {
-        val s = store()
-        YamlLobbyRepository(s).setLobby(WorldPosition("lobby", 1.0, 2.0, 3.0))
+    fun `repositories never write config yml`() {
         val file = File(folder, "config.yml")
-        val yaml = YamlConfiguration.loadConfiguration(file)
+        val yaml = YamlConfiguration()
         yaml.set("prefix", "&9[X] ")
         yaml.save(file)
+        val before = file.readBytes()
 
-        YamlSignRepository(s).setSign("a1", WorldPosition("world", 5.0, 64.0, 5.0))
-        assertEquals("&9[X] ", YamlConfiguration.loadConfiguration(file).getString("prefix"))
+        lobby().setLobby(WorldPosition("lobby", 1.0, 2.0, 3.0))
+        signs().setSign("a1", WorldPosition("world", 5.0, 64.0, 5.0))
+        assertArrayEquals(before, file.readBytes())
+    }
+
+    @Test
+    fun `sign index is rebuilt from arena files by a new instance`() {
+        signs().setSign("a1", WorldPosition("world", 5.0, 64.0, 5.0))
+        // 別インスタンスは index を持たないので arena/<name>.yml から構築する
+        assertEquals("a1", signs().signOwner("world", 5.0, 64.0, 5.0))
+        assertEquals(5.0, signs().signLocation("a1")!!.x)
+    }
+
+    @Test
+    fun `setSign releases old position when re-registered`() {
+        val repo = signs()
+        repo.setSign("a1", WorldPosition("world", 5.0, 64.0, 5.0))
+        repo.setSign("a1", WorldPosition("world", 9.0, 64.0, 9.0))
+        assertNull(repo.signOwner("world", 5.0, 64.0, 5.0))
+        assertEquals("a1", repo.signOwner("world", 9.0, 64.0, 9.0))
+        assertEquals(9.0, repo.signLocation("a1")!!.x)
+    }
+
+    @Test
+    fun `clearSign does not recreate a deleted arena file`() {
+        val repo = signs()
+        repo.setSign("a1", WorldPosition("world", 5.0, 64.0, 5.0))
+        arenas().delete("a1")
+        repo.clearSign("a1")
+        assertFalse(File(folder, "arena/a1.yml").exists())
+        assertNull(repo.signOwner("world", 5.0, 64.0, 5.0))
+    }
+
+    @Test
+    fun `sign section survives arena save`() {
+        signs().setSign("a1", WorldPosition("world", 5.0, 64.0, 5.0))
+        arenas().save(ArenaDefinition(ArenaId("a1"), enabled = true))
+        val yaml = YamlConfiguration.loadConfiguration(File(folder, "arena/a1.yml"))
+        assertNotNull(yaml.getConfigurationSection("sign"))
+        assertEquals("a1", signs().signOwner("world", 5.0, 64.0, 5.0))
     }
 
     @Test

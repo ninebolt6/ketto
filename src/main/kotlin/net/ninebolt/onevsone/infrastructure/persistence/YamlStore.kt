@@ -27,7 +27,7 @@ class YamlStore(folder: File, private val logger: Logger) {
     internal val statsDir = File(folder, "stats")
     internal val arenaListFile = File(folder, "arenalist.yml")
     internal val playersFile = File(statusDir, "players.yml")
-    internal val configFile = File(folder, "config.yml")
+    internal val lobbyFile = File(folder, "lobby.yml")
 
     init {
         folder.mkdirs()
@@ -72,10 +72,6 @@ class YamlStore(folder: File, private val logger: Logger) {
             throw PersistenceFailure("Could not save YAML file: ${file.path}", e)
         }
     }
-
-    internal fun loadConfig(): YamlConfiguration = load(configFile)
-
-    internal fun saveConfig(yaml: YamlConfiguration) = save(yaml, configFile)
 
     // ---- コーデック --------------------------------------------------------
 

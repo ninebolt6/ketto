@@ -5,6 +5,7 @@ import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.application.ArenaRegistry
 import net.ninebolt.onevsone.application.PlayerRecoveryService
 import net.ninebolt.onevsone.infrastructure.paper.ArenaListener
+import net.ninebolt.onevsone.infrastructure.paper.ArenaSignListener
 import net.ninebolt.onevsone.infrastructure.paper.Messages
 import net.ninebolt.onevsone.infrastructure.paper.OneVsOneCommand
 import net.ninebolt.onevsone.infrastructure.paper.PaperEquipmentAdapter
@@ -75,9 +76,11 @@ class OneVsOnePlugin : JavaPlugin() {
 
         val executor = OneVsOneCommand(this, service, admin, messages)
         val command = getCommand("1vs1")
+        @Suppress("UsePropertyAccessSyntax") // false positive
         command?.setExecutor(executor)
         command?.tabCompleter = executor
-        server.pluginManager.registerEvents(ArenaListener(service, admin, lookup, messages), this)
+        server.pluginManager.registerEvents(ArenaListener(service, lookup, messages), this)
+        server.pluginManager.registerEvents(ArenaSignListener(service, admin, messages), this)
     }
 
     override fun onDisable() {

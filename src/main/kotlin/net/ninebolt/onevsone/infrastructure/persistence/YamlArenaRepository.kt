@@ -48,7 +48,7 @@ class YamlArenaRepository(private val store: YamlStore) : ArenaRepository {
         )
     }
 
-    /** enabled とスポーンのみを保存。inventory セクションは装備側の責務なので保持する。 */
+    /** enabled とスポーンのみを保存。inventory(装備)・sign(看板) セクションは各責務側が持つので保持する。 */
     override fun save(arena: ArenaDefinition) {
         val file = store.arenaFile(arena.name)
         val yaml = store.load(file)

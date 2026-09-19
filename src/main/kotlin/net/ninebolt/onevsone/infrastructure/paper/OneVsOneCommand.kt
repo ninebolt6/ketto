@@ -134,6 +134,7 @@ class OneVsOneCommand(
             "disable" -> arenaDisable(sender, args)
             "setinv" -> arenaSetInv(sender, args)
             "setsign" -> arenaSetSign(sender, args)
+            "removesign" -> arenaRemoveSign(sender, args)
             else -> messages.send(sender, messages.usageArena)
         }
     }
@@ -306,6 +307,27 @@ class OneVsOneCommand(
         target.location.toWorldPosition()?.let { admin.setSign(definition.name, it) }
     }
 
+    private fun arenaRemoveSign(sender: CommandSender, args: Array<String>) {
+        if (!sender.isOp) {
+            messages.send(sender, messages.noPermission)
+            return
+        }
+        if (args.size != 3) {
+            messages.send(sender, messages.usageRemoveSign)
+            return
+        }
+        if (admin.definition(args[2]) == null) {
+            messages.send(sender, messages.noArena)
+            return
+        }
+        if (admin.signLocation(args[2]) == null) {
+            messages.send(sender, messages.signNotRegistered)
+            return
+        }
+        admin.clearSign(args[2])
+        messages.send(sender, messages.signRemoved(args[2]))
+    }
+
     override fun onTabComplete(
         sender: CommandSender,
         command: Command,
@@ -323,7 +345,7 @@ class OneVsOneCommand(
         if (args[0].lowercase(Locale.ROOT) == "arena") {
             if (args.size == 2) {
                 val subs = if (sender.isOp) {
-                    listOf("info", "create", "remove", "setspawn1", "setspawn2", "enable", "disable", "setInv", "setsign")
+                    listOf("info", "create", "remove", "setspawn1", "setspawn2", "enable", "disable", "setInv", "setsign", "removesign")
                 } else {
                     listOf("info")
                 }

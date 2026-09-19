@@ -3,30 +3,15 @@ package net.ninebolt.onevsone.infrastructure.persistence
 import net.ninebolt.onevsone.application.port.LobbyRepository
 import net.ninebolt.onevsone.domain.WorldPosition
 
-/** config.yml のロビー座標の永続化。 */
+/** lobby.yml のロビー座標の永続化。 */
 class YamlLobbyRepository(private val store: YamlStore) : LobbyRepository {
 
-    override fun lobby(): WorldPosition? {
-        val cfg = store.loadConfig()
-        val world = cfg.getString("world") ?: return null
-        return WorldPosition(
-            world = world,
-            x = cfg.getDouble("x"),
-            y = cfg.getDouble("y"),
-            z = cfg.getDouble("z"),
-            yaw = cfg.getDouble("yaw").toFloat(),
-            pitch = cfg.getDouble("pitch").toFloat()
-        )
-    }
+    override fun lobby(): WorldPosition? =
+        store.readLocation(store.load(store.lobbyFile), "lobby")
 
     override fun setLobby(position: WorldPosition) {
-        val cfg = store.loadConfig()
-        cfg.set("world", position.world)
-        cfg.set("x", position.x)
-        cfg.set("y", position.y)
-        cfg.set("z", position.z)
-        cfg.set("yaw", position.yaw.toDouble())
-        cfg.set("pitch", position.pitch.toDouble())
-        store.saveConfig(cfg)
+        val yaml = store.load(store.lobbyFile)
+        store.writeLocation(yaml, "lobby", position)
+        store.save(yaml, store.lobbyFile)
     }
 }

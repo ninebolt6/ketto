@@ -6,6 +6,7 @@ import io.mockk.verify
 import net.ninebolt.onevsone.domain.ArenaId
 import net.ninebolt.onevsone.domain.WorldPosition
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.breakEvent
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.contains
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.interact
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.signBlock
@@ -49,15 +50,15 @@ class ArenaListenerSignTest {
         val p1 = env.player("Alice")
 
         val unregistered = interact(p1, env.signBlock(9, 64, 9))
-        env.listener.onInteract(unregistered)
+        env.signListener.onInteract(unregistered)
         assertNull(env.service.arenaIdOf(p1.uniqueId))
 
         val registered = interact(p1, env.signBlock(3, 64, 3))
-        env.listener.onInteract(registered)
+        env.signListener.onInteract(registered)
         assertEquals(arena, env.service.arenaIdOf(p1.uniqueId))
 
         val offhand = interact(env.player("Bob"), env.signBlock(3, 64, 3), EquipmentSlot.OFF_HAND)
-        env.listener.onInteract(offhand)
+        env.signListener.onInteract(offhand)
         assertNull(env.service.arenaIdOf(env.players.values.first { it.name == "Bob" }.uniqueId))
     }
 
@@ -72,7 +73,7 @@ class ArenaListenerSignTest {
         env.join(p2, arena)
 
         val p3 = env.player("Carol")
-        env.listener.onInteract(interact(p3, block))
+        env.signListener.onInteract(interact(p3, block))
         verify(exactly = 1) { p3.sendMessage(contains("このアリーナは現在ゲーム中です")) }
     }
 
@@ -85,12 +86,46 @@ class ArenaListenerSignTest {
         val block = mockk<Block>(relaxed = true)
         every { block.state } returns mockk<BlockState>(relaxed = true)
         every { block.world } returns env.world()
-        env.listener.onInteract(interact(p1, block))
+        env.signListener.onInteract(interact(p1, block))
 
         val leftClick = interact(p1, env.signBlock(3, 64, 3))
         every { leftClick.action } returns Action.LEFT_CLICK_BLOCK
-        env.listener.onInteract(leftClick)
+        env.signListener.onInteract(leftClick)
         assertNull(env.service.arenaIdOf(p1.uniqueId))
+    }
+
+    @Test
+    fun `registered sign cannot be broken until unregistered`() {
+        env.newArena()
+        env.signRepo.setSign("arena1", WorldPosition("world", 3.0, 64.0, 3.0))
+        val p1 = env.player("Alice")
+
+        val registered = breakEvent(p1, env.signBlock(3, 64, 3))
+        env.signListener.onBreak(registered)
+        verify(exactly = 1) { registered.isCancelled = true }
+
+        val unregistered = breakEvent(p1, env.signBlock(9, 64, 9))
+        env.signListener.onBreak(unregistered)
+        verify(exactly = 0) { unregistered.isCancelled = true }
+
+        env.admin.clearSign("arena1")
+        val freed = breakEvent(p1, env.signBlock(3, 64, 3))
+        env.signListener.onBreak(freed)
+        verify(exactly = 0) { freed.isCancelled = true }
+    }
+
+    @Test
+    fun `non sign break is ignored`() {
+        env.newArena()
+        env.signRepo.setSign("arena1", WorldPosition("world", 3.0, 64.0, 3.0))
+        val p1 = env.player("Alice")
+
+        val block = mockk<Block>(relaxed = true)
+        every { block.state } returns mockk<BlockState>(relaxed = true)
+        every { block.world } returns env.world()
+        val event = breakEvent(p1, block)
+        env.signListener.onBreak(event)
+        verify(exactly = 0) { event.isCancelled = true }
     }
 
     @Test

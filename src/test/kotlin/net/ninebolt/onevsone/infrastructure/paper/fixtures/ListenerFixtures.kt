@@ -10,6 +10,7 @@ import org.bukkit.block.sign.Side
 import org.bukkit.block.sign.SignSide
 import org.bukkit.entity.Player
 import org.bukkit.event.block.Action
+import org.bukkit.event.block.BlockBreakEvent
 import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerMoveEvent
@@ -68,5 +69,12 @@ internal fun interact(
     every { event.action } returns Action.RIGHT_CLICK_BLOCK
     every { event.hand } returns hand
     every { event.clickedBlock } returns block
+    return event
+}
+
+internal fun breakEvent(player: Player, block: Block): BlockBreakEvent {
+    val event = mockk<BlockBreakEvent>(relaxed = true)
+    every { event.player } returns player
+    every { event.block } returns block
     return event
 }

@@ -22,6 +22,7 @@ import net.ninebolt.onevsone.domain.ArenaId
 import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.WorldPosition
 import net.ninebolt.onevsone.infrastructure.paper.ArenaListener
+import net.ninebolt.onevsone.infrastructure.paper.ArenaSignListener
 import net.ninebolt.onevsone.infrastructure.paper.Messages
 import net.ninebolt.onevsone.infrastructure.paper.OneVsOneCommand
 import net.ninebolt.onevsone.infrastructure.paper.PaperEquipmentAdapter
@@ -104,7 +105,8 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         private set
     var admin = ArenaAdministrationService(registry, arenaRepo, signRepo, lobbyRepo, equipment, presentation, service)
         private set
-    val listener: ArenaListener by lazy { ArenaListener(service, admin, lookup, messages) }
+    val listener: ArenaListener by lazy { ArenaListener(service, lookup, messages) }
+    val signListener: ArenaSignListener by lazy { ArenaSignListener(service, admin, messages) }
     val command: OneVsOneCommand by lazy { OneVsOneCommand(plugin, service, admin, messages) }
 
     private fun buildService() = ArenaApplicationService(
@@ -318,7 +320,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     /** 看板参加と同じ経路で join し、応答メッセージも配送する。 */
     fun join(player: Player, arena: ArenaId): JoinReply {
         val reply = service.join(player.uniqueId, player.name, arena)
-        listener.renderJoin(player, arena.name, reply)
+        signListener.renderJoin(player, arena.name, reply)
         return reply
     }
 
