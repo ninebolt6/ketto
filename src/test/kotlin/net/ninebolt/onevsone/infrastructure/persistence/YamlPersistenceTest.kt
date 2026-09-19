@@ -3,9 +3,9 @@ package net.ninebolt.onevsone.infrastructure.persistence
 import net.ninebolt.onevsone.application.port.BackupRef
 import net.ninebolt.onevsone.domain.ArenaDefinition
 import net.ninebolt.onevsone.domain.ArenaId
+import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.MatchId
-import net.ninebolt.onevsone.domain.MatchView
 import net.ninebolt.onevsone.domain.Participant
 import net.ninebolt.onevsone.domain.WorldPosition
 import net.ninebolt.onevsone.domain.isValidArenaName
@@ -53,9 +53,10 @@ class YamlPersistenceTest {
 
         val loaded = arenas().find("a1")!!
         assertTrue(loaded.enabled)
-        assertEquals(1.5, loaded.spawn1!!.x)
-        assertEquals(12.34f, loaded.spawn1!!.yaw, 0.001f)
-        assertEquals(-56.78f, loaded.spawn1!!.pitch, 0.001f)
+        val spawn1 = loaded.spawn1!!
+        assertEquals(1.5, spawn1.x)
+        assertEquals(12.34f, spawn1.yaw, 0.001f)
+        assertEquals(-56.78f, spawn1.pitch, 0.001f)
     }
 
     @Test
@@ -85,13 +86,14 @@ class YamlPersistenceTest {
     fun `status file persists names keyed players and wins`() {
         val id1 = UUID.randomUUID()
         val id2 = UUID.randomUUID()
-        val view = MatchView(
+        val match = ArenaMatch(
             ArenaId("a1"),
-            ArenaState.INGAME,
-            listOf(Participant(id1, "Alice"), Participant(id2, "Bob")),
-            mapOf(id1 to 2)
+            requiredWins = 3,
+            state = ArenaState.INGAME,
+            participants = listOf(Participant(id1, "Alice"), Participant(id2, "Bob")),
+            wins = mapOf(id1 to 2)
         )
-        matchState().saveStatus(view)
+        matchState().saveStatus(match)
 
         val yaml = YamlConfiguration.loadConfiguration(File(folder, "status/a1.yml"))
         assertEquals("INGAME", yaml.getString("status"))
@@ -260,7 +262,7 @@ class YamlPersistenceTest {
     fun `deleteArena removes arena and status files`() {
         val repo = arenas()
         repo.save(ArenaDefinition(ArenaId("a1")))
-        matchState().saveStatus(MatchView(ArenaId("a1"), ArenaState.WAITING, emptyList(), emptyMap()))
+        matchState().saveStatus(ArenaMatch(ArenaId("a1"), requiredWins = 3))
         assertTrue(File(folder, "arena/a1.yml").exists())
         repo.delete("a1")
         assertFalse(File(folder, "arena/a1.yml").exists())

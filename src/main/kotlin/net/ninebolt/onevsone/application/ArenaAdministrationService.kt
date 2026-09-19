@@ -24,16 +24,16 @@ class ArenaAdministrationService(
     fun isValidName(name: String): Boolean = isValidArenaName(name)
 
     /** 登録順の arena 名一覧(タブ補完用)。 */
-    fun arenaNames(): List<String> = registry.definitions.keys.map { it.name }
+    fun arenaNames(): List<String> = registry.definitionIds().map { it.name }
 
-    fun definition(name: String): ArenaDefinition? = registry.definitions[ArenaId(name)]
+    fun definition(name: String): ArenaDefinition? = registry.definition(ArenaId(name))
 
     fun create(name: String): Boolean {
         if (!isValidArenaName(name)) return false
-        if (registry.definitions.keys.any { it.name.equals(name, ignoreCase = true) }) return false
+        if (registry.definitionIds().any { it.name.equals(name, ignoreCase = true) }) return false
         val definition = ArenaDefinition(ArenaId(name))
-        registry.definitions[definition.id] = definition
-        registry.matches[definition.id] = ArenaMatch(definition.id, matches.requiredWins)
+        registry.putDefinition(definition)
+        registry.installMatch(ArenaMatch(definition.id, matches.requiredWins))
         arenas.save(definition)
         arenas.saveArenaNames(arenaNames())
         return true
@@ -41,10 +41,10 @@ class ArenaAdministrationService(
 
     fun remove(name: String): Boolean {
         val id = ArenaId(name)
-        if (!registry.definitions.containsKey(id)) return false
+        if (registry.definition(id) == null) return false
         matches.abort(id)
-        registry.definitions.remove(id)
-        registry.matches.remove(id)
+        registry.removeDefinition(id)
+        registry.removeMatch(id)
         arenas.saveArenaNames(arenaNames())
         arenas.delete(name)
         arenas.clearSign(name)
@@ -52,26 +52,32 @@ class ArenaAdministrationService(
     }
 
     fun setEnabled(name: String, enabled: Boolean): ToggleReply {
-        val definition = registry.definitions[ArenaId(name)] ?: return ToggleReply.NotFound
+        val definition = registry.definition(ArenaId(name)) ?: return ToggleReply.NotFound
         if (definition.enabled == enabled) {
             return if (enabled) ToggleReply.AlreadyEnabled else ToggleReply.AlreadyDisabled
         }
-        definition.enabled = enabled
-        arenas.save(definition)
+        val updated = definition.copy(enabled = enabled)
+        registry.putDefinition(updated)
+        arenas.save(updated)
         if (!enabled) matches.abort(definition.id)
         return ToggleReply.Changed
     }
 
     fun setSpawn(name: String, slot: Int, position: WorldPosition): Boolean {
-        val definition = registry.definitions[ArenaId(name)] ?: return false
-        if (slot == 1) definition.spawn1 = position else definition.spawn2 = position
-        arenas.save(definition)
+        val definition = registry.definition(ArenaId(name)) ?: return false
+        val updated = if (slot == 1) {
+            definition.copy(spawn1 = position)
+        } else {
+            definition.copy(spawn2 = position)
+        }
+        registry.putDefinition(updated)
+        arenas.save(updated)
         return true
     }
 
     /** 実行者の現在装備をアリーナ装備として保存する。 */
     fun setKit(name: String, playerId: UUID): Boolean {
-        val definition = registry.definitions[ArenaId(name)] ?: return false
+        val definition = registry.definition(ArenaId(name)) ?: return false
         equipment.saveKit(definition.id, playerId)
         return true
     }
@@ -86,9 +92,10 @@ class ArenaAdministrationService(
         arenas.signOwner(world, x, y, z)
 
     fun setSign(name: String, position: WorldPosition): Boolean {
-        val definition = registry.definitions[ArenaId(name)] ?: return false
+        val definition = registry.definition(ArenaId(name)) ?: return false
         arenas.setSign(name, position)
-        presentation.updateSign(definition.id, registry.matches[definition.id]!!.state())
+        val state = registry.match(definition.id)?.state ?: return true
+        presentation.updateSign(definition.id, state)
         return true
     }
 }

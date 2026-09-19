@@ -12,4 +12,15 @@ enum class ArenaState {
 
     /** Join 看板で参加を受け付けられる状態か。 */
     fun isJoinable(): Boolean = this == WAITING || this == ONEMORE
+
+    /**
+     * この状態で敗北通知を受理するか。
+     * 死亡は INGAME のみ、落下(非死亡)は INGAME/ROUNDCOUNTDOWN で受理する。
+     * recordDefeat と resolvesVoidFall の双方がこの規則を共有する。
+     */
+    fun acceptsDefeat(cause: DefeatCause): Boolean = when (this) {
+        INGAME -> true
+        ROUNDCOUNTDOWN -> cause == DefeatCause.FALL
+        else -> false
+    }
 }

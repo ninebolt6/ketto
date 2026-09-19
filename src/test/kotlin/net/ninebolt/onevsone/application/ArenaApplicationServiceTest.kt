@@ -54,7 +54,7 @@ class ArenaApplicationServiceTest {
         assertEquals(JoinReply.JoinedWaiting, app.service.join(p.id, p.name, ArenaId("a1")))
         assertEquals(JoinReply.AlreadyJoined, app.service.join(p.id, p.name, ArenaId("a2")))
         assertEquals(ArenaId("a1"), app.service.arenaIdOf(p.id))
-        assertEquals(ArenaState.WAITING, app.service.matchView("a2")!!.state)
+        assertEquals(ArenaState.WAITING, app.service.matchOf("a2")!!.state)
     }
 
     @Test
@@ -190,7 +190,7 @@ class ArenaApplicationServiceTest {
         assertFalse(app.service.defeat(p2.id, DefeatCause.FALL))
         app.scheduler.runOneShots()
         assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
-        assertEquals(2, app.service.matchView("arena1")!!.winsOf(p1.id))
+        assertEquals(2, app.service.matchOf("arena1")!!.winsOf(p1.id))
     }
 
     @Test
@@ -201,7 +201,7 @@ class ArenaApplicationServiceTest {
         assertTrue(app.service.defeat(p2.id, DefeatCause.DEATH))
         assertFalse(app.service.defeat(p2.id, DefeatCause.DEATH))
         assertFalse(app.service.defeat(p2.id, DefeatCause.FALL))
-        assertEquals(1, app.service.matchView("arena1")!!.winsOf(p1.id))
+        assertEquals(1, app.service.matchOf("arena1")!!.winsOf(p1.id))
         assertTrue(app.stats.stats.isEmpty())
     }
 

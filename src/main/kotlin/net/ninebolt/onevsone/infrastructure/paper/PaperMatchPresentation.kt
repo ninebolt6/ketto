@@ -4,8 +4,8 @@ import net.ninebolt.onevsone.application.port.ArenaRepository
 import net.ninebolt.onevsone.application.port.FailureReporter
 import net.ninebolt.onevsone.application.port.MatchPresentationPort
 import net.ninebolt.onevsone.domain.ArenaId
+import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.ArenaState
-import net.ninebolt.onevsone.domain.MatchView
 import net.ninebolt.onevsone.domain.WorldPosition
 import org.bukkit.Color
 import org.bukkit.FireworkEffect
@@ -104,19 +104,19 @@ class PaperMatchPresentation(
         firework.fireworkMeta = meta
     }
 
-    override fun updateScoreboard(view: MatchView) {
+    override fun updateScoreboard(match: ArenaMatch) {
         val manager = server.scoreboardManager
         val board = manager.newScoreboard
         val objective = board.registerNewObjective(
             "1vs1",
             Criteria.DUMMY,
-            messages.component(messages.scoreboardTitle(view.arenaId.name))
+            messages.component(messages.scoreboardTitle(match.arenaId.name))
         )
         objective.displaySlot = DisplaySlot.SIDEBAR
-        for (participant in view.participants) {
-            objective.getScore(messages.scoreboardEntry(participant.name)).score = view.winsOf(participant.id)
+        for (participant in match.participants) {
+            objective.getScore(messages.scoreboardEntry(participant.name)).score = match.winsOf(participant.id)
         }
-        for (participant in view.participants) {
+        for (participant in match.participants) {
             player(participant.id)?.scoreboard = board
         }
     }

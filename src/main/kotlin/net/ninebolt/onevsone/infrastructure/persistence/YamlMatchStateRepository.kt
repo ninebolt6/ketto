@@ -2,24 +2,24 @@ package net.ninebolt.onevsone.infrastructure.persistence
 
 import net.ninebolt.onevsone.application.port.MatchStateRepository
 import net.ninebolt.onevsone.domain.ArenaId
-import net.ninebolt.onevsone.domain.MatchView
+import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.Participant
 import org.bukkit.configuration.file.YamlConfiguration
 
 /** status/<name>.yml と players.yml の参加登録(players/arena セクション)の永続化。 */
 class YamlMatchStateRepository(private val store: YamlStore) : MatchStateRepository {
 
-    override fun saveStatus(view: MatchView) {
+    override fun saveStatus(match: ArenaMatch) {
         val yaml = YamlConfiguration()
-        yaml.set("status", view.state.name)
-        yaml.set("players", view.participants.map { it.name })
+        yaml.set("status", match.state.name)
+        yaml.set("players", match.participants.map { it.name })
         val winMap = mutableMapOf<String, Int>()
-        for ((id, wins) in view.wins) {
-            val name = view.participants.firstOrNull { it.id == id }?.name ?: continue
+        for ((id, wins) in match.wins) {
+            val name = match.participants.firstOrNull { it.id == id }?.name ?: continue
             winMap[name] = wins
         }
         yaml.set("win", winMap)
-        store.save(yaml, store.statusFile(view.arenaId.name))
+        store.save(yaml, store.statusFile(match.arenaId.name))
     }
 
     override fun registerParticipant(participant: Participant, arena: ArenaId) {

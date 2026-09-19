@@ -4,6 +4,7 @@ import net.ninebolt.onevsone.application.ArenaAdministrationService
 import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.application.LeaveReply
 import net.ninebolt.onevsone.application.ToggleReply
+import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.domain.ArenaState
 import org.bukkit.block.Sign
 import org.bukkit.command.Command
@@ -102,8 +103,13 @@ class OneVsOneCommand(
     }
 
     private fun showStats(sender: CommandSender, uuid: UUID) {
-        // 破損した stats は PersistenceFailure として伝播する
-        val stats = service.statsFor(uuid)
+        // 破損した stats は警告のうえ「なし」として扱う
+        val stats = try {
+            service.statsFor(uuid)
+        } catch (e: PersistenceFailure) {
+            plugin.logger.warning("Could not read stats for $uuid: ${e.message}")
+            null
+        }
         if (stats == null) {
             messages.send(sender, messages.noStats)
             return
@@ -137,20 +143,20 @@ class OneVsOneCommand(
             messages.send(sender, messages.usageArena)
             return
         }
-        val view = service.matchView(args[2])
-        if (view == null) {
+        val match = service.matchOf(args[2])
+        if (match == null) {
             messages.send(sender, messages.noArena)
             return
         }
-        messages.send(sender, messages.arenaHeader(view.arenaId.name))
-        messages.send(sender, messages.arenaState(messages.stateDisplay(view.state)))
-        if ((view.state == ArenaState.ROUNDCOUNTDOWN || view.state == ArenaState.INGAME) &&
-            view.participants.size == 2
+        messages.send(sender, messages.arenaHeader(match.arenaId.name))
+        messages.send(sender, messages.arenaState(messages.stateDisplay(match.state)))
+        if ((match.state == ArenaState.ROUNDCOUNTDOWN || match.state == ArenaState.INGAME) &&
+            match.full
         ) {
-            val p1 = view.participants[0]
-            val p2 = view.participants[1]
+            val p1 = match.participants[0]
+            val p2 = match.participants[1]
             messages.send(sender, messages.versus(p1.name, p2.name))
-            messages.send(sender, messages.winCount(view.winsOf(p1.id), view.winsOf(p2.id)))
+            messages.send(sender, messages.winCount(match.winsOf(p1.id), match.winsOf(p2.id)))
         }
     }
 

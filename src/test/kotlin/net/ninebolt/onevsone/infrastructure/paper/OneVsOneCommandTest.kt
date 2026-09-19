@@ -224,9 +224,9 @@ class OneVsOneCommandTest {
         `when`(op.location).thenReturn(Location(w, 1.5, 65.25, -3.0, 33.3f, 12.5f))
         run(op, "arena", "setspawn1", "arena1")
         verify(op).sendMessage(contains("のスポーン1を設定しました"))
-        val loaded = env.arenaRepo.find("arena1")!!
-        assertEquals(33.3f, loaded.spawn1!!.yaw, 0.001f)
-        assertEquals(65.25, loaded.spawn1!!.y)
+        val spawn1 = env.arenaRepo.find("arena1")!!.spawn1!!
+        assertEquals(33.3f, spawn1.yaw, 0.001f)
+        assertEquals(65.25, spawn1.y)
     }
 
     @Test

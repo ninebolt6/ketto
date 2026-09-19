@@ -68,7 +68,7 @@ class PaperArenaFlowTest {
         return serialized(captor.value)
     }
 
-    private fun view(name: String = "arena1") = env.service.matchView(name)!!
+    private fun view(name: String = "arena1") = env.service.matchOf(name)!!
 
     private fun playersYaml() = YamlConfiguration.loadConfiguration(File(folder, "status/players.yml"))
 
@@ -867,8 +867,8 @@ class PaperArenaFlowTest {
         assertEquals(JoinReply.JoinedWaiting, env.service.join(p1.uniqueId, p1.name, arena))
         assertEquals(JoinReply.JoinedStarting, env.service.join(p2.uniqueId, p2.name, arena))
         env.tick(6)
-        assertEquals(ArenaState.WAITING, env.service.matchView("spy-arena")!!.state)
-        assertTrue(env.service.matchView("spy-arena")!!.participants.isEmpty())
+        assertEquals(ArenaState.WAITING, env.service.matchOf("spy-arena")!!.state)
+        assertTrue(env.service.matchOf("spy-arena")!!.participants.isEmpty())
         assertNull(env.service.arenaIdOf(p1.uniqueId))
         assertNull(env.service.arenaIdOf(p2.uniqueId))
         verify(p1.inventory, never()).clear()
@@ -891,8 +891,8 @@ class PaperArenaFlowTest {
         env.service.join(p1.uniqueId, p1.name, arena)
         env.service.join(p2.uniqueId, p2.name, arena)
         env.service.abort(arena)
-        assertEquals(ArenaState.WAITING, env.service.matchView("spy-arena")!!.state)
-        assertTrue(env.service.matchView("spy-arena")!!.participants.isEmpty())
+        assertEquals(ArenaState.WAITING, env.service.matchOf("spy-arena")!!.state)
+        assertTrue(env.service.matchOf("spy-arena")!!.participants.isEmpty())
         assertNull(env.service.arenaIdOf(p1.uniqueId))
         assertNull(env.service.arenaIdOf(p2.uniqueId))
     }
@@ -975,7 +975,7 @@ class PaperArenaFlowTest {
         env.tick(6)
 
         org.junit.jupiter.api.Assertions.assertDoesNotThrow { env.service.defeat(p2.uniqueId, DefeatCause.FALL) }
-        assertEquals(ArenaState.WAITING, env.service.matchView("spy-arena")!!.state)
+        assertEquals(ArenaState.WAITING, env.service.matchOf("spy-arena")!!.state)
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
         assertNull(env.service.arenaIdOf(p1.uniqueId))

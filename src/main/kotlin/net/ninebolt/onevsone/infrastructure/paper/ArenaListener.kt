@@ -36,7 +36,7 @@ class ArenaListener(
     @EventHandler(priority = EventPriority.HIGH)
     fun onDeath(event: PlayerDeathEvent) {
         val player = event.entity
-        if (service.matchViewOf(player.uniqueId) == null) return
+        if (service.matchOf(player.uniqueId) == null) return
         event.keepInventory = true
         event.drops.clear()
         if (!service.defeat(player.uniqueId, DefeatCause.DEATH)) {
@@ -47,8 +47,8 @@ class ArenaListener(
     @EventHandler(priority = EventPriority.HIGH)
     fun onDamage(event: EntityDamageEvent) {
         val player = event.entity as? Player ?: return
-        val view = service.matchViewOf(player.uniqueId) ?: return
-        if (ParticipantRestrictions.forState(view.state).damageCancelled) {
+        val match = service.matchOf(player.uniqueId) ?: return
+        if (ParticipantRestrictions.forState(match.state).damageCancelled) {
             event.isCancelled = true
         }
     }
@@ -70,23 +70,23 @@ class ArenaListener(
     @EventHandler
     fun onMove(event: PlayerMoveEvent) {
         if (event is PlayerTeleportEvent) return
-        val view = service.matchViewOf(event.player.uniqueId) ?: return
-        if (ParticipantRestrictions.forState(view.state).horizontalMoveFrozen) {
+        val match = service.matchOf(event.player.uniqueId) ?: return
+        if (ParticipantRestrictions.forState(match.state).horizontalMoveFrozen) {
             val from = event.from
             val to = event.to
             if (from.blockX != to.blockX || from.blockZ != to.blockZ) {
                 event.setTo(from)
             }
         }
-        if (view.resolvesVoidFall && event.to.y <= 0) {
+        if (match.resolvesVoidFall && event.to.y <= 0) {
             service.defeat(event.player.uniqueId, DefeatCause.FALL)
         }
     }
 
     @EventHandler
     fun onBreak(event: BlockBreakEvent) {
-        val view = service.matchViewOf(event.player.uniqueId) ?: return
-        if (ParticipantRestrictions.forState(view.state).blockBreakCancelled) {
+        val match = service.matchOf(event.player.uniqueId) ?: return
+        if (ParticipantRestrictions.forState(match.state).blockBreakCancelled) {
             event.isCancelled = true
         }
     }
@@ -103,9 +103,9 @@ class ArenaListener(
             block.y.toDouble(),
             block.z.toDouble()
         ) ?: return
-        val view = service.matchView(name) ?: return
-        if (view.joinable) {
-            renderJoin(event.player, name, service.join(event.player.uniqueId, event.player.name, view.arenaId))
+        val match = service.matchOf(name) ?: return
+        if (match.joinable) {
+            renderJoin(event.player, name, service.join(event.player.uniqueId, event.player.name, match.arenaId))
         } else {
             messages.send(event.player, messages.arenaInGame)
         }
@@ -128,8 +128,8 @@ class ArenaListener(
 
     @EventHandler
     fun onCommand(event: PlayerCommandPreprocessEvent) {
-        val view = service.matchViewOf(event.player.uniqueId) ?: return
-        if (ParticipantRestrictions.forState(view.state).commandsBlocked) {
+        val match = service.matchOf(event.player.uniqueId) ?: return
+        if (ParticipantRestrictions.forState(match.state).commandsBlocked) {
             event.isCancelled = true
             messages.send(event.player, messages.commandBlocked)
         }

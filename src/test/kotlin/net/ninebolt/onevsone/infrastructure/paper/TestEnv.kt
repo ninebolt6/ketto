@@ -274,13 +274,15 @@ class TestEnv(folder: File, requiredWins: Int = 3) {
 
     fun newArena(name: String = "arena1", enabled: Boolean = true): ArenaId {
         val id = ArenaId(name)
-        registry.definitions[id] = ArenaDefinition(
-            id,
-            enabled = enabled,
-            spawn1 = WorldPosition("world", 1.0, 64.0, 1.0),
-            spawn2 = WorldPosition("world", 2.0, 64.0, 2.0)
+        registry.putDefinition(
+            ArenaDefinition(
+                id,
+                enabled = enabled,
+                spawn1 = WorldPosition("world", 1.0, 64.0, 1.0),
+                spawn2 = WorldPosition("world", 2.0, 64.0, 2.0)
+            )
         )
-        registry.matches[id] = ArenaMatch(id, requiredWins)
+        registry.installMatch(ArenaMatch(id, requiredWins))
         return id
     }
 
@@ -311,7 +313,7 @@ class TestEnv(folder: File, requiredWins: Int = 3) {
         return reply
     }
 
-    fun state(name: String = "arena1") = service.matchView(name)?.state
+    fun state(name: String = "arena1") = service.matchOf(name)?.state
 
     fun close() {
         itemStackConstruction.close()

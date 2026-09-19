@@ -3,152 +3,174 @@ package net.ninebolt.onevsone.domain
 import java.util.UUID
 
 /**
- * 1 アリーナの参加者と進行状態を所有する集約。
- * 変更はメソッド経由のみ。Bukkit・スケジューラ・永続化は持たず、
- * タイミング制御のために世代トークン(MatchToken)を発行する。
+ * 1 アリーナの参加者と進行状態を所有する集約。immutable: 各操作は
+ * 新しい状態を持つ Transition を返し、このインスタンス自身は変化しない。
+ * Bukkit・スケジューラ・永続化は持たず、タイミング制御のために世代トークン
+ * (MatchToken)を発行する。participants の並び順 = 参加順 = スポーンスロット番号。
  */
-class ArenaMatch(
+data class ArenaMatch(
     val arenaId: ArenaId,
-    private val requiredWins: Int
+    val requiredWins: Int,
+    val state: ArenaState = ArenaState.WAITING,
+    val participants: List<Participant> = emptyList(),
+    val wins: Map<UUID, Int> = emptyMap(),
+    /**
+     * 敗北の解決(リスポーン・再装備)が完了するまでの重複決着ガード。
+     * 同じ解決区間での二重加点を防ぐ。
+     */
+    val resolving: Boolean = false,
+    val epoch: Long = 0L
 ) {
     companion object {
         const val MAX_PARTICIPANTS = 2
     }
 
-    private var state: ArenaState = ArenaState.WAITING
-    private val participants = mutableListOf<Participant>()
-    private val wins = mutableMapOf<UUID, Int>()
+    val token: MatchToken get() = MatchToken(epoch)
 
-    /**
-     * 敗北の解決(リスポーン・再装備)が完了するまでの重複決着ガード。
-     * 同じ解決区間での二重加点を防ぐ。
-     */
-    private var resolving: Boolean = false
+    /** Join 看板で参加を受け付けられる状態か。 */
+    val joinable: Boolean get() = state.isJoinable()
 
-    private var epoch: Long = 0L
+    /** 規定人数(2人)が在籍しているか。 */
+    val full: Boolean get() = participants.size == MAX_PARTICIPANTS
 
-    fun view(): MatchView = MatchView(arenaId, state, participants.toList(), wins.toMap())
+    /** Y<=0 落下を敗北として解決するか(落下を受理する状態かつ 2 人在籍)。 */
+    val resolvesVoidFall: Boolean
+        get() = state.acceptsDefeat(DefeatCause.FALL) && full
 
-    fun state(): ArenaState = state
+    /** 初回カウントダウンから INGAME へ進められる状態か。 */
+    val canBeginMatch: Boolean get() = state == ArenaState.COUNTDOWN && full
 
-    fun participantCount(): Int = participants.size
+    /** ラウンドカウントダウンから INGAME へ復帰できる状態か。 */
+    val canResumeRound: Boolean get() = state == ArenaState.ROUNDCOUNTDOWN && full
 
     fun participant(id: UUID): Participant? = participants.firstOrNull { it.id == id }
 
-    fun token(): MatchToken = MatchToken(epoch)
+    /** 参加者のスポーンスロット(0 始まり = spawn1/spawn2)。非参加なら null。 */
+    fun slotOf(id: UUID): Int? =
+        participants.indexOfFirst { it.id == id }.takeIf { it >= 0 }
 
-    /** 事前検証(永続化前に失敗を確定させるための非変更チェック)。 */
-    fun joinRejection(participant: Participant): Boolean =
-        !state.isJoinable() ||
-            participants.size >= MAX_PARTICIPANTS ||
-            participants.any { it.id == participant.id }
+    fun participantAt(slot: Int): Participant? = participants.getOrNull(slot)
 
-    fun join(participant: Participant): JoinOutcome {
-        if (joinRejection(participant)) return JoinOutcome.Rejected
-        participants += participant
-        return if (participants.size == 1) {
-            state = ArenaState.ONEMORE
-            JoinOutcome.FirstJoined
+    fun winsOf(id: UUID): Int = wins[id] ?: 0
+
+    fun join(participant: Participant): Transition<JoinOutcome> {
+        if (!state.isJoinable() || full || participants.any { it.id == participant.id }) {
+            return Transition(this, JoinOutcome.Rejected)
+        }
+        val joined = participants + participant
+        return if (joined.size == 1) {
+            Transition(copy(participants = joined, state = ArenaState.ONEMORE), JoinOutcome.FirstJoined)
         } else {
-            state = ArenaState.COUNTDOWN
-            JoinOutcome.MatchReady
+            Transition(copy(participants = joined, state = ArenaState.COUNTDOWN), JoinOutcome.MatchReady)
         }
     }
 
     /** ONEMORE 待機中の任意退出。退出しても持ち物には関知しない(未開始のため)。 */
-    fun leaveWaiting(id: UUID): LeaveOutcome {
-        if (state != ArenaState.ONEMORE) return LeaveOutcome.NotWaiting
+    fun leaveWaiting(id: UUID): Transition<LeaveOutcome> {
+        if (state != ArenaState.ONEMORE) return Transition(this, LeaveOutcome.NotWaiting)
         val participant = participant(id)
-        participants.removeIf { it.id == id }
-        epoch++
-        state = ArenaState.WAITING
-        return LeaveOutcome.Left(participant)
+        return Transition(
+            copy(
+                participants = participants.filterNot { it.id == id },
+                state = ArenaState.WAITING,
+                epoch = epoch + 1
+            ),
+            LeaveOutcome.Left(participant)
+        )
     }
 
     /**
      * 切断。未開始なら登録解除のみ、進行中なら相手を勝者とする不戦敗でマッチ終了。
      */
-    fun forfeit(id: UUID): QuitOutcome {
-        val participant = participant(id) ?: return QuitOutcome.NotParticipant
-        if (state == ArenaState.ONEMORE || state == ArenaState.WAITING || participants.size < MAX_PARTICIPANTS) {
-            participants.remove(participant)
-            epoch++
-            state = ArenaState.WAITING
-            return QuitOutcome.WaitingExit(participant)
+    fun forfeit(id: UUID): Transition<QuitOutcome> {
+        val participant = participant(id) ?: return Transition(this, QuitOutcome.NotParticipant)
+        if (state == ArenaState.ONEMORE || state == ArenaState.WAITING || !full) {
+            return Transition(
+                copy(
+                    participants = participants - participant,
+                    state = ArenaState.WAITING,
+                    epoch = epoch + 1
+                ),
+                QuitOutcome.WaitingExit(participant)
+            )
         }
         val winner = participants.first { it.id != id }
-        finishMatch()
-        return QuitOutcome.MatchEnded(winner, participant)
+        return Transition(finished(), QuitOutcome.MatchEnded(winner, participant))
     }
 
     /**
      * 死亡/落下の敗北通知。受理されれば RoundWon か MatchFinished。
      * 死亡は INGAME のみ、落下は INGAME/ROUNDCOUNTDOWN で受理する現挙動を維持。
      */
-    fun recordDefeat(id: UUID, cause: DefeatCause): DefeatOutcome {
-        if (state != ArenaState.INGAME &&
-            !(state == ArenaState.ROUNDCOUNTDOWN && cause == DefeatCause.FALL)
-        ) {
-            return DefeatOutcome.Rejected
-        }
-        if (participants.size != MAX_PARTICIPANTS || resolving) return DefeatOutcome.Rejected
-        val loser = participant(id) ?: return DefeatOutcome.Rejected
+    fun recordDefeat(id: UUID, cause: DefeatCause): Transition<DefeatOutcome> {
+        if (!state.acceptsDefeat(cause)) return Transition(this, DefeatOutcome.Rejected)
+        if (!full || resolving) return Transition(this, DefeatOutcome.Rejected)
+        val loser = participant(id) ?: return Transition(this, DefeatOutcome.Rejected)
         val winner = participants.first { it.id != id }
-        resolving = true
         // 加算前の累計勝数で終了判定。最終キルは勝数に加算しない。
-        if ((wins[winner.id] ?: 0) >= requiredWins - 1) {
-            finishMatch()
-            return DefeatOutcome.MatchFinished(winner, loser)
+        if (winsOf(winner.id) >= requiredWins - 1) {
+            return Transition(finished(), DefeatOutcome.MatchFinished(winner, loser))
         }
-        epoch++
-        wins[winner.id] = (wins[winner.id] ?: 0) + 1
-        state = ArenaState.ROUNDCOUNTDOWN
-        return DefeatOutcome.RoundWon(
-            round = wins.values.sum(),
-            winner = winner,
-            loser = loser
+        val next = copy(
+            state = ArenaState.ROUNDCOUNTDOWN,
+            resolving = true,
+            epoch = epoch + 1,
+            wins = wins + (winner.id to winsOf(winner.id) + 1)
+        )
+        return Transition(
+            next,
+            DefeatOutcome.RoundWon(
+                round = next.wins.values.sum(),
+                winner = winner,
+                loser = loser,
+                resolution = next.token
+            )
         )
     }
 
-    /** COUNTDOWN から INGAME への遷移(初回開始)。 */
-    fun beginMatch(): Boolean {
-        if (state != ArenaState.COUNTDOWN || participants.size != MAX_PARTICIPANTS) return false
-        state = ArenaState.INGAME
-        return true
-    }
+    /** COUNTDOWN から INGAME への遷移(初回開始)。受理されたら outcome=true。 */
+    fun beginMatch(): Transition<Boolean> =
+        if (canBeginMatch) {
+            Transition(copy(state = ArenaState.INGAME), true)
+        } else {
+            Transition(this, false)
+        }
 
     /** ROUNDCOUNTDOWN 完了で INGAME へ復帰。解決ガードもここで解放する。 */
-    fun resumeRound(): Boolean {
-        if (state != ArenaState.ROUNDCOUNTDOWN) return false
-        state = ArenaState.INGAME
-        resolving = false
-        return true
-    }
+    fun resumeRound(): Transition<Boolean> =
+        if (state == ArenaState.ROUNDCOUNTDOWN) {
+            Transition(copy(state = ArenaState.INGAME, resolving = false), true)
+        } else {
+            Transition(this, false)
+        }
 
     /**
      * 敗北解決区間の終了(リスポーン後の再装備完了、または非死亡ラウンドの次 tick)。
-     * 呼び出し側は token() で世代を照合してから呼ぶこと。
+     * RoundWon が発行した世代トークンと一致する場合のみガードを解放する。
+     * トークン不一致(中断・次ラウンド進行済み等)は no-op。
      */
-    fun releaseResolution() {
-        resolving = false
-    }
+    fun releaseResolution(token: MatchToken): ArenaMatch =
+        if (this.token == token) copy(resolving = false) else this
 
     /** 中断。進行中のカウントダウンや解決待ちコールバックは世代進行で無効化される。 */
-    fun abort(): List<Participant> {
-        epoch++
-        resolving = false
-        state = ArenaState.WAITING
-        val left = participants.toList()
-        participants.clear()
-        wins.clear()
-        return left
-    }
+    fun abort(): Transition<List<Participant>> =
+        Transition(
+            copy(
+                state = ArenaState.WAITING,
+                participants = emptyList(),
+                wins = emptyMap(),
+                resolving = false,
+                epoch = epoch + 1
+            ),
+            participants
+        )
 
-    private fun finishMatch() {
-        epoch++
-        resolving = false
-        state = ArenaState.WAITING
-        participants.clear()
-        wins.clear()
-    }
+    private fun finished(): ArenaMatch =
+        copy(
+            state = ArenaState.WAITING,
+            participants = emptyList(),
+            wins = emptyMap(),
+            resolving = false,
+            epoch = epoch + 1
+        )
 }

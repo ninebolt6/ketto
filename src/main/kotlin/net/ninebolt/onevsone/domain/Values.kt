@@ -17,12 +17,13 @@ data class WorldPosition(
     val pitch: Float = 0f
 )
 
-/** アリーナの静的設定。試合状態(ArenaMatch)とは分離する。装備中身は infrastructure が保持する。 */
-class ArenaDefinition(
+/** アリーナの静的設定。試合状態(ArenaMatch)とは分離する。装備中身は infrastructure が保持する。
+ *  immutable: 変更は copy() で新インスタンスを作り、レジストリと永続化へ置き換える。 */
+data class ArenaDefinition(
     val id: ArenaId,
-    var enabled: Boolean = false,
-    var spawn1: WorldPosition? = null,
-    var spawn2: WorldPosition? = null
+    val enabled: Boolean = false,
+    val spawn1: WorldPosition? = null,
+    val spawn2: WorldPosition? = null
 ) {
     val name: String get() = id.name
 

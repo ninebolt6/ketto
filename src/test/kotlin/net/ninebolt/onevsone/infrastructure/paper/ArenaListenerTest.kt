@@ -87,7 +87,7 @@ class ArenaListenerTest {
         verify(event).setKeepInventory(true)
         assertTrue(event.drops.isEmpty())
         assertEquals(ArenaState.ROUNDCOUNTDOWN, env.state())
-        assertEquals(1, env.service.matchView("arena1")!!.winsOf(p1.uniqueId))
+        assertEquals(1, env.service.matchOf("arena1")!!.winsOf(p1.uniqueId))
     }
 
     @Test
@@ -167,7 +167,7 @@ class ArenaListenerTest {
         val fall = moveEvent(p1, Location(w, 0.0, 1.0, 0.0), Location(w, 0.0, -1.0, 0.0))
         env.listener.onMove(fall)
         assertEquals(ArenaState.ROUNDCOUNTDOWN, env.state())
-        assertEquals(1, env.service.matchView("arena1")!!.winsOf(p2.uniqueId))
+        assertEquals(1, env.service.matchOf("arena1")!!.winsOf(p2.uniqueId))
     }
 
     @Test
@@ -357,12 +357,12 @@ class ArenaListenerTest {
         env.runOneShots()
         val w = env.world()
         env.listener.onMove(moveEvent(p2, Location(w, 0.0, 1.0, 0.0), Location(w, 0.0, -1.0, 0.0)))
-        assertEquals(2, env.service.matchView("arena1")!!.winsOf(p1.uniqueId))
+        assertEquals(2, env.service.matchOf("arena1")!!.winsOf(p1.uniqueId))
         env.timers.first { it.taskId == roundTimerId }.runnable.run()
         assertTrue(env.cancelledTaskIds.contains(roundTimerId))
 
         env.listener.onMove(moveEvent(p2, Location(w, 0.0, 1.0, 0.0), Location(w, 0.0, -1.0, 0.0)))
-        assertEquals(2, env.service.matchView("arena1")!!.winsOf(p1.uniqueId))
+        assertEquals(2, env.service.matchOf("arena1")!!.winsOf(p1.uniqueId))
     }
 
     @Test

@@ -2,7 +2,7 @@ package net.ninebolt.onevsone.application.port
 
 import net.ninebolt.onevsone.domain.ArenaDefinition
 import net.ninebolt.onevsone.domain.ArenaId
-import net.ninebolt.onevsone.domain.MatchView
+import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.Participant
 import net.ninebolt.onevsone.domain.PlayerStats
 import net.ninebolt.onevsone.domain.WorldPosition
@@ -37,11 +37,11 @@ interface ArenaRepository {
 }
 
 /**
- * 外部参照用の試合状態・参加者台帳。集約ではなく純粋 DTO を保存する。
+ * 外部参照用の試合状態・参加者台帳。immutable な集約スナップショットを保存する。
  */
 interface MatchStateRepository {
     /** status/<arena>.yml へ状態・参加者名・勝数を書き出す。 */
-    fun saveStatus(view: MatchView)
+    fun saveStatus(match: ArenaMatch)
     /** players.yml へ参加登録(メンバーシップのみ。持ち物は含めない)。 */
     fun registerParticipant(participant: Participant, arena: ArenaId)
     /** players.yml から参加登録を解除。バックアップ(inv.*)は消さない。 */

@@ -14,9 +14,9 @@ import net.ninebolt.onevsone.application.port.PlayerStatsRepository
 import net.ninebolt.onevsone.application.port.SchedulerPort
 import net.ninebolt.onevsone.domain.ArenaDefinition
 import net.ninebolt.onevsone.domain.ArenaId
+import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.MatchId
-import net.ninebolt.onevsone.domain.MatchView
 import net.ninebolt.onevsone.domain.Participant
 import net.ninebolt.onevsone.domain.PlayerStats
 import net.ninebolt.onevsone.domain.WorldPosition
@@ -232,15 +232,15 @@ class InMemoryArenaRepository : ArenaRepository {
 }
 
 class InMemoryMatchStateRepository : MatchStateRepository {
-    val savedViews = mutableListOf<MatchView>()
+    val savedViews = mutableListOf<ArenaMatch>()
     val registrations = linkedMapOf<String, ArenaId>()
     var failOnRegister = false
     var failOnUnregister = false
     var failOnSaveStatus = false
 
-    override fun saveStatus(view: MatchView) {
+    override fun saveStatus(match: ArenaMatch) {
         if (failOnSaveStatus) throw PersistenceFailure("status save failed")
-        savedViews += view
+        savedViews += match
     }
 
     override fun registerParticipant(participant: Participant, arena: ArenaId) {
@@ -293,7 +293,7 @@ class RecordingPresentation : MatchPresentationPort {
     val roundEndSounds = mutableListOf<WorldPosition>()
     val champions = mutableListOf<Pair<ArenaId, String>>()
     val fireworks = mutableListOf<UUID>()
-    val scoreboards = mutableListOf<MatchView>()
+    val scoreboards = mutableListOf<ArenaMatch>()
     val clearedScoreboards = mutableListOf<UUID>()
     val signUpdates = mutableListOf<Pair<ArenaId, ArenaState>>()
 
@@ -329,8 +329,8 @@ class RecordingPresentation : MatchPresentationPort {
         fireworks += playerId
     }
 
-    override fun updateScoreboard(view: MatchView) {
-        scoreboards += view
+    override fun updateScoreboard(match: ArenaMatch) {
+        scoreboards += match
     }
 
     override fun clearScoreboard(playerId: UUID) {
@@ -374,15 +374,17 @@ class TestApp(val requiredWins: Int = 3) {
 
     fun newArena(name: String = "arena1", enabled: Boolean = true): ArenaId {
         val id = ArenaId(name)
-        registry.definitions[id] = ArenaDefinition(
-            id,
-            enabled = enabled,
-            spawn1 = WorldPosition("world", 1.0, 64.0, 1.0),
-            spawn2 = WorldPosition("world", 2.0, 64.0, 2.0)
+        registry.putDefinition(
+            ArenaDefinition(
+                id,
+                enabled = enabled,
+                spawn1 = WorldPosition("world", 1.0, 64.0, 1.0),
+                spawn2 = WorldPosition("world", 2.0, 64.0, 2.0)
+            )
         )
-        registry.matches[id] = net.ninebolt.onevsone.domain.ArenaMatch(id, requiredWins)
+        registry.installMatch(ArenaMatch(id, requiredWins))
         return id
     }
 
-    fun state(name: String = "arena1") = service.matchView(name)!!.state
+    fun state(name: String = "arena1") = service.matchOf(name)!!.state
 }

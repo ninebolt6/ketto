@@ -1,8 +1,8 @@
 package net.ninebolt.onevsone.application.port
 
 import net.ninebolt.onevsone.domain.ArenaId
+import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.ArenaState
-import net.ninebolt.onevsone.domain.MatchView
 import net.ninebolt.onevsone.domain.WorldPosition
 import java.util.UUID
 
@@ -27,8 +27,8 @@ interface MatchPresentationPort {
     fun champion(arena: ArenaId, winnerName: String)
     /** 勝者位置の花火。 */
     fun championFirework(playerId: UUID)
-    /** サイドバースコアボードを最新の view で更新。 */
-    fun updateScoreboard(view: MatchView)
+    /** サイドバースコアボードを最新の試合状態で更新。 */
+    fun updateScoreboard(match: ArenaMatch)
     /** スコアボードをクリア。 */
     fun clearScoreboard(playerId: UUID)
     /** 看板の表示更新(Join 可否 + 状態行)。 */

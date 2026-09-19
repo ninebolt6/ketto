@@ -23,8 +23,10 @@ git diff --check
 composition root として手動で全依存を配線する(DI フレームワーク不使用)。
 
 - `src/main/kotlin/net/ninebolt/onevsone/` — `OneVsOnePlugin.kt`(composition root のみ)
-- `.../domain/` — 純粋 Kotlin/JDK のみ。`ArenaMatch` 集約(状態遷移・勝敗規則・世代トークン)、
-  `ArenaDefinition`、`MatchView`、`ParticipantRestrictions`、`PlayerStats`、識別子(`ArenaId`/`MatchId`)
+- `.../domain/` — 純粋 Kotlin/JDK のみ。`ArenaMatch` 集約(immutable: 各操作は新状態を持つ
+  `Transition` を返し、呼び出し側がレジストリへ書き戻す。状態遷移・勝敗規則・世代トークン)、
+  `ArenaDefinition`(immutable data class)、`ParticipantRestrictions`、`PlayerStats`、
+  識別子(`ArenaId`/`MatchId`)
 - `.../application/` — domain + `application/port` のみに依存。
   `ArenaApplicationService`(参加/開始/決着/終了/中断のオーケストレーション)、
   `PlayerRecoveryService`(未復元バックアップの台帳・復元)、`ArenaAdministrationService`、
