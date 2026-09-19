@@ -1,5 +1,7 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
+import io.mockk.every
+import io.mockk.verify
 import org.bukkit.Material
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -10,7 +12,6 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import org.mockito.Mockito.verify
 import java.io.File
 
 /** PaperInventorySnapshot の単体テスト。 */
@@ -38,9 +39,9 @@ class PaperInventorySnapshotTest {
         val contents = arrayOfNulls<org.bukkit.inventory.ItemStack>(41)
         contents[0] = sword
         contents[40] = env.item(Material.SHIELD)
-        org.mockito.Mockito.`when`(inv.contents).thenReturn(contents)
+        every { inv.contents } returns contents
         val snapshot = PaperInventorySnapshot.capture(inv)
-        verify(sword).clone()
+        verify(exactly = 1) { sword.clone() }
         assertEquals(Material.DIAMOND_SWORD, snapshot.items[0]?.type)
         assertNotSame(sword, snapshot.items[0])
         assertNull(snapshot.items[1])
@@ -69,7 +70,7 @@ class PaperInventorySnapshotTest {
         val snapshot = PaperInventorySnapshot(items = listOf(bread))
         snapshot.apply(inv)
         assertNotSame(snapshot.items[0], inv.contents[0])
-        verify(bread).clone()
+        verify(exactly = 1) { bread.clone() }
     }
 
     @Test
@@ -99,6 +100,6 @@ class PaperInventorySnapshotTest {
         val inv = env.inventory()
         val helmet = env.item(Material.IRON_HELMET)
         PaperInventorySnapshot(armor = List(6) { helmet }, items = emptyList()).apply(inv)
-        verify(inv).setArmorContents(org.mockito.ArgumentMatchers.argThat<Array<org.bukkit.inventory.ItemStack?>> { it.size == 4 })
+        verify(exactly = 1) { inv.armorContents = match<Array<org.bukkit.inventory.ItemStack?>> { it.size == 4 } }
     }
 }

@@ -40,7 +40,7 @@ composition root として手動で全依存を配線する(DI フレームワ�
   `YamlArenaRepository`/`YamlMatchStateRepository`/`YamlPlayerStatsRepository`
 - `src/main/resources/` — plugin.yml(version は processResources で展開), config.yml
 - `src/test/kotlin/...` — domain/application は純粋テスト + fake、infrastructure は
-  JUnit5 + Mockito(モック Server/Player/Scheduler、静的 Bukkit を mockStatic)の TestEnv 統合。
+  JUnit5 + MockK(モック Server/Player/Scheduler、静的 Bukkit を mockkStatic)の TestEnv 統合。
   `ArchitectureTest` が内側層の禁止参照を検査
 - 状態はメモリ(domain の `ArenaMatch` + `ArenaRegistry`)、YAML は永続化専用。詳細仕様は docs/ を参照
 - インベントリスナップショットは**マッチ開始時**(初期カウントダウン終了、キット適用直前)に

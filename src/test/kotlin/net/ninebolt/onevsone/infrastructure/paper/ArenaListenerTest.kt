@@ -1,5 +1,9 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
+import io.mockk.MockKMatcherScope
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import net.ninebolt.onevsone.domain.ArenaId
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatCause
@@ -28,11 +32,6 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import org.mockito.ArgumentMatchers.contains
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.never
-import org.mockito.Mockito.verify
-import org.mockito.Mockito.`when`
 import java.io.File
 
 class ArenaListenerTest {
@@ -52,19 +51,21 @@ class ArenaListenerTest {
         env.close()
     }
 
+    private fun MockKMatcherScope.contains(part: String): String = match { it.contains(part) }
+
     private fun deathEvent(player: Player): PlayerDeathEvent {
-        val event = mock(PlayerDeathEvent::class.java)
+        val event = mockk<PlayerDeathEvent>(relaxed = true)
         val drops = mutableListOf(env.item(Material.STONE))
-        `when`(event.entity).thenReturn(player)
-        `when`(event.drops).thenReturn(drops)
+        every { event.entity } returns player
+        every { event.drops } returns drops
         return event
     }
 
     private fun moveEvent(player: Player, from: Location, to: Location): PlayerMoveEvent {
-        val event = mock(PlayerMoveEvent::class.java)
-        `when`(event.player).thenReturn(player)
-        `when`(event.from).thenReturn(from)
-        `when`(event.to).thenReturn(to)
+        val event = mockk<PlayerMoveEvent>(relaxed = true)
+        every { event.player } returns player
+        every { event.from } returns from
+        every { event.to } returns to
         return event
     }
 
@@ -81,10 +82,10 @@ class ArenaListenerTest {
     @Test
     fun `death event keeps inventory clears drops and resolves round`() {
         val (p1, p2) = twoPlayerIngame()
-        `when`(p2.isDead).thenReturn(true)
+        every { p2.isDead } returns true
         val event = deathEvent(p2)
         env.listener.onDeath(event)
-        verify(event).setKeepInventory(true)
+        verify(exactly = 1) { event.keepInventory = true }
         assertTrue(event.drops.isEmpty())
         assertEquals(ArenaState.ROUNDCOUNTDOWN, env.state())
         assertEquals(1, env.service.matchOf("arena1")!!.winsOf(p1.uniqueId))
@@ -95,24 +96,24 @@ class ArenaListenerTest {
         val outsider = env.player("Outsider")
         val event = deathEvent(outsider)
         env.listener.onDeath(event)
-        verify(event, never()).setKeepInventory(true)
+        verify(exactly = 0) { event.keepInventory = true }
     }
 
     @Test
     fun `non player damage ignored`() {
-        val event = mock(EntityDamageEvent::class.java)
-        `when`(event.entity).thenReturn(mock(Entity::class.java))
+        val event = mockk<EntityDamageEvent>(relaxed = true)
+        every { event.entity } returns mockk<Entity>(relaxed = true)
         env.listener.onDamage(event)
-        verify(event, never()).isCancelled = true
+        verify(exactly = 0) { event.isCancelled = true }
     }
 
     @Test
     fun `damage not cancelled in INGAME`() {
         val (p1, _) = twoPlayerIngame()
-        val event = mock(EntityDamageEvent::class.java)
-        `when`(event.entity).thenReturn(p1)
+        val event = mockk<EntityDamageEvent>(relaxed = true)
+        every { event.entity } returns p1
         env.listener.onDamage(event)
-        verify(event, never()).isCancelled = true
+        verify(exactly = 0) { event.isCancelled = true }
     }
 
     @Test
@@ -120,29 +121,30 @@ class ArenaListenerTest {
         val (p1, p2) = twoPlayerIngame()
         env.service.defeat(p2.uniqueId, DefeatCause.FALL)
         assertEquals(ArenaState.ROUNDCOUNTDOWN, env.state())
-        val event = mock(EntityDamageEvent::class.java)
-        `when`(event.entity).thenReturn(p1)
+        val event = mockk<EntityDamageEvent>(relaxed = true)
+        every { event.entity } returns p1
         env.listener.onDamage(event)
-        verify(event).isCancelled = true
+        verify(exactly = 1) { event.isCancelled = true }
     }
 
     @Test
     fun `quit of outsider does not touch inventory`() {
         val outsider = env.player("Outsider")
-        val event = mock(PlayerQuitEvent::class.java)
-        `when`(event.player).thenReturn(outsider)
+        val event = mockk<PlayerQuitEvent>(relaxed = true)
+        every { event.player } returns outsider
         env.listener.onQuit(event)
-        verify(outsider.inventory, never()).clear()
+        val inv = outsider.inventory
+        verify(exactly = 0) { inv.clear() }
     }
 
     @Test
     fun `quit of participant resolves through quitting scope`() {
         val (p1, p2) = twoPlayerIngame()
         p1.inventory.setItem(0, null)
-        `when`(p1.isOnline).thenReturn(false)
+        every { p1.isOnline } returns false
         env.players.remove(p1.uniqueId)
-        val event = mock(PlayerQuitEvent::class.java)
-        `when`(event.player).thenReturn(p1)
+        val event = mockk<PlayerQuitEvent>(relaxed = true)
+        every { event.player } returns p1
         env.listener.onQuit(event)
         assertEquals(ArenaState.WAITING, env.state())
         assertEquals(1, env.statsRepo.find(p2.uniqueId)!!.wins)
@@ -176,13 +178,14 @@ class ArenaListenerTest {
         env.service.defeat(p2.uniqueId, DefeatCause.FALL)
 
         val w = env.world()
-        val horizontal = moveEvent(p1, Location(w, 0.0, 64.0, 0.0), Location(w, 1.0, 64.0, 0.0))
+        val from = Location(w, 0.0, 64.0, 0.0)
+        val horizontal = moveEvent(p1, from, Location(w, 1.0, 64.0, 0.0))
         env.listener.onMove(horizontal)
-        verify(horizontal).setTo(horizontal.from)
+        verify(exactly = 1) { horizontal.to = from }
 
         val vertical = moveEvent(p1, Location(w, 0.0, 64.0, 0.0), Location(w, 0.0, 65.0, 0.0))
         env.listener.onMove(vertical)
-        verify(vertical, never()).setTo(org.mockito.ArgumentMatchers.any())
+        verify(exactly = 0) { vertical.to = any() }
     }
 
     @Test
@@ -190,12 +193,12 @@ class ArenaListenerTest {
         val (p1, p2) = twoPlayerIngame()
         env.service.defeat(p2.uniqueId, DefeatCause.FALL)
         val w = env.world()
-        val event = mock(PlayerTeleportEvent::class.java)
-        `when`(event.player).thenReturn(p1)
-        `when`(event.from).thenReturn(Location(w, 0.0, 64.0, 0.0))
-        `when`(event.to).thenReturn(Location(w, 5.0, -3.0, 0.0))
+        val event = mockk<PlayerTeleportEvent>(relaxed = true)
+        every { event.player } returns p1
+        every { event.from } returns Location(w, 0.0, 64.0, 0.0)
+        every { event.to } returns Location(w, 5.0, -3.0, 0.0)
         env.listener.onMove(event)
-        verify(event, never()).setTo(org.mockito.ArgumentMatchers.any())
+        verify(exactly = 0) { event.to = any() }
     }
 
     @Test
@@ -203,60 +206,60 @@ class ArenaListenerTest {
         val arena = env.newArena()
         val p1 = env.player("Alice")
         env.join(p1, arena)
-        val event = mock(BlockBreakEvent::class.java)
-        `when`(event.player).thenReturn(p1)
+        val event = mockk<BlockBreakEvent>(relaxed = true)
+        every { event.player } returns p1
         env.listener.onBreak(event)
-        verify(event, never()).isCancelled = true
+        verify(exactly = 0) { event.isCancelled = true }
 
         val p2 = env.player("Bob")
         env.join(p2, arena)
         env.tick(6)
         env.listener.onBreak(event)
-        verify(event).isCancelled = true
+        verify(exactly = 1) { event.isCancelled = true }
     }
 
     @Test
     fun `commands blocked except in ONEMORE`() {
         val arena = env.newArena()
         val p1 = env.player("Alice")
-        val event = mock(PlayerCommandPreprocessEvent::class.java)
-        `when`(event.player).thenReturn(p1)
+        val event = mockk<PlayerCommandPreprocessEvent>(relaxed = true)
+        every { event.player } returns p1
 
         env.listener.onCommand(event)
-        verify(event, never()).isCancelled = true
+        verify(exactly = 0) { event.isCancelled = true }
 
         env.join(p1, arena)
         env.listener.onCommand(event)
-        verify(event, never()).isCancelled = true
+        verify(exactly = 0) { event.isCancelled = true }
 
         val p2 = env.player("Bob")
         env.join(p2, arena)
         env.listener.onCommand(event)
-        verify(event).isCancelled = true
-        verify(p1).sendMessage(contains("コマンドは使用できません！"))
+        verify(exactly = 1) { event.isCancelled = true }
+        verify(exactly = 1) { p1.sendMessage(contains("コマンドは使用できません！")) }
     }
 
     private fun signBlock(x: Int, y: Int, z: Int): Block {
-        val block = mock(Block::class.java)
-        val sign = mock(Sign::class.java)
-        val side = mock(org.bukkit.block.sign.SignSide::class.java)
+        val block = mockk<Block>(relaxed = true)
+        val sign = mockk<Sign>(relaxed = true)
+        val side = mockk<org.bukkit.block.sign.SignSide>(relaxed = true)
         val w = env.world()
-        `when`(sign.getSide(org.bukkit.block.sign.Side.FRONT)).thenReturn(side)
-        `when`(block.state).thenReturn(sign)
-        `when`(block.world).thenReturn(w)
-        `when`(block.x).thenReturn(x)
-        `when`(block.y).thenReturn(y)
-        `when`(block.z).thenReturn(z)
-        `when`(w.getBlockAt(x, y, z)).thenReturn(block)
+        every { sign.getSide(org.bukkit.block.sign.Side.FRONT) } returns side
+        every { block.state } returns sign
+        every { block.world } returns w
+        every { block.x } returns x
+        every { block.y } returns y
+        every { block.z } returns z
+        every { w.getBlockAt(x, y, z) } returns block
         return block
     }
 
     private fun interact(player: Player, block: Block, hand: EquipmentSlot = EquipmentSlot.HAND): PlayerInteractEvent {
-        val event = mock(PlayerInteractEvent::class.java)
-        `when`(event.player).thenReturn(player)
-        `when`(event.action).thenReturn(Action.RIGHT_CLICK_BLOCK)
-        `when`(event.hand).thenReturn(hand)
-        `when`(event.clickedBlock).thenReturn(block)
+        val event = mockk<PlayerInteractEvent>(relaxed = true)
+        every { event.player } returns player
+        every { event.action } returns Action.RIGHT_CLICK_BLOCK
+        every { event.hand } returns hand
+        every { event.clickedBlock } returns block
         return event
     }
 
@@ -291,7 +294,7 @@ class ArenaListenerTest {
 
         val p3 = env.player("Carol")
         env.listener.onInteract(interact(p3, block))
-        verify(p3).sendMessage(contains("このアリーナは現在ゲーム中です"))
+        verify(exactly = 1) { p3.sendMessage(contains("このアリーナは現在ゲーム中です")) }
     }
 
     @Test
@@ -300,13 +303,13 @@ class ArenaListenerTest {
         env.newArena()
         val p1 = env.player("Alice")
 
-        val block = mock(Block::class.java)
-        `when`(block.state).thenReturn(mock(org.bukkit.block.BlockState::class.java))
-        `when`(block.world).thenReturn(env.world())
+        val block = mockk<Block>(relaxed = true)
+        every { block.state } returns mockk<org.bukkit.block.BlockState>(relaxed = true)
+        every { block.world } returns env.world()
         env.listener.onInteract(interact(p1, block))
 
         val leftClick = interact(p1, signBlock(3, 64, 3))
-        `when`(leftClick.action).thenReturn(Action.LEFT_CLICK_BLOCK)
+        every { leftClick.action } returns Action.LEFT_CLICK_BLOCK
         env.listener.onInteract(leftClick)
         assertNull(env.service.arenaIdOf(p1.uniqueId))
     }
@@ -318,20 +321,20 @@ class ArenaListenerTest {
         env.join(p1, arena)
 
         fun assertState(damageCancelled: Boolean, breakCancelled: Boolean, commandBlocked: Boolean) {
-            val damage = mock(EntityDamageEvent::class.java)
-            `when`(damage.entity).thenReturn(p1)
+            val damage = mockk<EntityDamageEvent>(relaxed = true)
+            every { damage.entity } returns p1
             env.listener.onDamage(damage)
-            if (damageCancelled) verify(damage).isCancelled = true else verify(damage, never()).isCancelled = true
+            if (damageCancelled) verify(exactly = 1) { damage.isCancelled = true } else verify(exactly = 0) { damage.isCancelled = true }
 
-            val breaking = mock(BlockBreakEvent::class.java)
-            `when`(breaking.player).thenReturn(p1)
+            val breaking = mockk<BlockBreakEvent>(relaxed = true)
+            every { breaking.player } returns p1
             env.listener.onBreak(breaking)
-            if (breakCancelled) verify(breaking).isCancelled = true else verify(breaking, never()).isCancelled = true
+            if (breakCancelled) verify(exactly = 1) { breaking.isCancelled = true } else verify(exactly = 0) { breaking.isCancelled = true }
 
-            val command = mock(PlayerCommandPreprocessEvent::class.java)
-            `when`(command.player).thenReturn(p1)
+            val command = mockk<PlayerCommandPreprocessEvent>(relaxed = true)
+            every { command.player } returns p1
             env.listener.onCommand(command)
-            if (commandBlocked) verify(command).isCancelled = true else verify(command, never()).isCancelled = true
+            if (commandBlocked) verify(exactly = 1) { command.isCancelled = true } else verify(exactly = 0) { command.isCancelled = true }
         }
 
         assertState(damageCancelled = false, breakCancelled = false, commandBlocked = false) // ONEMORE
@@ -370,15 +373,15 @@ class ArenaListenerTest {
         val (p1, p2) = twoPlayerIngame()
         // 試合中に disconnect すると backup は残る
         env.players.remove(p2.uniqueId)
-        `when`(p2.isOnline).thenReturn(false)
+        every { p2.isOnline } returns false
         env.service.abort(ArenaId("arena1"))
 
         // 再参加時に PlayerJoinEvent 経由で復元(空バックアップ→ロビーアイテム)
-        `when`(p2.isOnline).thenReturn(true)
+        every { p2.isOnline } returns true
         p2.inventory.setItem(0, null)
         env.players[p2.uniqueId] = p2
-        val join = mock(org.bukkit.event.player.PlayerJoinEvent::class.java)
-        `when`(join.player).thenReturn(p2)
+        val join = mockk<org.bukkit.event.player.PlayerJoinEvent>(relaxed = true)
+        every { join.player } returns p2
         env.listener.onJoin(join)
         assertEquals(Material.COMPASS, p2.inventory.contents[0]?.type)
     }

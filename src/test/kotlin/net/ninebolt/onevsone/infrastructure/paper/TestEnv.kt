@@ -1,5 +1,14 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
+import io.mockk.EqMatcher
+import io.mockk.Runs
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.mockkConstructor
+import io.mockk.mockkStatic
+import io.mockk.unmockkConstructor
+import io.mockk.unmockkStatic
 import net.ninebolt.onevsone.application.ArenaAdministrationService
 import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.application.ArenaRegistry
@@ -31,16 +40,9 @@ import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitRunnable
 import org.bukkit.scheduler.BukkitScheduler
 import org.bukkit.scheduler.BukkitTask
+import org.bukkit.scoreboard.Criteria
 import org.bukkit.scoreboard.Scoreboard
 import org.bukkit.scoreboard.ScoreboardManager
-import org.mockito.ArgumentMatchers.any
-import org.mockito.ArgumentMatchers.anyLong
-import org.mockito.ArgumentMatchers.anyString
-import org.mockito.MockedStatic
-import org.mockito.Mockito.doAnswer
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.mockStatic
-import org.mockito.Mockito.`when`
 import java.io.File
 import java.util.UUID
 import java.util.logging.Logger
@@ -50,18 +52,11 @@ import java.util.logging.Logger
  * Paper 依存は infrastructure テストに限定する。
  */
 class TestEnv(folder: File, requiredWins: Int = 3) {
-    val server: Server = mock(Server::class.java)
-    val plugin: JavaPlugin = mock(JavaPlugin::class.java)
-    val scheduler: BukkitScheduler = mock(BukkitScheduler::class.java)
-    val scoreboardManager: ScoreboardManager = mock(ScoreboardManager::class.java)
-    val itemFactory: ItemFactory = mock(ItemFactory::class.java)
-    val bukkit: MockedStatic<Bukkit> = mockStatic(Bukkit::class.java)
-    val itemStackConstruction = org.mockito.Mockito.mockConstruction(ItemStack::class.java) { mock, context ->
-        val material = context.arguments()[0] as Material
-        `when`(mock.type).thenReturn(material)
-        `when`(mock.clone()).thenAnswer { item(material) }
-        `when`(mock.serialize()).thenReturn(mutableMapOf<String, Any>("type" to material.name))
-    }
+    val server: Server = mockk(relaxed = true)
+    val plugin: JavaPlugin = mockk(relaxed = true)
+    val scheduler: BukkitScheduler = mockk(relaxed = true)
+    val scoreboardManager: ScoreboardManager = mockk(relaxed = true)
+    val itemFactory: ItemFactory = mockk(relaxed = true)
 
     val requiredWins = requiredWins
     val messages = Messages("&8[&61vs1&8] ")
@@ -127,139 +122,150 @@ class TestEnv(folder: File, requiredWins: Int = 3) {
     val worlds = mutableMapOf<String, World>()
 
     init {
-        `when`(plugin.server).thenReturn(server)
-        `when`(plugin.isEnabled).thenReturn(true)
-        `when`(plugin.logger).thenReturn(Logger.getLogger("1vs1-test"))
-        `when`(plugin.dataFolder).thenReturn(folder)
+        mockkStatic(Bukkit::class, ItemStack::class)
+        every { Bukkit.getServer() } returns server
+        every { Bukkit.getScheduler() } returns scheduler
+        every { Bukkit.getItemFactory() } returns itemFactory
+        every { Bukkit.getScoreboardCriteria(any<String>()) } answers { mockk<Criteria>(relaxed = true) }
+        every { ItemStack.of(any<Material>()) } answers { mockk(relaxed = true) }
+        every { ItemStack.of(any<Material>(), any<Int>()) } answers { mockk(relaxed = true) }
+
+        mockkConstructor(ItemStack::class)
+        every { anyConstructed<ItemStack>().itemMeta = any() } just Runs
+        for (material in listOf(Material.COMPASS, Material.FEATHER)) {
+            every { constructedWith<ItemStack>(EqMatcher(material)).type } returns material
+            every { constructedWith<ItemStack>(EqMatcher(material)).clone() } answers { item(material) }
+            every { constructedWith<ItemStack>(EqMatcher(material)).serialize() } returns mutableMapOf<String, Any>("type" to material.name)
+        }
+
+        every { plugin.server } returns server
+        every { plugin.isEnabled } returns true
+        every { plugin.logger } returns Logger.getLogger("1vs1-test")
+        every { plugin.dataFolder } returns folder
         val config = YamlConfiguration()
         config.set("prefix", "&8[&61vs1&8] ")
         config.set("required-wins", requiredWins)
-        `when`(plugin.config).thenReturn(config)
+        every { plugin.config } returns config
 
-        `when`(server.scheduler).thenReturn(scheduler)
-        `when`(server.scoreboardManager).thenReturn(scoreboardManager)
-        `when`(server.itemFactory).thenReturn(itemFactory)
-        `when`(server.getPlayer(any<UUID>())).thenAnswer { players[it.getArgument(0)] }
-        `when`(server.getPlayerExact(anyString())).thenAnswer { invocation ->
-            players.values.firstOrNull { it.name == invocation.getArgument<String>(0) }
+        every { server.scheduler } returns scheduler
+        every { server.scoreboardManager } returns scoreboardManager
+        every { server.itemFactory } returns itemFactory
+        every { server.getPlayer(any<UUID>()) } answers { players[firstArg()] }
+        every { server.getPlayerExact(any<String>()) } answers {
+            players.values.firstOrNull { it.name == firstArg<String>() }
         }
-        `when`(server.getWorld(anyString())).thenAnswer { worlds[it.getArgument(0)] }
+        every { server.getWorld(any<String>()) } answers { worlds[firstArg()] }
+        every { server.getOfflinePlayerIfCached(any<String>()) } returns null
 
-        `when`(scoreboardManager.newScoreboard).thenAnswer {
-            val board = mock(Scoreboard::class.java)
-            `when`(
+        every { scoreboardManager.newScoreboard } answers {
+            val board = mockk<Scoreboard>(relaxed = true)
+            every {
                 board.registerNewObjective(
-                    anyString(),
+                    any<String>(),
                     any<org.bukkit.scoreboard.Criteria>(),
                     any<net.kyori.adventure.text.Component>()
                 )
-            ).thenAnswer {
-                val objective = mock(org.bukkit.scoreboard.Objective::class.java)
-                `when`(objective.getScore(anyString())).thenAnswer { mock(org.bukkit.scoreboard.Score::class.java) }
+            } answers {
+                val objective = mockk<org.bukkit.scoreboard.Objective>(relaxed = true)
+                every { objective.getScore(any<String>()) } answers { mockk<org.bukkit.scoreboard.Score>(relaxed = true) }
                 objective
             }
             boards += board
             board
         }
-        `when`(itemFactory.getItemMeta(any<Material>())).thenAnswer { mock(ItemMeta::class.java) }
-        `when`(itemFactory.asMetaFor(any<ItemMeta>(), any<ItemStack>())).thenAnswer { it.getArgument<ItemMeta>(0) }
+        every { itemFactory.getItemMeta(any<Material>()) } answers { mockk<ItemMeta>(relaxed = true) }
+        every { itemFactory.asMetaFor(any<ItemMeta>(), any<ItemStack>()) } answers { firstArg() }
 
-        bukkit.`when`<Server> { Bukkit.getServer() }.thenReturn(server)
-        bukkit.`when`<BukkitScheduler> { Bukkit.getScheduler() }.thenReturn(scheduler)
-        bukkit.`when`<ItemFactory> { Bukkit.getItemFactory() }.thenReturn(itemFactory)
-
-        `when`(
+        every {
             scheduler.runTaskTimer(
                 any<org.bukkit.plugin.Plugin>(),
                 any<Runnable>(),
-                anyLong(),
-                anyLong()
+                any<Long>(),
+                any<Long>()
             )
-        ).thenAnswer {
-            val runnable = it.getArgument<Runnable>(1) as BukkitRunnable
-            val task = mock(BukkitTask::class.java)
+        } answers {
+            val runnable = arg<Runnable>(1) as BukkitRunnable
+            val task = mockk<BukkitTask>(relaxed = true)
             val id = nextTaskId++
-            `when`(task.taskId).thenReturn(id)
-            timers += TimerRecord(runnable, it.getArgument(2), it.getArgument(3), id)
+            every { task.taskId } returns id
+            timers += TimerRecord(runnable, arg(2), arg(3), id)
             task
         }
-        `when`(scheduler.runTask(any<org.bukkit.plugin.Plugin>(), any<Runnable>())).thenAnswer {
-            oneShots += it.getArgument<Runnable>(1)
-            mock(BukkitTask::class.java)
+        every { scheduler.runTask(any<org.bukkit.plugin.Plugin>(), any<Runnable>()) } answers {
+            oneShots += arg<Runnable>(1)
+            mockk<BukkitTask>(relaxed = true)
         }
-        `when`(
+        every {
             scheduler.runTaskLater(
                 any<org.bukkit.plugin.Plugin>(),
                 any<Runnable>(),
-                anyLong()
+                any<Long>()
             )
-        ).thenAnswer {
-            oneShots += it.getArgument<Runnable>(1)
-            mock(BukkitTask::class.java)
+        } answers {
+            oneShots += arg<Runnable>(1)
+            mockk<BukkitTask>(relaxed = true)
         }
-        doAnswer { cancelledTaskIds += it.getArgument<Int>(0); null }
-            .`when`(scheduler).cancelTask(org.mockito.ArgumentMatchers.anyInt())
+        every { scheduler.cancelTask(any<Int>()) } answers {
+            cancelledTaskIds += firstArg<Int>()
+        }
     }
 
     fun item(type: Material): ItemStack {
-        val stack = mock(ItemStack::class.java)
-        `when`(stack.type).thenReturn(type)
-        `when`(stack.clone()).thenAnswer { item(type) }
-        `when`(stack.serialize()).thenReturn(mutableMapOf<String, Any>("type" to type.name))
+        val stack = mockk<ItemStack>(relaxed = true)
+        every { stack.type } returns type
+        every { stack.clone() } answers { item(type) }
+        every { stack.serialize() } returns mutableMapOf<String, Any>("type" to type.name)
         return stack
     }
 
     fun world(name: String = "world"): World = worlds.getOrPut(name) {
-        mock(World::class.java).also { `when`(it.name).thenReturn(name) }
+        mockk<World>(relaxed = true).also { every { it.name } returns name }
     }
 
     fun inventory(contentsSize: Int = 41, armorSize: Int = 4): PlayerInventory {
         val contents = arrayOfNulls<ItemStack>(contentsSize)
         val armor = arrayOfNulls<ItemStack>(armorSize)
-        val inv = mock(PlayerInventory::class.java)
-        `when`(inv.contents).thenAnswer { contents.clone() }
-        doAnswer { invocation ->
-            val arr = invocation.getArgument<Array<ItemStack?>>(0)
+        val inv = mockk<PlayerInventory>(relaxed = true)
+        every { inv.contents } answers { contents.clone() }
+        every { inv.contents = any() } answers {
+            val arr = firstArg<Array<ItemStack?>>()
             for (i in contents.indices) contents[i] = arr.getOrNull(i)
-            null
-        }.`when`(inv).setContents(any())
-        `when`(inv.armorContents).thenAnswer { armor.clone() }
-        doAnswer { invocation ->
-            val arr = invocation.getArgument<Array<ItemStack?>>(0)
+        }
+        every { inv.armorContents } answers { armor.clone() }
+        every { inv.armorContents = any() } answers {
+            val arr = firstArg<Array<ItemStack?>>()
             for (i in armor.indices) armor[i] = arr.getOrNull(i)
-            null
-        }.`when`(inv).setArmorContents(any())
-        doAnswer { invocation ->
-            contents[invocation.getArgument(0)] = invocation.getArgument(1)
-            null
-        }.`when`(inv).setItem(org.mockito.ArgumentMatchers.anyInt(), any())
-        doAnswer {
+        }
+        every { inv.setItem(any<Int>(), any<ItemStack>()) } answers {
+            contents[firstArg()] = arg<ItemStack?>(1)
+        }
+        every { inv.clear() } answers {
             contents.fill(null)
             armor.fill(null)
-            null
-        }.`when`(inv).clear()
+        }
         return inv
     }
 
     fun player(name: String, uuid: UUID = UUID.randomUUID(), worldName: String = "world"): Player {
         val w = world(worldName)
-        val p = mock(Player::class.java)
+        val p = mockk<Player>(relaxed = true)
         val inv = inventory()
-        val spigot = mock(Player.Spigot::class.java)
-        `when`(p.uniqueId).thenReturn(uuid)
-        `when`(p.name).thenReturn(name)
-        `when`(p.inventory).thenReturn(inv)
-        `when`(p.isOnline).thenReturn(true)
-        `when`(p.world).thenReturn(w)
-        `when`(p.location).thenReturn(Location(w, 0.0, 64.0, 0.0))
-        `when`(p.spigot()).thenReturn(spigot)
+        val spigot = mockk<Player.Spigot>(relaxed = true)
+        every { p.uniqueId } returns uuid
+        every { p.name } returns name
+        every { p.inventory } returns inv
+        every { p.isOnline } returns true
+        every { p.world } returns w
+        every { p.location } returns Location(w, 0.0, 64.0, 0.0)
+        every { p.spigot() } returns spigot
+        every { p.getAttribute(any()) } returns null
         players[uuid] = p
         return p
     }
 
     fun removePlayer(p: Player) {
         players.remove(p.uniqueId)
-        `when`(p.isOnline).thenReturn(false)
+        every { p.isOnline } returns false
     }
 
     fun tick(times: Int = 1) {
@@ -316,7 +322,7 @@ class TestEnv(folder: File, requiredWins: Int = 3) {
     fun state(name: String = "arena1") = service.matchOf(name)?.state
 
     fun close() {
-        itemStackConstruction.close()
-        bukkit.close()
+        unmockkConstructor(ItemStack::class)
+        unmockkStatic(Bukkit::class, ItemStack::class)
     }
 }

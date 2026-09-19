@@ -1,5 +1,12 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
+import io.mockk.MockKMatcherScope
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.slot
+import io.mockk.spyk
+import io.mockk.verify
+import io.mockk.verifyOrder
 import net.ninebolt.onevsone.application.JoinReply
 import net.ninebolt.onevsone.application.LeaveReply
 import net.ninebolt.onevsone.application.ToggleReply
@@ -27,13 +34,6 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import org.mockito.ArgumentCaptor
-import org.mockito.ArgumentMatchers.any
-import org.mockito.ArgumentMatchers.contains
-import org.mockito.Mockito.inOrder
-import org.mockito.Mockito.never
-import org.mockito.Mockito.verify
-import org.mockito.Mockito.`when`
 import java.io.File
 import java.util.UUID
 
@@ -60,12 +60,14 @@ class PaperArenaFlowTest {
         env.close()
     }
 
+    private fun MockKMatcherScope.contains(part: String): String = match { it.contains(part) }
+
     private fun serialized(component: Component): String = legacy.serialize(component)
 
     private fun lastBroadcast(): String {
-        val captor = ArgumentCaptor.forClass(Component::class.java)
-        verify(env.server).broadcast(captor.capture())
-        return serialized(captor.value)
+        val slot = slot<Component>()
+        verify(exactly = 1) { env.server.broadcast(capture(slot)) }
+        return serialized(slot.captured)
     }
 
     private fun view(name: String = "arena1") = env.service.matchOf(name)!!
@@ -79,8 +81,8 @@ class PaperArenaFlowTest {
         env.join(p1, arena)
         assertEquals(ArenaState.ONEMORE, view().state)
         assertEquals(arena, env.service.arenaIdOf(p1.uniqueId))
-        verify(p1).sendMessage(contains("に参加しました"))
-        verify(p1).sendMessage(contains("あと一人参加するのを待っています"))
+        verify(exactly = 1) { p1.sendMessage(contains("に参加しました")) }
+        verify(exactly = 1) { p1.sendMessage(contains("あと一人参加するのを待っています")) }
 
         val p2 = env.player("Bob")
         env.join(p2, arena)
@@ -96,18 +98,18 @@ class PaperArenaFlowTest {
         val disabled = env.newArena("disabled", enabled = false)
         val p1 = env.player("Alice")
         env.join(p1, disabled)
-        verify(p1).sendMessage(contains("アリーナが有効になっていません！"))
+        verify(exactly = 1) { p1.sendMessage(contains("アリーナが有効になっていません！")) }
         assertNull(env.service.arenaIdOf(p1.uniqueId))
 
         env.join(p1, arena)
         env.join(p1, arena)
-        verify(p1).sendMessage(contains("すでに他のアリーナに参加しています"))
+        verify(exactly = 1) { p1.sendMessage(contains("すでに他のアリーナに参加しています")) }
 
         val p2 = env.player("Bob")
         env.join(p2, arena)
         val p3 = env.player("Carol")
         env.join(p3, arena)
-        verify(p3).sendMessage(contains("このアリーナは現在ゲーム中です"))
+        verify(exactly = 1) { p3.sendMessage(contains("このアリーナは現在ゲーム中です")) }
         assertNull(env.service.arenaIdOf(p3.uniqueId))
     }
 
@@ -122,15 +124,15 @@ class PaperArenaFlowTest {
 
         for (n in 5 downTo 1) {
             env.tick()
-            verify(p1).sendMessage(contains("テレポートまで: ${n}秒"))
+            verify(exactly = 1) { p1.sendMessage(contains("テレポートまで: ${n}秒")) }
         }
         assertEquals(ArenaState.COUNTDOWN, view().state)
 
         env.tick()
         assertEquals(ArenaState.INGAME, view().state)
-        verify(p1).sendMessage(contains("ゲームスタート！"))
-        verify(p1).teleport(any(Location::class.java))
-        verify(p2).teleport(any(Location::class.java))
+        verify(exactly = 1) { p1.sendMessage(contains("ゲームスタート！")) }
+        verify(exactly = 1) { p1.teleport(any<Location>()) }
+        verify(exactly = 1) { p2.teleport(any<Location>()) }
         assertEquals(Material.IRON_SWORD, p1.inventory.contents[0]?.type)
         assertEquals(Material.IRON_SWORD, p2.inventory.contents[0]?.type)
     }
@@ -148,10 +150,11 @@ class PaperArenaFlowTest {
         assertEquals(ArenaState.WAITING, view().state)
         assertTrue(view().participants.isEmpty())
         env.tick(6)
-        verify(p1, never()).teleport(any(Location::class.java))
-        verify(p2, never()).teleport(any(Location::class.java))
+        verify(exactly = 0) { p1.teleport(any<Location>()) }
+        verify(exactly = 0) { p2.teleport(any<Location>()) }
         assertNull(p1.inventory.contents[0])
-        verify(p1.inventory, never()).setItem(org.mockito.ArgumentMatchers.eq(0), org.mockito.ArgumentMatchers.argThat<ItemStack?> { it?.type == Material.COMPASS })
+        val inv1 = p1.inventory
+        verify(exactly = 0) { inv1.setItem(0, ofType(ItemStack::class)) }
     }
 
     @Test
@@ -167,18 +170,18 @@ class PaperArenaFlowTest {
         env.service.defeat(p2.uniqueId, DefeatCause.FALL)
         assertEquals(ArenaState.ROUNDCOUNTDOWN, view().state)
         assertEquals(1, view().winsOf(p1.uniqueId))
-        verify(p1).sendMessage(contains("ラウンド["))
-        verify(p1).sendMessage(contains("勝者: Alice"))
+        verify(exactly = 1) { p1.sendMessage(contains("ラウンド[")) }
+        verify(exactly = 1) { p1.sendMessage(contains("勝者: Alice")) }
 
         env.tick()
         env.tick()
         for (n in 5 downTo 1) {
             env.tick()
-            verify(p1).sendMessage(contains("開始まで: ${n}秒"))
+            verify(exactly = 1) { p1.sendMessage(contains("開始まで: ${n}秒")) }
         }
         env.tick()
         assertEquals(ArenaState.INGAME, view().state)
-        verify(p1).sendMessage(contains("§aスタート！"))
+        verify(exactly = 1) { p1.sendMessage(contains("§aスタート！")) }
     }
 
     @Test
@@ -255,8 +258,8 @@ class PaperArenaFlowTest {
         env.join(p2, arena)
         env.tick(6)
 
-        `when`(p2.isDead).thenReturn(true)
-        `when`(p2.killer).thenReturn(null)
+        every { p2.isDead } returns true
+        every { p2.killer } returns null
         assertTrue(env.service.defeat(p2.uniqueId, DefeatCause.DEATH))
         assertEquals(1, view().winsOf(p1.uniqueId))
         assertEquals(ArenaState.ROUNDCOUNTDOWN, view().state)
@@ -273,13 +276,16 @@ class PaperArenaFlowTest {
         env.tick(6)
         p1.inventory.setItem(0, null)
 
-        `when`(p2.isDead).thenReturn(true)
+        every { p2.isDead } returns true
         env.service.defeat(p2.uniqueId, DefeatCause.DEATH)
         assertEquals(1, env.oneShots.size)
         env.runOneShots()
-        val order = inOrder(p2.inventory, p2.spigot())
-        order.verify(p2.spigot()).respawn()
-        order.verify(p2.inventory).setContents(any())
+        val spigot2 = p2.spigot()
+        val inv2 = p2.inventory
+        verifyOrder {
+            spigot2.respawn()
+            inv2.contents = any()
+        }
         assertEquals(Material.IRON_SWORD, p2.inventory.contents[0]?.type)
     }
 
@@ -291,7 +297,7 @@ class PaperArenaFlowTest {
         env.join(p1, arena)
         env.join(p2, arena)
         env.tick(6)
-        `when`(p2.isDead).thenReturn(true)
+        every { p2.isDead } returns true
 
         assertTrue(env.service.defeat(p2.uniqueId, DefeatCause.DEATH))
         assertFalse(env.service.defeat(p2.uniqueId, DefeatCause.DEATH))
@@ -311,7 +317,7 @@ class PaperArenaFlowTest {
         env.join(p2, arena)
         env.tick(6)
 
-        `when`(p2.isDead).thenReturn(true)
+        every { p2.isDead } returns true
         env.service.defeat(p2.uniqueId, DefeatCause.DEATH)
         env.service.abort(arena)
         env.runOneShots()
@@ -333,12 +339,12 @@ class PaperArenaFlowTest {
         env.tick(6)
         assertEquals(Material.IRON_SWORD, p2.inventory.contents[0]?.type)
 
-        `when`(p2.isDead).thenReturn(true)
+        every { p2.isDead } returns true
         env.service.defeat(p2.uniqueId, DefeatCause.DEATH)
         assertEquals(ArenaState.WAITING, view().state)
         env.runOneShots()
-        val order = inOrder(p2.inventory, p2.spigot())
-        order.verify(p2.spigot()).respawn()
+        val spigot2 = p2.spigot()
+        verify(exactly = 1) { spigot2.respawn() }
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
         assertEquals(1, env.statsRepo.find(p1.uniqueId)!!.wins)
         assertEquals(1, env.statsRepo.find(p2.uniqueId)!!.losses)
@@ -400,12 +406,12 @@ class PaperArenaFlowTest {
         val p1 = env.player("Alice")
         val p2 = env.player("Bob")
         assertEquals(LeaveReply.NotJoined, env.leave(p1))
-        verify(p1).sendMessage(contains("あなたはアリーナに参加していません！"))
+        verify(exactly = 1) { p1.sendMessage(contains("あなたはアリーナに参加していません！")) }
 
         env.join(p1, arena)
         env.join(p2, arena)
         assertEquals(LeaveReply.NotWaiting, env.leave(p1))
-        verify(p1).sendMessage(contains("カウントダウン中はアリーナから退出できません！"))
+        verify(exactly = 1) { p1.sendMessage(contains("カウントダウン中はアリーナから退出できません！")) }
         assertEquals(arena, env.service.arenaIdOf(p1.uniqueId))
     }
 
@@ -416,7 +422,7 @@ class PaperArenaFlowTest {
         p1.inventory.setItem(0, env.item(Material.BREAD))
         env.join(p1, arena)
         assertEquals(LeaveReply.Left, env.leave(p1))
-        verify(p1).sendMessage(contains("アリーナから退出しました"))
+        verify(exactly = 1) { p1.sendMessage(contains("アリーナから退出しました")) }
         assertEquals(ArenaState.WAITING, view().state)
         assertNull(env.service.arenaIdOf(p1.uniqueId))
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
@@ -432,8 +438,13 @@ class PaperArenaFlowTest {
         env.tick(6)
         env.removePlayer(p1)
         env.quit(p1)
-        verify(p1.inventory).setItem(org.mockito.ArgumentMatchers.eq(0), org.mockito.ArgumentMatchers.argThat<ItemStack?> { it?.type == Material.COMPASS })
-        verify(p1.inventory).setItem(org.mockito.ArgumentMatchers.eq(8), org.mockito.ArgumentMatchers.argThat<ItemStack?> { it?.type == Material.FEATHER })
+        val inv1 = p1.inventory
+        val slot0Items = mutableListOf<ItemStack>()
+        val slot8Items = mutableListOf<ItemStack>()
+        verify(exactly = 1) { inv1.setItem(0, capture(slot0Items)) }
+        verify(exactly = 1) { inv1.setItem(8, capture(slot8Items)) }
+        assertEquals(1, slot0Items.count { it.type == Material.COMPASS })
+        assertEquals(1, slot8Items.count { it.type == Material.FEATHER })
     }
 
     @Test
@@ -445,7 +456,8 @@ class PaperArenaFlowTest {
         env.join(p2, arena)
         env.tick(6)
         assertNull(p1.inventory.contents[0])
-        verify(p1.inventory, never()).setItem(org.mockito.ArgumentMatchers.eq(0), org.mockito.ArgumentMatchers.argThat<ItemStack?> { it?.type == Material.COMPASS })
+        val inv1 = p1.inventory
+        verify(exactly = 0) { inv1.setItem(0, ofType(ItemStack::class)) }
     }
 
     @Test
@@ -473,7 +485,7 @@ class PaperArenaFlowTest {
         assertNull(env.service.arenaIdOf(p1.uniqueId))
         assertNull(env.service.arenaIdOf(p2.uniqueId))
         env.tick(6)
-        verify(p1, never()).teleport(any(Location::class.java))
+        verify(exactly = 0) { p1.teleport(any<Location>()) }
         val reloaded = env.arenaRepo.find("arena1")!!
         assertFalse(reloaded.enabled)
     }
@@ -498,7 +510,10 @@ class PaperArenaFlowTest {
         val p = env.player("Alice", uuid)
         p.inventory.setItem(0, env.item(Material.STONE))
         env.service.restorePending(p.uniqueId, p.name)
-        verify(p.inventory).setItem(org.mockito.ArgumentMatchers.eq(0), org.mockito.ArgumentMatchers.argThat<ItemStack?> { it?.type == Material.COMPASS })
+        val inv = p.inventory
+        val restoredItems = mutableListOf<ItemStack>()
+        verify { inv.setItem(0, capture(restoredItems)) }
+        assertEquals(1, restoredItems.count { it.type == Material.COMPASS })
         assertNull(playersYaml().getConfigurationSection("inv.Alice"))
     }
 
@@ -514,7 +529,7 @@ class PaperArenaFlowTest {
         env.join(p2, arena)
         env.tick(6)
 
-        `when`(p2.isDead).thenReturn(true)
+        every { p2.isDead } returns true
         env.service.defeat(p2.uniqueId, DefeatCause.DEATH)
         assertEquals(ArenaState.WAITING, view().state)
 
@@ -522,8 +537,8 @@ class PaperArenaFlowTest {
         env.quit(p2)
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
 
-        `when`(p2.isOnline).thenReturn(true)
-        `when`(p2.isDead).thenReturn(false)
+        every { p2.isOnline } returns true
+        every { p2.isDead } returns false
         env.players[p2.uniqueId] = p2
         p2.inventory.setItem(0, env.item(Material.GOLDEN_APPLE))
         env.runOneShots()
@@ -542,14 +557,14 @@ class PaperArenaFlowTest {
         env.join(p2, arena)
         env.tick(6)
 
-        `when`(p2.isDead).thenReturn(true)
+        every { p2.isDead } returns true
         env.service.defeat(p2.uniqueId, DefeatCause.DEATH)
         env.service.shutdown()
 
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
         assertEquals(p2.uniqueId.toString(), playersYaml().getString("inv.Bob.uuid"))
 
-        `when`(p2.isDead).thenReturn(false)
+        every { p2.isDead } returns false
         env.service.restorePending(p2.uniqueId, p2.name)
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
         assertNull(playersYaml().getConfigurationSection("inv.Bob"))
@@ -569,13 +584,13 @@ class PaperArenaFlowTest {
         env.join(p2, arena)
         env.tick(6)
 
-        `when`(p2.isDead).thenReturn(true)
+        every { p2.isDead } returns true
         env.service.defeat(p2.uniqueId, DefeatCause.DEATH)
         env.service.abort(arena)
         env.runOneShots()
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
 
-        `when`(p2.isDead).thenReturn(false)
+        every { p2.isDead } returns false
         env.join(p2, arena)
         assertEquals(arena, env.service.arenaIdOf(p2.uniqueId))
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
@@ -596,7 +611,7 @@ class PaperArenaFlowTest {
 
         assertEquals(p2.uniqueId.toString(), playersYaml().getString("inv.Bob.uuid"))
 
-        `when`(p2.isOnline).thenReturn(true)
+        every { p2.isOnline } returns true
         env.players[p2.uniqueId] = p2
         env.service.restorePending(p2.uniqueId, p2.name)
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
@@ -699,12 +714,12 @@ class PaperArenaFlowTest {
         env.tick(6)
 
         env.service.defeat(p2.uniqueId, DefeatCause.FALL)
-        verify(p1, org.mockito.Mockito.times(2)).setHealth(20.0)
-        verify(p1, org.mockito.Mockito.times(2)).setFoodLevel(20)
-        verify(p1, org.mockito.Mockito.times(2)).setFireTicks(0)
-        verify(p2, org.mockito.Mockito.times(2)).setHealth(20.0)
-        verify(p2, org.mockito.Mockito.times(2)).setScoreboard(any())
-        verify(p1, org.mockito.Mockito.times(2)).setScoreboard(any())
+        verify(exactly = 2) { p1.health = 20.0 }
+        verify(exactly = 2) { p1.foodLevel = 20 }
+        verify(exactly = 2) { p1.fireTicks = 0 }
+        verify(exactly = 2) { p2.health = 20.0 }
+        verify(exactly = 2) { p2.scoreboard = any() }
+        verify(exactly = 2) { p1.scoreboard = any() }
     }
 
     @Test
@@ -716,8 +731,8 @@ class PaperArenaFlowTest {
         env.join(p2, arena)
         env.tick(6)
         env.service.abort(arena)
-        verify(p1, org.mockito.Mockito.times(2)).setScoreboard(any())
-        verify(p2, org.mockito.Mockito.times(2)).setScoreboard(any())
+        verify(exactly = 2) { p1.scoreboard = any() }
+        verify(exactly = 2) { p2.scoreboard = any() }
     }
 
     @Test
@@ -732,9 +747,10 @@ class PaperArenaFlowTest {
         val arena = env.newArena()
         val p1 = env.player("Alice")
         env.join(p1, arena)
-        verify(p1.inventory, never()).contents
-        verify(p1.inventory, never()).armorContents
-        verify(p1.inventory, never()).clear()
+        val inv1 = p1.inventory
+        verify(exactly = 0) { inv1.contents }
+        verify(exactly = 0) { inv1.armorContents }
+        verify(exactly = 0) { inv1.clear() }
         val yaml = playersYaml()
         assertTrue(yaml.getStringList("players").contains("Alice"))
         assertEquals("arena1", yaml.getString("arena.Alice"))
@@ -750,7 +766,8 @@ class PaperArenaFlowTest {
         p1.inventory.setItem(0, null)
         env.leave(p1)
         assertNull(p1.inventory.contents[0])
-        verify(p1.inventory, never()).setItem(org.mockito.ArgumentMatchers.eq(0), org.mockito.ArgumentMatchers.argThat<ItemStack?> { it?.type == Material.COMPASS })
+        val inv1 = p1.inventory
+        verify(exactly = 1) { inv1.setItem(0, ofType(ItemStack::class)) }
 
         val p2 = env.player("Bob")
         env.join(p2, arena)
@@ -855,9 +872,8 @@ class PaperArenaFlowTest {
 
     @Test
     fun `snapshot persistence failure aborts match before equipment`() {
-        val spyStore = org.mockito.Mockito.spy(env.store)
-        org.mockito.Mockito.doThrow(PersistenceFailure("disk full")).`when`(spyStore)
-            .saveBackups(org.mockito.ArgumentMatchers.anyList())
+        val spyStore = spyk(env.store)
+        every { spyStore.saveBackups(any()) } throws PersistenceFailure("disk full")
         env.rebuildWith(spyStore)
         val arena = env.newArena("spy-arena", enabled = true)
         env.setKit(arena, PaperInventorySnapshot(items = listOf(env.item(Material.IRON_SWORD))))
@@ -871,19 +887,20 @@ class PaperArenaFlowTest {
         assertTrue(env.service.matchOf("spy-arena")!!.participants.isEmpty())
         assertNull(env.service.arenaIdOf(p1.uniqueId))
         assertNull(env.service.arenaIdOf(p2.uniqueId))
-        verify(p1.inventory, never()).clear()
-        verify(p2.inventory, never()).clear()
+        val inv1 = p1.inventory
+        val inv2 = p2.inventory
+        verify(exactly = 0) { inv1.clear() }
+        verify(exactly = 0) { inv2.clear() }
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
         assertNull(p2.inventory.contents[0])
         env.tick(3)
-        verify(p1, never()).teleport(any(Location::class.java))
+        verify(exactly = 0) { p1.teleport(any<Location>()) }
     }
 
     @Test
     fun `abort completes memory cleanup even when unregister disk write fails`() {
-        val spyMatchState = org.mockito.Mockito.spy(env.matchStateRepo)
-        org.mockito.Mockito.doThrow(PersistenceFailure("io")).`when`(spyMatchState)
-            .unregisterParticipant(org.mockito.ArgumentMatchers.anyString())
+        val spyMatchState = spyk(env.matchStateRepo)
+        every { spyMatchState.unregisterParticipant(any<String>()) } throws PersistenceFailure("io")
         env.rebuildWith(matchState = spyMatchState)
         val arena = env.newArena("spy-arena", enabled = true)
         val p1 = env.player("Alice")
@@ -901,8 +918,8 @@ class PaperArenaFlowTest {
     fun `malformed winner stats does not prevent final death cleanup`() {
         env.close()
         env = TestEnv(folder, requiredWins = 1)
-        val logger = org.mockito.Mockito.mock(java.util.logging.Logger::class.java)
-        `when`(env.plugin.logger).thenReturn(logger)
+        val logger = mockk<java.util.logging.Logger>(relaxed = true)
+        every { env.plugin.logger } returns logger
         val arena = env.newArena()
         env.setKit(arena, PaperInventorySnapshot(items = listOf(env.item(Material.IRON_SWORD))))
         val p1 = env.player("Alice")
@@ -914,7 +931,7 @@ class PaperArenaFlowTest {
         env.tick(6)
         val winnerStats = File(folder, "stats/${p1.uniqueId}.yml")
         winnerStats.writeText("win: [broken")
-        `when`(p2.isDead).thenReturn(true)
+        every { p2.isDead } returns true
 
         org.junit.jupiter.api.Assertions.assertDoesNotThrow { env.service.defeat(p2.uniqueId, DefeatCause.DEATH) }
         assertEquals(ArenaState.WAITING, view().state)
@@ -923,14 +940,16 @@ class PaperArenaFlowTest {
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
         assertNull(env.service.arenaIdOf(p1.uniqueId))
         assertNull(env.service.arenaIdOf(p2.uniqueId))
-        verify(p1, org.mockito.Mockito.times(2)).setScoreboard(any())
+        verify(exactly = 2) { p1.scoreboard = any() }
         assertEquals("win: [broken", winnerStats.readText())
         assertEquals(1, env.statsRepo.find(p2.uniqueId)!!.losses)
-        verify(logger, org.mockito.Mockito.times(1)).log(
-            org.mockito.ArgumentMatchers.eq(java.util.logging.Level.SEVERE),
-            contains("Failed to record"),
-            org.mockito.ArgumentMatchers.any(Throwable::class.java)
-        )
+        verify(exactly = 1) {
+            logger.log(
+                eq(java.util.logging.Level.SEVERE),
+                contains("Failed to record"),
+                any<Throwable>()
+            )
+        }
         val statusYaml = YamlConfiguration.loadConfiguration(File(folder, "status/arena1.yml"))
         assertEquals("WAITING", statusYaml.getString("status"))
         assertTrue(statusYaml.getStringList("players").isEmpty())
@@ -959,7 +978,7 @@ class PaperArenaFlowTest {
     fun `stats write failure does not prevent final cleanup`() {
         env.close()
         env = TestEnv(folder, requiredWins = 1)
-        val spyStats = org.mockito.Mockito.spy(env.statsRepo)
+        val spyStats = spyk(env.statsRepo)
         env.rebuildWith(statsRepo = spyStats)
         val arena = env.newArena("spy-arena", enabled = true)
         env.setKit(arena, PaperInventorySnapshot(items = listOf(env.item(Material.IRON_SWORD))))
@@ -970,8 +989,7 @@ class PaperArenaFlowTest {
         env.service.join(p1.uniqueId, p1.name, arena)
         env.service.join(p2.uniqueId, p2.name, arena)
         val winnerId = p1.uniqueId
-        org.mockito.Mockito.doThrow(IllegalStateException("write failed", java.io.IOException("disk full")))
-            .`when`(spyStats).recordWin(winnerId)
+        every { spyStats.recordWin(winnerId) } throws IllegalStateException("write failed", java.io.IOException("disk full"))
         env.tick(6)
 
         org.junit.jupiter.api.Assertions.assertDoesNotThrow { env.service.defeat(p2.uniqueId, DefeatCause.FALL) }
@@ -1023,7 +1041,8 @@ class PaperArenaFlowTest {
         env.tick()
         assertEquals(ArenaState.WAITING, view().state)
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
-        verify(p1.inventory, never()).clear()
+        val inv1 = p1.inventory
+        verify(exactly = 0) { inv1.clear() }
         assertNull(env.service.arenaIdOf(p1.uniqueId))
     }
 }

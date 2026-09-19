@@ -16,7 +16,7 @@ dependencies {
     testImplementation(kotlin("test-junit5"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.13.4")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.13.4")
-    testImplementation("org.mockito:mockito-core:5.20.0")
+    testImplementation("io.mockk:mockk:1.14.11")
 }
 
 kotlin {
