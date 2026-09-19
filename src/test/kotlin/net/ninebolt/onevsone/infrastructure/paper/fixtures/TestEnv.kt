@@ -153,7 +153,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
 
         mockkConstructor(ItemStack::class)
         every { anyConstructed<ItemStack>().itemMeta = any() } just Runs
-        for (material in listOf(Material.COMPASS, Material.FEATHER)) {
+        listOf(Material.COMPASS, Material.FEATHER).forEach { material ->
             every { constructedWith<ItemStack>(EqMatcher(material)).type } returns material
             every { constructedWith<ItemStack>(EqMatcher(material)).clone() } answers { item(material) }
             every { constructedWith<ItemStack>(EqMatcher(material)).serialize() } returns mutableMapOf<String, Any>("type" to material.name)
@@ -250,12 +250,12 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         every { inv.contents } answers { contents.clone() }
         every { inv.contents = any() } answers {
             val arr = firstArg<Array<ItemStack?>>()
-            for (i in contents.indices) contents[i] = arr.getOrNull(i)
+            contents.indices.forEach { contents[it] = arr.getOrNull(it) }
         }
         every { inv.armorContents } answers { armor.clone() }
         every { inv.armorContents = any() } answers {
             val arr = firstArg<Array<ItemStack?>>()
-            for (i in armor.indices) armor[i] = arr.getOrNull(i)
+            armor.indices.forEach { armor[it] = arr.getOrNull(it) }
         }
         every { inv.setItem(any<Int>(), any<ItemStack>()) } answers {
             contents[firstArg()] = arg<ItemStack?>(1)

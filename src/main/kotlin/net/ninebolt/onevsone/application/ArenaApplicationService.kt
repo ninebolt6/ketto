@@ -58,7 +58,7 @@ class ArenaApplicationService(
             failures.warn("arenalist.yml is unreadable; no arenas loaded this session")
             emptyList()
         }
-        for (definition in definitions) {
+        definitions.forEach { definition ->
             registry.putDefinition(definition)
             val match = ArenaMatch(definition.id, requiredWins)
             registry.installMatch(match)
@@ -78,10 +78,10 @@ class ArenaApplicationService(
     }
 
     fun shutdown() {
-        for ((arenaId) in registry.matches()) {
+        registry.matches().forEach { (arenaId) ->
             timers.remove(arenaId)?.cancel()
             val left = registry.transact(arenaId) { it.abort() }?.outcome ?: emptyList()
-            for ((id, name) in left) {
+            left.forEach { (id, name) ->
                 registry.unassign(id)
                 try {
                     matchState.unregisterParticipant(name)
@@ -246,7 +246,7 @@ class ArenaApplicationService(
         val step = registry.transact(arenaId) { it.abort() } ?: return
         val left = step.outcome
         val tickets = left.map { it to recovery.pending(it.id) }
-        for ((id, name) in left) {
+        left.forEach { (id, name) ->
             registry.unassign(id)
             try {
                 matchState.unregisterParticipant(name)
@@ -254,8 +254,8 @@ class ArenaApplicationService(
                 failures.warn("Could not unregister $name from players.yml; pending restore retained in memory")
             }
         }
-        for ((participant, ticket) in tickets) {
-            val handle = players.handle(participant.id) ?: continue
+        tickets.forEach { (participant, ticket) ->
+            val handle = players.handle(participant.id) ?: return@forEach
             if (handle.dead) {
                 if (ticket != null) {
                     scheduler.schedule(0) {
@@ -342,7 +342,7 @@ class ArenaApplicationService(
         val loserTicket = recovery.pending(loser.id)
         registry.unassign(winner.id)
         registry.unassign(loser.id)
-        for ((_, name) in listOf(winner, loser)) {
+        listOf(winner, loser).forEach { (_, name) ->
             try {
                 matchState.unregisterParticipant(name)
             } catch (e: PersistenceFailure) {
@@ -399,7 +399,7 @@ class ArenaApplicationService(
 
     /** 戦績更新の失敗は winner/loser それぞれ独立に報告し、復元・相手の記録を止めない。 */
     private fun recordResult(winner: Participant, loser: Participant) {
-        for ((participant, win) in listOf(winner to true, loser to false)) {
+        listOf(winner to true, loser to false).forEach { (participant, win) ->
             try {
                 if (win) stats.recordWin(participant.id) else stats.recordLoss(participant.id)
             } catch (e: IllegalStateException) {

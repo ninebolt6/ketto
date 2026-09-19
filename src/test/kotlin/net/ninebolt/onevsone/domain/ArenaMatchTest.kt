@@ -191,7 +191,7 @@ class ArenaMatchTest {
                 commandsBlocked = true
             )
         )
-        for ((state, expected) in matrix) {
+        matrix.forEach { (state, expected) ->
             assertEquals(expected, ParticipantRestrictions.forState(state), "state=$state")
         }
         assertNull(m.participant(alice.id))

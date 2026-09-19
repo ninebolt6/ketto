@@ -14,8 +14,8 @@ class YamlMatchStateRepository(private val store: YamlStore) : MatchStateReposit
         yaml.set("status", match.state.name)
         yaml.set("players", match.participants.map { it.name })
         val winMap = mutableMapOf<String, Int>()
-        for ((id, wins) in match.wins) {
-            val name = match.participants.firstOrNull { it.id == id }?.name ?: continue
+        match.wins.forEach { (id, wins) ->
+            val name = match.participants.firstOrNull { it.id == id }?.name ?: return@forEach
             winMap[name] = wins
         }
         yaml.set("win", winMap)

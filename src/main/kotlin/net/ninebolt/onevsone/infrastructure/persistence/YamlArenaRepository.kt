@@ -14,14 +14,14 @@ class YamlArenaRepository(private val store: YamlStore) : ArenaRepository {
         val names = store.load(store.arenaListFile).getStringList("arenas")
         val seen = mutableSetOf<String>()
         val definitions = mutableListOf<ArenaDefinition>()
-        for (name in names) {
+        names.forEach { name ->
             if (!isValidArenaName(name)) {
                 store.warn("Ignoring invalid arena name '$name' in arenalist.yml")
-                continue
+                return@forEach
             }
             if (!seen.add(name.lowercase(Locale.ROOT))) {
                 store.warn("Ignoring duplicate arena name '$name' in arenalist.yml")
-                continue
+                return@forEach
             }
             val definition = try {
                 find(name)
@@ -30,7 +30,7 @@ class YamlArenaRepository(private val store: YamlStore) : ArenaRepository {
             }
             if (definition == null) {
                 store.warn("Arena '$name' could not be loaded; skipping")
-                continue
+                return@forEach
             }
             definitions += definition
         }

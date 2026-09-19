@@ -33,13 +33,11 @@ class YamlSignRepository(private val store: YamlStore) : ArenaSignRepository {
     override fun signOwner(world: String, x: Double, y: Double, z: Double): String? {
         val cfg = store.config()
         val section = cfg.getConfigurationSection("sign") ?: return null
-        for (name in section.getKeys(false)) {
-            if (cfg.getString("sign.$name.world") == world &&
+        return section.getKeys(false).firstOrNull { name ->
+            cfg.getString("sign.$name.world") == world &&
                 cfg.getDouble("sign.$name.x") == x &&
                 cfg.getDouble("sign.$name.y") == y &&
                 cfg.getDouble("sign.$name.z") == z
-            ) return name
         }
-        return null
     }
 }

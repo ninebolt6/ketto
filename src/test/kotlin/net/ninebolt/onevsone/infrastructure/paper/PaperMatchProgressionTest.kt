@@ -87,7 +87,7 @@ class PaperMatchProgressionTest {
         env.join(p1, arena)
         env.join(p2, arena)
 
-        for (n in 5 downTo 1) {
+        (5 downTo 1).forEach { n ->
             env.tick()
             verify(exactly = 1) { p1.sendMessage(contains("テレポートまで: ${n}秒")) }
         }
@@ -120,7 +120,7 @@ class PaperMatchProgressionTest {
 
         env.tick()
         env.tick()
-        for (n in 5 downTo 1) {
+        (5 downTo 1).forEach { n ->
             env.tick()
             verify(exactly = 1) { p1.sendMessage(contains("開始まで: ${n}秒")) }
         }
@@ -181,7 +181,7 @@ class PaperMatchProgressionTest {
         env.tick(6)
 
         val sequence = listOf(p2, p2, p1, p1, p2)
-        for ((i, loser) in sequence.withIndex()) {
+        sequence.withIndex().forEach { (i, loser) ->
             env.service.defeat(loser.uniqueId, DefeatCause.FALL)
             if (i < 4) {
                 assertEquals(ArenaState.ROUNDCOUNTDOWN, env.view().state)

@@ -31,9 +31,9 @@ class ArchitectureTest {
 
     private fun violations(dir: File): List<String> {
         val result = mutableListOf<String>()
-        for (file in kotlinFiles(dir)) {
+        kotlinFiles(dir).forEach { file ->
             file.readLines().forEachIndexed { index, line ->
-                for (token in forbiddenInInnerLayers) {
+                forbiddenInInnerLayers.forEach { token ->
                     if (line.contains(token)) {
                         result.add("${file.path}:${index + 1}: '$token' in '${line.trim()}'")
                     }

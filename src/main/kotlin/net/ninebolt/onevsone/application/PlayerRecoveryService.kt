@@ -32,7 +32,7 @@ class PlayerRecoveryService(
 
     /** 起動時に呼ばれる。 */
     fun loadPersisted() {
-        for (ref in backups.pendingBackups()) {
+        backups.pendingBackups().forEach { ref ->
             val ticket = RestoreTicket(ref)
             ref.playerId?.let { ticketsByUuid[it] = ticket }
             ticketsByName[ref.playerName] = ticket
@@ -41,7 +41,7 @@ class PlayerRecoveryService(
 
     /** backupBeforeMatch 成功後に呼ぶ。 */
     fun register(refs: List<BackupRef>) {
-        for (ref in refs) {
+        refs.forEach { ref ->
             val ticket = RestoreTicket(ref)
             ref.playerId?.let { ticketsByUuid[it] = ticket }
             ticketsByName[ref.playerName] = ticket
@@ -108,14 +108,14 @@ class PlayerRecoveryService(
      * オフライン等の未完了データは残す。
      */
     fun restoreAllOnline() {
-        for ((id, ticket) in ticketsByUuid.toList()) {
-            val handle = players.handle(id) ?: continue
+        ticketsByUuid.toList().forEach { (id, ticket) ->
+            val handle = players.handle(id) ?: return@forEach
             if (handle.dead) {
                 try {
                     backups.restore(ticket.ref)
                 } catch (e: PersistenceFailure) {
                     failures.report("Could not restore inventory for ${handle.name} (${handle.id}); backup retained", e)
-                    continue
+                    return@forEach
                 }
                 presentation.clearScoreboard(id)
             } else {

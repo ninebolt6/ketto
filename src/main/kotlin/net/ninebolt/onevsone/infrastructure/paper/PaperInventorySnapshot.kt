@@ -18,17 +18,8 @@ data class PaperInventorySnapshot(
 
     fun apply(inventory: PlayerInventory) {
         inventory.clear()
-        val contents = inventory.contents
-        val restored = arrayOfNulls<ItemStack>(contents.size)
-        for (i in restored.indices) {
-            restored[i] = items.getOrNull(i)?.clone()
-        }
-        inventory.contents = restored
-        val armorContents = arrayOfNulls<ItemStack>(4)
-        for (i in armorContents.indices) {
-            armorContents[i] = armor.getOrNull(i)?.clone()
-        }
-        inventory.armorContents = armorContents
+        inventory.contents = Array(inventory.contents.size) { items.getOrNull(it)?.clone() }
+        inventory.armorContents = Array(4) { armor.getOrNull(it)?.clone() }
     }
 
     private fun ItemStack?.isNullOrAir(): Boolean =

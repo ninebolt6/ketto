@@ -78,7 +78,7 @@ class ArenaApplicationServiceTest {
     fun `initial countdown ticks then batch backup then equip and INGAME`() {
         val app = TestApp()
         val (p1, p2) = app.joinedTwo()
-        for (n in 5 downTo 1) {
+        (5 downTo 1).forEach { n ->
             app.scheduler.tick()
             assertEquals(n, app.presentation.countdownTicks.last().seconds)
         }
@@ -231,7 +231,7 @@ class ArenaApplicationServiceTest {
         // tick7: 再装備 / tick50以降: 5→1 / tick150: 再開
         app.scheduler.tick()   // remaining 7: kit reapply
         app.scheduler.tick()   // remaining 6: nothing
-        for (n in 5 downTo 1) {
+        (5 downTo 1).forEach { n ->
             app.scheduler.tick()
             assertEquals(n, app.presentation.roundCountdownTicks.last().seconds)
         }

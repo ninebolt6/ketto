@@ -58,7 +58,7 @@ class ArenaMatchDefeatTest {
         var m = startedMatch()
         val sequence = listOf(bob.id, bob.id, alice.id, alice.id, bob.id)
         var outcome: DefeatOutcome = DefeatOutcome.Rejected
-        for ((i, loser) in sequence.withIndex()) {
+        sequence.withIndex().forEach { (i, loser) ->
             val step = m.recordDefeat(loser, DefeatCause.FALL)
             outcome = step.outcome
             if (i < 4) {

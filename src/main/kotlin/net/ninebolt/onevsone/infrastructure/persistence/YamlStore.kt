@@ -135,7 +135,7 @@ class YamlStore(folder: File, private val logger: Logger) {
     /** 試合開始時の一括保存。失敗時は誰のレコードも変更しない。 */
     fun saveBackups(backups: List<PersistedBackup>) {
         val yaml = load(playersFile)
-        for (backup in backups) {
+        backups.forEach { backup ->
             val path = "inv.${backup.ref.playerName}"
             writeSnapshot(yaml, path, backup.snapshot)
             backup.ref.playerId?.let { yaml.set("$path.uuid", it.toString()) }
@@ -148,16 +148,14 @@ class YamlStore(folder: File, private val logger: Logger) {
     fun persistedBackups(): List<PersistedBackup> {
         val yaml = load(playersFile)
         val inv = yaml.getConfigurationSection("inv") ?: return emptyList()
-        val result = mutableListOf<PersistedBackup>()
-        for (name in inv.getKeys(false)) {
+        return inv.getKeys(false).map { name ->
             val snapshot = readSnapshot(yaml, "inv.$name")
             val uuid = yaml.getString("inv.$name.uuid")?.let { parseUuid(it) }
             val backupId = yaml.getString("inv.$name.id")?.let { parseUuid(it) } ?: UUID.randomUUID()
             val matchId = yaml.getString("inv.$name.match")?.let { parseUuid(it) }?.let { MatchId(it) }
                 ?: MatchId.newId()
-            result.add(PersistedBackup(BackupRef(backupId, matchId, uuid, name), snapshot))
+            PersistedBackup(BackupRef(backupId, matchId, uuid, name), snapshot)
         }
-        return result
     }
 
     /**

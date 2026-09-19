@@ -63,7 +63,7 @@ class PaperEquipmentAdapter(
             )
         }
         store.saveBackups(captured)
-        for ((ref, snapshot) in captured) pendingSnapshots[ref.backupId] = snapshot
+        captured.forEach { (ref, snapshot) -> pendingSnapshots[ref.backupId] = snapshot }
         return captured.map { it.ref }
     }
 

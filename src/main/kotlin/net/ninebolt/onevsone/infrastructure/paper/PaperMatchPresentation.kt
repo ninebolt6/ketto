@@ -36,7 +36,7 @@ class PaperMatchPresentation(
 
     override fun countdownTick(participantIds: List<UUID>, secondsLeft: Int) {
         val message = messages.teleportIn(secondsLeft)
-        for (id in participantIds) {
+        participantIds.forEach { id ->
             player(id)?.let { p ->
                 messages.send(p, message)
                 pling(p, 1f)
@@ -46,7 +46,7 @@ class PaperMatchPresentation(
 
     override fun roundCountdownTick(participantIds: List<UUID>, secondsLeft: Int) {
         val message = messages.startIn(secondsLeft)
-        for (id in participantIds) {
+        participantIds.forEach { id ->
             player(id)?.let { p ->
                 messages.send(p, message)
                 pling(p, 1f)
@@ -55,7 +55,7 @@ class PaperMatchPresentation(
     }
 
     override fun matchStart(participantIds: List<UUID>) {
-        for (id in participantIds) {
+        participantIds.forEach { id ->
             player(id)?.let { p ->
                 pling(p, 2f)
                 messages.send(p, messages.gameStart)
@@ -64,7 +64,7 @@ class PaperMatchPresentation(
     }
 
     override fun roundStart(participantIds: List<UUID>) {
-        for (id in participantIds) {
+        participantIds.forEach { id ->
             player(id)?.let { p ->
                 pling(p, 2f)
                 messages.send(p, messages.roundStart)
@@ -74,7 +74,7 @@ class PaperMatchPresentation(
 
     override fun roundWon(participantIds: List<UUID>, round: Int, winnerName: String) {
         val message = messages.roundWinner(round, winnerName)
-        for (id in participantIds) {
+        participantIds.forEach { id ->
             player(id)?.let { messages.send(it, message) }
         }
     }
@@ -112,10 +112,10 @@ class PaperMatchPresentation(
             messages.component(messages.scoreboardTitle(match.arenaId.name))
         )
         objective.displaySlot = DisplaySlot.SIDEBAR
-        for ((id, name) in match.participants) {
+        match.participants.forEach { (id, name) ->
             objective.getScore(messages.scoreboardEntry(name)).score = match.winsOf(id)
         }
-        for ((id) in match.participants) {
+        match.participants.forEach { (id) ->
             player(id)?.scoreboard = board
         }
     }
