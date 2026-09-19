@@ -1,5 +1,10 @@
-package net.ninebolt.onevsone
+package net.ninebolt.onevsone.infrastructure.paper
 
+import net.ninebolt.onevsone.application.ArenaAdministrationService
+import net.ninebolt.onevsone.application.ArenaApplicationService
+import net.ninebolt.onevsone.application.LeaveReply
+import net.ninebolt.onevsone.application.ToggleReply
+import net.ninebolt.onevsone.domain.ArenaState
 import org.bukkit.block.Sign
 import org.bukkit.command.Command
 import org.bukkit.command.CommandSender
@@ -11,9 +16,14 @@ import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 
+/**
+ * /1vs1 コマンドの入力アダプター。権限・引数・位置の変換に限定し、
+ * 業務処理は application サービスのみ呼ぶ。
+ */
 class OneVsOneCommand(
     private val plugin: JavaPlugin,
-    private val service: ArenaService,
+    private val service: ArenaApplicationService,
+    private val admin: ArenaAdministrationService,
     private val messages: Messages,
     private val resolveOffline: (String) -> CompletableFuture<UUID> = { name ->
         CompletableFuture.supplyAsync { plugin.server.getOfflinePlayer(name).uniqueId }
@@ -31,7 +41,11 @@ class OneVsOneCommand(
                 if (sender !is Player) {
                     messages.send(sender, messages.playerOnly)
                 } else {
-                    service.leave(sender)
+                    when (service.leave(sender.uniqueId)) {
+                        LeaveReply.Left -> messages.send(sender, messages.leftArena)
+                        LeaveReply.NotWaiting -> messages.send(sender, messages.cannotLeave)
+                        LeaveReply.NotJoined -> messages.send(sender, messages.notJoined)
+                    }
                 }
             }
             "setlobby" -> {
@@ -40,8 +54,11 @@ class OneVsOneCommand(
                 } else if (sender !is Player) {
                     messages.send(sender, messages.playerOnly)
                 } else {
-                    service.setLobby(sender.location)
-                    messages.send(sender, messages.lobbySet)
+                    val position = sender.location.toWorldPosition()
+                    if (position != null) {
+                        admin.setLobby(position)
+                        messages.send(sender, messages.lobbySet)
+                    }
                 }
             }
             "arena" -> handleArena(sender, args)
@@ -85,14 +102,15 @@ class OneVsOneCommand(
     }
 
     private fun showStats(sender: CommandSender, uuid: UUID) {
-        if (!service.store.statsExist(uuid)) {
+        // 破損した stats は PersistenceFailure として伝播する
+        val stats = service.statsFor(uuid)
+        if (stats == null) {
             messages.send(sender, messages.noStats)
             return
         }
-        val (win, lose) = service.store.readStats(uuid)
-        messages.send(sender, messages.statWin(win))
-        messages.send(sender, messages.statLose(lose))
-        messages.send(sender, messages.statRatio(win, lose))
+        messages.send(sender, messages.statWin(stats.wins))
+        messages.send(sender, messages.statLose(stats.losses))
+        messages.send(sender, messages.statRatio(stats))
     }
 
     private fun handleArena(sender: CommandSender, args: Array<String>) {
@@ -119,18 +137,20 @@ class OneVsOneCommand(
             messages.send(sender, messages.usageArena)
             return
         }
-        val arena = service.arena(args[2])
-        if (arena == null) {
+        val view = service.matchView(args[2])
+        if (view == null) {
             messages.send(sender, messages.noArena)
             return
         }
-        messages.send(sender, messages.arenaHeader(arena.name))
-        messages.send(sender, messages.arenaState(arena.state.display))
-        if ((arena.state == ArenaState.ROUNDCOUNTDOWN || arena.state == ArenaState.INGAME) && arena.players.size == 2) {
-            val p1 = arena.players[0]
-            val p2 = arena.players[1]
+        messages.send(sender, messages.arenaHeader(view.arenaId.name))
+        messages.send(sender, messages.arenaState(messages.stateDisplay(view.state)))
+        if ((view.state == ArenaState.ROUNDCOUNTDOWN || view.state == ArenaState.INGAME) &&
+            view.participants.size == 2
+        ) {
+            val p1 = view.participants[0]
+            val p2 = view.participants[1]
             messages.send(sender, messages.versus(p1.name, p2.name))
-            messages.send(sender, messages.winCount(arena.wins[p1.id] ?: 0, arena.wins[p2.id] ?: 0))
+            messages.send(sender, messages.winCount(view.winsOf(p1.id), view.winsOf(p2.id)))
         }
     }
 
@@ -139,15 +159,11 @@ class OneVsOneCommand(
             messages.send(sender, messages.noPermission)
             return
         }
-        if (args.size != 3) {
+        if (args.size != 3 || !admin.isValidName(args[2])) {
             messages.send(sender, messages.usageCreate)
             return
         }
-        if (!service.store.isValidArenaName(args[2])) {
-            messages.send(sender, messages.usageCreate)
-            return
-        }
-        if (!service.createArena(args[2])) {
+        if (!admin.create(args[2])) {
             messages.send(sender, messages.arenaExists)
             return
         }
@@ -163,7 +179,7 @@ class OneVsOneCommand(
             messages.send(sender, messages.usageRemove)
             return
         }
-        if (!service.removeArena(args[2])) {
+        if (!admin.remove(args[2])) {
             messages.send(sender, messages.noArena)
             return
         }
@@ -184,13 +200,14 @@ class OneVsOneCommand(
             messages.send(sender, usage)
             return
         }
-        val arena = service.arena(args[2])
-        if (arena == null) {
+        val definition = admin.definition(args[2])
+        if (definition == null) {
             messages.send(sender, messages.noArena)
             return
         }
-        service.setSpawn(arena, number, sender.location)
-        messages.send(sender, if (number == 1) messages.spawn1Set(arena.name) else messages.spawn2Set(arena.name))
+        // world 無しの位置は保存をスキップするが、応答は従来通り成功メッセージ
+        sender.location.toWorldPosition()?.let { admin.setSpawn(definition.name, number, it) }
+        messages.send(sender, if (number == 1) messages.spawn1Set(definition.name) else messages.spawn2Set(definition.name))
     }
 
     private fun arenaEnable(sender: CommandSender, args: Array<String>) {
@@ -202,16 +219,11 @@ class OneVsOneCommand(
             messages.send(sender, messages.usageEnable)
             return
         }
-        val arena = service.arena(args[2])
-        if (arena == null) {
-            messages.send(sender, messages.noArena)
-            return
+        when (admin.setEnabled(args[2], true)) {
+            ToggleReply.NotFound -> messages.send(sender, messages.noArena)
+            ToggleReply.AlreadyEnabled -> messages.send(sender, messages.alreadyEnabled)
+            else -> messages.send(sender, messages.enabled(args[2]))
         }
-        if (!service.enableArena(arena)) {
-            messages.send(sender, messages.alreadyEnabled)
-            return
-        }
-        messages.send(sender, messages.enabled(arena.name))
     }
 
     private fun arenaDisable(sender: CommandSender, args: Array<String>) {
@@ -223,16 +235,11 @@ class OneVsOneCommand(
             messages.send(sender, messages.usageDisable)
             return
         }
-        val arena = service.arena(args[2])
-        if (arena == null) {
-            messages.send(sender, messages.noArena)
-            return
+        when (admin.setEnabled(args[2], false)) {
+            ToggleReply.NotFound -> messages.send(sender, messages.noArena)
+            ToggleReply.AlreadyDisabled -> messages.send(sender, messages.alreadyDisabled)
+            else -> messages.send(sender, messages.disabled(args[2]))
         }
-        if (!service.disableArena(arena)) {
-            messages.send(sender, messages.alreadyDisabled)
-            return
-        }
-        messages.send(sender, messages.disabled(arena.name))
     }
 
     private fun arenaSetInv(sender: CommandSender, args: Array<String>) {
@@ -248,13 +255,13 @@ class OneVsOneCommand(
             messages.send(sender, messages.usageSetInv)
             return
         }
-        val arena = service.arena(args[2])
-        if (arena == null) {
+        val definition = admin.definition(args[2])
+        if (definition == null) {
             messages.send(sender, messages.noArena)
             return
         }
-        service.setKit(arena, sender.inventory)
-        messages.send(sender, messages.inventorySet(arena.name))
+        admin.setKit(definition.name, sender.uniqueId)
+        messages.send(sender, messages.inventorySet(definition.name))
     }
 
     private fun arenaSetSign(sender: CommandSender, args: Array<String>) {
@@ -270,8 +277,8 @@ class OneVsOneCommand(
             messages.send(sender, messages.usageSetSign)
             return
         }
-        val arena = service.arena(args[2])
-        if (arena == null) {
+        val definition = admin.definition(args[2])
+        if (definition == null) {
             messages.send(sender, messages.noArena)
             return
         }
@@ -280,17 +287,17 @@ class OneVsOneCommand(
             messages.send(sender, messages.lookAtSign)
             return
         }
-        val existing = service.signArenaName(
+        val existing = admin.signOwner(
             target.world.name,
             target.x.toDouble(),
             target.y.toDouble(),
             target.z.toDouble()
         )
-        if (existing != null && existing != arena.name) {
+        if (existing != null && existing != definition.name) {
             messages.send(sender, messages.signTaken)
             return
         }
-        service.setSign(arena, target.location)
+        target.location.toWorldPosition()?.let { admin.setSign(definition.name, it) }
     }
 
     override fun onTabComplete(
@@ -317,7 +324,7 @@ class OneVsOneCommand(
                 return subs.filter { it.lowercase(Locale.ROOT).startsWith(args[1].lowercase(Locale.ROOT)) }
             }
             if (args.size == 3) {
-                return service.arenas.keys.filter { it.startsWith(args[2]) }
+                return admin.arenaNames().filter { it.startsWith(args[2]) }
             }
         }
         return emptyList()

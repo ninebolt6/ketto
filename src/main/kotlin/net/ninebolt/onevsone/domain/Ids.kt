@@ -1,0 +1,26 @@
+package net.ninebolt.onevsone.domain
+
+import java.util.UUID
+
+/** アリーナ識別子。永続化・看板・ファイル名と一致する名前を包む。 */
+data class ArenaId(val name: String) {
+    override fun toString(): String = name
+}
+
+/** 1 回の試合(バックアップ〜終了復元まで)を識別するトークン的 ID。 */
+data class MatchId(val value: UUID) {
+    companion object {
+        fun newId(): MatchId = MatchId(UUID.randomUUID())
+    }
+    override fun toString(): String = value.toString()
+}
+
+/**
+ * アリーナ名の受理規則。永続化ファイル名に直結するため、パスに使えない文字や
+ * 予約名(players)を拒否する。arena ファイルの読み書きと管理コマンドの双方が使う。
+ */
+fun isValidArenaName(name: String): Boolean =
+    name.isNotBlank() &&
+        name.length <= 64 &&
+        name.none { it == '/' || it == '\\' || it == '.' || it.isISOControl() } &&
+        !name.equals("players", ignoreCase = true)

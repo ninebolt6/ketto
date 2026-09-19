@@ -1,12 +1,13 @@
-package net.ninebolt.onevsone
+package net.ninebolt.onevsone.infrastructure.paper
 
+import net.ninebolt.onevsone.domain.ArenaState
+import net.ninebolt.onevsone.domain.PlayerStats
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
 import org.bukkit.Server
 import org.bukkit.command.CommandSender
-import java.math.BigDecimal
-import java.math.RoundingMode
 
+/** 状態の色・文字列、Adventure 変換、アイテム表示名をここに集約する。 */
 class Messages(prefixRaw: String) {
     private val legacy = LegacyComponentSerializer.legacySection()
 
@@ -24,10 +25,13 @@ class Messages(prefixRaw: String) {
         server.broadcast(legacy.deserialize(prefix + text))
     }
 
-    fun ratio(win: Int, lose: Int): String =
-        BigDecimal.valueOf(win.toLong())
-            .divide(BigDecimal.valueOf(lose.coerceAtLeast(1).toLong()), 2, RoundingMode.HALF_UP)
-            .toPlainString()
+    fun stateDisplay(state: ArenaState): String = when (state) {
+        ArenaState.WAITING -> "§aWaiting"
+        ArenaState.ONEMORE -> "§e1 More"
+        ArenaState.COUNTDOWN -> "§cCountdown"
+        ArenaState.ROUNDCOUNTDOWN -> "§c§lIngame"
+        ArenaState.INGAME -> "§c§lIngame"
+    }
 
     val usageRoot = "§e/1vs1 stats | /1vs1 stats [player]"
     val usageArena = "§e/1vs1 arena info [arena]"
@@ -76,7 +80,7 @@ class Messages(prefixRaw: String) {
     fun champion(arena: String, name: String) = "§eアリーナ: ${arena}で§c${name}が優勝しました！"
     fun statWin(win: Int) = "§cWin: §b$win"
     fun statLose(lose: Int) = "§cLose: §b$lose"
-    fun statRatio(win: Int, lose: Int) = "§cW/L(勝率): §b${ratio(win, lose)}"
+    fun statRatio(stats: PlayerStats) = "§cW/L(勝率): §b${stats.ratio}"
     val noStats = "§cStatsが存在しません"
 
     val signTitle = "§4[§6§l1vs1§4]"

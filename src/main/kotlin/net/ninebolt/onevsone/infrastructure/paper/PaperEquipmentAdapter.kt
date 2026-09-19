@@ -1,0 +1,130 @@
+package net.ninebolt.onevsone.infrastructure.paper
+
+import net.ninebolt.onevsone.application.port.BackupRef
+import net.ninebolt.onevsone.application.port.PersistenceFailure
+import net.ninebolt.onevsone.application.port.PlayerEquipmentPort
+import net.ninebolt.onevsone.domain.ArenaId
+import net.ninebolt.onevsone.domain.MatchId
+import net.ninebolt.onevsone.domain.Participant
+import net.ninebolt.onevsone.infrastructure.persistence.PersistedBackup
+import net.ninebolt.onevsone.infrastructure.persistence.YamlStore
+import org.bukkit.Material
+import org.bukkit.Server
+import org.bukkit.entity.Player
+import org.bukkit.inventory.ItemStack
+import java.util.UUID
+
+/**
+ * インベントリ実データのアダプター。バックアップ/キットの ItemStack は
+ * PaperInventorySnapshot としてこの層に閉じ込める。
+ */
+class PaperEquipmentAdapter(
+    private val store: YamlStore,
+    private val lookup: PaperPlayerLookup,
+    private val server: Server,
+    private val messages: Messages
+) : PlayerEquipmentPort {
+
+    /** アリーナ装備のメモリキャッシュ(arena/<name>.yml の inventory)。 */
+    private val kits = mutableMapOf<ArenaId, PaperInventorySnapshot>()
+
+    /** 稼働中に取得/読み込みしたバックアップ実データ(backupId → snapshot)。 */
+    private val pendingSnapshots = mutableMapOf<UUID, PaperInventorySnapshot>()
+
+    /** テスト・起動時プリロード用。 */
+    internal fun putKit(arena: ArenaId, kit: PaperInventorySnapshot) {
+        kits[arena] = kit
+    }
+
+    /** キャッシュ済みのアリーナ装備(テスト検証用。未設定時は null)。 */
+    internal fun kitOf(arena: ArenaId): PaperInventorySnapshot? = kits[arena]
+
+    internal fun forgetKit(arena: ArenaId) {
+        kits.remove(arena)
+    }
+
+    /**
+     * 両者の持ち物を複製して一括永続化。複製は持ち物を変更しない。
+     * 保存に失敗したら PersistenceFailure を投げ、誰の持ち物も変更しない。
+     */
+    override fun backupBeforeMatch(match: MatchId, participants: List<Participant>): List<BackupRef> {
+        val captured = participants.map { participant ->
+            val player = lookup.resolve(participant.id)
+                ?: throw PersistenceFailure("Player ${participant.name} (${participant.id}) is not available for inventory backup")
+            PersistedBackup(
+                BackupRef(
+                    backupId = UUID.randomUUID(),
+                    matchId = match,
+                    playerId = participant.id,
+                    playerName = participant.name
+                ),
+                PaperInventorySnapshot.capture(player.inventory)
+            )
+        }
+        store.saveBackups(captured)
+        for (backup in captured) pendingSnapshots[backup.ref.backupId] = backup.snapshot
+        return captured.map { it.ref }
+    }
+
+    /**
+     * バックアップへ復元。退避済みの空スナップショットのときだけ
+     * 既存フォールバック(ロビーアイテム)を適用する。
+     */
+    override fun restore(backup: BackupRef) {
+        val snapshot = pendingSnapshots[backup.backupId]
+            ?: store.backupFor(backup)?.snapshot
+            ?: throw PersistenceFailure("No stored backup ${backup.backupId} for ${backup.playerName}")
+        val player = resolve(backup)
+            ?: throw PersistenceFailure("Player ${backup.playerName} is not available for restore")
+        player.inventory.clear()
+        if (snapshot.isEmpty) {
+            giveLobbyItems(player)
+        } else {
+            snapshot.apply(player.inventory)
+        }
+    }
+
+    private fun resolve(backup: BackupRef): Player? =
+        backup.playerId?.let { lookup.resolve(it) } ?: lookup.resolveByName(backup.playerName)
+
+    /** 復元完了後に記録を削除。backupId 一致のみ。 */
+    override fun acknowledge(backup: BackupRef) {
+        store.deleteBackup(backup)
+        pendingSnapshots.remove(backup.backupId)
+    }
+
+    override fun pendingBackups(): List<BackupRef> =
+        store.persistedBackups().onEach { pendingSnapshots[it.ref.backupId] = it.snapshot }.map { it.ref }
+
+    override fun applyKit(arena: ArenaId, playerId: UUID) {
+        val player = lookup.resolve(playerId)
+            ?: throw PersistenceFailure("Player $playerId is not available for kit apply")
+        kit(arena).apply(player.inventory)
+    }
+
+    override fun saveKit(arena: ArenaId, playerId: UUID) {
+        val player = lookup.resolve(playerId)
+            ?: throw PersistenceFailure("Player $playerId is not available for kit capture")
+        val kit = PaperInventorySnapshot.capture(player.inventory)
+        store.saveArenaKit(arena.name, kit)
+        kits[arena] = kit
+    }
+
+    private fun kit(arena: ArenaId): PaperInventorySnapshot =
+        kits.getOrPut(arena) { store.loadArenaKit(arena.name) }
+
+    private fun giveLobbyItems(player: Player) {
+        val compass = ItemStack(Material.COMPASS)
+        server.itemFactory.getItemMeta(Material.COMPASS)?.let { meta ->
+            meta.displayName(messages.component(messages.compassName))
+            compass.itemMeta = meta
+        }
+        val feather = ItemStack(Material.FEATHER)
+        server.itemFactory.getItemMeta(Material.FEATHER)?.let { meta ->
+            meta.displayName(messages.component(messages.featherName))
+            feather.itemMeta = meta
+        }
+        player.inventory.setItem(0, compass)
+        player.inventory.setItem(8, feather)
+    }
+}
