@@ -114,7 +114,7 @@ class ArenaServiceTest {
     }
 
     @Test
-    fun `abort during countdown stops task and prevents equipment`() {
+    fun `abort during countdown stops task and leaves waiting inventories untouched`() {
         val arena = env.newArena()
         arena.kit = InventorySnapshot(items = listOf(env.item(Material.IRON_SWORD)))
         val p1 = env.player("Alice")
@@ -128,7 +128,8 @@ class ArenaServiceTest {
         env.tick(6)
         verify(p1, never()).teleport(any(Location::class.java))
         verify(p2, never()).teleport(any(Location::class.java))
-        assertEquals(Material.COMPASS, p1.inventory.contents[0]?.type)
+        assertNull(p1.inventory.contents[0])
+        verify(p1.inventory, never()).setItem(org.mockito.ArgumentMatchers.eq(0), org.mockito.ArgumentMatchers.argThat<ItemStack?> { it?.type == Material.COMPASS })
     }
 
     @Test
@@ -403,8 +404,12 @@ class ArenaServiceTest {
     fun `empty snapshot falls back to lobby items on restore`() {
         val arena = env.newArena()
         val p1 = env.player("Alice")
+        val p2 = env.player("Bob")
         env.service.join(p1, arena)
-        env.service.leave(p1)
+        env.service.join(p2, arena)
+        env.tick(6)
+        env.removePlayer(p1)
+        env.service.quit(p1)
         verify(p1.inventory).setItem(org.mockito.ArgumentMatchers.eq(0), org.mockito.ArgumentMatchers.argThat<ItemStack?> { it?.type == Material.COMPASS })
         verify(p1.inventory).setItem(org.mockito.ArgumentMatchers.eq(8), org.mockito.ArgumentMatchers.argThat<ItemStack?> { it?.type == Material.FEATHER })
     }
@@ -585,8 +590,11 @@ class ArenaServiceTest {
         val arena = env.newArena()
         val uuid = UUID.randomUUID()
         val original = env.player("Alice", uuid)
+        val bob = env.player("Bob")
         original.inventory.setItem(0, env.item(Material.DIAMOND))
         env.service.join(original, arena)
+        env.service.join(bob, arena)
+        env.tick(6)
         env.removePlayer(original)
         env.service.abort(arena)
 
@@ -689,9 +697,10 @@ class ArenaServiceTest {
         val p2 = env.player("Bob")
         env.service.join(p1, arena)
         env.service.join(p2, arena)
+        env.tick(6)
         env.service.abort(arena)
-        verify(p1).setScoreboard(org.mockito.ArgumentMatchers.any())
-        verify(p2).setScoreboard(org.mockito.ArgumentMatchers.any())
+        verify(p1, org.mockito.Mockito.times(2)).setScoreboard(org.mockito.ArgumentMatchers.any())
+        verify(p2, org.mockito.Mockito.times(2)).setScoreboard(org.mockito.ArgumentMatchers.any())
     }
 
     @Test
@@ -699,5 +708,293 @@ class ArenaServiceTest {
         assertTrue(env.service.createArena("Arena1"))
         assertFalse(env.service.createArena("arena1"))
         assertFalse(env.service.createArena("PLAYERS"))
+    }
+
+    @Test
+    fun `join writes membership only and never reads waiting inventory`() {
+        val arena = env.newArena()
+        val p1 = env.player("Alice")
+        env.service.join(p1, arena)
+        verify(p1.inventory, never()).contents
+        verify(p1.inventory, never()).armorContents
+        verify(p1.inventory, never()).clear()
+        val yaml = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(File(folder, "status/players.yml"))
+        assertTrue(yaml.getStringList("players").contains("Alice"))
+        assertEquals("arena1", yaml.getString("arena.Alice"))
+        assertNull(yaml.getConfigurationSection("inv.Alice"))
+    }
+
+    @Test
+    fun `waiting leave does not recreate transferred items and keeps received items`() {
+        val arena = env.newArena()
+        val p1 = env.player("Alice")
+        p1.inventory.setItem(0, env.item(Material.DIAMOND))
+        env.service.join(p1, arena)
+        p1.inventory.setItem(0, null)
+        env.service.leave(p1)
+        assertNull(p1.inventory.contents[0])
+        verify(p1.inventory, never()).setItem(org.mockito.ArgumentMatchers.eq(0), org.mockito.ArgumentMatchers.argThat<ItemStack?> { it?.type == Material.COMPASS })
+
+        val p2 = env.player("Bob")
+        env.service.join(p2, arena)
+        p2.inventory.setItem(0, env.item(Material.APPLE))
+        env.service.leave(p2)
+        assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
+    }
+
+    @Test
+    fun `waiting quit disable and shutdown preserve current inventory`() {
+        val arena = env.newArena()
+        val p1 = env.player("Alice")
+        p1.inventory.setItem(0, env.item(Material.BREAD))
+        env.service.join(p1, arena)
+        env.removePlayer(p1)
+        env.service.quit(p1)
+        assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
+        assertNull(env.service.pendingOf(p1.uniqueId))
+
+        val p2 = env.player("Bob")
+        p2.inventory.setItem(0, env.item(Material.APPLE))
+        env.service.join(p2, arena)
+        env.service.disableArena(arena)
+        assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
+        assertNull(env.service.pendingOf(p2.uniqueId))
+        env.service.enableArena(arena)
+
+        val p3 = env.player("Carol")
+        p3.inventory.setItem(0, env.item(Material.COOKED_BEEF))
+        env.service.join(p3, arena)
+        env.service.shutdown()
+        assertEquals(Material.COOKED_BEEF, p3.inventory.contents[0]?.type)
+    }
+
+    @Test
+    fun `snapshot captured at match start reflects countdown window changes`() {
+        val arena = env.newArena()
+        arena.kit = InventorySnapshot(items = listOf(env.item(Material.IRON_SWORD)))
+        val p1 = env.player("Alice")
+        val p2 = env.player("Bob")
+        p1.inventory.setItem(0, env.item(Material.BREAD))
+        env.service.join(p1, arena)
+        env.service.join(p2, arena)
+        p1.inventory.setItem(0, env.item(Material.APPLE))
+        env.tick(5)
+        var yaml = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(File(folder, "status/players.yml"))
+        assertNull(yaml.getConfigurationSection("inv.Alice"))
+        env.tick()
+        assertEquals(ArenaState.INGAME, arena.state)
+        assertEquals(Material.IRON_SWORD, p1.inventory.contents[0]?.type)
+        yaml = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(File(folder, "status/players.yml"))
+        assertEquals(p1.uniqueId.toString(), yaml.getString("inv.Alice.uuid"))
+        assertEquals(p2.uniqueId.toString(), yaml.getString("inv.Bob.uuid"))
+        env.service.abort(arena)
+        assertEquals(Material.APPLE, p1.inventory.contents[0]?.type)
+    }
+
+    @Test
+    fun `round kit reapplications never overwrite saved originals`() {
+        val arena = env.newArena()
+        arena.kit = InventorySnapshot(items = listOf(env.item(Material.IRON_SWORD)))
+        val p1 = env.player("Alice")
+        val p2 = env.player("Bob")
+        p2.inventory.setItem(0, env.item(Material.APPLE))
+        env.service.join(p1, arena)
+        env.service.join(p2, arena)
+        env.tick(6)
+
+        env.service.lose(p2, death = false)
+        env.runOneShots()
+        env.tick(8)
+        assertEquals(ArenaState.INGAME, arena.state)
+        env.service.lose(p2, death = false)
+        env.runOneShots()
+        env.tick(8)
+        assertEquals(ArenaState.INGAME, arena.state)
+        env.service.lose(p2, death = false)
+        assertEquals(ArenaState.WAITING, arena.state)
+        assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
+    }
+
+    @Test
+    fun `quit during COUNTDOWN forfeits without touching inventories`() {
+        val arena = env.newArena()
+        arena.kit = InventorySnapshot(items = listOf(env.item(Material.IRON_SWORD)))
+        val p1 = env.player("Alice")
+        val p2 = env.player("Bob")
+        p1.inventory.setItem(0, env.item(Material.BREAD))
+        p2.inventory.setItem(0, env.item(Material.APPLE))
+        env.service.join(p1, arena)
+        env.service.join(p2, arena)
+        env.removePlayer(p1)
+        env.service.quit(p1)
+        assertEquals(ArenaState.WAITING, arena.state)
+        assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
+        assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
+        assertEquals(1, env.store.readStats(p2.uniqueId).first)
+        assertEquals(1, env.store.readStats(p1.uniqueId).second)
+        val yaml = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(File(folder, "status/players.yml"))
+        assertNull(yaml.getConfigurationSection("inv.Alice"))
+        assertNull(yaml.getConfigurationSection("inv.Bob"))
+    }
+
+    @Test
+    fun `snapshot persistence failure aborts match before equipment`() {
+        val spyStore = org.mockito.Mockito.spy(env.store)
+        val service = ArenaService(env.plugin, spyStore, env.messages)
+        org.mockito.Mockito.doThrow(IllegalStateException("disk full")).`when`(spyStore).saveSnapshots(org.mockito.ArgumentMatchers.anyList())
+        val arena = Arena("spy-arena", enabled = true)
+        arena.spawn1 = SavedLocation("world", 1.0, 64.0, 1.0)
+        arena.spawn2 = SavedLocation("world", 2.0, 64.0, 2.0)
+        arena.kit = InventorySnapshot(items = listOf(env.item(Material.IRON_SWORD)))
+        service.arenas["spy-arena"] = arena
+        val p1 = env.player("Alice")
+        val p2 = env.player("Bob")
+        p1.inventory.setItem(0, env.item(Material.BREAD))
+        service.join(p1, arena)
+        service.join(p2, arena)
+        val participants = arena.players.toList()
+        env.tick(6)
+        assertEquals(ArenaState.WAITING, arena.state)
+        assertTrue(arena.players.isEmpty())
+        assertNull(service.arenaOf(p1.uniqueId))
+        assertNull(service.arenaOf(p2.uniqueId))
+        assertTrue(participants.all { it.snapshot == null })
+        verify(p1.inventory, never()).clear()
+        verify(p2.inventory, never()).clear()
+        assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
+        assertNull(p2.inventory.contents[0])
+        env.tick(3)
+        verify(p1, never()).teleport(any(Location::class.java))
+    }
+
+    @Test
+    fun `abort completes memory cleanup even when unregister disk write fails`() {
+        val spyStore = org.mockito.Mockito.spy(env.store)
+        val service = ArenaService(env.plugin, spyStore, env.messages)
+        org.mockito.Mockito.doThrow(IllegalStateException("io")).`when`(spyStore)
+            .unregisterParticipant(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyBoolean())
+        val arena = Arena("spy-arena", enabled = true)
+        service.arenas["spy-arena"] = arena
+        val p1 = env.player("Alice")
+        val p2 = env.player("Bob")
+        service.join(p1, arena)
+        service.join(p2, arena)
+        service.abort(arena)
+        assertEquals(ArenaState.WAITING, arena.state)
+        assertTrue(arena.players.isEmpty())
+        assertNull(service.arenaOf(p1.uniqueId))
+        assertNull(service.arenaOf(p2.uniqueId))
+    }
+
+    @Test
+    fun `malformed winner stats does not prevent final death cleanup`() {
+        env.close()
+        env = TestEnv(folder, requiredWins = 1)
+        val logger = org.mockito.Mockito.mock(java.util.logging.Logger::class.java)
+        `when`(env.plugin.logger).thenReturn(logger)
+        val arena = env.newArena()
+        arena.kit = InventorySnapshot(items = listOf(env.item(Material.IRON_SWORD)))
+        val p1 = env.player("Alice")
+        val p2 = env.player("Bob")
+        p1.inventory.setItem(0, env.item(Material.BREAD))
+        p2.inventory.setItem(0, env.item(Material.APPLE))
+        env.service.join(p1, arena)
+        env.service.join(p2, arena)
+        env.tick(6)
+        val winnerStats = File(folder, "stats/${p1.uniqueId}.yml")
+        winnerStats.writeText("win: [broken")
+        `when`(p2.isDead).thenReturn(true)
+
+        org.junit.jupiter.api.Assertions.assertDoesNotThrow { env.service.lose(p2, death = true) }
+        assertEquals(ArenaState.WAITING, arena.state)
+        assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
+        env.runOneShots()
+        assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
+        assertNull(env.service.arenaOf(p1.uniqueId))
+        assertNull(env.service.arenaOf(p2.uniqueId))
+        verify(p1, org.mockito.Mockito.times(2)).setScoreboard(org.mockito.ArgumentMatchers.any())
+        assertEquals("win: [broken", winnerStats.readText())
+        assertEquals(1, env.store.readStats(p2.uniqueId).second)
+        verify(logger, org.mockito.Mockito.times(1)).log(
+            org.mockito.ArgumentMatchers.eq(java.util.logging.Level.SEVERE),
+            org.mockito.ArgumentMatchers.contains("Failed to record"),
+            org.mockito.ArgumentMatchers.any(Throwable::class.java)
+        )
+        val statusYaml = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(File(folder, "status/arena1.yml"))
+        assertEquals("WAITING", statusYaml.getString("status"))
+        assertTrue(statusYaml.getStringList("players").isEmpty())
+    }
+
+    @Test
+    fun `malformed loser stats does not prevent final cleanup`() {
+        env.close()
+        env = TestEnv(folder, requiredWins = 1)
+        val arena = env.newArena()
+        val p1 = env.player("Alice")
+        val p2 = env.player("Bob")
+        p1.inventory.setItem(0, env.item(Material.BREAD))
+        env.service.join(p1, arena)
+        env.service.join(p2, arena)
+        env.tick(6)
+        File(folder, "stats/${p2.uniqueId}.yml").writeText("lose: [broken")
+
+        org.junit.jupiter.api.Assertions.assertDoesNotThrow { env.service.lose(p2, death = false) }
+        assertEquals(ArenaState.WAITING, arena.state)
+        assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
+        assertEquals(1, env.store.readStats(p1.uniqueId).first)
+    }
+
+    @Test
+    fun `stats write failure does not prevent final cleanup`() {
+        env.close()
+        env = TestEnv(folder, requiredWins = 1)
+        val spyStore = org.mockito.Mockito.spy(env.store)
+        val service = ArenaService(env.plugin, spyStore, env.messages)
+        val arena = Arena("spy-arena", enabled = true)
+        arena.spawn1 = SavedLocation("world", 1.0, 64.0, 1.0)
+        arena.spawn2 = SavedLocation("world", 2.0, 64.0, 2.0)
+        arena.kit = InventorySnapshot(items = listOf(env.item(Material.IRON_SWORD)))
+        service.arenas["spy-arena"] = arena
+        val p1 = env.player("Alice")
+        val p2 = env.player("Bob")
+        p1.inventory.setItem(0, env.item(Material.BREAD))
+        p2.inventory.setItem(0, env.item(Material.APPLE))
+        service.join(p1, arena)
+        service.join(p2, arena)
+        val winnerId = p1.uniqueId
+        org.mockito.Mockito.doThrow(IllegalStateException("write failed", java.io.IOException("disk full")))
+            .`when`(spyStore).addWin(winnerId)
+        env.tick(6)
+
+        org.junit.jupiter.api.Assertions.assertDoesNotThrow { service.lose(p2, death = false) }
+        assertEquals(ArenaState.WAITING, arena.state)
+        assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
+        assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
+        assertNull(service.arenaOf(p1.uniqueId))
+        assertNull(service.arenaOf(p2.uniqueId))
+        assertEquals(1, service.store.readStats(p2.uniqueId).second)
+        assertFalse(File(folder, "stats/${p1.uniqueId}.yml").exists())
+    }
+
+    @Test
+    fun `stats failure during COUNTDOWN forfeit still completes cleanup`() {
+        env.close()
+        env = TestEnv(folder)
+        val arena = env.newArena()
+        val p1 = env.player("Alice")
+        val p2 = env.player("Bob")
+        p1.inventory.setItem(0, env.item(Material.BREAD))
+        p2.inventory.setItem(0, env.item(Material.APPLE))
+        env.service.join(p1, arena)
+        env.service.join(p2, arena)
+        File(folder, "stats/${p1.uniqueId}.yml").writeText("lose: [broken")
+        env.removePlayer(p1)
+
+        org.junit.jupiter.api.Assertions.assertDoesNotThrow { env.service.quit(p1) }
+        assertEquals(ArenaState.WAITING, arena.state)
+        assertNull(env.service.arenaOf(p2.uniqueId))
+        assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
+        assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
+        assertEquals(1, env.store.readStats(p2.uniqueId).first)
     }
 }

@@ -122,15 +122,32 @@ class ArenaService(
         pendingByUuid[player.uniqueId]
             ?: pendingByName[player.name]?.takeIf { it.uuid == null || it.uuid == player.uniqueId }
 
-    private fun queueRestore(participant: Participant): PendingRestore {
-        val pending = PendingRestore(participant.name, participant.id, participant.snapshot)
+    private fun queueRestore(participant: Participant): PendingRestore? {
+        val snapshot = participant.snapshot
+        if (snapshot == null) {
+            try {
+                store.unregisterParticipant(participant.name, discardSnapshot = false)
+            } catch (e: IllegalStateException) {
+                plugin.logger.warning("Could not unregister ${participant.name} from players.yml; membership record may be stale")
+            }
+            return null
+        }
+        val pending = PendingRestore(participant.name, participant.id, snapshot)
         pendingByUuid[participant.id] = pending
         pendingByName[participant.name] = pending
-        store.unregisterParticipant(participant.name, discardSnapshot = false)
+        try {
+            store.unregisterParticipant(participant.name, discardSnapshot = false)
+        } catch (e: IllegalStateException) {
+            plugin.logger.warning("Could not unregister ${participant.name} from players.yml; pending restore retained in memory")
+        }
         return pending
     }
 
-    private fun completeRestore(player: Player, pending: PendingRestore, respawn: Boolean, lobby: Boolean) {
+    private fun completeRestore(player: Player, pending: PendingRestore?, respawn: Boolean, lobby: Boolean) {
+        if (pending == null) {
+            if (lobby) teleportLobby(player)
+            return
+        }
         val owned = pendingByUuid[player.uniqueId] === pending ||
             (pendingByName[player.name] === pending && (pending.uuid == null || pending.uuid == player.uniqueId))
         if (!owned) return
@@ -163,7 +180,7 @@ class ArenaService(
             }
             completeRestore(player, pending, respawn = true, lobby = false)
         }
-        val participant = Participant(player.uniqueId, player.name, InventorySnapshot.capture(player.inventory))
+        val participant = Participant(player.uniqueId, player.name)
         store.registerParticipant(participant, arena.name)
         arena.players.add(participant)
         playerArena[player.uniqueId] = arena
@@ -271,11 +288,17 @@ class ArenaService(
         for ((participant, pending) in pendings) {
             val player = plugin.server.getPlayer(participant.id) ?: continue
             if (player.isDead) {
-                plugin.server.scheduler.runTask(plugin, Runnable {
-                    if (pendingByUuid[participant.id] !== pending || !player.isOnline) return@Runnable
-                    if (player.isDead) player.spigot().respawn()
-                    completeRestore(player, pending, respawn = false, lobby = false)
-                })
+                if (pending != null) {
+                    plugin.server.scheduler.runTask(plugin, Runnable {
+                        if (pendingByUuid[participant.id] !== pending || !player.isOnline) return@Runnable
+                        if (player.isDead) player.spigot().respawn()
+                        completeRestore(player, pending, respawn = false, lobby = false)
+                    })
+                } else {
+                    plugin.server.scheduler.runTask(plugin, Runnable {
+                        if (player.isOnline && player.isDead) player.spigot().respawn()
+                    })
+                }
             } else {
                 completeRestore(player, pending, respawn = false, lobby = false)
             }
@@ -426,6 +449,7 @@ class ArenaService(
         forfeit: Boolean
     ) {
         arena.generation++
+        val generation = arena.generation
         arena.task?.cancel()
         arena.task = null
         resolving.remove(arena)
@@ -439,8 +463,6 @@ class ArenaService(
         playerArena.remove(loser.id)
 
         messages.broadcast(plugin.server, messages.champion(arena.name, winner.name))
-        store.addWin(winner.id)
-        store.addLose(loser.id)
 
         val winnerPlayer = plugin.server.getPlayer(winner.id)
         if (winnerPlayer != null && !winnerPlayer.isDead) {
@@ -449,7 +471,12 @@ class ArenaService(
             if (!forfeit) spawnFirework(winnerPlayer)
         } else if (winnerPlayer != null) {
             plugin.server.scheduler.runTask(plugin, Runnable {
-                if (pendingByUuid[winner.id] !== winnerPending || !winnerPlayer.isOnline) return@Runnable
+                if (winnerPending != null) {
+                    if (pendingByUuid[winner.id] !== winnerPending) return@Runnable
+                } else if (arena.generation != generation || playerArena[winner.id] != null) {
+                    return@Runnable
+                }
+                if (!winnerPlayer.isOnline) return@Runnable
                 if (winnerPlayer.isDead) winnerPlayer.spigot().respawn()
                 resetVitals(winnerPlayer)
                 completeRestore(winnerPlayer, winnerPending, respawn = false, lobby = true)
@@ -459,7 +486,12 @@ class ArenaService(
 
         if (death) {
             plugin.server.scheduler.runTask(plugin, Runnable {
-                if (pendingByUuid[loser.id] !== loserPending || !loserPlayer.isOnline) return@Runnable
+                if (loserPending != null) {
+                    if (pendingByUuid[loser.id] !== loserPending) return@Runnable
+                } else if (arena.generation != generation || playerArena[loser.id] != null) {
+                    return@Runnable
+                }
+                if (!loserPlayer.isOnline) return@Runnable
                 if (loserPlayer.isDead) loserPlayer.spigot().respawn()
                 resetVitals(loserPlayer)
                 completeRestore(loserPlayer, loserPending, respawn = false, lobby = true)
@@ -471,6 +503,17 @@ class ArenaService(
 
         store.saveStatus(arena)
         updateSign(arena)
+        recordResult(winner, loser)
+    }
+
+    private fun recordResult(winner: Participant, loser: Participant) {
+        for ((participant, win) in listOf(winner to true, loser to false)) {
+            try {
+                if (win) store.addWin(participant.id) else store.addLose(participant.id)
+            } catch (e: IllegalStateException) {
+                plugin.logger.log(java.util.logging.Level.SEVERE, "Failed to record ${if (win) "win" else "loss"} for ${participant.name} (${participant.id}); arena cleanup completed, statistics require manual recovery", e)
+            }
+        }
     }
 
     private fun startCountdown(arena: Arena, initial: Boolean) {
@@ -500,6 +543,20 @@ class ArenaService(
                         p1.playSound(p1.location, Sound.BLOCK_NOTE_BLOCK_PLING, 5f, 1f)
                         p2.playSound(p2.location, Sound.BLOCK_NOTE_BLOCK_PLING, 5f, 1f)
                     } else {
+                        if (p1.isDead || p2.isDead) return
+                        val snapshots = listOf(
+                            first to InventorySnapshot.capture(p1.inventory),
+                            second to InventorySnapshot.capture(p2.inventory)
+                        )
+                        try {
+                            store.saveSnapshots(snapshots)
+                        } catch (e: IllegalStateException) {
+                            plugin.logger.log(java.util.logging.Level.SEVERE, "Could not save inventories before starting arena ${arena.name}; match aborted", e)
+                            cancel()
+                            abort(arena)
+                            return
+                        }
+                        for ((participant, snapshot) in snapshots) participant.snapshot = snapshot
                         arena.kit.apply(p1.inventory)
                         arena.kit.apply(p2.inventory)
                         resetPlayer(p1)

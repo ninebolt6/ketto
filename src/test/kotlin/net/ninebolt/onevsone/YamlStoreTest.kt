@@ -140,6 +140,34 @@ class YamlStoreTest {
     }
 
     @Test
+    fun `registerParticipant without snapshot writes membership only`() {
+        val s = store()
+        val uuid = UUID.randomUUID()
+        s.registerParticipant(Participant(uuid, "Alice"), "a1")
+        val yaml = YamlConfiguration.loadConfiguration(File(folder, "status/players.yml"))
+        assertTrue(yaml.getStringList("players").contains("Alice"))
+        assertEquals("a1", yaml.getString("arena.Alice"))
+        assertNull(yaml.getConfigurationSection("inv.Alice"))
+    }
+
+    @Test
+    fun `saveSnapshots persists both snapshots in one file`() {
+        val s = store()
+        val u1 = UUID.randomUUID()
+        val u2 = UUID.randomUUID()
+        val p1 = Participant(u1, "Alice")
+        val p2 = Participant(u2, "Bob")
+        s.registerParticipant(p1, "a1")
+        s.registerParticipant(p2, "a1")
+        s.saveSnapshots(listOf(p1 to InventorySnapshot(), p2 to InventorySnapshot()))
+        val yaml = YamlConfiguration.loadConfiguration(File(folder, "status/players.yml"))
+        assertEquals(u1.toString(), yaml.getString("inv.Alice.uuid"))
+        assertEquals(u2.toString(), yaml.getString("inv.Bob.uuid"))
+        assertNotNull(yaml.getConfigurationSection("inv.Alice"))
+        assertNotNull(yaml.getConfigurationSection("inv.Bob"))
+    }
+
+    @Test
     fun `malformed stats yaml throws`() {
         val s = store()
         val uuid = UUID.randomUUID()

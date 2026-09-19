@@ -163,8 +163,19 @@ class YamlStore(private val folder: File, private val logger: Logger) {
         if (!players.contains(participant.name)) players.add(participant.name)
         yaml.set("players", players)
         yaml.set("arena.${participant.name}", arenaName)
-        writeSnapshot(yaml, "inv.${participant.name}", participant.snapshot)
-        yaml.set("inv.${participant.name}.uuid", participant.id.toString())
+        participant.snapshot?.let {
+            writeSnapshot(yaml, "inv.${participant.name}", it)
+            yaml.set("inv.${participant.name}.uuid", participant.id.toString())
+        }
+        saveYaml(yaml, playersFile)
+    }
+
+    fun saveSnapshots(snapshots: List<Pair<Participant, InventorySnapshot>>) {
+        val yaml = loadYaml(playersFile)
+        for ((participant, snapshot) in snapshots) {
+            writeSnapshot(yaml, "inv.${participant.name}", snapshot)
+            yaml.set("inv.${participant.name}.uuid", participant.id.toString())
+        }
         saveYaml(yaml, playersFile)
     }
 

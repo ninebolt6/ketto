@@ -11,7 +11,7 @@ enum class ArenaState(val display: String) {
     INGAME("§c§lIngame")
 }
 
-data class Participant(val id: UUID, val name: String, val snapshot: InventorySnapshot)
+data class Participant(val id: UUID, val name: String, var snapshot: InventorySnapshot? = null)
 
 class Arena(
     val name: String,
