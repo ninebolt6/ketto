@@ -2,6 +2,7 @@ package net.ninebolt.onevsone.application
 
 import net.ninebolt.onevsone.application.fixtures.TestApp
 import net.ninebolt.onevsone.application.port.PersistenceFailure
+import net.ninebolt.onevsone.domain.ArenaDefinition
 import net.ninebolt.onevsone.domain.ArenaId
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatCause
@@ -120,6 +121,31 @@ class ArenaApplicationServiceResilienceTest {
         // メモリ上の登録解除は済んでいる
         assertNull(app.service.arenaIdOf(p1.id))
         assertTrue(app.matchState.registrations.isEmpty())
+    }
+
+    @Test
+    fun `load isolates per arena status persistence failure`() {
+        val app = TestApp()
+        app.arenas.save(ArenaDefinition(ArenaId("broken")))
+        app.arenas.save(ArenaDefinition(ArenaId("healthy")))
+        app.matchState.failOnSaveStatusFor += "broken"
+        app.service.load()
+        assertEquals(ArenaState.WAITING, app.service.matchOf("broken")!!.state)
+        assertEquals(ArenaState.WAITING, app.service.matchOf("healthy")!!.state)
+        assertTrue(app.failures.warnings.any { it.contains("broken") })
+    }
+
+    @Test
+    fun `shutdown restores backups even when a status save fails`() {
+        val app = TestApp()
+        app.startMatch("arena1")
+        val (q1, q2) = app.startMatch("arena2")
+        app.matchState.failOnSaveStatusFor += "arena1"
+        app.service.shutdown()
+        // 失敗した arena1 の後も arena2 の登録解除と復元が続行される
+        assertNull(app.service.arenaIdOf(q1.id))
+        assertNull(app.service.arenaIdOf(q2.id))
+        assertEquals(4, app.equipment.restored.size)
     }
 
     @Test

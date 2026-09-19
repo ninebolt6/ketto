@@ -62,8 +62,16 @@ class ArenaApplicationService(
             registry.putDefinition(definition)
             val match = ArenaMatch(definition.id, requiredWins)
             registry.installMatch(match)
-            matchState.saveStatus(match)
-            presentation.updateSign(definition.id, ArenaState.WAITING)
+            try {
+                matchState.saveStatus(match)
+            } catch (e: PersistenceFailure) {
+                failures.warn("Could not persist status for arena ${definition.id.name}; continuing startup")
+            }
+            try {
+                presentation.updateSign(definition.id, ArenaState.WAITING)
+            } catch (e: PersistenceFailure) {
+                failures.warn("Could not update sign for arena ${definition.id.name}; continuing startup")
+            }
         }
         try {
             recovery.loadPersisted()
@@ -81,15 +89,18 @@ class ArenaApplicationService(
         registry.matches().forEach { (arenaId) ->
             timers.remove(arenaId)?.cancel()
             val left = registry.transact(arenaId) { it.abort() }?.outcome ?: emptyList()
-            left.forEach { (id, name) ->
-                registry.unassign(id)
+            left.forEach { (_, name) ->
                 try {
                     matchState.unregisterParticipant(name)
                 } catch (e: PersistenceFailure) {
                     failures.warn("Could not unregister $name from players.yml; membership record may be stale")
                 }
             }
-            registry.match(arenaId)?.let { matchState.saveStatus(it) }
+            try {
+                registry.match(arenaId)?.let { matchState.saveStatus(it) }
+            } catch (e: PersistenceFailure) {
+                failures.warn("Could not persist shutdown state for arena $arenaId; continuing shutdown")
+            }
         }
         recovery.restoreAllOnline()
     }
@@ -134,7 +145,6 @@ class ArenaApplicationService(
         // 何も変わっていない状態で例外を投げる。
         matchState.registerParticipant(participant, arenaId)
         registry.installMatch(step.match)
-        registry.assign(playerId, arenaId)
         if (step.outcome == JoinOutcome.MatchReady) startInitialCountdown(arenaId)
         matchState.saveStatus(step.match)
         presentation.updateSign(arenaId, step.match.state)
@@ -152,7 +162,6 @@ class ArenaApplicationService(
         when (val outcome = step.outcome) {
             LeaveOutcome.NotWaiting -> return LeaveReply.NotWaiting
             is LeaveOutcome.Left -> {
-                registry.unassign(playerId)
                 outcome.participant?.let { participant ->
                     try {
                         matchState.unregisterParticipant(participant.name)
@@ -183,13 +192,9 @@ class ArenaApplicationService(
             }
             return
         }
-        val step = registry.transact(arenaId) { it.forfeit(playerId) } ?: run {
-            registry.unassign(playerId)
-            return
-        }
+        val step = registry.transact(arenaId) { it.forfeit(playerId) } ?: return
         when (val outcome = step.outcome) {
             is QuitOutcome.WaitingExit -> {
-                registry.unassign(playerId)
                 try {
                     matchState.unregisterParticipant(outcome.participant.name)
                 } catch (e: PersistenceFailure) {
@@ -201,7 +206,7 @@ class ArenaApplicationService(
             is QuitOutcome.MatchEnded -> {
                 finishMatch(step.match, outcome.winner, outcome.loser, forfeit = true, death = false)
             }
-            QuitOutcome.NotParticipant -> registry.unassign(playerId)
+            QuitOutcome.NotParticipant -> Unit
         }
     }
 
@@ -246,8 +251,7 @@ class ArenaApplicationService(
         val step = registry.transact(arenaId) { it.abort() } ?: return
         val left = step.outcome
         val tickets = left.map { it to recovery.pending(it.id) }
-        left.forEach { (id, name) ->
-            registry.unassign(id)
+        left.forEach { (_, name) ->
             try {
                 matchState.unregisterParticipant(name)
             } catch (e: PersistenceFailure) {
@@ -257,17 +261,8 @@ class ArenaApplicationService(
         tickets.forEach { (participant, ticket) ->
             val handle = players.handle(participant.id) ?: return@forEach
             if (handle.dead) {
-                if (ticket != null) {
-                    scheduler.schedule(0) {
-                        if (recovery.pending(participant.id) !== ticket) return@schedule
-                        val h = players.handle(participant.id)?.takeIf { it.online } ?: return@schedule
-                        if (h.dead) h.respawn()
-                        recovery.restoreNow(h, ticket, respawn = false, lobby = false)
-                    }
-                } else {
-                    scheduler.schedule(0) {
-                        players.handle(participant.id)?.takeIf { it.online && it.dead }?.respawn()
-                    }
+                scheduleDeferred(participant.id, ticket, { true }) { h ->
+                    recovery.restoreNow(h, ticket, respawn = false, lobby = false)
                 }
             } else {
                 recovery.restoreNow(handle, ticket, respawn = false, lobby = false)
@@ -298,15 +293,12 @@ class ArenaApplicationService(
 
         val loserHandle = players.handle(outcome.loser.id)
         if (death) {
-            scheduler.schedule(0) {
-                val current = registry.match(arenaId) ?: return@schedule
-                if (current.token != gen) return@schedule
-                if (registry.arenaOf(outcome.loser.id) != arenaId) return@schedule
-                val h = players.handle(outcome.loser.id)?.takeIf { it.online } ?: return@schedule
-                if (h.dead) h.respawn()
+            scheduleDeferred(outcome.loser.id, null, {
+                registry.match(arenaId)?.token == gen && registry.arenaOf(outcome.loser.id) == arenaId
+            }) { h ->
                 h.prepareForMatch()
                 kit.applyKit(arenaId, outcome.loser.id)
-                teleportToSlot(current, outcome.loser, h)
+                registry.match(arenaId)?.let { teleportToSlot(it, outcome.loser, h) }
                 registry.updateMatch(arenaId) { it.releaseResolution(gen) }
             }
         } else if (loserHandle != null) {
@@ -340,8 +332,6 @@ class ArenaApplicationService(
         // 復元対象を先に確保してから登録解除・タスク停止へ
         val winnerTicket = recovery.pending(winner.id)
         val loserTicket = recovery.pending(loser.id)
-        registry.unassign(winner.id)
-        registry.unassign(loser.id)
         listOf(winner, loser).forEach { (_, name) ->
             try {
                 matchState.unregisterParticipant(name)
@@ -358,14 +348,9 @@ class ArenaApplicationService(
             recovery.restoreNow(winnerHandle, winnerTicket, respawn = false, lobby = true)
             if (!forfeit) presentation.championFirework(winner.id)
         } else if (winnerHandle != null) {
-            scheduler.schedule(0) {
-                if (winnerTicket != null) {
-                    if (recovery.pending(winner.id) !== winnerTicket) return@schedule
-                } else if (registry.match(arenaId)?.token != gen || registry.arenaOf(winner.id) != null) {
-                    return@schedule
-                }
-                val h = players.handle(winner.id)?.takeIf { it.online } ?: return@schedule
-                if (h.dead) h.respawn()
+            scheduleDeferred(winner.id, winnerTicket, {
+                registry.match(arenaId)?.token == gen && registry.arenaOf(winner.id) == null
+            }) { h ->
                 h.resetVitals()
                 recovery.restoreNow(h, winnerTicket, respawn = false, lobby = true)
                 if (!forfeit) presentation.championFirework(winner.id)
@@ -373,14 +358,9 @@ class ArenaApplicationService(
         }
 
         if (death) {
-            scheduler.schedule(0) {
-                if (loserTicket != null) {
-                    if (recovery.pending(loser.id) !== loserTicket) return@schedule
-                } else if (registry.match(arenaId)?.token != gen || registry.arenaOf(loser.id) != null) {
-                    return@schedule
-                }
-                val h = players.handle(loser.id)?.takeIf { it.online } ?: return@schedule
-                if (h.dead) h.respawn()
+            scheduleDeferred(loser.id, loserTicket, {
+                registry.match(arenaId)?.token == gen && registry.arenaOf(loser.id) == null
+            }) { h ->
                 h.resetVitals()
                 recovery.restoreNow(h, loserTicket, respawn = false, lobby = true)
             }
@@ -524,6 +504,31 @@ class ArenaApplicationService(
     }
 
     // ---- 内部: 共通 ---------------------------------------------------------
+
+    /**
+     * 次 tick に死亡中プレイヤーの復元系後処理を行う。
+     * ticket があれば同一性が、無ければ valid が実行時点でも成立するときだけ
+     * ハンドルを解決し、未リスポーンなら先に respawn してから action を実行する。
+     * オフライン等でハンドルを得られなければ何もしない。
+     */
+    private fun scheduleDeferred(
+        playerId: UUID,
+        ticket: PlayerRecoveryService.RestoreTicket?,
+        valid: () -> Boolean,
+        action: (PlayerHandle) -> Unit
+    ) {
+        scheduler.schedule(0) {
+            val stillValid = if (ticket != null) {
+                recovery.pending(playerId) === ticket
+            } else {
+                valid()
+            }
+            if (!stillValid) return@schedule
+            val h = players.handle(playerId)?.takeIf { it.online } ?: return@schedule
+            if (h.dead) h.respawn()
+            action(h)
+        }
+    }
 
     private fun teleportToSlot(match: ArenaMatch, participant: Participant, handle: PlayerHandle) {
         val slot = match.slotOf(participant.id) ?: return

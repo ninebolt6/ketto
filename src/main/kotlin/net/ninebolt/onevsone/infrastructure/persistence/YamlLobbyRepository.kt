@@ -7,7 +7,7 @@ import net.ninebolt.onevsone.domain.WorldPosition
 class YamlLobbyRepository(private val store: YamlStore) : LobbyRepository {
 
     override fun lobby(): WorldPosition? {
-        val cfg = store.config()
+        val cfg = store.loadConfig()
         val world = cfg.getString("world") ?: return null
         return WorldPosition(
             world = world,
@@ -20,13 +20,13 @@ class YamlLobbyRepository(private val store: YamlStore) : LobbyRepository {
     }
 
     override fun setLobby(position: WorldPosition) {
-        val cfg = store.config()
+        val cfg = store.loadConfig()
         cfg.set("world", position.world)
         cfg.set("x", position.x)
         cfg.set("y", position.y)
         cfg.set("z", position.z)
         cfg.set("yaw", position.yaw.toDouble())
         cfg.set("pitch", position.pitch.toDouble())
-        store.saveConfig()
+        store.saveConfig(cfg)
     }
 }

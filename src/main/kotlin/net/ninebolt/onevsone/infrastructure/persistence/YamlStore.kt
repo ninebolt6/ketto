@@ -29,8 +29,6 @@ class YamlStore(folder: File, private val logger: Logger) {
     internal val playersFile = File(statusDir, "players.yml")
     internal val configFile = File(folder, "config.yml")
 
-    private var config: YamlConfiguration? = null
-
     init {
         folder.mkdirs()
         arenaDir.mkdirs()
@@ -75,14 +73,9 @@ class YamlStore(folder: File, private val logger: Logger) {
         }
     }
 
-    internal fun config(): YamlConfiguration {
-        config?.let { return it }
-        val loaded = load(configFile)
-        config = loaded
-        return loaded
-    }
+    internal fun loadConfig(): YamlConfiguration = load(configFile)
 
-    internal fun saveConfig() = save(config(), configFile)
+    internal fun saveConfig(yaml: YamlConfiguration) = save(yaml, configFile)
 
     // ---- コーデック --------------------------------------------------------
 

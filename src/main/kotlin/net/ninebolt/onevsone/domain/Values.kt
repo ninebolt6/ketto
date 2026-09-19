@@ -27,7 +27,11 @@ data class ArenaDefinition(
 ) {
     val name: String get() = id.name
 
-    fun spawn(slot: Int): WorldPosition? = if (slot == 0) spawn1 else spawn2
+    fun spawn(slot: Int): WorldPosition? = when (slot) {
+        0 -> spawn1
+        1 -> spawn2
+        else -> null
+    }
 }
 
 /** 勝率の数値計算をここに集約する。 */

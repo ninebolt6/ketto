@@ -274,6 +274,19 @@ class YamlPersistenceTest {
     }
 
     @Test
+    fun `config writes do not clobber external edits`() {
+        val s = store()
+        YamlLobbyRepository(s).setLobby(WorldPosition("lobby", 1.0, 2.0, 3.0))
+        val file = File(folder, "config.yml")
+        val yaml = YamlConfiguration.loadConfiguration(file)
+        yaml.set("prefix", "&9[X] ")
+        yaml.save(file)
+
+        YamlSignRepository(s).setSign("a1", WorldPosition("world", 5.0, 64.0, 5.0))
+        assertEquals("&9[X] ", YamlConfiguration.loadConfiguration(file).getString("prefix"))
+    }
+
+    @Test
     fun `invalid arena names rejected`() {
         for (bad in listOf("", "a/b", "a\\b", "a.b", "..", "players", "PLAYERS", "Players", "a b", "ab", "x".repeat(65))) {
             assertFalse(isValidArenaName(bad), "expected '$bad' rejected")

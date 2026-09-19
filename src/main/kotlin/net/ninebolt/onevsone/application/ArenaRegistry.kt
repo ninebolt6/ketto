@@ -11,10 +11,11 @@ import java.util.UUID
  * ArenaApplicationService と ArenaAdministrationService が共有し、
  * アリーナをまたぐ二重参加禁止は playerArena 索引が担う。
  *
- * map は公開しない: playerArena[uuid]=id ⟺ uuid ∈ matches[id].participants の
- * 不変条件を守るため、索引の更新は assign/unassign 経由に限定する。
- * ArenaMatch は immutable なので変更は必ず installMatch/transact/updateMatch で
- * 置き換える。
+ * map は公開しない。playerArena 索引は match 書き戻し
+ * (installMatch/transact/updateMatch/removeMatch)のたびに参加者差分から
+ * 追従させ、playerArena[uuid]=id ⟺ uuid ∈ matches[id].participants の
+ * 不変条件を構造で維持する。ArenaMatch は immutable なので変更は必ず
+ * これらのメソッドで置き換える。
  */
 class ArenaRegistry {
     private val definitions = LinkedHashMap<ArenaId, ArenaDefinition>()
@@ -43,19 +44,26 @@ class ArenaRegistry {
     /** 登録順の全試合(シャットダウン処理用)。 */
     fun matches(): List<ArenaMatch> = matches.values.toList()
 
-    /** 新規登録および immutable 集約の書き戻し。 */
+    /** 新しい試合状態で置き換える(新規登録・ immutable 集約の書き戻し)。 */
     fun installMatch(match: ArenaMatch) {
-        matches[match.arenaId] = match
+        val previous = matches.put(match.arenaId, match)
+        reconcileIndex(match.arenaId, previous, match)
     }
 
     fun removeMatch(id: ArenaId) {
-        matches.remove(id)
+        val previous = matches.remove(id)
+        reconcileIndex(id, previous, null)
     }
 
-    /** アリーナが無ければ変換せず null。 */
+    /**
+     * match を変換して書き戻す。アリーナが無ければ何もせず null。
+     */
     fun updateMatch(id: ArenaId, transform: (ArenaMatch) -> ArenaMatch): ArenaMatch? {
         val current = matches[id] ?: return null
-        return transform(current).also { matches[id] = it }
+        val next = transform(current)
+        matches[id] = next
+        reconcileIndex(id, current, next)
+        return next
     }
 
     /**
@@ -64,7 +72,10 @@ class ArenaRegistry {
      */
     fun <O> transact(id: ArenaId, operation: (ArenaMatch) -> Transition<O>): Transition<O>? {
         val current = matches[id] ?: return null
-        return operation(current).also { matches[id] = it.match }
+        val transition = operation(current)
+        matches[id] = transition.match
+        reconcileIndex(id, current, transition.match)
+        return transition
     }
 
     // ---- 参加索引 ----------------------------------------------------------
@@ -73,11 +84,19 @@ class ArenaRegistry {
 
     fun isJoined(playerId: UUID): Boolean = playerArena.containsKey(playerId)
 
-    fun assign(playerId: UUID, arena: ArenaId) {
-        playerArena[playerId] = arena
-    }
-
-    fun unassign(playerId: UUID) {
-        playerArena.remove(playerId)
+    /**
+     * 書き戻し前後の参加者差分を索引へ反映する。
+     * 参加側の上書きは試合在籍をそのまま写すだけでよく、退出側は
+     * このアリーナを指しているエントリのみ外す(他アリーナ参加と混ざらないよう)。
+     */
+    private fun reconcileIndex(id: ArenaId, before: ArenaMatch?, after: ArenaMatch?) {
+        val beforeIds = before?.participants?.mapTo(HashSet()) { it.id } ?: emptySet()
+        val afterIds = after?.participants?.mapTo(HashSet()) { it.id } ?: emptySet()
+        for (playerId in beforeIds - afterIds) {
+            if (playerArena[playerId] == id) playerArena.remove(playerId)
+        }
+        for (playerId in afterIds - beforeIds) {
+            playerArena[playerId] = id
+        }
     }
 }

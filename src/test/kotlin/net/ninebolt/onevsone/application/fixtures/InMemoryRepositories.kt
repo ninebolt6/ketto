@@ -70,9 +70,12 @@ class InMemoryMatchStateRepository : MatchStateRepository {
     var failOnRegister = false
     var failOnUnregister = false
     var failOnSaveStatus = false
+    val failOnSaveStatusFor = mutableSetOf<String>()
 
     override fun saveStatus(match: ArenaMatch) {
-        if (failOnSaveStatus) throw PersistenceFailure("status save failed")
+        if (failOnSaveStatus || match.arenaId.name in failOnSaveStatusFor) {
+            throw PersistenceFailure("status save failed")
+        }
         savedViews += match
     }
 

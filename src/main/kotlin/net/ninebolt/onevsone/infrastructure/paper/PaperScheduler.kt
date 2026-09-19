@@ -17,16 +17,12 @@ class PaperScheduler(private val plugin: JavaPlugin) : SchedulerPort {
     }
 
     override fun repeat(initialDelayTicks: Long, periodTicks: Long, action: (Cancellation) -> Unit): Cancellation {
-        val cancellation = object : Cancellation {
-            lateinit var task: BukkitRunnable
-            override fun cancel() {
-                task.cancel()
-            }
-        }
-        cancellation.task = object : BukkitRunnable() {
+        var task: BukkitRunnable? = null
+        val cancellation = Cancellation { task?.cancel() }
+        task = object : BukkitRunnable() {
             override fun run() = action(cancellation)
         }
-        cancellation.task.runTaskTimer(plugin, initialDelayTicks, periodTicks)
+        task.runTaskTimer(plugin, initialDelayTicks, periodTicks)
         return cancellation
     }
 }
