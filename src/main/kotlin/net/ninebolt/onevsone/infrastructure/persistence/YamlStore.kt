@@ -67,6 +67,7 @@ class YamlStore(folder: File, private val logger: Logger) {
                 Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING)
             }
         } catch (e: IOException) {
+            tmp.delete()
             logger.warning("Failed to save ${file.path}: ${e.message}")
             throw PersistenceFailure("Could not save YAML file: ${file.path}", e)
         }

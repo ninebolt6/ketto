@@ -231,6 +231,18 @@ class YamlPersistenceTest {
     }
 
     @Test
+    fun `failed save leaves no temp file`() {
+        val s = store()
+        // 一時ファイルのパスをディレクトリで塞ぎ、書き出しを失敗させる
+        val tmp = File(folder, "status/players.yml.tmp")
+        tmp.mkdirs()
+        assertThrows(IllegalStateException::class.java) {
+            s.save(YamlConfiguration(), File(folder, "status/players.yml"))
+        }
+        assertFalse(tmp.exists())
+    }
+
+    @Test
     fun `malformed players yaml throws and file stays byte identical`() {
         val file = File(folder, "status/players.yml")
         File(folder, "status").mkdirs()
