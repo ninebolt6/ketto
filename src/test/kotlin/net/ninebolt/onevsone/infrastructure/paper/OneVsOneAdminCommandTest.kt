@@ -131,8 +131,7 @@ class OneVsOneAdminCommandTest {
     fun `arena setsign requires looking at sign`() {
         val op = env.opPlayer("Op")
         env.newArena()
-        // 空ワールドの上空で何も指していない状態にする
-        op.setLocation(Location(env.world(), 0.5, 100.0, 0.5, 0f, -90f))
+        // targetBlock 未設定 = 何も指していない
         env.run(op, "arena", "setsign", "arena1")
         assertTrue(op.drainMessages().any { it.contains("看板を見て実行してください") })
     }
@@ -144,11 +143,9 @@ class OneVsOneAdminCommandTest {
         env.newArena("arena1")
         env.newArena("arena2")
 
-        env.signBlock(4, 64, 4)
-        // 真上から看板を見下ろす位置・向きにする
-        val gaze = Location(env.world(), 4.5, 65.5, 4.5, 0f, 90f)
-        op.setLocation(gaze)
-        second.setLocation(gaze.clone())
+        val sign = env.signBlock(4, 64, 4)
+        op.targetBlock = sign
+        second.targetBlock = sign
 
         env.run(op, "arena", "setsign", "arena1")
         assertEquals("arena1", env.signRepo.signOwner("world", 4, 64, 4))

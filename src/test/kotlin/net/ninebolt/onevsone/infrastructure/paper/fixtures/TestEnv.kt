@@ -39,6 +39,7 @@ import net.ninebolt.onevsone.infrastructure.persistence.YamlStore
 import net.kyori.adventure.text.Component
 import org.bukkit.Location
 import org.bukkit.Material
+import org.bukkit.block.Block
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.bukkit.configuration.serialization.ConfigurationSerialization
@@ -266,6 +267,11 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
  * MockBukkit の PlayerSpigotMock も未実装のため、PlayerMock.respawn() へ委譲する実装を噛ませる。
  */
 class ArenaPlayerMock(server: ServerMock, name: String, uuid: UUID) : PlayerMock(server, name, uuid) {
+    /** 視線先のブロック。getTargetBlockExact は MockBukkit 未実装のためスタブで返す。 */
+    var targetBlock: Block? = null
+
+    override fun getTargetBlockExact(maxDistance: Int): Block? = targetBlock
+
     private val testSpigot = object : Player.Spigot() {
         var respawnCount = 0
         /** respawn 実行時点の先頭スロット。リスポーン→装備復元の順序検証用。 */
