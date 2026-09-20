@@ -22,9 +22,9 @@ import org.bukkit.inventory.EquipmentSlot
 
 /** ArenaListener テスト用の実イベント構築と 2 人マッチ開始フィクスチャ。 */
 
-internal fun TestEnv.deathEvent(player: Player): PlayerDeathEvent {
+internal fun TestEnv.deathEvent(player: Player, droppedExp: Int = 0): PlayerDeathEvent {
     val drops = mutableListOf(item(Material.STONE))
-    return PlayerDeathEvent(player, mockk<DamageSource>(relaxed = true), drops, 0, Component.empty())
+    return PlayerDeathEvent(player, mockk<DamageSource>(relaxed = true), drops, droppedExp, Component.empty())
 }
 
 internal fun quitEvent(player: Player) =

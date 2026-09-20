@@ -44,10 +44,13 @@ class ArenaListenerCombatTest {
     fun `death event keeps inventory clears drops and resolves round`() {
         val (p1, p2) = env.twoPlayerIngame()
         p2.health = 0.0
-        val event = env.deathEvent(p2)
+        val event = env.deathEvent(p2, droppedExp = 30)
         env.listener.onDeath(event)
         assertTrue(event.keepInventory)
         assertTrue(event.drops.isEmpty())
+        // 経験値はドロップさせず、リスポーン後もレベル・経験値を保持する
+        assertEquals(0, event.droppedExp)
+        assertTrue(event.keepLevel)
         assertEquals(ArenaState.ROUNDCOUNTDOWN, env.state())
         assertEquals(1, env.service.matchOf("arena1")!!.winsOf(p1.uuid))
     }
@@ -55,9 +58,11 @@ class ArenaListenerCombatTest {
     @Test
     fun `non participant death ignored`() {
         val outsider = env.player("Outsider")
-        val event = env.deathEvent(outsider)
+        val event = env.deathEvent(outsider, droppedExp = 30)
         env.listener.onDeath(event)
         assertFalse(event.keepInventory)
+        assertEquals(30, event.droppedExp)
+        assertFalse(event.keepLevel)
     }
 
     @Test

@@ -35,6 +35,9 @@ class ArenaListener(
         if (service.matchOf(id) == null) return
         event.keepInventory = true
         event.drops.clear()
+        // keepInventory はアイテムのみを守るため、経験値もドロップさせず保持する
+        event.droppedExp = 0
+        event.keepLevel = true
         if (!service.defeat(id, DefeatCause.DEATH)) {
             service.requestRespawn(id)
         }
