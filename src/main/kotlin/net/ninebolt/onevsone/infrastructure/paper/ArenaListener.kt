@@ -11,6 +11,7 @@ import org.bukkit.event.block.BlockBreakEvent
 import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.player.PlayerCommandPreprocessEvent
+import org.bukkit.event.player.PlayerDropItemEvent
 import org.bukkit.event.player.PlayerJoinEvent
 import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.event.player.PlayerQuitEvent
@@ -86,6 +87,14 @@ class ArenaListener(
     fun onBreak(event: BlockBreakEvent) {
         val match = service.matchOf(event.player.uniqueId.toKotlinUuid()) ?: return
         if (ParticipantRestrictions.forState(match.state).blockBreakCancelled) {
+            event.isCancelled = true
+        }
+    }
+
+    @EventHandler
+    fun onDrop(event: PlayerDropItemEvent) {
+        val match = service.matchOf(event.player.uniqueId.toKotlinUuid()) ?: return
+        if (ParticipantRestrictions.forState(match.state).itemDropCancelled) {
             event.isCancelled = true
         }
     }

@@ -5,19 +5,21 @@ import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.breakEvent
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.damageEvent
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.dropEvent
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.plainBlock
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import org.bukkit.entity.Player
 import org.bukkit.event.player.PlayerCommandPreprocessEvent
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
-/** 状態ごとの制約(ブロック破壊・コマンド)の検証。実イベントの isCancelled を見る。 */
+/** 状態ごとの制約(ブロック破壊・アイテムドロップ・コマンド)の検証。実イベントの isCancelled を見る。 */
 class ArenaListenerRestrictionTest {
 
     @TempDir
@@ -74,6 +76,37 @@ class ArenaListenerRestrictionTest {
         env.listener.onCommand(countdown)
         assertEquals(true, countdown.isCancelled)
         assertTrue(p1.drainMessages().any { it.contains("コマンドは使用できません！") })
+    }
+
+    @Test
+    fun `item drop cancelled only while equipped`() {
+        val arena = env.newArena()
+        val p1 = env.player("Alice")
+        env.join(p1, arena)
+        val onemore = env.dropEvent(p1)
+        env.listener.onDrop(onemore)
+        assertFalse(onemore.isCancelled)
+
+        val p2 = env.player("Bob")
+        env.join(p2, arena)
+        val countdown = env.dropEvent(p1)
+        env.listener.onDrop(countdown)
+        assertFalse(countdown.isCancelled)
+
+        env.tick(6)
+        val ingame = env.dropEvent(p1)
+        env.listener.onDrop(ingame)
+        assertTrue(ingame.isCancelled)
+
+        env.service.defeat(p2.uuid, DefeatCause.FALL)
+        val roundCountdown = env.dropEvent(p1)
+        env.listener.onDrop(roundCountdown)
+        assertTrue(roundCountdown.isCancelled)
+
+        val outsider = env.player("Carol")
+        val free = env.dropEvent(outsider)
+        env.listener.onDrop(free)
+        assertFalse(free.isCancelled)
     }
 
     @Test

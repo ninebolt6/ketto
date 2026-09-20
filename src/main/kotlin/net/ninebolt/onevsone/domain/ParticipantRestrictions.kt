@@ -8,6 +8,8 @@ data class ParticipantRestrictions(
     val horizontalMoveFrozen: Boolean,
     val damageCancelled: Boolean,
     val blockBreakCancelled: Boolean,
+    /** 装備交換後はインベントリが開始時バックアップで上書きされるため、持ち出しを防ぐ */
+    val itemDropCancelled: Boolean,
     /** ONEMORE 待機中のみコマンドを許可する */
     val commandsBlocked: Boolean
 ) {
@@ -17,18 +19,21 @@ data class ParticipantRestrictions(
                 horizontalMoveFrozen = true,
                 damageCancelled = true,
                 blockBreakCancelled = true,
+                itemDropCancelled = true,
                 commandsBlocked = true
             )
             ArenaState.INGAME -> ParticipantRestrictions(
                 horizontalMoveFrozen = false,
                 damageCancelled = false,
                 blockBreakCancelled = true,
+                itemDropCancelled = true,
                 commandsBlocked = true
             )
             ArenaState.COUNTDOWN -> ParticipantRestrictions(
                 horizontalMoveFrozen = false,
                 damageCancelled = false,
                 blockBreakCancelled = false,
+                itemDropCancelled = false,
                 commandsBlocked = true
             )
             // WAITING / ONEMORE: 制約なし。WAITING で参加者が存在する経路は無いが、
@@ -37,12 +42,14 @@ data class ParticipantRestrictions(
                 horizontalMoveFrozen = false,
                 damageCancelled = false,
                 blockBreakCancelled = false,
+                itemDropCancelled = false,
                 commandsBlocked = false
             )
             ArenaState.WAITING -> ParticipantRestrictions(
                 horizontalMoveFrozen = false,
                 damageCancelled = false,
                 blockBreakCancelled = false,
+                itemDropCancelled = false,
                 commandsBlocked = true
             )
         }

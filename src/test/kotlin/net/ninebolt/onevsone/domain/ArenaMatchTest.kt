@@ -170,24 +170,28 @@ class ArenaMatchTest {
                 horizontalMoveFrozen = false,
                 damageCancelled = false,
                 blockBreakCancelled = false,
+                itemDropCancelled = false,
                 commandsBlocked = false
             ),
             ArenaState.COUNTDOWN to ParticipantRestrictions(
                 horizontalMoveFrozen = false,
                 damageCancelled = false,
                 blockBreakCancelled = false,
+                itemDropCancelled = false,
                 commandsBlocked = true
             ),
             ArenaState.ROUNDCOUNTDOWN to ParticipantRestrictions(
                 horizontalMoveFrozen = true,
                 damageCancelled = true,
                 blockBreakCancelled = true,
+                itemDropCancelled = true,
                 commandsBlocked = true
             ),
             ArenaState.INGAME to ParticipantRestrictions(
                 horizontalMoveFrozen = false,
                 damageCancelled = false,
                 blockBreakCancelled = true,
+                itemDropCancelled = true,
                 commandsBlocked = true
             )
         )

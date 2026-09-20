@@ -15,6 +15,7 @@ import org.bukkit.block.BlockFace
 import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.player.PlayerInteractEvent
+import org.bukkit.event.player.PlayerDropItemEvent
 import org.bukkit.event.player.PlayerJoinEvent
 import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.event.player.PlayerQuitEvent
@@ -59,6 +60,10 @@ internal fun interact(
 ) = PlayerInteractEvent(player, action, null, block, BlockFace.SELF, hand)
 
 internal fun breakEvent(player: Player, block: Block) = BlockBreakEvent(block, player)
+
+/** 実アイテムエンティティを落としてドロップイベントを作る。 */
+internal fun TestEnv.dropEvent(player: Player): PlayerDropItemEvent =
+    PlayerDropItemEvent(player, world().dropItem(player.location, item(Material.STONE)))
 
 /** 看板ではない実ブロック。 */
 internal fun TestEnv.plainBlock(x: Int = 9, y: Int = 64, z: Int = 9): Block =
