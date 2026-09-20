@@ -192,6 +192,45 @@ class YamlPersistenceTest {
     }
 
     @Test
+    fun `saveBackups evacuates a foreign record with the same name`() {
+        val s = backups()
+        val original = Participant.new("Alice")
+        val old = BackupRef.new(MatchId.new(), original.id, original.name)
+        s.saveBackups(listOf(PersistedBackup(old, PaperInventorySnapshot(items = listOf(null)))))
+
+        // 同名の別人が参加してバックアップを保存する
+        val other = Participant.new("Alice")
+        val fresh = BackupRef.new(MatchId.new(), other.id, other.name)
+        s.saveBackups(listOf(PersistedBackup(fresh, PaperInventorySnapshot())))
+
+        val yaml = YamlConfiguration.loadConfiguration(File(folder, "status/players.yml"))
+        assertEquals(other.id.toString(), yaml.getString("inv.Alice.uuid"))
+        val moved = "inv.Alice__${old.backupId}"
+        assertEquals(original.id.toString(), yaml.getString("$moved.uuid"))
+        assertEquals("Alice", yaml.getString("$moved.name"))
+
+        // 両方が読み出せ、旧レコードは id 一致で削除できる
+        assertEquals(2, backups().persistedBackups().size)
+        backups().deleteBackup(old)
+        val after = YamlConfiguration.loadConfiguration(File(folder, "status/players.yml"))
+        assertNull(after.getConfigurationSection(moved))
+        assertEquals(other.id.toString(), after.getString("inv.Alice.uuid"))
+    }
+
+    @Test
+    fun `saveBackups overwrites own record without evacuating`() {
+        val s = backups()
+        val p = Participant.new("Alice")
+        s.saveBackups(listOf(PersistedBackup(BackupRef.new(MatchId.new(), p.id, p.name), PaperInventorySnapshot())))
+        val second = BackupRef.new(MatchId.new(), p.id, p.name)
+        s.saveBackups(listOf(PersistedBackup(second, PaperInventorySnapshot(items = listOf(null)))))
+
+        val yaml = YamlConfiguration.loadConfiguration(File(folder, "status/players.yml"))
+        assertEquals(second.backupId.toString(), yaml.getString("inv.Alice.id"))
+        assertEquals(1, backups().persistedBackups().size)
+    }
+
+    @Test
     fun `malformed players yaml throws and file stays byte identical`() {
         val file = File(folder, "status/players.yml")
         File(folder, "status").mkdirs()
@@ -275,6 +314,11 @@ class YamlPersistenceTest {
         assertEquals(1, pending.size)
         assertEquals("Legacy", pending[0].ref.playerName)
         assertNull(pending[0].ref.playerId)
+        // 識別子が無い旧レコードは採番して書き戻す(以後は id で同一性判定できる)
+        assertEquals(
+            pending[0].ref.backupId.toString(),
+            YamlConfiguration.loadConfiguration(file).getString("inv.Legacy.id")
+        )
     }
 
     @Test
