@@ -1,14 +1,8 @@
 package net.ninebolt.onevsone.infrastructure.paper.fixtures
 
-import io.mockk.EqMatcher
-import io.mockk.Runs
 import io.mockk.every
-import io.mockk.just
 import io.mockk.mockk
-import io.mockk.mockkConstructor
-import io.mockk.mockkStatic
-import io.mockk.unmockkConstructor
-import io.mockk.unmockkStatic
+import io.mockk.spyk
 import io.papermc.paper.threadedregions.scheduler.AsyncScheduler
 import io.papermc.paper.threadedregions.scheduler.ScheduledTask
 import net.ninebolt.onevsone.application.ArenaAdministrationService
@@ -43,46 +37,77 @@ import net.ninebolt.onevsone.infrastructure.persistence.YamlSignRepository
 import net.ninebolt.onevsone.infrastructure.persistence.YamlPlayerStatsRepository
 import net.ninebolt.onevsone.infrastructure.persistence.YamlStore
 import net.kyori.adventure.text.Component
-import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.Material
-import org.bukkit.Server
-import org.bukkit.World
-import org.bukkit.configuration.file.YamlConfiguration
-import org.bukkit.command.ConsoleCommandSender
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
-import org.bukkit.inventory.PlayerInventory
-import org.bukkit.inventory.meta.ItemMeta
-import org.bukkit.plugin.Plugin
-import org.bukkit.plugin.java.JavaPlugin
-import org.bukkit.scheduler.BukkitScheduler
-import org.bukkit.scheduler.BukkitTask
+import org.bukkit.configuration.serialization.ConfigurationSerialization
 import org.bukkit.scoreboard.Criteria
-import org.bukkit.scoreboard.Objective
-import org.bukkit.scoreboard.Score
+import org.bukkit.scoreboard.DisplaySlot
+import org.bukkit.scoreboard.RenderType
 import org.bukkit.scoreboard.Scoreboard
-import org.bukkit.scoreboard.ScoreboardManager
+import org.mockbukkit.mockbukkit.inventory.ItemStackMock
+import org.mockbukkit.mockbukkit.scoreboard.ObjectiveMock
+import org.mockbukkit.mockbukkit.scoreboard.ScoreMock
+import org.mockbukkit.mockbukkit.scoreboard.ScoreboardManagerMock
+import org.mockbukkit.mockbukkit.scoreboard.ScoreboardMock
+import org.mockbukkit.mockbukkit.MockBukkit
+import org.mockbukkit.mockbukkit.ServerMock
+import org.mockbukkit.mockbukkit.entity.PlayerMock
+import org.mockbukkit.mockbukkit.plugin.PluginMock
+import org.mockbukkit.mockbukkit.world.WorldMock
 import java.io.File
 import java.util.Locale
 import java.util.UUID
-import java.util.function.Consumer
 import java.util.logging.Logger
 import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
 import kotlin.uuid.toKotlinUuid
 
 /**
- * Bukkit モック上に実アダプター・実サービスを配線する統合テスト環境。
+ * MockBukkit 上に実アダプター・実サービスを配線する統合テスト環境。
+ * モック呼出ではなく実状態(実インベントリ・実スケジューラ・実イベント)で検証する。
  * Paper 依存は infrastructure テストに限定する。
  */
 class TestEnv(val folder: File, val requiredWins: Int = 3) {
-    val server: Server = mockk(relaxed = true)
-    val plugin: JavaPlugin = mockk(relaxed = true)
-    val scheduler: BukkitScheduler = mockk(relaxed = true)
+    // spyk はオフライン解決・isEnabled・asyncScheduler の障害注入/同期化のみに使い、
+    // 未スタブ呼出は全て実動作へ委譲する
+    val server: ServerMock = spyk(MockBukkit.mock())
+    val plugin: PluginMock = spyk(MockBukkit.createMockPlugin())
     val asyncScheduler: AsyncScheduler = mockk(relaxed = true)
-    val scoreboardManager: ScoreboardManager = mockk(relaxed = true)
-    val console: ConsoleCommandSender = mockk(relaxed = true)
+    // ScoreMock.customName が MockBukkit 4.15 未実装のため、スコアボード境界だけは narrow なスタブに留める
+    val scoreboardManager: ScoreboardManagerMock = mockk(relaxed = true)
+    val boards = mutableListOf<Scoreboard>()
+
+    init {
+        // ItemStack.of が ItemStackMock を返すため、YamlConfiguration 経由の往復に登録が必要
+        ConfigurationSerialization.registerClass(ItemStackMock::class.java)
+        // async 解決は即時実行に潰し、応答側の runTask は実スケジューラ経由で runOneShots が消化する
+        every { server.asyncScheduler } returns asyncScheduler
+        every { asyncScheduler.runNow(any(), any<java.util.function.Consumer<ScheduledTask>>()) } answers {
+            arg<java.util.function.Consumer<ScheduledTask>>(1).accept(mockk(relaxed = true))
+            mockk(relaxed = true)
+        }
+        every { server.scoreboardManager } returns scoreboardManager
+        every { scoreboardManager.newScoreboard } answers {
+            // Scoreboard は実物のまま使う。ScoreMock.customName 未実装なので
+            // validate を呼ばない匿名サブクラスの objective/score に差し替える
+            val board = spyk(ScoreboardMock())
+            every { board.registerNewObjective(any<String>(), any<Criteria>(), any<Component>()) } answers {
+                object : ObjectiveMock(board, arg(0), arg(2), arg(1), RenderType.INTEGER) {
+                    override fun setDisplaySlot(slot: DisplaySlot?) {}
+                    override fun getScore(entry: String): ScoreMock =
+                        object : ScoreMock(this, entry) {
+                            override fun customName(customName: Component?) {}
+                            override fun setScore(score: Int) {}
+                        }
+                }
+            }
+            boards += board
+            board
+        }
+        every { plugin.isEnabled } returns true
+    }
 
     val messages = Messages.load(File(folder, "lang"), "ja", "auto", Logger.getLogger("1vs1-test"))
     val failures = PluginFailureReporter { plugin.logger }
@@ -158,181 +183,34 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         admin = ArenaAdministrationService(registry, arenaRepo, signRepo, lobbyRepo, equipment, presentation, progression)
     }
 
-    data class TimerRecord(val runnable: Runnable, val delay: Long, val period: Long, val taskId: Int)
+    fun world(name: String = "world"): WorldMock =
+        server.getWorld(name) as? WorldMock ?: server.addSimpleWorld(name)
 
-    val timers = mutableListOf<TimerRecord>()
-    val cancelledTaskIds = mutableListOf<Int>()
-    var nextTaskId = 1
-    val oneShots = mutableListOf<Runnable>()
-    val players = mutableMapOf<UUID, Player>()
-    val boards = mutableListOf<Scoreboard>()
-    val worlds = mutableMapOf<String, World>()
-
-    init {
-        mockkStatic(Bukkit::class, ItemStack::class)
-        every { Bukkit.getServer() } returns server
-        every { Bukkit.getScheduler() } returns scheduler
-        every { Bukkit.getScoreboardCriteria(any<String>()) } answers { mockk<Criteria>(relaxed = true) }
-        every { ItemStack.of(any<Material>()) } answers { mockk(relaxed = true) }
-        every { ItemStack.of(any<Material>(), any<Int>()) } answers { mockk(relaxed = true) }
-
-        mockkConstructor(ItemStack::class)
-        every { anyConstructed<ItemStack>().itemMeta = any() } just Runs
-        every { anyConstructed<ItemStack>().editMeta(any<Consumer<ItemMeta>>()) } answers {
-            firstArg<Consumer<ItemMeta>>().accept(mockk<ItemMeta>(relaxed = true))
-            true
-        }
-        listOf(Material.COMPASS, Material.FEATHER).forEach { material ->
-            every { constructedWith<ItemStack>(EqMatcher(material)).type } returns material
-            every { constructedWith<ItemStack>(EqMatcher(material)).clone() } answers { item(material) }
-            every { constructedWith<ItemStack>(EqMatcher(material)).serialize() } returns mutableMapOf<String, Any>("type" to material.name)
-        }
-
-        every { plugin.server } returns server
-        every { plugin.isEnabled } returns true
-        every { plugin.logger } returns Logger.getLogger("1vs1-test")
-        every { plugin.dataFolder } returns folder
-        val config = YamlConfiguration()
-        config.set("required-wins", requiredWins)
-        every { plugin.config } returns config
-
-        every { server.scheduler } returns scheduler
-        every { server.asyncScheduler } returns asyncScheduler
-        every { server.scoreboardManager } returns scoreboardManager
-        every { server.getPlayer(any<UUID>()) } answers { players[firstArg()] }
-        every { server.getPlayerExact(any<String>()) } answers {
-            players.values.firstOrNull { it.name == firstArg<String>() }
-        }
-        every { server.onlinePlayers } answers { players.values.toList() }
-        every { server.consoleSender } returns console
-        every { server.getWorld(any<String>()) } answers { worlds[firstArg()] }
-        every { server.getOfflinePlayerIfCached(any<String>()) } returns null
-
-        every { scoreboardManager.newScoreboard } answers {
-            val board = mockk<Scoreboard>(relaxed = true)
-            every {
-                board.registerNewObjective(
-                    any<String>(),
-                    any<Criteria>(),
-                    any<Component>()
-                )
-            } answers {
-                val objective = mockk<Objective>(relaxed = true)
-                every { objective.getScore(any<String>()) } answers { mockk<Score>(relaxed = true) }
-                objective
-            }
-            boards += board
-            board
-        }
-        every {
-            scheduler.runTaskTimer(
-                any<Plugin>(),
-                any<Runnable>(),
-                any<Long>(),
-                any<Long>()
-            )
-        } answers {
-            val runnable = arg<Runnable>(1)
-            val task = mockk<BukkitTask>(relaxed = true)
-            val id = nextTaskId++
-            every { task.taskId } returns id
-            every { task.cancel() } answers { cancelledTaskIds += id }
-            timers += TimerRecord(runnable, arg(2), arg(3), id)
-            task
-        }
-        every { scheduler.runTask(any<Plugin>(), any<Runnable>()) } answers {
-            oneShots += arg<Runnable>(1)
-            mockk<BukkitTask>(relaxed = true)
-        }
-        every {
-            scheduler.runTaskLater(
-                any<Plugin>(),
-                any<Runnable>(),
-                any<Long>()
-            )
-        } answers {
-            oneShots += arg<Runnable>(1)
-            mockk<BukkitTask>(relaxed = true)
-        }
-        every { scheduler.cancelTask(any<Int>()) } answers {
-            cancelledTaskIds += firstArg<Int>()
-        }
-
-        // async タスクは即時実行に潰す。応答側の runTask が oneShots へ溜まるので runOneShots で同期化できる
-        every { asyncScheduler.runNow(any<Plugin>(), any<Consumer<ScheduledTask>>()) } answers {
-            val task = mockk<ScheduledTask>(relaxed = true)
-            arg<Consumer<ScheduledTask>>(1).accept(task)
-            task
-        }
-    }
-
-    fun item(type: Material): ItemStack {
-        val stack = mockk<ItemStack>(relaxed = true)
-        every { stack.type } returns type
-        every { stack.clone() } answers { item(type) }
-        every { stack.serialize() } returns mutableMapOf<String, Any>("type" to type.name)
-        return stack
-    }
-
-    fun world(name: String = "world"): World = worlds.getOrPut(name) {
-        mockk<World>(relaxed = true).also { every { it.name } returns name }
-    }
-
-    fun inventory(contentsSize: Int = 41, armorSize: Int = 4): PlayerInventory {
-        val contents = arrayOfNulls<ItemStack>(contentsSize)
-        val armor = arrayOfNulls<ItemStack>(armorSize)
-        val inv = mockk<PlayerInventory>(relaxed = true)
-        every { inv.contents } answers { contents.clone() }
-        every { inv.contents = any() } answers {
-            val arr = firstArg<Array<ItemStack?>>()
-            contents.indices.forEach { contents[it] = arr.getOrNull(it) }
-        }
-        every { inv.armorContents } answers { armor.clone() }
-        every { inv.armorContents = any() } answers {
-            val arr = firstArg<Array<ItemStack?>>()
-            armor.indices.forEach { armor[it] = arr.getOrNull(it) }
-        }
-        every { inv.setItem(any<Int>(), any<ItemStack>()) } answers {
-            contents[firstArg()] = arg<ItemStack?>(1)
-        }
-        every { inv.clear() } answers {
-            contents.fill(null)
-            armor.fill(null)
-        }
-        return inv
-    }
-
-    fun player(name: String, uuid: Uuid = Uuid.random(), worldName: String = "world"): Player {
+    fun player(name: String, uuid: Uuid = Uuid.random(), worldName: String = "world"): ArenaPlayerMock {
         val w = world(worldName)
-        val p = mockk<Player>(relaxed = true)
-        val inv = inventory()
-        val spigot = mockk<Player.Spigot>(relaxed = true)
-        every { p.uniqueId } returns uuid.toJavaUuid()
-        every { p.name } returns name
-        every { p.inventory } returns inv
-        every { p.isOnline } returns true
-        every { p.world } returns w
-        every { p.locale() } returns Locale.JAPAN
-        every { p.location } returns Location(w, 0.0, 64.0, 0.0)
-        every { p.spigot() } returns spigot
-        every { p.getAttribute(any()) } returns null
-        players[uuid.toJavaUuid()] = p
+        val p = ArenaPlayerMock(server, name, uuid.toJavaUuid())
+        p.setLocale(Locale.JAPAN)
+        server.addPlayer(p)
+        p.setLocation(Location(w, 0.0, 64.0, 0.0))
         return p
     }
 
+    fun item(type: Material): ItemStack = ItemStack.of(type)
+
+    /** 切断。オンライン一覧から外れ isOnline=false になる。quit 処理は quit() で駆動する。 */
     fun removePlayer(p: Player) {
-        players.remove(p.uniqueId)
-        every { p.isOnline } returns false
+        (p as? PlayerMock)?.disconnect()
     }
 
+    /** カウントダウンタイマー(period=20tick)を n 回発火させる分だけ時間を進める。 */
     fun tick(times: Int = 1) {
-        repeat(times) { timers.lastOrNull()?.runnable?.run() }
+        server.scheduler.performTicks(20L * times)
     }
 
+    /** 遅延 0 のワンショット(延期コールバック)を消化する。周期タイマーは発火させない。 */
     fun runOneShots() {
-        val pending = oneShots.toList()
-        oneShots.clear()
-        pending.forEach { it.run() }
+        server.scheduler.waitAsyncTasksFinished()
+        server.scheduler.performTicks(1)
     }
 
     fun newArena(name: String = "arena1", enabled: Boolean = true): Arena.Id {
@@ -351,7 +229,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     fun setKit(arena: Arena.Id, snapshot: PaperInventorySnapshot) = equipment.putKit(arena, snapshot)
 
     /** 看板参加と同じ経路で join し、応答メッセージも配送する。 */
-    fun join(player: Player, arena: Arena.Id): JoinReply {
+    fun join(player: Player, arena: Arena.Id = Arena.Id.new("arena1")): JoinReply {
         val reply = service.join(player.uuid, player.name, arena)
         signListener.renderJoin(player, arena.name, reply)
         return reply
@@ -378,9 +256,31 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     fun state(name: String = "arena1") = service.matchOf(name)?.state
 
     fun close() {
-        unmockkConstructor(ItemStack::class)
-        unmockkStatic(Bukkit::class, ItemStack::class)
+        MockBukkit.unmock()
     }
+}
+
+/**
+ * `Player.Spigot.respawn()` は paper-api の既定実装が UnsupportedOperationException を投げ、
+ * MockBukkit の PlayerSpigotMock も未実装のため、PlayerMock.respawn() へ委譲する実装を噛ませる。
+ */
+class ArenaPlayerMock(server: ServerMock, name: String, uuid: UUID) : PlayerMock(server, name, uuid) {
+    private val testSpigot = object : Player.Spigot() {
+        var respawnCount = 0
+        /** respawn 実行時点の先頭スロット。リスポーン→装備復元の順序検証用。 */
+        var slotAtRespawn: ItemStack? = null
+
+        override fun respawn() {
+            respawnCount++
+            slotAtRespawn = this@ArenaPlayerMock.inventory.getItem(0)
+            this@ArenaPlayerMock.respawn()
+        }
+    }
+
+    override fun spigot(): Player.Spigot = testSpigot
+
+    val respawnCount get() = testSpigot.respawnCount
+    val slotAtRespawn get() = testSpigot.slotAtRespawn
 }
 
 /** モック Player の Bukkit 側 ID(java.util.UUID)をドメインの Uuid へ変換する。 */

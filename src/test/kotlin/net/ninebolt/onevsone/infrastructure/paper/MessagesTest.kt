@@ -1,18 +1,13 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
-import io.mockk.every
 import io.mockk.mockk
-import io.mockk.slot
 import io.mockk.verify
-import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.containsText
-import org.bukkit.command.CommandSender
 import org.bukkit.configuration.file.YamlConfiguration
-import org.bukkit.command.ConsoleCommandSender
-import org.bukkit.entity.Player
+import org.mockbukkit.mockbukkit.MockBukkit
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
@@ -33,12 +28,6 @@ class MessagesTest {
 
     private fun load(language: String = "auto", logger: Logger = this.logger) =
         Messages.load(File(folder, "lang"), "ja", language, logger)
-
-    private fun CommandSender.sends(): String {
-        val slot = slot<Component>()
-        verify { sendMessage(capture(slot)) }
-        return plain.serialize(slot.captured)
-    }
 
     /** 同梱リソースの葉キー集合を取り出す。 */
     private fun bundledKeys(lang: String): Set<String> {
@@ -93,28 +82,35 @@ class MessagesTest {
     @Test
     fun `auto mode resolves player locale and falls back for console`() {
         val messages = load()
-        val ja = mockk<Player>(relaxed = true)
-        every { ja.locale() } returns Locale.JAPAN
-        val en = mockk<Player>(relaxed = true)
-        every { en.locale() } returns Locale.ENGLISH
-        val console = mockk<ConsoleCommandSender>(relaxed = true)
+        val server = MockBukkit.mock()
+        try {
+            val ja = server.addPlayer("Ja").also { it.setLocale(Locale.JAPAN) }
+            val en = server.addPlayer("En").also { it.setLocale(Locale.ENGLISH) }
+            val console = server.consoleSender
 
-        messages.send(ja, messages.joined("a1"))
-        messages.send(en, messages.joined("a1"))
-        messages.send(console, messages.joined("a1"))
+            messages.send(ja, messages.joined("a1"))
+            messages.send(en, messages.joined("a1"))
+            messages.send(console, messages.joined("a1"))
 
-        assertTrue(ja.sends().contains("アリーナ: a1 に参加しました"))
-        assertTrue(en.sends().contains("Joined arena: a1"))
-        assertTrue(console.sends().contains("アリーナ: a1 に参加しました"))
+            assertTrue(plain.serialize(ja.nextComponentMessage()!!).contains("アリーナ: a1 に参加しました"))
+            assertTrue(plain.serialize(en.nextComponentMessage()!!).contains("Joined arena: a1"))
+            assertTrue(plain.serialize(console.nextComponentMessage()!!).contains("アリーナ: a1 に参加しました"))
+        } finally {
+            MockBukkit.unmock()
+        }
     }
 
     @Test
     fun `fixed language overrides player locale`() {
         val messages = load(language = "en")
-        val ja = mockk<Player>(relaxed = true)
-        every { ja.locale() } returns Locale.JAPAN
-        messages.send(ja, messages.joined("a1"))
-        assertTrue(ja.sends().contains("Joined arena: a1"))
+        val server = MockBukkit.mock()
+        try {
+            val ja = server.addPlayer("Ja").also { it.setLocale(Locale.JAPAN) }
+            messages.send(ja, messages.joined("a1"))
+            assertTrue(plain.serialize(ja.nextComponentMessage()!!).contains("Joined arena: a1"))
+        } finally {
+            MockBukkit.unmock()
+        }
     }
 
     @Test

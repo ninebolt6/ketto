@@ -1,21 +1,21 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.verify
+import net.kyori.adventure.text.Component
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.damageEvent
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.deathEvent
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.moveEvent
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.nonPlayer
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.twoPlayerIngame
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import org.bukkit.Location
-import org.bukkit.entity.Entity
-import org.bukkit.event.entity.EntityDamageEvent
+import org.bukkit.Material
 import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.event.player.PlayerTeleportEvent
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -23,7 +23,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
-/** 死亡・ダメージ・切断・移動イベントのハンドリング。 */
+/** 死亡・ダメージ・切断・移動イベントのハンドリング。実イベントオブジェクトで検証する。 */
 class ArenaListenerCombatTest {
 
     @TempDir
@@ -44,10 +44,10 @@ class ArenaListenerCombatTest {
     @Test
     fun `death event keeps inventory clears drops and resolves round`() {
         val (p1, p2) = env.twoPlayerIngame()
-        every { p2.isDead } returns true
+        p2.health = 0.0
         val event = env.deathEvent(p2)
         env.listener.onDeath(event)
-        verify(exactly = 1) { event.keepInventory = true }
+        assertTrue(event.keepInventory)
         assertTrue(event.drops.isEmpty())
         assertEquals(ArenaState.ROUNDCOUNTDOWN, env.state())
         assertEquals(1, env.service.matchOf("arena1")!!.winsOf(p1.uuid))
@@ -58,24 +58,22 @@ class ArenaListenerCombatTest {
         val outsider = env.player("Outsider")
         val event = env.deathEvent(outsider)
         env.listener.onDeath(event)
-        verify(exactly = 0) { event.keepInventory = true }
+        assertFalse(event.keepInventory)
     }
 
     @Test
     fun `non player damage ignored`() {
-        val event = mockk<EntityDamageEvent>(relaxed = true)
-        every { event.entity } returns mockk<Entity>(relaxed = true)
+        val event = damageEvent(env.nonPlayer())
         env.listener.onDamage(event)
-        verify(exactly = 0) { event.isCancelled = true }
+        assertFalse(event.isCancelled)
     }
 
     @Test
     fun `damage not cancelled in INGAME`() {
         val (p1, _) = env.twoPlayerIngame()
-        val event = mockk<EntityDamageEvent>(relaxed = true)
-        every { event.entity } returns p1
+        val event = damageEvent(p1)
         env.listener.onDamage(event)
-        verify(exactly = 0) { event.isCancelled = true }
+        assertFalse(event.isCancelled)
     }
 
     @Test
@@ -83,31 +81,25 @@ class ArenaListenerCombatTest {
         val (p1, p2) = env.twoPlayerIngame()
         env.service.defeat(p2.uuid, DefeatCause.FALL)
         assertEquals(ArenaState.ROUNDCOUNTDOWN, env.state())
-        val event = mockk<EntityDamageEvent>(relaxed = true)
-        every { event.entity } returns p1
+        val event = damageEvent(p1)
         env.listener.onDamage(event)
-        verify(exactly = 1) { event.isCancelled = true }
+        assertTrue(event.isCancelled)
     }
 
     @Test
     fun `quit of outsider does not touch inventory`() {
         val outsider = env.player("Outsider")
-        val event = mockk<PlayerQuitEvent>(relaxed = true)
-        every { event.player } returns outsider
-        env.listener.onQuit(event)
-        val inv = outsider.inventory
-        verify(exactly = 0) { inv.clear() }
+        outsider.inventory.setItem(0, env.item(Material.STONE))
+        env.listener.onQuit(PlayerQuitEvent(outsider, Component.empty()))
+        assertEquals(Material.STONE, outsider.inventory.contents[0]?.type)
     }
 
     @Test
     fun `quit of participant resolves through quitting scope`() {
         val (p1, p2) = env.twoPlayerIngame()
         p1.inventory.setItem(0, null)
-        every { p1.isOnline } returns false
-        env.players.remove(p1.uniqueId)
-        val event = mockk<PlayerQuitEvent>(relaxed = true)
-        every { event.player } returns p1
-        env.listener.onQuit(event)
+        env.removePlayer(p1)
+        env.listener.onQuit(PlayerQuitEvent(p1, Component.empty()))
         assertEquals(ArenaState.WAITING, env.state())
         assertEquals(1, env.statsRepo.find(p2.uuid)!!.wins)
     }
@@ -143,11 +135,12 @@ class ArenaListenerCombatTest {
         val from = Location(w, 0.0, 64.0, 0.0)
         val horizontal = moveEvent(p1, from, Location(w, 1.0, 64.0, 0.0))
         env.listener.onMove(horizontal)
-        verify(exactly = 1) { horizontal.to = from }
+        assertEquals(from, horizontal.to)
 
-        val vertical = moveEvent(p1, Location(w, 0.0, 64.0, 0.0), Location(w, 0.0, 65.0, 0.0))
+        val verticalTo = Location(w, 0.0, 65.0, 0.0)
+        val vertical = moveEvent(p1, Location(w, 0.0, 64.0, 0.0), verticalTo)
         env.listener.onMove(vertical)
-        verify(exactly = 0) { vertical.to = any() }
+        assertEquals(verticalTo, vertical.to)
     }
 
     @Test
@@ -155,12 +148,10 @@ class ArenaListenerCombatTest {
         val (p1, p2) = env.twoPlayerIngame()
         env.service.defeat(p2.uuid, DefeatCause.FALL)
         val w = env.world()
-        val event = mockk<PlayerTeleportEvent>(relaxed = true)
-        every { event.player } returns p1
-        every { event.from } returns Location(w, 0.0, 64.0, 0.0)
-        every { event.to } returns Location(w, 5.0, -3.0, 0.0)
+        val to = Location(w, 5.0, -3.0, 0.0)
+        val event = PlayerTeleportEvent(p1, Location(w, 0.0, 64.0, 0.0), to)
         env.listener.onMove(event)
-        verify(exactly = 0) { event.to = any() }
+        assertEquals(to, event.to)
     }
 
     @Test
@@ -168,16 +159,16 @@ class ArenaListenerCombatTest {
         val (p1, p2) = env.twoPlayerIngame()
         env.service.defeat(p2.uuid, DefeatCause.FALL)
         assertEquals(ArenaState.ROUNDCOUNTDOWN, env.state())
-        val roundTimerId = env.timers.last().taskId
 
         env.runOneShots()
         val w = env.world()
         env.listener.onMove(moveEvent(p2, Location(w, 0.0, 1.0, 0.0), Location(w, 0.0, -1.0, 0.0)))
         assertEquals(2, env.service.matchOf("arena1")!!.winsOf(p1.uuid))
-        env.timers.first { it.taskId == roundTimerId }.runnable.run()
-        assertTrue(env.cancelledTaskIds.contains(roundTimerId))
+        // キャンセル済みの旧タイマーは実スケジューラ上は二度と発火せず、新タイマーだけが進行する
+        env.tick(8)
+        assertEquals(ArenaState.INGAME, env.state())
 
         env.listener.onMove(moveEvent(p2, Location(w, 0.0, 1.0, 0.0), Location(w, 0.0, -1.0, 0.0)))
-        assertEquals(2, env.service.matchOf("arena1")!!.winsOf(p1.uuid))
+        assertEquals(ArenaState.WAITING, env.state())
     }
 }

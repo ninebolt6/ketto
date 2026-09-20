@@ -1,0 +1,126 @@
+package net.ninebolt.onevsone.application
+
+import net.ninebolt.onevsone.application.fixtures.TestApp
+import net.ninebolt.onevsone.domain.Arena
+import net.ninebolt.onevsone.domain.ArenaState
+import net.ninebolt.onevsone.domain.DefeatCause
+import net.ninebolt.onevsone.domain.WorldPosition
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+
+/** 管理操作(作成/削除/有効化/スポーン/キット/看板)の単体テスト。 */
+class ArenaAdministrationServiceTest {
+
+    private lateinit var app: TestApp
+
+    @BeforeEach
+    fun setup() {
+        app = TestApp()
+    }
+
+    @Test
+    fun `create persists arena and rejects duplicates and invalid names`() {
+        assertTrue(app.admin.create("arena1"))
+        assertEquals(false, app.arenas.find("arena1").enabled)
+        assertEquals(ArenaState.WAITING, app.state())
+
+        assertFalse(app.admin.create("Arena1"))
+        assertFalse(app.admin.create("bad/name"))
+        assertFalse(app.admin.create("players"))
+        assertNull(app.service.arena("bad/name"))
+    }
+
+    @Test
+    fun `remove aborts running match and clears registrations`() {
+        val arena = app.newArena()
+        val (p1, p2) = app.joinedTwo()
+        app.admin.setSign("arena1", WorldPosition.new("world", 3.0, 64.0, 3.0))
+        assertTrue(app.admin.remove("arena1"))
+        assertNull(app.service.arena("arena1"))
+        assertNull(app.service.arenaIdOf(p1.id))
+        assertNull(app.service.arenaIdOf(p2.id))
+        assertNull(app.admin.signLocation("arena1"))
+        assertNull(app.arenas.signs["arena1"])
+        assertFalse(app.arenas.names.contains("arena1"))
+
+        assertFalse(app.admin.remove("arena1"))
+        assertFalse(app.admin.remove("bad name!"))
+    }
+
+    @Test
+    fun `setEnabled toggles and persists, disable aborts countdown`() {
+        app.newArena()
+        app.joinedTwo()
+        assertEquals(ArenaState.COUNTDOWN, app.state())
+
+        assertEquals(ToggleReply.Changed, app.admin.setEnabled("arena1", false))
+        assertFalse(app.service.arena("arena1")!!.enabled)
+        assertEquals(ArenaState.WAITING, app.state())
+        assertFalse(app.arenas.find("arena1").enabled)
+
+        assertEquals(ToggleReply.AlreadyDisabled, app.admin.setEnabled("arena1", false))
+        assertEquals(ToggleReply.Changed, app.admin.setEnabled("arena1", true))
+        assertEquals(ToggleReply.AlreadyEnabled, app.admin.setEnabled("arena1", true))
+        assertEquals(ToggleReply.NotFound, app.admin.setEnabled("missing", true))
+        assertEquals(ToggleReply.NotFound, app.admin.setEnabled("bad name!", true))
+    }
+
+    @Test
+    fun `setSpawn writes slot and persists`() {
+        app.newArena()
+        val pos = WorldPosition.new("world", 9.5, 70.0, -2.5, 33.3f, 12.5f)
+        assertTrue(app.admin.setSpawn("arena1", 1, pos))
+        assertEquals(pos, app.arenas.find("arena1").spawn1)
+        assertTrue(app.admin.setSpawn("arena1", 2, pos))
+        assertEquals(pos, app.arenas.find("arena1").spawn2)
+        assertFalse(app.admin.setSpawn("missing", 1, pos))
+        // コマンド面は 1/2 固定だが、サービス経由の不正スロットは fail-fast
+        assertThrows(IllegalArgumentException::class.java) { app.admin.setSpawn("arena1", 3, pos) }
+    }
+
+    @Test
+    fun `setLobby and sign lifecycle`() {
+        val pos = WorldPosition.new("lobby", 5.0, 64.0, 5.0)
+        app.admin.setLobby(pos)
+        assertEquals(pos, app.arenas.lobbyPosition)
+
+        app.newArena()
+        val sign = WorldPosition.new("world", 3.0, 64.0, 3.0)
+        assertTrue(app.admin.setSign("arena1", sign))
+        assertEquals(sign, app.admin.signLocation("arena1"))
+        assertEquals("arena1", app.admin.signOwner("world", 3, 64, 3))
+        assertEquals(Arena.Id.new("arena1") to ArenaState.WAITING, app.presentation.signUpdates.last())
+
+        assertFalse(app.admin.setSign("missing", sign))
+        // clearSign は「arena が存在するなら解除成功」な冪等操作。未登録 arena だけが失敗
+        assertTrue(app.admin.clearSign("arena1"))
+        assertNull(app.admin.signLocation("arena1"))
+        assertFalse(app.admin.clearSign("missing"))
+    }
+
+    @Test
+    fun `setKit delegates to kit port`() {
+        app.newArena()
+        val p = app.players.add("Alice")
+        assertTrue(app.admin.setKit("arena1", p.id))
+        assertEquals(1, app.equipment.savedKits.size)
+        assertFalse(app.admin.setKit("missing", p.id))
+    }
+
+    @Test
+    fun `remove during ingame forfeits and unregisters`() {
+        val (p1, p2) = app.startMatch()
+        app.service.defeat(p2.id, DefeatCause.FALL)
+        assertTrue(app.admin.remove("arena1"))
+        assertNull(app.service.arenaIdOf(p1.id))
+        assertNull(app.service.arenaIdOf(p2.id))
+        // 敗者の戦績は確定済みだが、remove で中断された場合の残留登録がないこと
+        assertNull(app.matchState.registrations[p1.name])
+        assertNull(app.matchState.registrations[p2.name])
+    }
+}

@@ -1,22 +1,20 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
-import io.mockk.verify
 import net.ninebolt.onevsone.application.LeaveReply
 import net.ninebolt.onevsone.application.ToggleReply
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.contains
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.lastBroadcast
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.playersYaml
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.view
-import org.bukkit.Location
 import org.bukkit.Material
-import org.bukkit.inventory.ItemStack
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotSame
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -99,12 +97,12 @@ class PaperArenaMembershipTest {
         val p1 = env.player("Alice")
         val p2 = env.player("Bob")
         assertEquals(LeaveReply.NotJoined, env.leave(p1))
-        verify(exactly = 1) { p1.sendMessage(contains("あなたはアリーナに参加していません！")) }
+        assertTrue(p1.drainMessages().any { it.contains("あなたはアリーナに参加していません！") })
 
         env.join(p1, arena)
         env.join(p2, arena)
         assertEquals(LeaveReply.NotWaiting, env.leave(p1))
-        verify(exactly = 1) { p1.sendMessage(contains("カウントダウン中はアリーナから退出できません！")) }
+        assertTrue(p1.drainMessages().any { it.contains("カウントダウン中はアリーナから退出できません！") })
         assertEquals(arena, env.service.arenaIdOf(p1.uuid))
     }
 
@@ -115,7 +113,7 @@ class PaperArenaMembershipTest {
         p1.inventory.setItem(0, env.item(Material.BREAD))
         env.join(p1, arena)
         assertEquals(LeaveReply.Left, env.leave(p1))
-        verify(exactly = 1) { p1.sendMessage(contains("アリーナから退出しました")) }
+        assertTrue(p1.drainMessages().any { it.contains("アリーナから退出しました") })
         assertEquals(ArenaState.WAITING, env.view().state)
         assertNull(env.service.arenaIdOf(p1.uuid))
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
@@ -147,9 +145,12 @@ class PaperArenaMembershipTest {
         env.join(p1, arena)
         env.join(p2, arena)
         env.tick(6)
+        // INGAME でサイドバー用ボードが割り当てられていること
+        val ingameBoard = p1.scoreboard
+        assertTrue(env.boards.contains(ingameBoard))
         env.service.abort(arena)
-        verify(exactly = 2) { p1.scoreboard = any() }
-        verify(exactly = 2) { p2.scoreboard = any() }
+        assertNotSame(ingameBoard, p1.scoreboard)
+        assertNotSame(ingameBoard, p2.scoreboard)
     }
 
     @Test
@@ -164,10 +165,7 @@ class PaperArenaMembershipTest {
         val arena = env.newArena()
         val p1 = env.player("Alice")
         env.join(p1, arena)
-        val inv1 = p1.inventory
-        verify(exactly = 0) { inv1.contents }
-        verify(exactly = 0) { inv1.armorContents }
-        verify(exactly = 0) { inv1.clear() }
+        assertNull(p1.inventory.contents[0])
         val yaml = env.playersYaml()
         assertTrue(yaml.getStringList("players").contains("Alice"))
         assertEquals("arena1", yaml.getString("arena.Alice"))
@@ -183,8 +181,6 @@ class PaperArenaMembershipTest {
         p1.inventory.setItem(0, null)
         env.leave(p1)
         assertNull(p1.inventory.contents[0])
-        val inv1 = p1.inventory
-        verify(exactly = 1) { inv1.setItem(0, ofType(ItemStack::class)) }
 
         val p2 = env.player("Bob")
         env.join(p2, arena)
@@ -266,7 +262,7 @@ class PaperArenaMembershipTest {
         assertNull(env.service.arenaIdOf(p1.uuid))
         assertNull(env.service.arenaIdOf(p2.uuid))
         env.tick(6)
-        verify(exactly = 0) { p1.teleport(any<Location>()) }
+        assertFalse(p1.hasTeleported())
         val reloaded = env.arenaRepo.find("arena1")!!
         assertFalse(reloaded.enabled)
     }

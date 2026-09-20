@@ -57,8 +57,12 @@ composition root として手動で全依存を配線する(DI フレームワ�
 - `src/main/resources/` — plugin.yml(version は processResources で展開), config.yml,
   `lang/messages_<lang>.yml`(MiniMessage 文言。`Messages` が Msg キー+引数を宛先ロケールで
   描画。`language: auto` でクライアントロケール、共有面は `default-language`)
-- `src/test/kotlin/...` — domain/application は純粋テスト + fake、infrastructure は
-  JUnit5 + MockK(モック Server/Player/Scheduler、静的 Bukkit を mockkStatic)の TestEnv 統合。
+- `src/test/kotlin/...` — domain/application は純粋テスト + fake(`TestApp` 経由)。
+  infrastructure は MockBukkit(`TestEnv` が `MockBukkit.mock()` + `PluginMock` を手動配線)で
+  実サーバー/プレイヤー/スケジューラ/インベントリを使い、実状態をアサートする。
+  MockK は残るが限定用途: 障害注入(`spyk`+throw)、MockBukkit 未実装 API
+  (`Player.Spigot.respawn()` → `ArenaPlayerMock` 下位互換、`ScoreMock.customName` →
+  narrow スタブ)、狭いイベント引数(`DamageSource`/`Command`)、async オフライン解決の即時化。
   `ArchitectureTest` が内側層の禁止参照を検査。
   テストヘルパー(fake/fixture/TestApp/TestEnv 等)は各層の `fixtures/` サブパッケージに隔離する
 - 状態はメモリ(domain の `ArenaMatch` + `ArenaRegistry`)、YAML は永続化専用。詳細仕様は docs/ を参照

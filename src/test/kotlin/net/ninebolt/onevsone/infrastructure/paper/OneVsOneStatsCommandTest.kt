@@ -2,32 +2,28 @@ package net.ninebolt.onevsone.infrastructure.paper
 
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.contains
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.run
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.writeStats
-import net.kyori.adventure.text.Component
-import org.bukkit.OfflinePlayer
-import org.bukkit.command.BlockCommandSender
-import org.bukkit.command.Command
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
-import kotlin.uuid.Uuid
-import kotlin.uuid.toJavaUuid
+import kotlin.uuid.toKotlinUuid
 
 /** /1vs1 stats と引数なし/権限/未知サブコマンドの検証。 */
+// resolveOfflineId が非推奨の getOfflinePlayer(name) 経路を使うため、その検証経路でも同 API を呼ぶ
+@Suppress("DEPRECATION")
 class OneVsOneStatsCommandTest {
 
     @TempDir
     lateinit var folder: File
 
     private lateinit var env: TestEnv
-    private val cmd = mockk<Command>(relaxed = true)
 
     @BeforeEach
     fun setup() {
@@ -43,39 +39,40 @@ class OneVsOneStatsCommandTest {
     fun `no args shows usage`() {
         val p = env.player("Alice")
         env.run(p)
-        verify(exactly = 1) { p.sendMessage(contains("/1vs1 stats | /1vs1 stats [player]")) }
+        assertTrue(p.drainMessages().any { it.contains("/1vs1 stats | /1vs1 stats [player]") })
     }
 
     @Test
     fun `console cannot run player commands`() {
-        val console = mockk<BlockCommandSender>(relaxed = true)
+        val console = env.server.consoleSender
         env.run(console, "stats")
-        verify(exactly = 1) { console.sendMessage(contains("このコマンドはプレイヤーのみ実行可能です")) }
+        assertTrue(console.drainMessages().any { it.contains("このコマンドはプレイヤーのみ実行可能です") })
         env.run(console, "leave")
-        verify(exactly = 2) { console.sendMessage(contains("このコマンドはプレイヤーのみ実行可能です")) }
+        assertTrue(console.drainMessages().any { it.contains("このコマンドはプレイヤーのみ実行可能です") })
     }
 
     @Test
     fun `non op management commands denied`() {
         val p = env.player("Alice")
-        every { p.isOp } returns false
+        p.isOp = false
         env.run(p, "setlobby")
-        verify(exactly = 1) { p.sendMessage(contains("権限がありません！")) }
+        assertTrue(p.drainMessages().any { it.contains("権限がありません！") })
         env.run(p, "arena", "create", "x")
-        verify(exactly = 2) { p.sendMessage(contains("権限がありません！")) }
+        assertTrue(p.drainMessages().any { it.contains("権限がありません！") })
     }
 
     @Test
     fun `stats shows own stats or missing message`() {
         val p = env.player("Alice")
         env.run(p, "stats")
-        verify(exactly = 1) { p.sendMessage(contains("Statsが存在しません")) }
+        assertTrue(p.drainMessages().any { it.contains("Statsが存在しません") })
 
         env.writeStats(p.uuid, 3, 0)
         env.run(p, "stats")
-        verify(exactly = 1) { p.sendMessage(contains("Win: 3")) }
-        verify(exactly = 1) { p.sendMessage(contains("Lose: 0")) }
-        verify(exactly = 1) { p.sendMessage(contains("W/L(勝率): 3.00")) }
+        val msgs = p.drainMessages()
+        assertTrue(msgs.any { it.contains("Win: 3") })
+        assertTrue(msgs.any { it.contains("Lose: 0") })
+        assertTrue(msgs.any { it.contains("W/L(勝率): 3.00") })
     }
 
     @Test
@@ -84,35 +81,32 @@ class OneVsOneStatsCommandTest {
         val target = env.player("Target")
         env.writeStats(target.uuid, 0, 2)
         env.run(viewer, "stats", "Target")
-        verify(exactly = 1) { viewer.sendMessage(contains("Win: 0")) }
-        verify(exactly = 1) { viewer.sendMessage(contains("Lose: 2")) }
-        verify(exactly = 1) { viewer.sendMessage(contains("W/L(勝率): 0.00")) }
+        val msgs = viewer.drainMessages()
+        assertTrue(msgs.any { it.contains("Win: 0") })
+        assertTrue(msgs.any { it.contains("Lose: 2") })
+        assertTrue(msgs.any { it.contains("W/L(勝率): 0.00") })
     }
 
     @Test
     fun `stats of offline cached player resolves uuid`() {
         val viewer = env.player("Viewer")
-        val uuid = Uuid.random()
-        env.writeStats(uuid, 5, 5)
-        val offline = mockk<OfflinePlayer>(relaxed = true)
-        every { offline.uniqueId } returns uuid.toJavaUuid()
-        every { env.server.getOfflinePlayerIfCached("Ghost") } returns offline
+        // オンライン/切断済みプレイヤーはキャッシュヒット経路を通る
+        val ghost = env.player("Ghost")
+        env.writeStats(ghost.uuid, 5, 5)
         env.run(viewer, "stats", "Ghost")
-        verify(exactly = 1) { viewer.sendMessage(contains("W/L(勝率): 1.00")) }
+        assertTrue(viewer.drainMessages().any { it.contains("W/L(勝率): 1.00") })
     }
 
     @Test
     fun `stats offline uncached resolves through async scheduler on main thread`() {
         val viewer = env.player("Viewer")
-        val uuid = Uuid.random()
+        // 未キャッシュ名は getOfflinePlayer が決定論的な OfflinePlayerMock を生成する
+        val uuid = env.server.getOfflinePlayer("Ghost").uniqueId.toKotlinUuid()
         env.writeStats(uuid, 2, 1)
-        val offline = mockk<OfflinePlayer>(relaxed = true)
-        every { offline.uniqueId } returns uuid.toJavaUuid()
-        every { env.server.getOfflinePlayer("Ghost") } returns offline
         env.run(viewer, "stats", "Ghost")
-        verify(exactly = 0) { viewer.sendMessage(contains("Win:")) }
+        assertTrue(viewer.drainMessages().none { it.contains("Win:") })
         env.runOneShots()
-        verify(exactly = 1) { viewer.sendMessage(contains("Win: 2")) }
+        assertTrue(viewer.drainMessages().any { it.contains("Win: 2") })
     }
 
     @Test
@@ -121,7 +115,7 @@ class OneVsOneStatsCommandTest {
         every { env.server.getOfflinePlayer("Ghost") } throws RuntimeException("lookup failed")
         env.run(viewer, "stats", "Ghost")
         env.runOneShots()
-        verify(exactly = 1) { viewer.sendMessage(contains("Statsが存在しません")) }
+        assertTrue(viewer.drainMessages().any { it.contains("Statsが存在しません") })
     }
 
     @Test
@@ -130,15 +124,15 @@ class OneVsOneStatsCommandTest {
         every { env.plugin.isEnabled } returns false
         env.run(viewer, "stats", "Ghost")
         env.runOneShots()
-        verify(exactly = 0) { viewer.sendMessage(any<Component>()) }
+        assertTrue(viewer.drainMessages().isEmpty())
     }
 
     @Test
     fun `unknown subcommand falls back to usage`() {
         val p = env.player("Alice")
         env.run(p, "bogus")
-        verify(exactly = 1) { p.sendMessage(contains("/1vs1 stats | /1vs1 stats [player]")) }
+        assertTrue(p.drainMessages().any { it.contains("/1vs1 stats | /1vs1 stats [player]") })
         env.run(p, "arena", "bogus")
-        verify(exactly = 1) { p.sendMessage(contains("/1vs1 arena info [arena]")) }
+        assertTrue(p.drainMessages().any { it.contains("/1vs1 arena info [arena]") })
     }
 }

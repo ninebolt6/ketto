@@ -1,10 +1,8 @@
 package net.ninebolt.onevsone.infrastructure.paper.fixtures
 
-import io.mockk.every
 import io.mockk.mockk
 import org.bukkit.command.Command
 import org.bukkit.command.CommandSender
-import org.bukkit.entity.Player
 import kotlin.uuid.Uuid
 
 /** OneVsOneCommand テスト用のコマンド実行・stats 投入・OP プレイヤーフィクスチャ。 */
@@ -17,8 +15,4 @@ internal fun TestEnv.writeStats(uuid: Uuid, win: Int, lose: Int) {
     repeat(lose) { statsRepo.recordLoss(uuid) }
 }
 
-internal fun TestEnv.opPlayer(name: String): Player {
-    val p = player(name)
-    every { p.isOp } returns true
-    return p
-}
+internal fun TestEnv.opPlayer(name: String): ArenaPlayerMock = player(name).also { it.isOp = true }

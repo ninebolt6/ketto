@@ -1,40 +1,41 @@
 package net.ninebolt.onevsone.infrastructure.paper.fixtures
 
-import io.mockk.every
 import io.mockk.mockk
+import net.kyori.adventure.text.Component
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.block.Block
-import org.bukkit.block.Sign
-import org.bukkit.block.sign.Side
-import org.bukkit.block.sign.SignSide
+import org.bukkit.damage.DamageSource
+import org.bukkit.entity.EntityType
 import org.bukkit.entity.Player
 import org.bukkit.event.block.Action
 import org.bukkit.event.block.BlockBreakEvent
+import org.bukkit.block.BlockFace
+import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.player.PlayerInteractEvent
+import org.bukkit.event.player.PlayerJoinEvent
 import org.bukkit.event.player.PlayerMoveEvent
+import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.inventory.EquipmentSlot
 
-/** ArenaListener テスト用のイベントモック生成と 2 人マッチ開始フィクスチャ。 */
+/** ArenaListener テスト用の実イベント構築と 2 人マッチ開始フィクスチャ。 */
 
 internal fun TestEnv.deathEvent(player: Player): PlayerDeathEvent {
-    val event = mockk<PlayerDeathEvent>(relaxed = true)
     val drops = mutableListOf(item(Material.STONE))
-    every { event.entity } returns player
-    every { event.drops } returns drops
-    return event
+    return PlayerDeathEvent(player, mockk<DamageSource>(relaxed = true), drops, 0, Component.empty())
 }
 
-internal fun moveEvent(player: Player, from: Location, to: Location): PlayerMoveEvent {
-    val event = mockk<PlayerMoveEvent>(relaxed = true)
-    every { event.player } returns player
-    every { event.from } returns from
-    every { event.to } returns to
-    return event
-}
+internal fun quitEvent(player: Player) = PlayerQuitEvent(player, Component.empty())
 
-internal fun TestEnv.twoPlayerIngame(): Pair<Player, Player> {
+internal fun joinEvent(player: Player) = PlayerJoinEvent(player, Component.empty())
+
+internal fun damageEvent(entity: org.bukkit.entity.Entity, damage: Double = 1.0) =
+    EntityDamageEvent(entity, EntityDamageEvent.DamageCause.FALL, damage)
+
+internal fun moveEvent(player: Player, from: Location, to: Location) = PlayerMoveEvent(player, from, to)
+
+internal fun TestEnv.twoPlayerIngame(): Pair<ArenaPlayerMock, ArenaPlayerMock> {
     val arena = newArena()
     val p1 = player("Alice")
     val p2 = player("Bob")
@@ -44,37 +45,22 @@ internal fun TestEnv.twoPlayerIngame(): Pair<Player, Player> {
     return p1 to p2
 }
 
-internal fun TestEnv.signBlock(x: Int, y: Int, z: Int): Block {
-    val block = mockk<Block>(relaxed = true)
-    val sign = mockk<Sign>(relaxed = true)
-    val side = mockk<SignSide>(relaxed = true)
-    val w = world()
-    every { sign.getSide(Side.FRONT) } returns side
-    every { block.state } returns sign
-    every { block.world } returns w
-    every { block.x } returns x
-    every { block.y } returns y
-    every { block.z } returns z
-    every { w.getBlockAt(x, y, z) } returns block
-    return block
-}
+/** 実ブロックを看板に変えて返す。以後の getBlockAt は同じ状態を返す。 */
+internal fun TestEnv.signBlock(x: Int, y: Int, z: Int): Block =
+    world().getBlockAt(x, y, z).also { it.type = Material.OAK_SIGN }
 
 internal fun interact(
     player: Player,
     block: Block,
-    hand: EquipmentSlot = EquipmentSlot.HAND
-): PlayerInteractEvent {
-    val event = mockk<PlayerInteractEvent>(relaxed = true)
-    every { event.player } returns player
-    every { event.action } returns Action.RIGHT_CLICK_BLOCK
-    every { event.hand } returns hand
-    every { event.clickedBlock } returns block
-    return event
-}
+    hand: EquipmentSlot = EquipmentSlot.HAND,
+    action: Action = Action.RIGHT_CLICK_BLOCK
+) = PlayerInteractEvent(player, action, null, block, BlockFace.SELF, hand)
 
-internal fun breakEvent(player: Player, block: Block): BlockBreakEvent {
-    val event = mockk<BlockBreakEvent>(relaxed = true)
-    every { event.player } returns player
-    every { event.block } returns block
-    return event
-}
+internal fun breakEvent(player: Player, block: Block) = BlockBreakEvent(block, player)
+
+/** 看板ではない実ブロック。 */
+internal fun TestEnv.plainBlock(x: Int = 9, y: Int = 64, z: Int = 9): Block =
+    world().getBlockAt(x, y, z).also { it.type = Material.STONE }
+
+internal fun TestEnv.nonPlayer() =
+    world().spawnEntity(Location(world(), 0.0, 64.0, 0.0), EntityType.PIG)

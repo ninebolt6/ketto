@@ -9,11 +9,9 @@ import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.contains
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.containsText
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.view
-import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.configuration.file.YamlConfiguration
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
@@ -83,14 +81,10 @@ class PaperArenaFailureTest {
         assertTrue(env.service.matchOf("spy-arena")!!.participants.isEmpty())
         assertNull(env.service.arenaIdOf(p1.uuid))
         assertNull(env.service.arenaIdOf(p2.uuid))
-        val inv1 = p1.inventory
-        val inv2 = p2.inventory
-        verify(exactly = 0) { inv1.clear() }
-        verify(exactly = 0) { inv2.clear() }
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
         assertNull(p2.inventory.contents[0])
         env.tick(3)
-        verify(exactly = 0) { p1.teleport(any<Location>()) }
+        assertFalse(p1.hasTeleported())
     }
 
     @Test
@@ -127,7 +121,7 @@ class PaperArenaFailureTest {
         env.tick(6)
         val winnerStats = File(folder, "stats/${p1.uuid}.yml")
         winnerStats.writeText("win: [broken")
-        every { p2.isDead } returns true
+        p2.health = 0.0
 
         assertDoesNotThrow { env.service.defeat(p2.uuid, DefeatCause.DEATH) }
         assertEquals(ArenaState.WAITING, env.view().state)
@@ -136,7 +130,7 @@ class PaperArenaFailureTest {
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
         assertNull(env.service.arenaIdOf(p1.uuid))
         assertNull(env.service.arenaIdOf(p2.uuid))
-        verify(exactly = 2) { p1.scoreboard = any() }
+        assertTrue(env.boards.contains(p1.scoreboard))
         assertEquals("win: [broken", winnerStats.readText())
         assertEquals(1, env.statsRepo.find(p2.uuid)!!.losses)
         verify(exactly = 1) {

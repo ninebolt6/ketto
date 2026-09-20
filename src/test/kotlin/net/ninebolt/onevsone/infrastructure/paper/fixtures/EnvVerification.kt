@@ -1,29 +1,24 @@
 package net.ninebolt.onevsone.infrastructure.paper.fixtures
 
 import io.mockk.MockKMatcherScope
-import io.mockk.slot
-import io.mockk.verify
-import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import org.bukkit.configuration.file.YamlConfiguration
+import org.mockbukkit.mockbukkit.command.MessageTarget
 import java.io.File
 
-/** TestEnv の観測系ヘルパー。マッチャと読み取り系のみを集める。 */
+/** TestEnv の観測系ヘルパー。送信済みメッセージの読み出しのみを集める。 */
 
 private val plain = PlainTextComponentSerializer.plainText()
 
-internal fun MockKMatcherScope.contains(part: String): Component = match {
-    plain.serialize(it).contains(part)
-}
-
-/** sendMessage ではなく String 引数(Logger 等)を検証する側。 */
+/** 文字列引数(Logger 等、障害注入モック向け)を検証するマッチャ。 */
 internal fun MockKMatcherScope.containsText(part: String): String = match { it.contains(part) }
 
-internal fun TestEnv.lastBroadcast(): String {
-    val slot = slot<Component>()
-    verify(exactly = 1) { console.sendMessage(capture(slot)) }
-    return plain.serialize(slot.captured)
-}
+/** 送信済みメッセージを全て読み出す。キューは消費されるので以後の呼出は新規分のみ見える。 */
+internal fun MessageTarget.drainMessages(): List<String> =
+    generateSequence { nextComponentMessage() }.map(plain::serialize).toList()
+
+internal fun TestEnv.lastBroadcast(): String =
+    server.consoleSender.drainMessages().lastOrNull() ?: error("no broadcast captured")
 
 internal fun TestEnv.view(name: String = "arena1") = service.matchOf(name)!!
 
