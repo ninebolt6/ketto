@@ -13,12 +13,14 @@ import net.ninebolt.onevsone.infrastructure.paper.fixtures.signBlock
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.twoPlayerIngame
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import org.bukkit.ExplosionResult
+import org.bukkit.event.Event
 import org.bukkit.event.block.Action
 import org.bukkit.event.block.BlockExplodeEvent
 import org.bukkit.event.entity.EntityExplodeEvent
 import org.bukkit.event.player.PlayerJoinEvent
 import org.bukkit.inventory.EquipmentSlot
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -60,8 +62,9 @@ class ArenaListenerSignTest {
         env.signListener.onInteract(registered)
         assertEquals(arena, env.service.arenaIdOf(p1.uuid))
         // バニラの看板編集画面を開かせない
-        assertTrue(registered.isCancelled)
-        assertFalse(unregistered.isCancelled)
+        assertEquals(Event.Result.DENY, registered.useInteractedBlock())
+        assertEquals(Event.Result.DENY, registered.useItemInHand())
+        assertNotEquals(Event.Result.DENY, unregistered.useInteractedBlock())
 
         val bob = env.player("Bob")
         val offhand = interact(bob, env.signBlock(3, 64, 3), EquipmentSlot.OFF_HAND)
