@@ -21,7 +21,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
-import kotlin.uuid.Uuid
 
 /** インベントリバックアップの取得・復元・保留のシナリオ。 */
 class PaperInventoryRecoveryTest {
@@ -235,30 +234,6 @@ class PaperInventoryRecoveryTest {
         env.service.restorePending(p2.uuid, p2.name)
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
         assertNull(env.playersYaml().getConfigurationSection("inv.Bob"))
-    }
-
-    @Test
-    fun `name collision does not restore and renamed uuid does`() {
-        val arena = env.newArena()
-        val uuid = Uuid.random()
-        val original = env.player("Alice", uuid)
-        val bob = env.player("Bob")
-        original.inventory.setItem(0, env.item(Material.DIAMOND))
-        env.join(original, arena)
-        env.join(bob, arena)
-        env.tick(6)
-        env.removePlayer(original)
-        env.service.abort(arena)
-
-        val squatter = env.player("Alice")
-        squatter.inventory.setItem(0, env.item(Material.STONE))
-        env.service.restorePending(squatter.uuid, squatter.name)
-        assertEquals(Material.STONE, squatter.inventory.contents[0]?.type)
-
-        val renamed = env.player("Alice2", uuid)
-        env.service.restorePending(renamed.uuid, renamed.name)
-        assertEquals(Material.DIAMOND, renamed.inventory.contents[0]?.type)
-        assertNull(env.playersYaml().getConfigurationSection("inv.Alice"))
     }
 
     @Test

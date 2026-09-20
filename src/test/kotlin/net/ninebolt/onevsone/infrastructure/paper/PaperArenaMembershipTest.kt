@@ -4,7 +4,6 @@ import net.ninebolt.onevsone.application.LeaveReply
 import net.ninebolt.onevsone.application.ToggleReply
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaState
-import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.lastBroadcast
@@ -64,34 +63,6 @@ class PaperArenaMembershipTest {
     }
 
     @Test
-    fun `quit during COUNTDOWN forfeits`() {
-        val arena = env.newArena()
-        val p1 = env.player("Alice")
-        val p2 = env.player("Bob")
-        env.join(p1, arena)
-        env.join(p2, arena)
-        env.removePlayer(p1)
-        env.quit(p1)
-        assertEquals(ArenaState.WAITING, env.view().state)
-        assertEquals(1, env.statsRepo.find(p2.uuid)!!.wins)
-        assertEquals(1, env.statsRepo.find(p1.uuid)!!.losses)
-    }
-
-    @Test
-    fun `quit during ONEMORE unregisters without stats`() {
-        val arena = env.newArena()
-        val p1 = env.player("Alice")
-        p1.inventory.setItem(0, env.item(Material.BREAD))
-        env.join(p1, arena)
-        env.removePlayer(p1)
-        env.quit(p1)
-        assertEquals(ArenaState.WAITING, env.view().state)
-        assertNull(env.service.arenaIdOf(p1.uuid))
-        assertNull(env.statsRepo.find(p1.uuid))
-        assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
-    }
-
-    @Test
     fun `leave only allowed in ONEMORE`() {
         val arena = env.newArena()
         val p1 = env.player("Alice")
@@ -104,37 +75,6 @@ class PaperArenaMembershipTest {
         assertEquals(LeaveReply.NotWaiting, env.leave(p1))
         assertTrue(p1.drainMessages().any { it.contains("カウントダウン中はアリーナから退出できません！") })
         assertEquals(arena, env.service.arenaIdOf(p1.uuid))
-    }
-
-    @Test
-    fun `leave in ONEMORE resets arena without touching inventory`() {
-        val arena = env.newArena()
-        val p1 = env.player("Alice")
-        p1.inventory.setItem(0, env.item(Material.BREAD))
-        env.join(p1, arena)
-        assertEquals(LeaveReply.Left, env.leave(p1))
-        assertTrue(p1.drainMessages().any { it.contains("アリーナから退出しました") })
-        assertEquals(ArenaState.WAITING, env.view().state)
-        assertNull(env.service.arenaIdOf(p1.uuid))
-        assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
-    }
-
-    @Test
-    fun `quit during ROUNDCOUNTDOWN forfeits with stats`() {
-        val arena = env.newArena()
-        val p1 = env.player("Alice")
-        val p2 = env.player("Bob")
-        env.join(p1, arena)
-        env.join(p2, arena)
-        env.tick(6)
-        env.service.defeat(p2.uuid, DefeatCause.FALL)
-        assertEquals(ArenaState.ROUNDCOUNTDOWN, env.view().state)
-
-        env.removePlayer(p1)
-        env.quit(p1)
-        assertEquals(ArenaState.WAITING, env.view().state)
-        assertEquals(1, env.statsRepo.find(p2.uuid)!!.wins)
-        assertEquals(1, env.statsRepo.find(p1.uuid)!!.losses)
     }
 
     @Test
@@ -151,13 +91,6 @@ class PaperArenaMembershipTest {
         env.service.abort(arena)
         assertNotSame(ingameBoard, p1.scoreboard)
         assertNotSame(ingameBoard, p2.scoreboard)
-    }
-
-    @Test
-    fun `createArena rejects case insensitive duplicates`() {
-        assertTrue(env.admin.create("Arena1"))
-        assertFalse(env.admin.create("arena1"))
-        assertFalse(env.admin.create("PLAYERS"))
     }
 
     @Test

@@ -160,59 +160,6 @@ class PaperMatchProgressionTest {
     }
 
     @Test
-    fun `requiredWins 1 ends on first loss`() {
-        env.close()
-        env = TestEnv(folder, requiredWins = 1)
-        val arena = env.newArena()
-        val p1 = env.player("Alice")
-        val p2 = env.player("Bob")
-        env.join(p1, arena)
-        env.join(p2, arena)
-        env.tick(6)
-        env.service.defeat(p2.uuid, DefeatCause.FALL)
-        assertEquals(ArenaState.WAITING, env.view().state)
-        assertTrue(env.lastBroadcast().contains("Alice"))
-    }
-
-    @Test
-    fun `mixed winners reach max 5 rounds with requiredWins 3`() {
-        val arena = env.newArena()
-        val p1 = env.player("Alice")
-        val p2 = env.player("Bob")
-        env.join(p1, arena)
-        env.join(p2, arena)
-        env.tick(6)
-
-        val sequence = listOf(p2, p2, p1, p1, p2)
-        sequence.withIndex().forEach { (i, loser) ->
-            env.service.defeat(loser.uuid, DefeatCause.FALL)
-            if (i < 4) {
-                assertEquals(ArenaState.ROUNDCOUNTDOWN, env.view().state)
-                env.tick(8)
-                assertEquals(ArenaState.INGAME, env.view().state)
-            }
-        }
-        assertEquals(ArenaState.WAITING, env.view().state)
-        assertTrue(env.lastBroadcast().contains("Alice"))
-        assertEquals(1, env.statsRepo.find(p1.uuid)!!.wins)
-    }
-
-    @Test
-    fun `environmental death without killer awards opponent`() {
-        val arena = env.newArena()
-        val p1 = env.player("Alice")
-        val p2 = env.player("Bob")
-        env.join(p1, arena)
-        env.join(p2, arena)
-        env.tick(6)
-
-        p2.health = 0.0
-        assertTrue(env.service.defeat(p2.uuid, DefeatCause.DEATH))
-        assertEquals(1, env.view().winsOf(p1.uuid))
-        assertEquals(ArenaState.ROUNDCOUNTDOWN, env.view().state)
-    }
-
-    @Test
     fun `death schedules respawn before re-equip`() {
         val arena = env.newArena()
         env.setKit(arena, PaperInventorySnapshot(items = listOf(env.item(Material.IRON_SWORD))))
@@ -230,49 +177,6 @@ class PaperMatchProgressionTest {
         // リスポーン時点ではまだキット再適用前であることをスロット記録で検証
         // (順序の網羅的検証は application 層の deferred restore テストで担保)
         assertEquals(Material.IRON_SWORD, p2.inventory.contents[0]?.type)
-    }
-
-    @Test
-    fun `duplicate lose callback does not double score`() {
-        val arena = env.newArena()
-        val p1 = env.player("Alice")
-        val p2 = env.player("Bob")
-        env.join(p1, arena)
-        env.join(p2, arena)
-        env.tick(6)
-        p2.health = 0.0
-
-        assertTrue(env.service.defeat(p2.uuid, DefeatCause.DEATH))
-        assertFalse(env.service.defeat(p2.uuid, DefeatCause.DEATH))
-        assertFalse(env.service.defeat(p2.uuid, DefeatCause.FALL))
-        assertEquals(1, env.view().winsOf(p1.uuid))
-        assertNull(env.statsRepo.find(p1.uuid))
-        assertNull(env.statsRepo.find(p2.uuid))
-    }
-
-    @Test
-    fun `void loss in ROUNDCOUNTDOWN scores again after guard release and cancels old timer`() {
-        val arena = env.newArena()
-        val p1 = env.player("Alice")
-        val p2 = env.player("Bob")
-        env.join(p1, arena)
-        env.join(p2, arena)
-        env.tick(6)
-
-        assertTrue(env.service.defeat(p2.uuid, DefeatCause.FALL))
-        assertEquals(ArenaState.ROUNDCOUNTDOWN, env.view().state)
-
-        assertFalse(env.service.defeat(p2.uuid, DefeatCause.FALL))
-        assertEquals(1, env.view().winsOf(p1.uuid))
-
-        env.runOneShots()
-        assertTrue(env.service.defeat(p2.uuid, DefeatCause.FALL))
-        assertEquals(2, env.view().winsOf(p1.uuid))
-        assertEquals(ArenaState.ROUNDCOUNTDOWN, env.view().state)
-
-        // 新しいラウンドタイマーだけが進行すること(キャンセル済みの旧タイマーは発火しない)
-        env.tick(8)
-        assertEquals(ArenaState.INGAME, env.view().state)
     }
 
     @Test

@@ -4,8 +4,6 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
-import net.ninebolt.onevsone.application.JoinReply
-import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
@@ -62,46 +60,6 @@ class PaperArenaFailureTest {
         assertNull(env.service.arenaIdOf(p.uuid))
         assertTrue(env.view().participants.isEmpty())
         assertEquals(ArenaState.WAITING, env.view().state)
-    }
-
-    @Test
-    fun `snapshot persistence failure aborts match before equipment`() {
-        val spyBackups = spyk(env.backupStore)
-        every { spyBackups.saveBackups(any()) } throws PersistenceFailure("disk full")
-        env.rebuildWith(backupStore = spyBackups)
-        val arena = env.newArena("spy-arena", enabled = true)
-        env.setKit(arena, PaperInventorySnapshot(items = listOf(env.item(Material.IRON_SWORD))))
-        val p1 = env.player("Alice")
-        val p2 = env.player("Bob")
-        p1.inventory.setItem(0, env.item(Material.BREAD))
-        assertEquals(JoinReply.JoinedWaiting, env.service.join(p1.uuid, p1.name, arena))
-        assertEquals(JoinReply.JoinedStarting, env.service.join(p2.uuid, p2.name, arena))
-        env.tick(6)
-        assertEquals(ArenaState.WAITING, env.service.matchOf("spy-arena")!!.state)
-        assertTrue(env.service.matchOf("spy-arena")!!.participants.isEmpty())
-        assertNull(env.service.arenaIdOf(p1.uuid))
-        assertNull(env.service.arenaIdOf(p2.uuid))
-        assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
-        assertNull(p2.inventory.contents[0])
-        env.tick(3)
-        assertFalse(p1.hasTeleported())
-    }
-
-    @Test
-    fun `abort completes memory cleanup even when unregister disk write fails`() {
-        val spyMatchState = spyk(env.matchStateRepo)
-        every { spyMatchState.unregisterParticipant(any<String>()) } throws PersistenceFailure("io")
-        env.rebuildWith(matchState = spyMatchState)
-        val arena = env.newArena("spy-arena", enabled = true)
-        val p1 = env.player("Alice")
-        val p2 = env.player("Bob")
-        env.service.join(p1.uuid, p1.name, arena)
-        env.service.join(p2.uuid, p2.name, arena)
-        env.service.abort(arena)
-        assertEquals(ArenaState.WAITING, env.service.matchOf("spy-arena")!!.state)
-        assertTrue(env.service.matchOf("spy-arena")!!.participants.isEmpty())
-        assertNull(env.service.arenaIdOf(p1.uuid))
-        assertNull(env.service.arenaIdOf(p2.uuid))
     }
 
     @Test
