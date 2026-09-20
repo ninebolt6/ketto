@@ -31,7 +31,7 @@ class YamlSignRepository(private val store: YamlStore) : ArenaSignRepository {
     }
 
     private fun signPos(yaml: YamlConfiguration): SignPos? {
-        val world = yaml.getString("sign.world") ?: return null
+        val world = yaml.getString("sign.world")?.takeIf { it.isNotBlank() } ?: return null
         if (!yaml.contains("sign.x")) return null
         return SignPos(
             world,
@@ -43,7 +43,7 @@ class YamlSignRepository(private val store: YamlStore) : ArenaSignRepository {
 
     override fun signLocation(arenaName: String): WorldPosition? =
         index.entries.firstOrNull { it.value == arenaName }?.key
-            ?.let { WorldPosition(it.world, it.x.toDouble(), it.y.toDouble(), it.z.toDouble()) }
+            ?.let { WorldPosition.new(it.world, it.x.toDouble(), it.y.toDouble(), it.z.toDouble()) }
 
     override fun setSign(arenaName: String, position: WorldPosition) {
         val file = store.arenaFile(arenaName)

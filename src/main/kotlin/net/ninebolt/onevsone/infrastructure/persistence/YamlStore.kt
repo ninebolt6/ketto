@@ -76,14 +76,18 @@ class YamlStore(folder: File, private val logger: Logger) {
 
     internal fun readLocation(yaml: YamlConfiguration, path: String): WorldPosition? {
         val world = yaml.getString("$path.world") ?: return null
-        return WorldPosition(
-            world = world,
-            x = yaml.getDouble("$path.x"),
-            y = yaml.getDouble("$path.y"),
-            z = yaml.getDouble("$path.z"),
-            yaw = yaml.getDouble("$path.yaw").toFloat(),
-            pitch = yaml.getDouble("$path.pitch").toFloat()
-        )
+        return try {
+            WorldPosition.new(
+                world = world,
+                x = yaml.getDouble("$path.x"),
+                y = yaml.getDouble("$path.y"),
+                z = yaml.getDouble("$path.z"),
+                yaw = yaml.getDouble("$path.yaw").toFloat(),
+                pitch = yaml.getDouble("$path.pitch").toFloat()
+            )
+        } catch (e: IllegalArgumentException) {
+            throw PersistenceFailure("Invalid location at $path", e)
+        }
     }
 
     internal fun writeLocation(yaml: YamlConfiguration, path: String, loc: WorldPosition) {

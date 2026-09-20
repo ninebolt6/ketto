@@ -34,7 +34,7 @@ class ArenaRegistry(private val requiredWins: Int) {
 
     /** アリーナを登録し、新規の試合集約を紐付ける。 */
     fun installArena(arena: Arena) {
-        val match = ArenaMatch(arena.id, requiredWins)
+        val match = ArenaMatch.new(arena.id, requiredWins)
         val previous = slots.put(arena.id, Slot(arena, match))
         reconcileIndex(arena.id, previous?.match, match)
     }

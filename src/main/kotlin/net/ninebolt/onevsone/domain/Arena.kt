@@ -4,9 +4,10 @@ package net.ninebolt.onevsone.domain
  * アリーナ。静的設定(有効化・スポーン)を担う永続エンティティ。
  * 進行中の試合状態は別集約の ArenaMatch が持ち、両者の 1:1 ペアリングは
  * ArenaRegistry が構造で保証する。装備中身は infrastructure が保持する。
- * immutable: 変更は copy() で新インスタンスを作り、レジストリと永続化へ置き換える。
+ * immutable: 変更は enable()/disable()/withSpawn() で新インスタンスを作り、
+ * レジストリと永続化へ置き換える。
  */
-data class Arena(
+data class Arena private constructor(
     val id: Id,
     val enabled: Boolean = false,
     val spawn1: WorldPosition? = null,
@@ -36,16 +37,35 @@ data class Arena(
             fun of(name: String): Id? = if (isValidName(name)) Id(name) else null
 
             /** 妥当性が分かっている名前向け。不正名は IllegalArgumentException。 */
-            operator fun invoke(name: String): Id =
+            fun new(name: String): Id =
                 of(name) ?: throw IllegalArgumentException("invalid arena name: '$name'")
         }
     }
 
     val name: String get() = id.name
 
+    fun enable(): Arena = copy(enabled = true)
+
+    fun disable(): Arena = copy(enabled = false)
+
+    /** slot は spawn(slot) と同じ 0 始まり。 */
+    fun withSpawn(slot: Int, position: WorldPosition): Arena {
+        require(slot in 0..1) { "spawn slot must be 0 or 1 (was $slot)" }
+        return if (slot == 0) copy(spawn1 = position) else copy(spawn2 = position)
+    }
+
     fun spawn(slot: Int): WorldPosition? = when (slot) {
         0 -> spawn1
         1 -> spawn2
         else -> null
+    }
+
+    companion object {
+        fun new(
+            id: Id,
+            enabled: Boolean = false,
+            spawn1: WorldPosition? = null,
+            spawn2: WorldPosition? = null
+        ): Arena = Arena(id, enabled, spawn1, spawn2)
     }
 }

@@ -245,7 +245,7 @@ class PaperArenaMembershipTest {
     fun `shutdown preserves enabled and clears state`() {
         env.newArena()
         val p1 = env.player("Alice")
-        env.join(p1, Arena.Id("arena1"))
+        env.join(p1, Arena.Id.new("arena1"))
         env.service.shutdown()
         assertTrue(env.service.arena("arena1")!!.enabled)
         assertEquals(ArenaState.WAITING, env.view().state)
@@ -273,7 +273,7 @@ class PaperArenaMembershipTest {
 
     @Test
     fun `enabled persists across service load`() {
-        env.arenaRepo.save(Arena(Arena.Id("arena1"), enabled = true))
+        env.arenaRepo.save(Arena.new(Arena.Id.new("arena1"), enabled = true))
         env.service.load()
         assertTrue(env.service.arena("arena1")!!.enabled)
     }

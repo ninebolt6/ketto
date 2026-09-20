@@ -30,7 +30,7 @@ class ArenaAdministrationService(
     fun create(name: String): Boolean {
         val id = Arena.Id.of(name) ?: return false
         if (registry.arenaIds().any { it.name.equals(name, ignoreCase = true) }) return false
-        val arena = Arena(id)
+        val arena = Arena.new(id)
         registry.installArena(arena)
         arenas.save(arena)
         return true
@@ -52,7 +52,8 @@ class ArenaAdministrationService(
         if (arena.enabled == enabled) {
             return if (enabled) ToggleReply.AlreadyEnabled else ToggleReply.AlreadyDisabled
         }
-        val updated = registry.updateArena(id) { it.copy(enabled = enabled) } ?: return ToggleReply.NotFound
+        val updated = registry.updateArena(id) { if (enabled) it.enable() else it.disable() }
+            ?: return ToggleReply.NotFound
         arenas.save(updated)
         if (!enabled) progression.abort(id)
         return ToggleReply.Changed
@@ -60,9 +61,7 @@ class ArenaAdministrationService(
 
     fun setSpawn(name: String, slot: Int, position: WorldPosition): Boolean {
         val id = Arena.Id.of(name) ?: return false
-        val updated = registry.updateArena(id) {
-            if (slot == 1) it.copy(spawn1 = position) else it.copy(spawn2 = position)
-        } ?: return false
+        val updated = registry.updateArena(id) { it.withSpawn(slot - 1, position) } ?: return false
         arenas.save(updated)
         return true
     }

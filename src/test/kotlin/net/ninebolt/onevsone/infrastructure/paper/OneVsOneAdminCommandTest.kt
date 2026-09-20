@@ -130,7 +130,7 @@ class OneVsOneAdminCommandTest {
         op.inventory.setItem(0, env.item(Material.DIAMOND_SWORD))
         env.run(op, "arena", "setInv", "arena1")
         verify(exactly = 1) { op.sendMessage(contains("のインベントリを設定しました")) }
-        assertEquals(Material.DIAMOND_SWORD, env.equipment.kitOf(Arena.Id("arena1"))?.items?.get(0)?.type)
+        assertEquals(Material.DIAMOND_SWORD, env.equipment.kitOf(Arena.Id.new("arena1"))?.items?.get(0)?.type)
     }
 
     @Test
@@ -174,7 +174,7 @@ class OneVsOneAdminCommandTest {
     fun `arena removesign unregisters sign`() {
         val op = env.opPlayer("Op")
         env.newArena()
-        env.signRepo.setSign("arena1", WorldPosition("world", 4.0, 64.0, 4.0))
+        env.signRepo.setSign("arena1", WorldPosition.new("world", 4.0, 64.0, 4.0))
 
         env.run(op, "arena", "removesign", "arena1")
         verify(exactly = 1) { op.sendMessage(contains("の看板登録を解除しました")) }

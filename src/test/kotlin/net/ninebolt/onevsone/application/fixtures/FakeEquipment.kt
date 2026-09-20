@@ -27,7 +27,7 @@ class FakeEquipment(var players: FakePlayers? = null) : KitPort, InventoryBackup
         backupCalls++
         failOnBackup?.let { throw it }
         return participants.map { p ->
-            BackupRef(Uuid.random(), match, p.id, p.name)
+            BackupRef.new(match, p.id, p.name)
         }.onEach { storedBackups[it.backupId] = it }
     }
 

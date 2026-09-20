@@ -80,7 +80,7 @@ private class PaperPlayerHandle(
     override fun position(): WorldPosition? {
         val location = player.location
         val world = location.world ?: return null
-        return WorldPosition(world.name, location.x, location.y, location.z, location.yaw, location.pitch)
+        return WorldPosition.new(world.name, location.x, location.y, location.z, location.yaw, location.pitch)
     }
 
     override fun respawn() {
@@ -113,5 +113,5 @@ private class PaperPlayerHandle(
 /** コマンド側での Location → 純粋座標への変換。world 無しは null。 */
 fun Location.toWorldPosition(): WorldPosition? {
     val world = world ?: return null
-    return WorldPosition(world.name, x, y, z, yaw, pitch)
+    return WorldPosition.new(world.name, x, y, z, yaw, pitch)
 }

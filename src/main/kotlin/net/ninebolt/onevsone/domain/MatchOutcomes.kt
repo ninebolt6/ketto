@@ -1,12 +1,5 @@
 package net.ninebolt.onevsone.domain
 
-/**
- * 試合/カウントダウンの世代トークン。中断・再参加で古い scheduler コールバックを
- * 無効化するために使う。バックアップ/復元のトークン(BackupRef 相当)とは別系統。
- */
-@JvmInline
-value class MatchToken(val epoch: Long)
-
 /** 敗北の通知経路。落下(非死亡)は ROUNDCOUNTDOWN 中も受理される。 */
 enum class DefeatCause { DEATH, FALL }
 
@@ -49,7 +42,7 @@ sealed interface DefeatOutcome {
         val round: Int,
         val winner: Participant,
         val loser: Participant,
-        val resolution: MatchToken
+        val resolution: ArenaMatch.Token
     ) : DefeatOutcome
     /** 規定勝数に到達してマッチ終了。最終キルは勝数に加算しない現挙動を維持。 */
     data class MatchFinished(val winner: Participant, val loser: Participant) : DefeatOutcome

@@ -29,7 +29,7 @@ class InMemoryArenaRepository : ArenaRepository, LobbyRepository, ArenaSignRepos
     }
 
     override fun find(name: String): Arena =
-        definitions[name] ?: Arena(Arena.Id(name))
+        definitions[name] ?: Arena.new(Arena.Id.new(name))
 
     override fun save(arena: Arena) {
         if (failOnSave) throw PersistenceFailure("save failed")
@@ -105,13 +105,13 @@ class InMemoryPlayerStatsRepository : PlayerStatsRepository {
 
     override fun recordWin(playerId: Uuid) {
         failOnWin?.let { throw it }
-        val s = stats[playerId] ?: PlayerStats(0, 0)
-        stats[playerId] = PlayerStats(s.wins + 1, s.losses)
+        val s = stats[playerId] ?: PlayerStats.new(0, 0)
+        stats[playerId] = PlayerStats.new(s.wins + 1, s.losses)
     }
 
     override fun recordLoss(playerId: Uuid) {
         failOnLoss?.let { throw it }
-        val s = stats[playerId] ?: PlayerStats(0, 0)
-        stats[playerId] = PlayerStats(s.wins, s.losses + 1)
+        val s = stats[playerId] ?: PlayerStats.new(0, 0)
+        stats[playerId] = PlayerStats.new(s.wins, s.losses + 1)
     }
 }

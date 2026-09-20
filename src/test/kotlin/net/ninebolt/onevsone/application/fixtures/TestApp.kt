@@ -34,13 +34,13 @@ class TestApp(val requiredWins: Int = 3) {
     val admin = ArenaAdministrationService(registry, arenas, arenas, arenas, equipment, presentation, progression)
 
     fun newArena(name: String = "arena1", enabled: Boolean = true): Arena.Id {
-        val id = Arena.Id(name)
+        val id = Arena.Id.new(name)
         registry.installArena(
-            Arena(
+            Arena.new(
                 id,
                 enabled = enabled,
-                spawn1 = WorldPosition("world", 1.0, 64.0, 1.0),
-                spawn2 = WorldPosition("world", 2.0, 64.0, 2.0)
+                spawn1 = WorldPosition.new("world", 1.0, 64.0, 1.0),
+                spawn2 = WorldPosition.new("world", 2.0, 64.0, 2.0)
             )
         )
         return id
@@ -51,8 +51,8 @@ class TestApp(val requiredWins: Int = 3) {
         newArena(arenaName)
         val p1 = players.add("Alice")
         val p2 = players.add("Bob")
-        assertEquals(JoinReply.JoinedWaiting, service.join(p1.id, p1.name, Arena.Id(arenaName)))
-        assertEquals(JoinReply.JoinedStarting, service.join(p2.id, p2.name, Arena.Id(arenaName)))
+        assertEquals(JoinReply.JoinedWaiting, service.join(p1.id, p1.name, Arena.Id.new(arenaName)))
+        assertEquals(JoinReply.JoinedStarting, service.join(p2.id, p2.name, Arena.Id.new(arenaName)))
         return p1 to p2
     }
 

@@ -47,7 +47,7 @@ class ArenaListenerSignTest {
     @Test
     fun `registered sign join works and unregistered ignored`() {
         val arena = env.newArena()
-        env.signRepo.setSign("arena1", WorldPosition("world", 3.0, 64.0, 3.0))
+        env.signRepo.setSign("arena1", WorldPosition.new("world", 3.0, 64.0, 3.0))
         val p1 = env.player("Alice")
 
         val unregistered = interact(p1, env.signBlock(9, 64, 9))
@@ -66,7 +66,7 @@ class ArenaListenerSignTest {
     @Test
     fun `cannot join sign click shows message`() {
         val arena = env.newArena()
-        env.signRepo.setSign("arena1", WorldPosition("world", 3.0, 64.0, 3.0))
+        env.signRepo.setSign("arena1", WorldPosition.new("world", 3.0, 64.0, 3.0))
         val block = env.signBlock(3, 64, 3)
         val p1 = env.player("Alice")
         val p2 = env.player("Bob")
@@ -80,7 +80,7 @@ class ArenaListenerSignTest {
 
     @Test
     fun `non sign block and non right click ignored`() {
-        env.signRepo.setSign("arena1", WorldPosition("world", 3.0, 64.0, 3.0))
+        env.signRepo.setSign("arena1", WorldPosition.new("world", 3.0, 64.0, 3.0))
         env.newArena()
         val p1 = env.player("Alice")
 
@@ -98,7 +98,7 @@ class ArenaListenerSignTest {
     @Test
     fun `registered sign cannot be broken until unregistered`() {
         env.newArena()
-        env.signRepo.setSign("arena1", WorldPosition("world", 3.0, 64.0, 3.0))
+        env.signRepo.setSign("arena1", WorldPosition.new("world", 3.0, 64.0, 3.0))
         val p1 = env.player("Alice")
 
         val registered = breakEvent(p1, env.signBlock(3, 64, 3))
@@ -118,7 +118,7 @@ class ArenaListenerSignTest {
     @Test
     fun `non sign break is ignored`() {
         env.newArena()
-        env.signRepo.setSign("arena1", WorldPosition("world", 3.0, 64.0, 3.0))
+        env.signRepo.setSign("arena1", WorldPosition.new("world", 3.0, 64.0, 3.0))
         val p1 = env.player("Alice")
 
         val block = mockk<Block>(relaxed = true)
@@ -135,7 +135,7 @@ class ArenaListenerSignTest {
         // 試合中に disconnect すると backup は残る
         env.players.remove(p2.uniqueId)
         every { p2.isOnline } returns false
-        env.service.abort(Arena.Id("arena1"))
+        env.service.abort(Arena.Id.new("arena1"))
 
         // 再参加時に PlayerJoinEvent 経由で復元(空バックアップ→空インベントリ)
         every { p2.isOnline } returns true

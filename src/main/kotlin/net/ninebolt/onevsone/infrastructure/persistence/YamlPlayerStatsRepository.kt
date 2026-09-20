@@ -14,7 +14,7 @@ class YamlPlayerStatsRepository(private val store: YamlStore) : PlayerStatsRepos
         if (!file.exists()) return null
         val yaml = store.load(file)
         return try {
-            PlayerStats(wins = yaml.getInt("win"), losses = yaml.getInt("lose"))
+            PlayerStats.new(wins = yaml.getInt("win"), losses = yaml.getInt("lose"))
         } catch (e: IllegalArgumentException) {
             throw PersistenceFailure("Corrupt stats file ${file.name}", e)
         }

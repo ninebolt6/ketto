@@ -6,7 +6,7 @@ import kotlin.uuid.Uuid
  * 1 アリーナの参加者と進行状態を所有する集約。immutable: 各操作は
  * 新しい状態を持つ Transition を返し、このインスタンス自身は変化しない。
  * Bukkit・スケジューラ・永続化は持たず、タイミング制御のために世代トークン
- * (MatchToken)を発行する。participants の並び順 = 参加順 = スポーンスロット番号。
+ * (Token)を発行する。participants の並び順 = 参加順 = スポーンスロット番号。
  */
 data class ArenaMatch private constructor(
     val arenaId: Arena.Id,
@@ -25,7 +25,7 @@ data class ArenaMatch private constructor(
         const val MAX_PARTICIPANTS = 2
 
         /** 新規(WAITING・0 人)の集約。 */
-        operator fun invoke(arenaId: Arena.Id, requiredWins: Int): ArenaMatch {
+        fun new(arenaId: Arena.Id, requiredWins: Int): ArenaMatch {
             require(requiredWins >= 1) { "requiredWins must be >= 1 (was $requiredWins)" }
             return ArenaMatch(arenaId, requiredWins)
         }
@@ -66,7 +66,21 @@ data class ArenaMatch private constructor(
         }
     }
 
-    val token: MatchToken get() = MatchToken(epoch)
+    /**
+     * 試合/カウントダウンの世代トークン。中断・再参加で古い scheduler コールバックを
+     * 無効化するために使う。バックアップ/復元のトークン(BackupRef 相当)とは別系統。
+     */
+    @JvmInline
+    value class Token private constructor(val epoch: Long) {
+        companion object {
+            fun new(epoch: Long): Token {
+                require(epoch >= 0) { "epoch must be >= 0 (was $epoch)" }
+                return Token(epoch)
+            }
+        }
+    }
+
+    val token: Token get() = Token.new(epoch)
 
     val joinable: Boolean get() = state.isJoinable()
 
@@ -190,7 +204,7 @@ data class ArenaMatch private constructor(
      * RoundWon が発行した世代トークンと一致する場合のみガードを解放する。
      * トークン不一致(中断・次ラウンド進行済み等)は no-op。
      */
-    fun releaseResolution(token: MatchToken): ArenaMatch =
+    fun releaseResolution(token: Token): ArenaMatch =
         if (this.token == token) copy(resolving = false) else this
 
     /** 進行中のカウントダウンや解決待ちコールバックは世代進行で無効化される。 */

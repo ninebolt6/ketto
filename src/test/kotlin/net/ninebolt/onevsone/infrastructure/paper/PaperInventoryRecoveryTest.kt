@@ -137,14 +137,14 @@ class PaperInventoryRecoveryTest {
 
     @Test
     fun `pending restore applied on join and discarded`() {
-        val uuid = Uuid.random()
-        val ref = BackupRef(Uuid.random(), MatchId.newId(), uuid, "Alice")
-        env.matchStateRepo.registerParticipant(Participant(uuid, "Alice"), Arena.Id("a1"))
+        val participant = Participant.new("Alice")
+        val ref = BackupRef.new(MatchId.newId(), participant.id, participant.name)
+        env.matchStateRepo.registerParticipant(participant, Arena.Id.new("a1"))
         env.backupStore.saveBackups(listOf(PersistedBackup(ref, PaperInventorySnapshot())))
         env.matchStateRepo.clearRegistrations()
         env.service.load()
 
-        val p = env.player("Alice", uuid)
+        val p = env.player("Alice", participant.id)
         p.inventory.setItem(0, env.item(Material.STONE))
         env.service.restorePending(p.uuid, p.name)
         val inv = p.inventory
@@ -267,7 +267,7 @@ class PaperInventoryRecoveryTest {
         env.removePlayer(original)
         env.service.abort(arena)
 
-        val squatter = env.player("Alice", Uuid.random())
+        val squatter = env.player("Alice")
         squatter.inventory.setItem(0, env.item(Material.STONE))
         env.service.restorePending(squatter.uuid, squatter.name)
         assertEquals(Material.STONE, squatter.inventory.contents[0]?.type)

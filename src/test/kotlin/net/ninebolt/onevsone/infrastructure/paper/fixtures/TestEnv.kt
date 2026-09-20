@@ -336,13 +336,13 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     }
 
     fun newArena(name: String = "arena1", enabled: Boolean = true): Arena.Id {
-        val id = Arena.Id(name)
+        val id = Arena.Id.new(name)
         registry.installArena(
-            Arena(
+            Arena.new(
                 id,
                 enabled = enabled,
-                spawn1 = WorldPosition("world", 1.0, 64.0, 1.0),
-                spawn2 = WorldPosition("world", 2.0, 64.0, 2.0)
+                spawn1 = WorldPosition.new("world", 1.0, 64.0, 1.0),
+                spawn2 = WorldPosition.new("world", 2.0, 64.0, 2.0)
             )
         )
         return id

@@ -50,8 +50,7 @@ class PaperEquipmentAdapter(
             val player = lookup.resolve(participant.id)
                 ?: throw PersistenceFailure("Player ${participant.name} (${participant.id}) is not available for inventory backup")
             PersistedBackup(
-                BackupRef(
-                    backupId = Uuid.random(),
+                BackupRef.new(
                     matchId = match,
                     playerId = participant.id,
                     playerName = participant.name

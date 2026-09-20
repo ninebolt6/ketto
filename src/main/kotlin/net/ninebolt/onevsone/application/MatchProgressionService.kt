@@ -20,7 +20,7 @@ import kotlin.uuid.Uuid
 /**
  * 開始カウントダウン・ラウンド遷移・決着・中断の進行機構。
  * ArenaApplicationService からの委譲先として、アリーナごとのタイマーを所有し、
- * 遅延コールバックは世代トークン(MatchToken)一致と生存確認で有効性を検証する。
+ * 遅延コールバックは世代トークン(ArenaMatch.Token)一致と生存確認で有効性を検証する。
  *
  * ArenaMatch は immutable: 遅延実行されるコールバック内では参照をキャプチャせず
  * registry.match(arenaId) で最新状態を再読みすること。

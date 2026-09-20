@@ -34,7 +34,7 @@ class YamlArenaRepository(private val store: YamlStore) : ArenaRepository {
     override fun find(name: String): Arena? {
         val id = Arena.Id.of(name) ?: return null
         val cfg = store.load(store.arenaFile(name))
-        return Arena(
+        return Arena.new(
             id = id,
             enabled = cfg.getBoolean("enabled", false),
             spawn1 = store.readLocation(cfg, "spawn1"),

@@ -201,26 +201,26 @@ class ArenaMatchTest {
     @Test
     fun `factories reject invalid construction`() {
         assertThrows(IllegalArgumentException::class.java) {
-            ArenaMatch(Arena.Id("a1"), 0)
+            ArenaMatch.new(Arena.Id.new("a1"), 0)
         }
         // 状態と参加人数の不整合
         assertThrows(IllegalArgumentException::class.java) {
-            ArenaMatch.restored(Arena.Id("a1"), 3, ArenaState.WAITING, listOf(alice), emptyMap())
+            ArenaMatch.restored(Arena.Id.new("a1"), 3, ArenaState.WAITING, listOf(alice), emptyMap())
         }
         assertThrows(IllegalArgumentException::class.java) {
-            ArenaMatch.restored(Arena.Id("a1"), 3, ArenaState.INGAME, listOf(alice), emptyMap())
+            ArenaMatch.restored(Arena.Id.new("a1"), 3, ArenaState.INGAME, listOf(alice), emptyMap())
         }
         // 非参加者への加点
         assertThrows(IllegalArgumentException::class.java) {
             ArenaMatch.restored(
-                Arena.Id("a1"), 3, ArenaState.INGAME, listOf(alice, bob),
+                Arena.Id.new("a1"), 3, ArenaState.INGAME, listOf(alice, bob),
                 wins = mapOf(carol.id to 1)
             )
         }
         // resolving は ROUNDCOUNTDOWN のみ
         assertThrows(IllegalArgumentException::class.java) {
             ArenaMatch.restored(
-                Arena.Id("a1"), 3, ArenaState.INGAME, listOf(alice, bob),
+                Arena.Id.new("a1"), 3, ArenaState.INGAME, listOf(alice, bob),
                 wins = emptyMap(), resolving = true
             )
         }

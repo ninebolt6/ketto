@@ -102,7 +102,7 @@ class ArenaApplicationService(
         val arena = registry.arena(arenaId) ?: return JoinReply.NotFound
         val match = registry.match(arenaId) ?: return JoinReply.NotFound
         if (!arena.enabled) return JoinReply.NotEnabled
-        val participant = Participant(playerId, playerName)
+        val participant = Participant.new(playerId, playerName)
 
         // join は純粋関数: コミット前に拒否を確定させる
         val step = match.join(participant)
