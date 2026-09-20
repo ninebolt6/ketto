@@ -39,6 +39,10 @@ data class ArenaMatch(
 
     val canResumeRound: Boolean get() = state == ArenaState.ROUNDCOUNTDOWN && full
 
+    /** 対戦が進行中(ROUNDCOUNTDOWN/INGAME で両者在籍)。対戦カード表示等の判定用。 */
+    val inProgress: Boolean get() =
+        (state == ArenaState.INGAME || state == ArenaState.ROUNDCOUNTDOWN) && full
+
     fun participant(id: Uuid): Participant? = participants.firstOrNull { it.id == id }
 
     /** 参加者のスポーンスロット(0 始まり = spawn1/spawn2)。非参加なら null。 */
