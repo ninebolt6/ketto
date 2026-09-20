@@ -138,7 +138,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         private set
     var registry = ArenaRegistry(requiredWins)
         private set
-    var recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepo, presentation, failures)
+    var recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepo, presentation, failures, server.onlineMode)
         private set
     var progression = buildProgression()
         private set
@@ -178,7 +178,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         equipment = PaperEquipmentAdapter(backupStore, kitStore, lookup)
         presentation = PaperMatchPresentation(server, messages, signRepo, failures)
         registry = ArenaRegistry(requiredWins)
-        recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepo, presentation, failures)
+        recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepo, presentation, failures, server.onlineMode)
         progression = buildProgression()
         service = buildService()
         admin = ArenaAdministrationService(registry, arenaRepo, signRepo, lobbyRepo, equipment, presentation, progression)

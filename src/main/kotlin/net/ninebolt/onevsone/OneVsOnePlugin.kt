@@ -67,7 +67,7 @@ class OneVsOnePlugin : JavaPlugin() {
         val presentation = PaperMatchPresentation(server, messages, signRepository, failures)
 
         val registry = ArenaRegistry(requiredWins)
-        val recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepository, presentation, failures)
+        val recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepository, presentation, failures, server.onlineMode)
         val stateSync = MatchStateSync(matchState, presentation)
         val progression = MatchProgressionService(
             registry = registry,

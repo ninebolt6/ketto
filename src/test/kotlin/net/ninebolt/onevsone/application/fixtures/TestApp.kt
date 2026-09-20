@@ -13,7 +13,7 @@ import net.ninebolt.onevsone.domain.WorldPosition
 import org.junit.jupiter.api.Assertions.assertEquals
 
 /** テスト向けにまとめて配線するコンテナ。 */
-class TestApp(val requiredWins: Int = 3) {
+class TestApp(val requiredWins: Int = 3, legacyNameRestore: Boolean = true) {
     val registry = ArenaRegistry(requiredWins)
     val arenas = InMemoryArenaRepository()
     val matchState = InMemoryMatchStateRepository()
@@ -23,7 +23,7 @@ class TestApp(val requiredWins: Int = 3) {
     val scheduler = FakeScheduler()
     val presentation = RecordingPresentation()
     val failures = RecordingFailures()
-    val recovery = PlayerRecoveryService(equipment, players, arenas, presentation, failures)
+    val recovery = PlayerRecoveryService(equipment, players, arenas, presentation, failures, legacyNameRestore)
     val stateSync = MatchStateSync(matchState, presentation)
     val progression = MatchProgressionService(
         registry, stateSync, stats, equipment, equipment, players, scheduler, presentation, recovery, failures

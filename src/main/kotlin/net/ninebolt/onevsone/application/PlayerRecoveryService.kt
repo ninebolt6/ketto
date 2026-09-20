@@ -22,7 +22,12 @@ class PlayerRecoveryService(
     private val players: PlayerPort,
     private val lobby: LobbyRepository,
     private val presentation: MatchPresentationPort,
-    private val failures: FailureReporter
+    private val failures: FailureReporter,
+    /**
+     * uuid 未記録の旧バックアップを名前一致で復元してよいか。
+     * オフラインモードでは同名の別人がログインし得るため、オンラインモードのみ許可する。
+     */
+    private val allowLegacyNameRestore: Boolean
 ) {
     /** 復元対象 1 件のトークン。遅延コールバックは参照同一性で照合する。 */
     class RestoreTicket(val ref: BackupRef)
@@ -41,21 +46,27 @@ class PlayerRecoveryService(
     }
 
     private fun registerTicket(ref: BackupRef) {
+        if (ref.playerId == null && !allowLegacyNameRestore) {
+            failures.warn(
+                "Backup for ${ref.playerName} has no owner uuid and is not restored on an offline-mode server; " +
+                    "add 'uuid' to inv.${ref.playerName} in players.yml or delete the record"
+            )
+        }
         val ticket = RestoreTicket(ref)
         ref.playerId?.let { ticketsByUuid[it] = ticket }
         ticketsByName[ref.playerName] = ticket
     }
 
-    /** UUID 優先、名前は uuid 一致(または uuid 無し)の場合のみ採用。 */
+    /** UUID 優先、名前は uuid 一致(または未記録で許可されている)場合のみ採用。 */
     fun ticketFor(playerId: Uuid, playerName: String): RestoreTicket? =
         ticketsByUuid[playerId]
             ?: ticketsByName[playerName]?.takeIf { it.matchesId(playerId) }
 
     fun pending(playerId: Uuid): RestoreTicket? = ticketsByUuid[playerId]
 
-    /** 名前索引経由で採用してよいか。uuid 未記録の旧バックアップは許容する。 */
+    /** 名前索引経由で採用してよいか。uuid 未記録の旧バックアップは許可時のみ許容する。 */
     private fun RestoreTicket.matchesId(playerId: Uuid): Boolean =
-        ref.playerId == null || ref.playerId == playerId
+        if (ref.playerId == null) allowLegacyNameRestore else ref.playerId == playerId
 
     private fun ownedBy(handle: PlayerHandle, ticket: RestoreTicket): Boolean =
         ticketsByUuid[handle.id] === ticket ||

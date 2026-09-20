@@ -112,6 +112,34 @@ class PlayerRecoveryServiceTest {
     }
 
     @Test
+    fun `legacy backup without uuid is not restored when name matching is disabled`() {
+        val app = TestApp(legacyNameRestore = false)
+        val p = app.players.add("Alice")
+        val ref = BackupRef.new(MatchId.new(), null, "Alice")
+        app.equipment.seedBackup(ref)
+        app.recovery.loadPersisted()
+        assertTrue(app.failures.warnings.any { it.contains("no owner uuid") })
+
+        app.service.restorePending(p.id, p.name)
+        assertTrue(app.equipment.restored.isEmpty())
+        // 管理者が uuid を補うか削除するまで記録は残る
+        assertTrue(app.equipment.storedBackups.containsKey(ref.backupId))
+    }
+
+    @Test
+    fun `legacy backup without uuid is restored when name matching is allowed`() {
+        val app = TestApp()
+        val p = app.players.add("Alice")
+        val ref = BackupRef.new(MatchId.new(), null, "Alice")
+        app.equipment.seedBackup(ref)
+        app.recovery.loadPersisted()
+
+        app.service.restorePending(p.id, p.name)
+        assertEquals(1, app.equipment.restored.size)
+        assertTrue(app.equipment.storedBackups.isEmpty())
+    }
+
+    @Test
     fun `acknowledge failure keeps disk record but completes restore`() {
         val app = TestApp()
         val p = app.players.add("Alice")
