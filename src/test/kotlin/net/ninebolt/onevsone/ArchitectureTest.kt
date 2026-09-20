@@ -1,63 +1,59 @@
 package net.ninebolt.onevsone
 
+import com.tngtech.archunit.core.importer.ClassFileImporter
+import com.tngtech.archunit.core.importer.ImportOption
+import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.io.File
 
 /**
- * 依存方向の静的検査。追加ライブラリなしでソーステキストを走査し、
- * domain/application から Bukkit・Adventure・YAML・ファイル I/O・
- * infrastructure 参照への漏れを検出する。完全修飾参照も対象。
+ * 依存方向の静的検査。コンパイル済みバイトコードを ArchUnit で解析し、
+ * domain/application が許可パッケージ以外に依存しないことを強制する。
+ * ブラックリストではなくホワイトリストなので、Bukkit・YAML・infrastructure
+ * 以外の新たな外部依存の混入も検出できる。
  */
 class ArchitectureTest {
 
-    private val sourceRoot = File("src/main/kotlin/net/ninebolt/onevsone")
+    private val classes by lazy {
+        ClassFileImporter()
+            .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
+            .importPackages("net.ninebolt.onevsone")
+    }
 
-    private val domainDir = File(sourceRoot, "domain")
-    private val applicationDir = File(sourceRoot, "application")
+    // java.lang や kotlin.jvm.internal、@NotNull 等のコンパイラ生成参照を許容する
+    private val jdkPackages = arrayOf("java..", "kotlin..", "org.jetbrains..")
 
-    private val forbiddenInInnerLayers = listOf(
-        "org.bukkit",
-        "io.papermc",
-        "net.kyori",
-        "YamlConfiguration",
-        "java.io.File",
-        "java.nio.file",
-        "net.ninebolt.onevsone.infrastructure"
-    )
-
-    private fun kotlinFiles(dir: File): List<File> =
-        dir.walkTopDown().filter { it.isFile && it.extension == "kt" }.toList()
-
-    private fun violations(dir: File): List<String> {
-        val result = mutableListOf<String>()
-        kotlinFiles(dir).forEach { file ->
-            file.readLines().forEachIndexed { index, line ->
-                forbiddenInInnerLayers.forEach { token ->
-                    if (line.contains(token)) {
-                        result.add("${file.path}:${index + 1}: '$token' in '${line.trim()}'")
-                    }
-                }
-            }
-        }
-        return result
+    @Test
+    fun `domain depends only on itself and the jdk`() {
+        noClasses().that().resideInAPackage("net.ninebolt.onevsone.domain..")
+            .should().dependOnClassesThat()
+            .resideOutsideOfPackages("net.ninebolt.onevsone.domain..", *jdkPackages)
+            .check(classes)
     }
 
     @Test
-    fun `domain has no forbidden references`() {
-        val found = violations(domainDir)
-        assertTrue(found.isEmpty(), "domain layer violations:\n" + found.joinToString("\n"))
+    fun `application depends only on itself domain and the jdk`() {
+        noClasses().that().resideInAPackage("net.ninebolt.onevsone.application..")
+            .should().dependOnClassesThat()
+            .resideOutsideOfPackages(
+                "net.ninebolt.onevsone.application..",
+                "net.ninebolt.onevsone.domain..",
+                *jdkPackages
+            ).check(classes)
     }
 
     @Test
-    fun `application has no forbidden references`() {
-        val found = violations(applicationDir)
-        assertTrue(found.isEmpty(), "application layer violations:\n" + found.joinToString("\n"))
+    fun `inner layers do not touch file io`() {
+        noClasses().that()
+            .resideInAnyPackage("net.ninebolt.onevsone.domain..", "net.ninebolt.onevsone.application..")
+            .should().dependOnClassesThat().resideInAnyPackage("java.io..", "java.nio..")
+            .check(classes)
     }
 
     @Test
     fun `plugin main class stays at original FQCN`() {
-        val main = File(sourceRoot, "OneVsOnePlugin.kt")
+        val main = File("src/main/kotlin/net/ninebolt/onevsone/OneVsOnePlugin.kt")
         assertTrue(main.isFile, "OneVsOnePlugin.kt must exist at the root package")
         assertTrue(
             main.readText().contains("class OneVsOnePlugin : JavaPlugin"),

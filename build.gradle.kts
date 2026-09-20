@@ -14,6 +14,7 @@ dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.1-R0.1-SNAPSHOT")
     // Paper が実行時提供するが、推移依存への暗黙依存を避けるため明示する
     compileOnly("net.kyori:adventure-text-minimessage:4.17.0")
+
     // MockBukkit は bukkit 提供側(paper-api)より先に置く必要がある
     // paper-api 1.21.1 に対応する最新の MockBukkit(4.16 以降は 1.21.3 前提)
     testImplementation("org.mockbukkit.mockbukkit:mockbukkit-v1.21:4.15.0")
@@ -23,6 +24,7 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter:5.13.4")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.13.4")
     testImplementation("io.mockk:mockk:1.14.11")
+    testImplementation("com.tngtech.archunit:archunit:1.5.0")
 }
 
 kotlin {
