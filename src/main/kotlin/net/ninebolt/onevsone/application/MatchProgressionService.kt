@@ -75,39 +75,44 @@ class MatchProgressionService(
         val arenaId = match.arenaId
         cancelCountdown(arenaId)
         val gen = match.epoch
+        try {
+            val winnerHandle = players.handle(outcome.winner.id)
+            if (winnerHandle != null) {
+                rearm(arenaId, outcome.winner, winnerHandle)
+            }
 
-        val winnerHandle = players.handle(outcome.winner.id)
-        if (winnerHandle != null) {
-            rearm(arenaId, outcome.winner, winnerHandle)
-        }
+            players.handle(outcome.loser.id)?.position()?.let { presentation.roundEndSound(it) }
 
-        players.handle(outcome.loser.id)?.position()?.let { presentation.roundEndSound(it) }
+            val ids = match.participants.map { it.id }
+            presentation.roundWon(ids, outcome.round, outcome.winner.name)
+            presentation.updateScoreboard(match)
 
-        val ids = match.participants.map { it.id }
-        presentation.roundWon(ids, outcome.round, outcome.winner.name)
-        presentation.updateScoreboard(match)
-
-        val loserHandle = players.handle(outcome.loser.id)
-        val release = { registry.updateMatch(arenaId) { it.releaseResolution(gen) } }
-        if (death) {
-            scheduleDeferred(outcome.loser.id, {
-                registry.match(arenaId)?.epoch == gen && registry.arenaOf(outcome.loser.id) == arenaId
-            }) { h ->
-                rearm(arenaId, outcome.loser, h)
-                registry.match(arenaId)?.let { teleportToSlot(it, outcome.loser, h) }
+            val loserHandle = players.handle(outcome.loser.id)
+            val release = { registry.updateMatch(arenaId) { it.releaseResolution(gen) } }
+            if (death) {
+                scheduleDeferred(outcome.loser.id, {
+                    registry.match(arenaId)?.epoch == gen && registry.arenaOf(outcome.loser.id) == arenaId
+                }) { h ->
+                    rearm(arenaId, outcome.loser, h)
+                    registry.match(arenaId)?.let { teleportToSlot(it, outcome.loser, h) }
+                    release()
+                }
+            } else if (loserHandle != null) {
+                rearm(arenaId, outcome.loser, loserHandle)
+                teleportToSlot(match, outcome.loser, loserHandle)
+                scheduler.schedule(0) { release() }
+            } else {
                 release()
             }
-        } else if (loserHandle != null) {
-            rearm(arenaId, outcome.loser, loserHandle)
-            teleportToSlot(match, outcome.loser, loserHandle)
-            scheduler.schedule(0) { release() }
-        } else {
-            release()
-        }
-        winnerHandle?.let { teleportToSlot(match, outcome.winner, it) }
+            winnerHandle?.let { teleportToSlot(match, outcome.winner, it) }
 
-        sync.publish(match)
-        startRoundCountdown(arenaId)
+            sync.publish(match)
+            startRoundCountdown(arenaId)
+        } catch (e: Exception) {
+            // 決着コミット後の失敗はタイマーの無い ROUNDCOUNTDOWN のまま進行不能になるため中断する
+            failures.report("Could not finish round ${outcome.round} in arena ${arenaId.name}; match aborted", e)
+            abort(arenaId)
+        }
     }
 
     internal fun finishMatch(

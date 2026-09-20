@@ -62,6 +62,21 @@ class ArenaApplicationServiceResilienceTest {
     }
 
     @Test
+    fun `round end failure aborts instead of stalling in round countdown`() {
+        val app = TestApp()
+        val (p1, p2) = app.startMatch()
+        // ラウンド終了時の再装備(開始時の 2 回に続く 3 回目)を失敗させる
+        app.equipment.failOnApplyAt = app.equipment.applyCalls + 1
+
+        assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
+        assertEquals(ArenaState.WAITING, app.state())
+        assertNull(app.service.arenaIdOf(p1.id))
+        assertNull(app.service.arenaIdOf(p2.id))
+        assertEquals(2, app.equipment.restored.size)
+        assertTrue(app.failures.reports.any { it.first.contains("Could not finish round") })
+    }
+
+    @Test
     fun `same tick duplicate defeat does not double score`() {
         val app = TestApp()
         val (p1, p2) = app.startMatch()
