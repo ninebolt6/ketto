@@ -13,13 +13,13 @@ internal class ArenaRemoveSignCommand(
     override fun execute(sender: CommandSender, args: List<String>): Msg? {
         if (sender.denyUnlessOp()) return null
         if (args.size != 1) return messages.usageRemoveSign
-        if (arenaOrWarn(sender, args[0]) == null) return null
-        if (admin.signLocation(args[0]) == null) {
+        val arena = arenaOrWarn(sender, args[0]) ?: return null
+        if (admin.signLocation(arena.name) == null) {
             messages.send(sender, messages.signNotRegistered)
             return null
         }
-        admin.clearSign(args[0])
-        messages.send(sender, messages.signRemoved(args[0]))
+        admin.clearSign(arena.name)
+        messages.send(sender, messages.signRemoved(arena.name))
         return null
     }
 }

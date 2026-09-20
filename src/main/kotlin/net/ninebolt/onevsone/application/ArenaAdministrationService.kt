@@ -25,11 +25,11 @@ class ArenaAdministrationService(
     /** 登録順の arena 名一覧(タブ補完用)。 */
     fun arenaNames(): List<String> = registry.arenaIds().map { it.name }
 
-    fun arena(name: String): Arena? = Arena.Id.of(name)?.let { registry.arena(it) }
+    fun arena(name: String): Arena? = registry.resolveArenaId(name)?.let { registry.arena(it) }
 
     fun create(name: String): Boolean {
         val id = Arena.Id.of(name) ?: return false
-        if (registry.arenaIds().any { it.name.equals(name, ignoreCase = true) }) return false
+        if (registry.resolveArenaId(name) != null) return false
         val arena = Arena.new(id)
         registry.installArena(arena)
         arenas.save(arena)
@@ -37,18 +37,18 @@ class ArenaAdministrationService(
     }
 
     fun remove(name: String): Boolean {
-        val id = Arena.Id.of(name) ?: return false
-        if (registry.arena(id) == null) return false
-        progression.abort(id)
-        registry.removeArena(id)
-        arenas.delete(name)
-        signs.clearSign(name)
-        kit.forgetKit(id)
+        val arena = arena(name) ?: return false
+        progression.abort(arena.id)
+        registry.removeArena(arena.id)
+        // 解決後の正規名で消す(大小文字違いの入力でもファイルと看板登録を残さない)
+        arenas.delete(arena.name)
+        signs.clearSign(arena.name)
+        kit.forgetKit(arena.id)
         return true
     }
 
     fun setEnabled(name: String, enabled: Boolean): ToggleReply {
-        val id = Arena.Id.of(name) ?: return ToggleReply.NotFound
+        val id = registry.resolveArenaId(name) ?: return ToggleReply.NotFound
         val arena = registry.arena(id) ?: return ToggleReply.NotFound
         if (arena.enabled == enabled) {
             return if (enabled) ToggleReply.AlreadyEnabled else ToggleReply.AlreadyDisabled
@@ -61,7 +61,7 @@ class ArenaAdministrationService(
     }
 
     fun setSpawn(name: String, slot: Int, position: WorldPosition): Boolean {
-        val id = Arena.Id.of(name) ?: return false
+        val id = registry.resolveArenaId(name) ?: return false
         val updated = registry.updateArena(id) { it.withSpawn(slot - 1, position) } ?: return false
         arenas.save(updated)
         return true
@@ -85,7 +85,7 @@ class ArenaAdministrationService(
 
     fun setSign(name: String, position: WorldPosition): Boolean {
         val arena = arena(name) ?: return false
-        signs.setSign(name, position)
+        signs.setSign(arena.name, position)
         val state = registry.match(arena.id)?.state ?: return true
         presentation.updateSign(arena.id, state)
         return true
@@ -93,8 +93,8 @@ class ArenaAdministrationService(
 
     /** 看板登録だけを解除する。看板ブロック自体は残り、破壊可能になる。 */
     fun clearSign(name: String): Boolean {
-        arena(name) ?: return false
-        signs.clearSign(name)
+        val arena = arena(name) ?: return false
+        signs.clearSign(arena.name)
         return true
     }
 }

@@ -29,6 +29,14 @@ class ArenaRegistry(private val requiredWins: Int) {
 
     fun arena(id: Arena.Id): Arena? = slots[id]?.arena
 
+    /**
+     * 名前から登録済みアリーナを解決する。完全一致を優先し、無ければ大小文字を
+     * 無視して探す(create の重複拒否が大小文字を無視するため参照側も揃える)。
+     */
+    fun resolveArenaId(name: String): Arena.Id? =
+        Arena.Id.of(name)?.takeIf { slots.containsKey(it) }
+            ?: slots.keys.firstOrNull { it.name.equals(name, ignoreCase = true) }
+
     /** 登録順のアリーナ ID 一覧。 */
     fun arenaIds(): List<Arena.Id> = slots.keys.toList()
 

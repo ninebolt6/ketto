@@ -115,6 +115,27 @@ class ArenaAdministrationServiceTest {
     }
 
     @Test
+    fun `arena name lookup ignores case`() {
+        app.newArena("Arena1")
+        assertEquals("Arena1", app.admin.arena("arena1")?.name)
+        assertEquals("Arena1", app.service.arena("ARENA1")?.name)
+        assertEquals(ArenaState.WAITING, app.service.matchOf("ArEnA1")?.state)
+
+        assertEquals(ToggleReply.Changed, app.admin.setEnabled("ARENA1", false))
+        assertFalse(app.service.arena("Arena1")!!.enabled)
+        assertEquals(ToggleReply.AlreadyDisabled, app.admin.setEnabled("arena1", false))
+
+        assertTrue(app.admin.setSpawn("ARENA1", 1, WorldPosition.new("world", 1.0, 64.0, 1.0)))
+        assertTrue(app.admin.setSign("arena1", WorldPosition.new("world", 3.0, 64.0, 3.0)))
+        assertEquals("Arena1", app.admin.signOwner("world", 3, 64, 3))
+
+        assertTrue(app.admin.remove("aReNa1"))
+        assertNull(app.service.arena("Arena1"))
+        assertNull(app.admin.signLocation("Arena1"))
+        assertNull(app.arenas.signs["Arena1"])
+    }
+
+    @Test
     fun `remove during ingame forfeits and unregisters`() {
         val (p1, p2) = app.startMatch()
         app.service.defeat(p2.id, DefeatCause.FALL)
