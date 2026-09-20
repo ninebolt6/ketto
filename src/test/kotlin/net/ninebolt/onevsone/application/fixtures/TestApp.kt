@@ -33,7 +33,7 @@ class TestApp(val requiredWins: Int = 3) {
     val service = ArenaApplicationService(
         registry, arenas, matchState, stats, players, presentation, recovery, failures, progression, stateSync, requiredWins
     )
-    val admin = ArenaAdministrationService(registry, arenas, arenas, arenas, equipment, presentation, service)
+    val admin = ArenaAdministrationService(registry, arenas, arenas, arenas, equipment, presentation, progression, requiredWins)
 
     fun newArena(name: String = "arena1", enabled: Boolean = true): ArenaId {
         val id = ArenaId(name)

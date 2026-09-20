@@ -94,7 +94,7 @@ class OneVsOnePlugin : JavaPlugin() {
             sync = stateSync,
             requiredWins = requiredWins
         )
-        val admin = ArenaAdministrationService(registry, arenaRepository, signRepository, lobbyRepository, equipment, presentation, service)
+        val admin = ArenaAdministrationService(registry, arenaRepository, signRepository, lobbyRepository, equipment, presentation, progression, requiredWins)
         this.service = service
         service.load()
 

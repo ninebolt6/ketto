@@ -116,25 +116,25 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         private set
     var recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepo, presentation, failures)
         private set
+    var progression = buildProgression()
+        private set
     var service = buildService()
         private set
-    var admin = ArenaAdministrationService(registry, arenaRepo, signRepo, lobbyRepo, equipment, presentation, service)
+    var admin = ArenaAdministrationService(registry, arenaRepo, signRepo, lobbyRepo, equipment, presentation, progression, requiredWins)
         private set
     val listener: ArenaListener by lazy { ArenaListener(service, lookup, messages) }
     val signListener: ArenaSignListener by lazy { ArenaSignListener(service, admin, messages) }
     val command: OneVsOneCommand by lazy { OneVsOneCommand(plugin, service, admin, messages) }
 
-    private fun buildService(): ArenaApplicationService {
-        val stateSync = MatchStateSync(matchStateRepo, presentation, failures)
-        val progression = MatchProgressionService(
-            registry, stateSync, statsRepo, equipment, equipment, playerPort,
-            schedulerPort, presentation, recovery, failures
-        )
-        return ArenaApplicationService(
-            registry, arenaRepo, matchStateRepo, statsRepo, playerPort,
-            presentation, recovery, failures, progression, stateSync, requiredWins
-        )
-    }
+    private fun buildProgression() = MatchProgressionService(
+        registry, MatchStateSync(matchStateRepo, presentation, failures), statsRepo,
+        equipment, equipment, playerPort, schedulerPort, presentation, recovery, failures
+    )
+
+    private fun buildService() = ArenaApplicationService(
+        registry, arenaRepo, matchStateRepo, statsRepo, playerPort,
+        presentation, recovery, failures, progression, MatchStateSync(matchStateRepo, presentation, failures), requiredWins
+    )
 
     /** store または各ポートを差し替えて全依存を再構築(障害注入用)。 */
     fun rebuildWith(
@@ -155,8 +155,9 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         presentation = PaperMatchPresentation(server, messages, signRepo, failures)
         registry = ArenaRegistry()
         recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepo, presentation, failures)
+        progression = buildProgression()
         service = buildService()
-        admin = ArenaAdministrationService(registry, arenaRepo, signRepo, lobbyRepo, equipment, presentation, service)
+        admin = ArenaAdministrationService(registry, arenaRepo, signRepo, lobbyRepo, equipment, presentation, progression, requiredWins)
     }
 
     data class TimerRecord(val runnable: Runnable, val delay: Long, val period: Long, val taskId: Int)

@@ -14,7 +14,7 @@ import kotlin.uuid.Uuid
 
 /**
  * create/remove/enable/disable、スポーン・装備・看板・ロビー設定の管理操作。
- * 必要な中断は ArenaApplicationService へ依頼する。
+ * 必要な中断は MatchProgressionService へ依頼する。
  */
 class ArenaAdministrationService(
     private val registry: ArenaRegistry,
@@ -23,7 +23,8 @@ class ArenaAdministrationService(
     private val lobby: LobbyRepository,
     private val kit: KitPort,
     private val presentation: MatchPresentationPort,
-    private val matches: ArenaApplicationService
+    private val progression: MatchProgressionService,
+    private val requiredWins: Int
 ) {
     fun isValidName(name: String): Boolean = isValidArenaName(name)
 
@@ -37,7 +38,7 @@ class ArenaAdministrationService(
         if (registry.definitionIds().any { it.name.equals(name, ignoreCase = true) }) return false
         val definition = ArenaDefinition(ArenaId(name))
         registry.putDefinition(definition)
-        registry.installMatch(ArenaMatch(definition.id, matches.requiredWins))
+        registry.installMatch(ArenaMatch(definition.id, requiredWins))
         arenas.save(definition)
         return true
     }
@@ -45,7 +46,7 @@ class ArenaAdministrationService(
     fun remove(name: String): Boolean {
         val id = ArenaId(name)
         if (registry.definition(id) == null) return false
-        matches.abort(id)
+        progression.abort(id)
         registry.removeDefinition(id)
         registry.removeMatch(id)
         arenas.delete(name)
@@ -61,7 +62,7 @@ class ArenaAdministrationService(
         val updated = definition.copy(enabled = enabled)
         registry.putDefinition(updated)
         arenas.save(updated)
-        if (!enabled) matches.abort(definition.id)
+        if (!enabled) progression.abort(definition.id)
         return ToggleReply.Changed
     }
 
