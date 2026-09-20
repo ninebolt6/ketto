@@ -31,6 +31,9 @@ class ArenaSignListener(
         val block = event.clickedBlock ?: return
         if (block.state !is Sign) return
         val name = admin.signOwner(block.world.name, block.x, block.y, block.z) ?: return
+        // 未waxの看板はバニラの右クリックで誰でも編集画面を開けるため、処理済みのクリックは
+        // キャンセルして編集画面とアイテム使用の両方を抑止する
+        event.isCancelled = true
         // joinable の事前判定は行わず、join の拒否結果(InMatch 等)の描画に委ねる
         val reply = Arena.Id.of(name)
             ?.let { service.join(event.player.uniqueId.toKotlinUuid(), event.player.name, it) }

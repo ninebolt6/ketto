@@ -55,6 +55,9 @@ class ArenaListenerSignTest {
         val registered = interact(p1, env.signBlock(3, 64, 3))
         env.signListener.onInteract(registered)
         assertEquals(arena, env.service.arenaIdOf(p1.uuid))
+        // バニラの看板編集画面を開かせない
+        assertTrue(registered.isCancelled)
+        assertFalse(unregistered.isCancelled)
 
         val bob = env.player("Bob")
         val offhand = interact(bob, env.signBlock(3, 64, 3), EquipmentSlot.OFF_HAND)
