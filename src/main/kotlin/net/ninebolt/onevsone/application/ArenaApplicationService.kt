@@ -71,7 +71,7 @@ class ArenaApplicationService(
             val arenaId = match.arenaId
             progression.cancelCountdown(arenaId)
             val left = registry.transact(arenaId) { it.abort() }?.outcome ?: emptyList()
-            left.forEach { sync.unregister(it) }
+            left.forEach { unregister(it) }
             failures.warnOnFailure("Could not persist shutdown state for arena $arenaId; continuing shutdown") {
                 registry.match(arenaId)?.let { matchState.saveStatus(it) }
             }
@@ -135,7 +135,7 @@ class ArenaApplicationService(
         when (val outcome = step.outcome) {
             LeaveOutcome.NotWaiting -> return LeaveReply.NotWaiting
             is LeaveOutcome.Left -> {
-                sync.unregister(outcome.participant)
+                unregister(outcome.participant)
                 // 未開始の退出では持ち物を変更しない(バックアップ無し・復元無し)
                 sync.publish(step.match)
                 return LeaveReply.Left
@@ -161,7 +161,7 @@ class ArenaApplicationService(
         val step = registry.transact(arenaId) { it.forfeit(playerId) } ?: return
         when (val outcome = step.outcome) {
             is QuitOutcome.WaitingExit -> {
-                sync.unregister(outcome.participant)
+                unregister(outcome.participant)
                 sync.publish(step.match)
             }
             is QuitOutcome.MatchEnded -> {
@@ -204,4 +204,10 @@ class ArenaApplicationService(
     // ---- 中断 ---------------------------------------------------------------
 
     fun abort(arenaId: Arena.Id) = progression.abort(arenaId)
+
+    /** 台帳解除の失敗は warn に潰し後続処理を止めない。 */
+    private fun unregister(participant: Participant) =
+        failures.warnOnFailure("Could not unregister ${participant.name} from players.yml; membership record may be stale") {
+            sync.unregister(participant)
+        }
 }

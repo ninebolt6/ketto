@@ -151,13 +151,13 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     val command: OneVsOneCommand by lazy { OneVsOneCommand(service, admin, playerPort, failures, messages) }
 
     private fun buildProgression() = MatchProgressionService(
-        registry, MatchStateSync(matchStateRepo, presentation, failures), statsRepo,
+        registry, MatchStateSync(matchStateRepo, presentation), statsRepo,
         equipment, equipment, playerPort, schedulerPort, presentation, recovery, failures
     )
 
     private fun buildService() = ArenaApplicationService(
         registry, arenaRepo, matchStateRepo, statsRepo, playerPort,
-        presentation, recovery, failures, progression, MatchStateSync(matchStateRepo, presentation, failures)
+        presentation, recovery, failures, progression, MatchStateSync(matchStateRepo, presentation)
     )
 
     /** store または各ポートを差し替えて全依存を再構築(障害注入用)。 */

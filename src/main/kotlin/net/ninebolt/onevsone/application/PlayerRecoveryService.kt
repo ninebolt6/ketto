@@ -49,14 +49,17 @@ class PlayerRecoveryService(
     /** UUID 優先、名前は uuid 一致(または uuid 無し)の場合のみ採用。 */
     fun ticketFor(playerId: Uuid, playerName: String): RestoreTicket? =
         ticketsByUuid[playerId]
-            ?: ticketsByName[playerName]?.takeIf { it.ref.playerId == null || it.ref.playerId == playerId }
+            ?: ticketsByName[playerName]?.takeIf { it.matchesId(playerId) }
 
     fun pending(playerId: Uuid): RestoreTicket? = ticketsByUuid[playerId]
 
+    /** 名前索引経由で採用してよいか。uuid 未記録の旧バックアップは許容する。 */
+    private fun RestoreTicket.matchesId(playerId: Uuid): Boolean =
+        ref.playerId == null || ref.playerId == playerId
+
     private fun ownedBy(handle: PlayerHandle, ticket: RestoreTicket): Boolean =
         ticketsByUuid[handle.id] === ticket ||
-            (ticketsByName[handle.name] === ticket &&
-                (ticket.ref.playerId == null || ticket.ref.playerId == handle.id))
+            (ticketsByName[handle.name] === ticket && ticket.matchesId(handle.id))
 
     /**
      * バックアップの復元を完結する。
