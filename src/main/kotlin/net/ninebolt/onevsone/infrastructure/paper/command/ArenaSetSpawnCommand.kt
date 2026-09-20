@@ -17,10 +17,10 @@ internal class ArenaSetSpawnCommand(
         if (sender.denyUnlessOp()) return null
         val player = sender.requirePlayer() ?: return null
         if (args.size != 1) return messages.usageSetSpawn(number)
-        val definition = definitionOrWarn(sender, args[0]) ?: return null
+        val arena = arenaOrWarn(sender, args[0]) ?: return null
         // world 無しの位置は保存をスキップするが、応答は従来通り成功メッセージ
-        player.location.toWorldPosition()?.let { admin.setSpawn(definition.name, number, it) }
-        messages.send(sender, messages.spawnSet(definition.name, number))
+        player.location.toWorldPosition()?.let { admin.setSpawn(arena.name, number, it) }
+        messages.send(sender, messages.spawnSet(arena.name, number))
         return null
     }
 }

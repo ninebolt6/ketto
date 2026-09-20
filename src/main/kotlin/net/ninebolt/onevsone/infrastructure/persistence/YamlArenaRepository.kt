@@ -2,15 +2,14 @@ package net.ninebolt.onevsone.infrastructure.persistence
 
 import net.ninebolt.onevsone.application.port.ArenaRepository
 import net.ninebolt.onevsone.application.port.PersistenceFailure
-import net.ninebolt.onevsone.domain.ArenaDefinition
-import net.ninebolt.onevsone.domain.ArenaId
+import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.isValidArenaName
 import java.util.Locale
 
 /** arenalist.yml・arena/<name>.yml の永続化。arenalist は登録順の index として内部管理する。 */
 class YamlArenaRepository(private val store: YamlStore) : ArenaRepository {
 
-    override fun loadAll(): List<ArenaDefinition> {
+    override fun loadAll(): List<Arena> {
         val names = store.load(store.arenaListFile).getStringList("arenas")
         val seen = mutableSetOf<String>()
         return names.mapNotNull { name ->
@@ -33,11 +32,11 @@ class YamlArenaRepository(private val store: YamlStore) : ArenaRepository {
         }
     }
 
-    override fun find(name: String): ArenaDefinition? {
+    override fun find(name: String): Arena? {
         if (!isValidArenaName(name)) return null
         val cfg = store.load(store.arenaFile(name))
-        return ArenaDefinition(
-            id = ArenaId(name),
+        return Arena(
+            id = Arena.Id(name),
             enabled = cfg.getBoolean("enabled", false),
             spawn1 = store.readLocation(cfg, "spawn1"),
             spawn2 = store.readLocation(cfg, "spawn2")
@@ -45,7 +44,7 @@ class YamlArenaRepository(private val store: YamlStore) : ArenaRepository {
     }
 
     /** enabled とスポーンのみを保存。inventory(装備)・sign(看板) セクションは各責務側が持つので保持する。 */
-    override fun save(arena: ArenaDefinition) {
+    override fun save(arena: Arena) {
         val file = store.arenaFile(arena.name)
         val yaml = store.load(file)
         yaml.set("enabled", arena.enabled)

@@ -1,6 +1,6 @@
 package net.ninebolt.onevsone.application.port
 
-import net.ninebolt.onevsone.domain.ArenaId
+import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.WorldPosition
@@ -24,7 +24,7 @@ interface MatchPresentationPort {
     /** ラウンド決着の爆発音(敗北地点)。 */
     fun roundEndSound(position: WorldPosition)
     /** 優勝ブロードキャスト。 */
-    fun champion(arena: ArenaId, winnerName: String)
+    fun champion(arena: Arena.Id, winnerName: String)
     /** 勝者位置の花火。 */
     fun championFirework(playerId: Uuid)
     /** サイドバースコアボードを最新の試合状態で更新。 */
@@ -32,5 +32,5 @@ interface MatchPresentationPort {
     /** スコアボードをクリア。 */
     fun clearScoreboard(playerId: Uuid)
     /** 看板の表示更新(Join 可否 + 状態行)。 */
-    fun updateSign(arena: ArenaId, state: ArenaState)
+    fun updateSign(arena: Arena.Id, state: ArenaState)
 }

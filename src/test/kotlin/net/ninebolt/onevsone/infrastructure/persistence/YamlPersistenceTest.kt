@@ -1,8 +1,7 @@
 package net.ninebolt.onevsone.infrastructure.persistence
 
 import net.ninebolt.onevsone.application.port.BackupRef
-import net.ninebolt.onevsone.domain.ArenaDefinition
-import net.ninebolt.onevsone.domain.ArenaId
+import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.MatchId
@@ -50,8 +49,8 @@ class YamlPersistenceTest {
     @Test
     fun `arena round trip keeps fractional yaw pitch and enabled`() {
         val repo = arenas()
-        val def = ArenaDefinition(
-            ArenaId("a1"),
+        val def = Arena(
+            Arena.Id("a1"),
             enabled = true,
             spawn1 = WorldPosition("world", 1.5, 64.25, -3.75, 12.34f, -56.78f)
         )
@@ -75,9 +74,9 @@ class YamlPersistenceTest {
     @Test
     fun `loadAll follows index order and skips duplicates`() {
         val repo = arenas()
-        repo.save(ArenaDefinition(ArenaId("b1")))
-        repo.save(ArenaDefinition(ArenaId("a1"), enabled = true))
-        repo.save(ArenaDefinition(ArenaId("b1"), enabled = true))
+        repo.save(Arena(Arena.Id("b1")))
+        repo.save(Arena(Arena.Id("a1"), enabled = true))
+        repo.save(Arena(Arena.Id("b1"), enabled = true))
 
         val loaded = arenas().loadAll()
         assertEquals(listOf("b1", "a1"), loaded.map { it.name })
@@ -91,7 +90,7 @@ class YamlPersistenceTest {
     @Test
     fun `loadAll skips invalid and duplicate index entries`() {
         File(folder, "arenalist.yml").writeText("arenas: [a1, 'a/b', A1]")
-        arenas().save(ArenaDefinition(ArenaId("a1")))
+        arenas().save(Arena(Arena.Id("a1")))
         assertEquals(listOf("a1"), arenas().loadAll().map { it.name })
     }
 
@@ -114,7 +113,7 @@ class YamlPersistenceTest {
         val id1 = Uuid.random()
         val id2 = Uuid.random()
         val match = ArenaMatch(
-            ArenaId("a1"),
+            Arena.Id("a1"),
             requiredWins = 3,
             state = ArenaState.INGAME,
             participants = listOf(Participant(id1, "Alice"), Participant(id2, "Bob")),
@@ -133,7 +132,7 @@ class YamlPersistenceTest {
         val uuid = Uuid.random()
         val ref = BackupRef(Uuid.random(), MatchId.newId(), uuid, "Alice")
         val repo = matchState()
-        repo.registerParticipant(Participant(uuid, "Alice"), ArenaId("a1"))
+        repo.registerParticipant(Participant(uuid, "Alice"), Arena.Id("a1"))
         backups().saveBackups(listOf(PersistedBackup(ref, PaperInventorySnapshot())))
 
         var yaml = YamlConfiguration.loadConfiguration(File(folder, "status/players.yml"))
@@ -159,7 +158,7 @@ class YamlPersistenceTest {
         val ref = BackupRef(Uuid.random(), MatchId.newId(), uuid, "Alice")
         val repo = matchState()
         val s = backups()
-        repo.registerParticipant(Participant(uuid, "Alice"), ArenaId("a1"))
+        repo.registerParticipant(Participant(uuid, "Alice"), Arena.Id("a1"))
         s.saveBackups(listOf(PersistedBackup(ref, PaperInventorySnapshot())))
 
         repo.unregisterParticipant("Alice")
@@ -208,7 +207,7 @@ class YamlPersistenceTest {
     @Test
     fun `registerParticipant writes membership only`() {
         val uuid = Uuid.random()
-        matchState().registerParticipant(Participant(uuid, "Alice"), ArenaId("a1"))
+        matchState().registerParticipant(Participant(uuid, "Alice"), Arena.Id("a1"))
         val yaml = YamlConfiguration.loadConfiguration(File(folder, "status/players.yml"))
         assertTrue(yaml.getStringList("players").contains("Alice"))
         assertEquals("a1", yaml.getString("arena.Alice"))
@@ -221,8 +220,8 @@ class YamlPersistenceTest {
         val u1 = Uuid.random()
         val u2 = Uuid.random()
         val repo = matchState()
-        repo.registerParticipant(Participant(u1, "Alice"), ArenaId("a1"))
-        repo.registerParticipant(Participant(u2, "Bob"), ArenaId("a1"))
+        repo.registerParticipant(Participant(u1, "Alice"), Arena.Id("a1"))
+        repo.registerParticipant(Participant(u2, "Bob"), Arena.Id("a1"))
         val match = MatchId.newId()
         s.saveBackups(
             listOf(
@@ -325,7 +324,7 @@ class YamlPersistenceTest {
     @Test
     fun `sign section survives arena save`() {
         signs().setSign("a1", WorldPosition("world", 5.0, 64.0, 5.0))
-        arenas().save(ArenaDefinition(ArenaId("a1"), enabled = true))
+        arenas().save(Arena(Arena.Id("a1"), enabled = true))
         val yaml = YamlConfiguration.loadConfiguration(File(folder, "arena/a1.yml"))
         assertNotNull(yaml.getConfigurationSection("sign"))
         assertEquals("a1", signs().signOwner("world", 5, 64, 5))
@@ -342,8 +341,8 @@ class YamlPersistenceTest {
     @Test
     fun `deleteArena removes arena and status files`() {
         val repo = arenas()
-        repo.save(ArenaDefinition(ArenaId("a1")))
-        matchState().saveStatus(ArenaMatch(ArenaId("a1"), requiredWins = 3))
+        repo.save(Arena(Arena.Id("a1")))
+        matchState().saveStatus(ArenaMatch(Arena.Id("a1"), requiredWins = 3))
         assertTrue(File(folder, "arena/a1.yml").exists())
         repo.delete("a1")
         assertFalse(File(folder, "arena/a1.yml").exists())
@@ -354,10 +353,10 @@ class YamlPersistenceTest {
     fun `saveArena keeps inventory section written by equipment adapter`() {
         val repo = arenas()
         val s = kits()
-        val def = ArenaDefinition(ArenaId("a1"), enabled = true)
+        val def = Arena(Arena.Id("a1"), enabled = true)
         repo.save(def)
         s.saveArenaKit("a1", PaperInventorySnapshot(items = listOf(null)))
-        repo.save(ArenaDefinition(ArenaId("a1"), enabled = false))
+        repo.save(Arena(Arena.Id("a1"), enabled = false))
         val yaml = YamlConfiguration.loadConfiguration(File(folder, "arena/a1.yml"))
         assertFalse(yaml.getBoolean("enabled"))
         assertNotNull(yaml.getList("inventory.item"))

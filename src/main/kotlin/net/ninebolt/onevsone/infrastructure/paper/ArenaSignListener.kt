@@ -3,7 +3,7 @@ package net.ninebolt.onevsone.infrastructure.paper
 import net.ninebolt.onevsone.application.ArenaAdministrationService
 import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.application.JoinReply
-import net.ninebolt.onevsone.domain.ArenaId
+import net.ninebolt.onevsone.domain.Arena
 import org.bukkit.block.Sign
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
@@ -32,7 +32,7 @@ class ArenaSignListener(
         if (block.state !is Sign) return
         val name = admin.signOwner(block.world.name, block.x, block.y, block.z) ?: return
         // joinable の事前判定は行わず、join の拒否結果(InMatch 等)の描画に委ねる
-        renderJoin(event.player, name, service.join(event.player.uniqueId.toKotlinUuid(), event.player.name, ArenaId(name)))
+        renderJoin(event.player, name, service.join(event.player.uniqueId.toKotlinUuid(), event.player.name, Arena.Id(name)))
     }
 
     /** 登録中の看板は誰も壊せない。解除は /1vs1 arena removesign か arena remove のみ。 */

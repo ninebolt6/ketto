@@ -6,8 +6,7 @@ import net.ninebolt.onevsone.application.port.LobbyRepository
 import net.ninebolt.onevsone.application.port.MatchStateRepository
 import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.application.port.PlayerStatsRepository
-import net.ninebolt.onevsone.domain.ArenaDefinition
-import net.ninebolt.onevsone.domain.ArenaId
+import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.Participant
 import net.ninebolt.onevsone.domain.PlayerStats
@@ -18,22 +17,22 @@ import kotlin.uuid.Uuid
 
 class InMemoryArenaRepository : ArenaRepository, LobbyRepository, ArenaSignRepository {
     val names = mutableListOf<String>()
-    val definitions = mutableMapOf<String, ArenaDefinition>()
+    val definitions = mutableMapOf<String, Arena>()
     var lobbyPosition: WorldPosition? = null
     val signs = mutableMapOf<String, WorldPosition>()
     var failOnSave = false
 
-    override fun loadAll(): List<ArenaDefinition> {
+    override fun loadAll(): List<Arena> {
         val seen = mutableSetOf<String>()
         return names.mapNotNull { name ->
             if (!isValidArenaName(name) || !seen.add(name.lowercase(Locale.ROOT))) null else find(name)
         }
     }
 
-    override fun find(name: String): ArenaDefinition =
-        definitions[name] ?: ArenaDefinition(ArenaId(name))
+    override fun find(name: String): Arena =
+        definitions[name] ?: Arena(Arena.Id(name))
 
-    override fun save(arena: ArenaDefinition) {
+    override fun save(arena: Arena) {
         if (failOnSave) throw PersistenceFailure("save failed")
         definitions[arena.name] = arena
         if (names.none { it.equals(arena.name, ignoreCase = true) }) names += arena.name
@@ -66,7 +65,7 @@ class InMemoryArenaRepository : ArenaRepository, LobbyRepository, ArenaSignRepos
 
 class InMemoryMatchStateRepository : MatchStateRepository {
     val savedViews = mutableListOf<ArenaMatch>()
-    val registrations = linkedMapOf<String, ArenaId>()
+    val registrations = linkedMapOf<String, Arena.Id>()
     var failOnRegister = false
     var failOnUnregister = false
     var failOnSaveStatus = false
@@ -79,7 +78,7 @@ class InMemoryMatchStateRepository : MatchStateRepository {
         savedViews += match
     }
 
-    override fun registerParticipant(participant: Participant, arena: ArenaId) {
+    override fun registerParticipant(participant: Participant, arena: Arena.Id) {
         if (failOnRegister) throw PersistenceFailure("register failed")
         registrations[participant.name] = arena
     }

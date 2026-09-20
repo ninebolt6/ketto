@@ -1,7 +1,7 @@
 package net.ninebolt.onevsone.infrastructure.persistence
 
 import net.ninebolt.onevsone.application.port.MatchStateRepository
-import net.ninebolt.onevsone.domain.ArenaId
+import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.Participant
 import org.bukkit.configuration.file.YamlConfiguration
@@ -20,7 +20,7 @@ class YamlMatchStateRepository(private val store: YamlStore) : MatchStateReposit
         store.save(yaml, store.statusFile(match.arenaId.name))
     }
 
-    override fun registerParticipant(participant: Participant, arena: ArenaId) {
+    override fun registerParticipant(participant: Participant, arena: Arena.Id) {
         val yaml = store.load(store.playersFile)
         val players = yaml.getStringList("players")
         if (!players.contains(participant.name)) players.add(participant.name)

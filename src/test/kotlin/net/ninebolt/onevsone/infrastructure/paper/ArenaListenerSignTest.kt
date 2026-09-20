@@ -3,7 +3,7 @@ package net.ninebolt.onevsone.infrastructure.paper
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import net.ninebolt.onevsone.domain.ArenaId
+import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.WorldPosition
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.breakEvent
@@ -135,7 +135,7 @@ class ArenaListenerSignTest {
         // 試合中に disconnect すると backup は残る
         env.players.remove(p2.uniqueId)
         every { p2.isOnline } returns false
-        env.service.abort(ArenaId("arena1"))
+        env.service.abort(Arena.Id("arena1"))
 
         // 再参加時に PlayerJoinEvent 経由で復元(空バックアップ→空インベントリ)
         every { p2.isOnline } returns true

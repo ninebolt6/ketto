@@ -15,9 +15,9 @@ internal class ArenaSetInventoryCommand(
         if (sender.denyUnlessOp()) return null
         val player = sender.requirePlayer() ?: return null
         if (args.size != 1) return messages.usageSetInv
-        val definition = definitionOrWarn(sender, args[0]) ?: return null
-        admin.setKit(definition.name, player.uniqueId.toKotlinUuid())
-        messages.send(sender, messages.inventorySet(definition.name))
+        val arena = arenaOrWarn(sender, args[0]) ?: return null
+        admin.setKit(arena.name, player.uniqueId.toKotlinUuid())
+        messages.send(sender, messages.inventorySet(arena.name))
         return null
     }
 }

@@ -9,7 +9,7 @@ import kotlin.uuid.Uuid
  * (MatchToken)を発行する。participants の並び順 = 参加順 = スポーンスロット番号。
  */
 data class ArenaMatch(
-    val arenaId: ArenaId,
+    val arenaId: Arena.Id,
     val requiredWins: Int,
     val state: ArenaState = ArenaState.WAITING,
     val participants: List<Participant> = emptyList(),

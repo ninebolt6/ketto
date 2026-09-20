@@ -3,7 +3,7 @@ package net.ninebolt.onevsone.infrastructure.paper
 import io.mockk.every
 import io.mockk.verify
 import net.ninebolt.onevsone.application.port.BackupRef
-import net.ninebolt.onevsone.domain.ArenaId
+import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.domain.MatchId
@@ -139,7 +139,7 @@ class PaperInventoryRecoveryTest {
     fun `pending restore applied on join and discarded`() {
         val uuid = Uuid.random()
         val ref = BackupRef(Uuid.random(), MatchId.newId(), uuid, "Alice")
-        env.matchStateRepo.registerParticipant(Participant(uuid, "Alice"), ArenaId("a1"))
+        env.matchStateRepo.registerParticipant(Participant(uuid, "Alice"), Arena.Id("a1"))
         env.backupStore.saveBackups(listOf(PersistedBackup(ref, PaperInventorySnapshot())))
         env.matchStateRepo.clearRegistrations()
         env.service.load()

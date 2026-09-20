@@ -23,16 +23,17 @@ git diff --check
 composition root として手動で全依存を配線する(DI フレームワーク不使用)。
 
 - `src/main/kotlin/net/ninebolt/onevsone/` — `OneVsOnePlugin.kt`(composition root のみ)
-- `.../domain/` — 純粋 Kotlin/JDK のみ。`ArenaMatch` 集約(immutable: 各操作は新状態を持つ
-  `Transition` を返し、呼び出し側がレジストリへ書き戻す。状態遷移・勝敗規則・世代トークン)、
-  `ArenaDefinition`(immutable data class)、`ParticipantRestrictions`、`PlayerStats`、
-  識別子(`ArenaId`/`MatchId`)
+- `.../domain/` — 純粋 Kotlin/JDK のみ。`Arena`(永続エンティティ: id/enabled/spawn、
+  immutable data class)、`ArenaMatch`(アリーナのセッション集約。immutable: 各操作は新状態を
+  持つ `Transition` を返し、呼び出し側がレジストリへ書き戻す。状態遷移・勝敗規則・世代トークン)、
+  `ParticipantRestrictions`、`PlayerStats`、識別子(`Arena.Id`/`MatchId`)
 - `.../application/` — domain + `application/port` のみに依存。
   `ArenaApplicationService`(参加/退出/勝敗入口・ライフサイクルの facade)、
   `MatchProgressionService`(カウントダウン/ラウンド遷移/決着/中断の進行機構。
   タイマー所有。ApplicationService から一方向に委譲される)、
   `PlayerRecoveryService`(未復元バックアップの台帳・復元)、`ArenaAdministrationService`、
-  `ArenaRegistry`(共有レジストリ)。`port/` に repository(`ArenaRepository`・
+  `ArenaRegistry`(共有レジストリ。Arena↔ArenaMatch を 1:1 の Slot で保持し、
+  installArena が requiredWins 付きの ArenaMatch を構築する)。`port/` に repository(`ArenaRepository`・
   `LobbyRepository`・`ArenaSignRepository`・`MatchStateRepository`・`PlayerStatsRepository`)・
   kit(`KitPort`)・backup(`InventoryBackupPort`)・player・scheduler・presentation・failure の
   各 interface と DTO(`BackupRef` 等)。1 アダプターが複数 port を実装してよい

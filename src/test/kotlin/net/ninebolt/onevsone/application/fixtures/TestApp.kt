@@ -7,16 +7,14 @@ import net.ninebolt.onevsone.application.JoinReply
 import net.ninebolt.onevsone.application.MatchProgressionService
 import net.ninebolt.onevsone.application.MatchStateSync
 import net.ninebolt.onevsone.application.PlayerRecoveryService
-import net.ninebolt.onevsone.domain.ArenaDefinition
-import net.ninebolt.onevsone.domain.ArenaId
-import net.ninebolt.onevsone.domain.ArenaMatch
+import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.WorldPosition
 import org.junit.jupiter.api.Assertions.assertEquals
 
 /** テスト向けにまとめて配線するコンテナ。 */
 class TestApp(val requiredWins: Int = 3) {
-    val registry = ArenaRegistry()
+    val registry = ArenaRegistry(requiredWins)
     val arenas = InMemoryArenaRepository()
     val matchState = InMemoryMatchStateRepository()
     val stats = InMemoryPlayerStatsRepository()
@@ -31,21 +29,20 @@ class TestApp(val requiredWins: Int = 3) {
         registry, stateSync, stats, equipment, equipment, players, scheduler, presentation, recovery, failures
     )
     val service = ArenaApplicationService(
-        registry, arenas, matchState, stats, players, presentation, recovery, failures, progression, stateSync, requiredWins
+        registry, arenas, matchState, stats, players, presentation, recovery, failures, progression, stateSync
     )
-    val admin = ArenaAdministrationService(registry, arenas, arenas, arenas, equipment, presentation, progression, requiredWins)
+    val admin = ArenaAdministrationService(registry, arenas, arenas, arenas, equipment, presentation, progression)
 
-    fun newArena(name: String = "arena1", enabled: Boolean = true): ArenaId {
-        val id = ArenaId(name)
-        registry.putDefinition(
-            ArenaDefinition(
+    fun newArena(name: String = "arena1", enabled: Boolean = true): Arena.Id {
+        val id = Arena.Id(name)
+        registry.installArena(
+            Arena(
                 id,
                 enabled = enabled,
                 spawn1 = WorldPosition("world", 1.0, 64.0, 1.0),
                 spawn2 = WorldPosition("world", 2.0, 64.0, 2.0)
             )
         )
-        registry.installMatch(ArenaMatch(id, requiredWins))
         return id
     }
 
@@ -54,8 +51,8 @@ class TestApp(val requiredWins: Int = 3) {
         newArena(arenaName)
         val p1 = players.add("Alice")
         val p2 = players.add("Bob")
-        assertEquals(JoinReply.JoinedWaiting, service.join(p1.id, p1.name, ArenaId(arenaName)))
-        assertEquals(JoinReply.JoinedStarting, service.join(p2.id, p2.name, ArenaId(arenaName)))
+        assertEquals(JoinReply.JoinedWaiting, service.join(p1.id, p1.name, Arena.Id(arenaName)))
+        assertEquals(JoinReply.JoinedStarting, service.join(p2.id, p2.name, Arena.Id(arenaName)))
         return p1 to p2
     }
 

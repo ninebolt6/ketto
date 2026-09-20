@@ -5,9 +5,7 @@ import net.ninebolt.onevsone.application.port.ArenaSignRepository
 import net.ninebolt.onevsone.application.port.KitPort
 import net.ninebolt.onevsone.application.port.LobbyRepository
 import net.ninebolt.onevsone.application.port.MatchPresentationPort
-import net.ninebolt.onevsone.domain.ArenaDefinition
-import net.ninebolt.onevsone.domain.ArenaId
-import net.ninebolt.onevsone.domain.ArenaMatch
+import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.WorldPosition
 import net.ninebolt.onevsone.domain.isValidArenaName
 import kotlin.uuid.Uuid
@@ -23,65 +21,59 @@ class ArenaAdministrationService(
     private val lobby: LobbyRepository,
     private val kit: KitPort,
     private val presentation: MatchPresentationPort,
-    private val progression: MatchProgressionService,
-    private val requiredWins: Int
+    private val progression: MatchProgressionService
 ) {
     fun isValidName(name: String): Boolean = isValidArenaName(name)
 
     /** 登録順の arena 名一覧(タブ補完用)。 */
-    fun arenaNames(): List<String> = registry.definitionIds().map { it.name }
+    fun arenaNames(): List<String> = registry.arenaIds().map { it.name }
 
-    fun definition(name: String): ArenaDefinition? = registry.definition(ArenaId(name))
+    fun arena(name: String): Arena? = registry.arena(Arena.Id(name))
 
     fun create(name: String): Boolean {
         if (!isValidArenaName(name)) return false
-        if (registry.definitionIds().any { it.name.equals(name, ignoreCase = true) }) return false
-        val definition = ArenaDefinition(ArenaId(name))
-        registry.putDefinition(definition)
-        registry.installMatch(ArenaMatch(definition.id, requiredWins))
-        arenas.save(definition)
+        if (registry.arenaIds().any { it.name.equals(name, ignoreCase = true) }) return false
+        val arena = Arena(Arena.Id(name))
+        registry.installArena(arena)
+        arenas.save(arena)
         return true
     }
 
     fun remove(name: String): Boolean {
-        val id = ArenaId(name)
-        if (registry.definition(id) == null) return false
+        val id = Arena.Id(name)
+        if (registry.arena(id) == null) return false
         progression.abort(id)
-        registry.removeDefinition(id)
-        registry.removeMatch(id)
+        registry.removeArena(id)
         arenas.delete(name)
         signs.clearSign(name)
         return true
     }
 
     fun setEnabled(name: String, enabled: Boolean): ToggleReply {
-        val definition = registry.definition(ArenaId(name)) ?: return ToggleReply.NotFound
-        if (definition.enabled == enabled) {
+        val id = Arena.Id(name)
+        val arena = registry.arena(id) ?: return ToggleReply.NotFound
+        if (arena.enabled == enabled) {
             return if (enabled) ToggleReply.AlreadyEnabled else ToggleReply.AlreadyDisabled
         }
-        val updated = definition.copy(enabled = enabled)
-        registry.putDefinition(updated)
+        val updated = registry.updateArena(id) { it.copy(enabled = enabled) } ?: return ToggleReply.NotFound
         arenas.save(updated)
-        if (!enabled) progression.abort(definition.id)
+        if (!enabled) progression.abort(id)
         return ToggleReply.Changed
     }
 
     fun setSpawn(name: String, slot: Int, position: WorldPosition): Boolean {
-        val definition = registry.definition(ArenaId(name)) ?: return false
-        val updated = if (slot == 1) {
-            definition.copy(spawn1 = position)
-        } else {
-            definition.copy(spawn2 = position)
-        }
-        registry.putDefinition(updated)
+        val id = Arena.Id(name)
+        val updated = registry.updateArena(id) {
+            if (slot == 1) it.copy(spawn1 = position) else it.copy(spawn2 = position)
+        } ?: return false
         arenas.save(updated)
         return true
     }
 
     /** 実行者の現在装備をアリーナ装備として保存する。 */
     fun setKit(name: String, playerId: Uuid): Boolean {
-        val definition = registry.definition(ArenaId(name)) ?: return false
-        kit.saveKit(definition.id, playerId)
+        val arena = registry.arena(Arena.Id(name)) ?: return false
+        kit.saveKit(arena.id, playerId)
         return true
     }
 
@@ -95,16 +87,16 @@ class ArenaAdministrationService(
         signs.signOwner(world, x, y, z)
 
     fun setSign(name: String, position: WorldPosition): Boolean {
-        val definition = registry.definition(ArenaId(name)) ?: return false
+        val arena = registry.arena(Arena.Id(name)) ?: return false
         signs.setSign(name, position)
-        val state = registry.match(definition.id)?.state ?: return true
-        presentation.updateSign(definition.id, state)
+        val state = registry.match(arena.id)?.state ?: return true
+        presentation.updateSign(arena.id, state)
         return true
     }
 
     /** 看板登録だけを解除する。看板ブロック自体は残り、破壊可能になる。 */
     fun clearSign(name: String): Boolean {
-        registry.definition(ArenaId(name)) ?: return false
+        registry.arena(Arena.Id(name)) ?: return false
         signs.clearSign(name)
         return true
     }

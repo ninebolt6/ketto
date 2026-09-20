@@ -3,7 +3,7 @@ package net.ninebolt.onevsone.application
 import net.ninebolt.onevsone.application.fixtures.TestApp
 import net.ninebolt.onevsone.application.port.BackupRef
 import net.ninebolt.onevsone.application.port.PersistenceFailure
-import net.ninebolt.onevsone.domain.ArenaId
+import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.domain.MatchId
@@ -63,7 +63,7 @@ class PlayerRecoveryServiceTest {
         val app = TestApp()
         app.newArena()
         val p1 = app.players.add("Alice")
-        app.service.join(p1.id, p1.name, ArenaId("arena1"))
+        app.service.join(p1.id, p1.name, Arena.Id("arena1"))
         // 未開始の退出/切断/停止では持ち物に触れない
         app.players.disconnect(p1)
         app.players.quittingScope(p1) {
@@ -78,7 +78,7 @@ class PlayerRecoveryServiceTest {
         val app = TestApp()
         val (p1, p2) = app.startMatch()
         app.players.disconnect(p2)
-        app.service.abort(ArenaId("arena1"))
+        app.service.abort(Arena.Id("arena1"))
         // オフラインなので復元は p1 のみ
         assertEquals(1, app.equipment.restored.size)
         assertEquals(1, app.equipment.storedBackups.size)
@@ -152,7 +152,7 @@ class PlayerRecoveryServiceTest {
         p2.dead = true
         app.service.defeat(p2.id, DefeatCause.DEATH)
         // ROUNDCOUNTDOWN 中の再装備予約を中断で無効化
-        app.service.abort(ArenaId("arena1"))
+        app.service.abort(Arena.Id("arena1"))
         app.scheduler.runOneShots()
         // abort 側の遅延復元が走り、古い再装備コールバックは世代不一致で無効
         val p2Restores = app.equipment.restored.count { it.playerId == p2.id }
@@ -210,10 +210,10 @@ class PlayerRecoveryServiceTest {
         app.recovery.loadPersisted()
 
         p.dead = true
-        assertEquals(JoinReply.InMatch, app.service.join(p.id, p.name, ArenaId("arena1")))
+        assertEquals(JoinReply.InMatch, app.service.join(p.id, p.name, Arena.Id("arena1")))
         assertNull(app.service.arenaIdOf(p.id))
         p.dead = false
-        assertEquals(JoinReply.JoinedWaiting, app.service.join(p.id, p.name, ArenaId("arena1")))
+        assertEquals(JoinReply.JoinedWaiting, app.service.join(p.id, p.name, Arena.Id("arena1")))
         // 復元済み(参加前に完了)なので記録は消える
         assertTrue(app.equipment.restored.any { it.playerId == p.id })
         assertTrue(app.equipment.storedBackups.isEmpty())

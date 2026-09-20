@@ -2,7 +2,7 @@ package net.ninebolt.onevsone.application.fixtures
 
 import net.ninebolt.onevsone.application.port.FailureReporter
 import net.ninebolt.onevsone.application.port.MatchPresentationPort
-import net.ninebolt.onevsone.domain.ArenaId
+import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.WorldPosition
@@ -17,11 +17,11 @@ class RecordingPresentation : MatchPresentationPort {
     val roundStarts = mutableListOf<List<Uuid>>()
     val roundWins = mutableListOf<Triple<List<Uuid>, Int, String>>()
     val roundEndSounds = mutableListOf<WorldPosition>()
-    val champions = mutableListOf<Pair<ArenaId, String>>()
+    val champions = mutableListOf<Pair<Arena.Id, String>>()
     val fireworks = mutableListOf<Uuid>()
     val scoreboards = mutableListOf<ArenaMatch>()
     val clearedScoreboards = mutableListOf<Uuid>()
-    val signUpdates = mutableListOf<Pair<ArenaId, ArenaState>>()
+    val signUpdates = mutableListOf<Pair<Arena.Id, ArenaState>>()
 
     override fun countdownTick(participantIds: List<Uuid>, secondsLeft: Int) {
         countdownTicks += Countdown(participantIds, secondsLeft)
@@ -47,7 +47,7 @@ class RecordingPresentation : MatchPresentationPort {
         roundEndSounds += position
     }
 
-    override fun champion(arena: ArenaId, winnerName: String) {
+    override fun champion(arena: Arena.Id, winnerName: String) {
         champions += arena to winnerName
     }
 
@@ -63,7 +63,7 @@ class RecordingPresentation : MatchPresentationPort {
         clearedScoreboards += playerId
     }
 
-    override fun updateSign(arena: ArenaId, state: ArenaState) {
+    override fun updateSign(arena: Arena.Id, state: ArenaState) {
         signUpdates += arena to state
     }
 }

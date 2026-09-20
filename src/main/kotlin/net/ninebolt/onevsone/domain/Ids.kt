@@ -2,12 +2,6 @@ package net.ninebolt.onevsone.domain
 
 import kotlin.uuid.Uuid
 
-/** アリーナ識別子。永続化・看板・ファイル名と一致する名前を包む。 */
-@JvmInline
-value class ArenaId(val name: String) {
-    override fun toString(): String = name
-}
-
 /** 1 回の試合(バックアップ〜終了復元まで)を識別するトークン的 ID。 */
 @JvmInline
 value class MatchId(val value: Uuid) {

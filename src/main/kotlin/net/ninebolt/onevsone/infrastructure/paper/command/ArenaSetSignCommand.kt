@@ -16,18 +16,18 @@ internal class ArenaSetSignCommand(
         if (sender.denyUnlessOp()) return null
         val player = sender.requirePlayer() ?: return null
         if (args.size != 1) return messages.usageSetSign
-        val definition = definitionOrWarn(sender, args[0]) ?: return null
+        val arena = arenaOrWarn(sender, args[0]) ?: return null
         val target = player.getTargetBlockExact(10)
         if (target == null || target.state !is Sign) {
             messages.send(sender, messages.lookAtSign)
             return null
         }
         val existing = admin.signOwner(target.world.name, target.x, target.y, target.z)
-        if (existing != null && existing != definition.name) {
+        if (existing != null && existing != arena.name) {
             messages.send(sender, messages.signTaken)
             return null
         }
-        target.location.toWorldPosition()?.let { admin.setSign(definition.name, it) }
+        target.location.toWorldPosition()?.let { admin.setSign(arena.name, it) }
         return null
     }
 }

@@ -10,7 +10,7 @@ import net.ninebolt.onevsone.application.port.PlayerHandle
 import net.ninebolt.onevsone.application.port.PlayerPort
 import net.ninebolt.onevsone.application.port.PlayerStatsRepository
 import net.ninebolt.onevsone.application.port.SchedulerPort
-import net.ninebolt.onevsone.domain.ArenaId
+import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.DefeatOutcome
 import net.ninebolt.onevsone.domain.MatchId
@@ -38,7 +38,7 @@ class MatchProgressionService(
     private val recovery: PlayerRecoveryService,
     private val failures: FailureReporter
 ) {
-    private val timers = mutableMapOf<ArenaId, Cancellation>()
+    private val timers = mutableMapOf<Arena.Id, Cancellation>()
 
     /** 死亡したが敗北として受理されなかった場合のリスポーン予約。 */
     fun requestRespawn(playerId: Uuid) {
@@ -49,7 +49,7 @@ class MatchProgressionService(
 
     // ---- 中断 ---------------------------------------------------------------
 
-    fun abort(arenaId: ArenaId) {
+    fun abort(arenaId: Arena.Id) {
         cancelCountdown(arenaId)
         val step = registry.transact(arenaId) { it.abort() } ?: return
         val left = step.outcome
@@ -69,7 +69,7 @@ class MatchProgressionService(
     }
 
     /** 走行中のカウントダウンだけを止める(shutdown 用)。 */
-    internal fun cancelCountdown(arenaId: ArenaId) {
+    internal fun cancelCountdown(arenaId: Arena.Id) {
         timers.remove(arenaId)?.cancel()
     }
 
@@ -187,7 +187,7 @@ class MatchProgressionService(
 
     // ---- カウントダウン ---------------------------------------------------------
 
-    internal fun startInitialCountdown(arenaId: ArenaId) {
+    internal fun startInitialCountdown(arenaId: Arena.Id) {
         runCountdown(arenaId, ticks = 5, stillCounting = { it.canBeginMatch }) {
             if (remaining > 0) {
                 presentation.countdownTick(participantIds, remaining)
@@ -226,7 +226,7 @@ class MatchProgressionService(
         }
     }
 
-    private fun startRoundCountdown(arenaId: ArenaId) {
+    private fun startRoundCountdown(arenaId: Arena.Id) {
         runCountdown(arenaId, ticks = 7, stillCounting = { it.canResumeRound }) {
             when (remaining) {
                 7 -> {
@@ -255,7 +255,7 @@ class MatchProgressionService(
      * 返した tick で終了。remaining は ticks から減り 0 以下でも呼ばれる。
      */
     private fun runCountdown(
-        arenaId: ArenaId,
+        arenaId: Arena.Id,
         ticks: Int,
         stillCounting: (ArenaMatch) -> Boolean,
         onTick: CountdownTick.() -> Boolean
@@ -327,7 +327,7 @@ class MatchProgressionService(
 
     private fun teleportToSlot(match: ArenaMatch, participant: Participant, handle: PlayerHandle) {
         val slot = match.slotOf(participant.id) ?: return
-        val spawn = registry.definition(match.arenaId)?.spawn(slot)
+        val spawn = registry.arena(match.arenaId)?.spawn(slot)
         if (spawn == null) {
             failures.warn("Arena ${match.arenaId.name} spawn ${slot + 1} is not set; skipping teleport")
             return

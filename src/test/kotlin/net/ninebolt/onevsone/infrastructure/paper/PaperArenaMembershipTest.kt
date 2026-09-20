@@ -3,8 +3,7 @@ package net.ninebolt.onevsone.infrastructure.paper
 import io.mockk.verify
 import net.ninebolt.onevsone.application.LeaveReply
 import net.ninebolt.onevsone.application.ToggleReply
-import net.ninebolt.onevsone.domain.ArenaDefinition
-import net.ninebolt.onevsone.domain.ArenaId
+import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
@@ -246,9 +245,9 @@ class PaperArenaMembershipTest {
     fun `shutdown preserves enabled and clears state`() {
         env.newArena()
         val p1 = env.player("Alice")
-        env.join(p1, ArenaId("arena1"))
+        env.join(p1, Arena.Id("arena1"))
         env.service.shutdown()
-        assertTrue(env.service.definition("arena1")!!.enabled)
+        assertTrue(env.service.arena("arena1")!!.enabled)
         assertEquals(ArenaState.WAITING, env.view().state)
         assertTrue(env.view().participants.isEmpty())
         assertNull(env.service.arenaIdOf(p1.uuid))
@@ -262,7 +261,7 @@ class PaperArenaMembershipTest {
         env.join(p1, arena)
         env.join(p2, arena)
         assertEquals(ToggleReply.Changed, env.admin.setEnabled("arena1", false))
-        assertFalse(env.service.definition("arena1")!!.enabled)
+        assertFalse(env.service.arena("arena1")!!.enabled)
         assertEquals(ArenaState.WAITING, env.view().state)
         assertNull(env.service.arenaIdOf(p1.uuid))
         assertNull(env.service.arenaIdOf(p2.uuid))
@@ -274,8 +273,8 @@ class PaperArenaMembershipTest {
 
     @Test
     fun `enabled persists across service load`() {
-        env.arenaRepo.save(ArenaDefinition(ArenaId("arena1"), enabled = true))
+        env.arenaRepo.save(Arena(Arena.Id("arena1"), enabled = true))
         env.service.load()
-        assertTrue(env.service.definition("arena1")!!.enabled)
+        assertTrue(env.service.arena("arena1")!!.enabled)
     }
 }

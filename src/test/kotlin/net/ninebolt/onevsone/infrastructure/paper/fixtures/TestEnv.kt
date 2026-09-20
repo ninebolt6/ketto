@@ -21,9 +21,7 @@ import net.ninebolt.onevsone.application.MatchStateSync
 import net.ninebolt.onevsone.application.PlayerRecoveryService
 import net.ninebolt.onevsone.application.port.MatchStateRepository
 import net.ninebolt.onevsone.application.port.PlayerStatsRepository
-import net.ninebolt.onevsone.domain.ArenaDefinition
-import net.ninebolt.onevsone.domain.ArenaId
-import net.ninebolt.onevsone.domain.ArenaMatch
+import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.WorldPosition
 import net.ninebolt.onevsone.infrastructure.paper.ArenaListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaSignListener
@@ -112,7 +110,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         private set
     var presentation = PaperMatchPresentation(server, messages, signRepo, failures)
         private set
-    var registry = ArenaRegistry()
+    var registry = ArenaRegistry(requiredWins)
         private set
     var recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepo, presentation, failures)
         private set
@@ -120,7 +118,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         private set
     var service = buildService()
         private set
-    var admin = ArenaAdministrationService(registry, arenaRepo, signRepo, lobbyRepo, equipment, presentation, progression, requiredWins)
+    var admin = ArenaAdministrationService(registry, arenaRepo, signRepo, lobbyRepo, equipment, presentation, progression)
         private set
     val listener: ArenaListener by lazy { ArenaListener(service, lookup, messages) }
     val signListener: ArenaSignListener by lazy { ArenaSignListener(service, admin, messages) }
@@ -133,7 +131,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
 
     private fun buildService() = ArenaApplicationService(
         registry, arenaRepo, matchStateRepo, statsRepo, playerPort,
-        presentation, recovery, failures, progression, MatchStateSync(matchStateRepo, presentation, failures), requiredWins
+        presentation, recovery, failures, progression, MatchStateSync(matchStateRepo, presentation, failures)
     )
 
     /** store または各ポートを差し替えて全依存を再構築(障害注入用)。 */
@@ -153,11 +151,11 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         this.statsRepo = statsRepo
         equipment = PaperEquipmentAdapter(backupStore, kitStore, lookup)
         presentation = PaperMatchPresentation(server, messages, signRepo, failures)
-        registry = ArenaRegistry()
+        registry = ArenaRegistry(requiredWins)
         recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepo, presentation, failures)
         progression = buildProgression()
         service = buildService()
-        admin = ArenaAdministrationService(registry, arenaRepo, signRepo, lobbyRepo, equipment, presentation, progression, requiredWins)
+        admin = ArenaAdministrationService(registry, arenaRepo, signRepo, lobbyRepo, equipment, presentation, progression)
     }
 
     data class TimerRecord(val runnable: Runnable, val delay: Long, val period: Long, val taskId: Int)
@@ -337,24 +335,23 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         pending.forEach { it.run() }
     }
 
-    fun newArena(name: String = "arena1", enabled: Boolean = true): ArenaId {
-        val id = ArenaId(name)
-        registry.putDefinition(
-            ArenaDefinition(
+    fun newArena(name: String = "arena1", enabled: Boolean = true): Arena.Id {
+        val id = Arena.Id(name)
+        registry.installArena(
+            Arena(
                 id,
                 enabled = enabled,
                 spawn1 = WorldPosition("world", 1.0, 64.0, 1.0),
                 spawn2 = WorldPosition("world", 2.0, 64.0, 2.0)
             )
         )
-        registry.installMatch(ArenaMatch(id, requiredWins))
         return id
     }
 
-    fun setKit(arena: ArenaId, snapshot: PaperInventorySnapshot) = equipment.putKit(arena, snapshot)
+    fun setKit(arena: Arena.Id, snapshot: PaperInventorySnapshot) = equipment.putKit(arena, snapshot)
 
     /** 看板参加と同じ経路で join し、応答メッセージも配送する。 */
-    fun join(player: Player, arena: ArenaId): JoinReply {
+    fun join(player: Player, arena: Arena.Id): JoinReply {
         val reply = service.join(player.uuid, player.name, arena)
         signListener.renderJoin(player, arena.name, reply)
         return reply

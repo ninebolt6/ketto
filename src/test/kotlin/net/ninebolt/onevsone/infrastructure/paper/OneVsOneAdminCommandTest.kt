@@ -3,7 +3,7 @@ package net.ninebolt.onevsone.infrastructure.paper
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import net.ninebolt.onevsone.domain.ArenaId
+import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.domain.WorldPosition
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
@@ -82,14 +82,14 @@ class OneVsOneAdminCommandTest {
         val op = env.opPlayer("Op")
         env.run(op, "arena", "create", "newarena")
         verify(exactly = 1) { op.sendMessage(contains("アリーナ: newarena を作成しました")) }
-        assertEquals(false, env.service.definition("newarena")!!.enabled)
+        assertEquals(false, env.service.arena("newarena")!!.enabled)
 
         env.run(op, "arena", "create", "newarena")
         verify(exactly = 1) { op.sendMessage(contains("そのアリーナはすでに存在しています")) }
 
         env.run(op, "arena", "remove", "newarena")
         verify(exactly = 1) { op.sendMessage(contains("アリーナ: newarena を削除しました")) }
-        assertNull(env.service.definition("newarena"))
+        assertNull(env.service.arena("newarena"))
 
         env.run(op, "arena", "remove", "newarena")
         verify(exactly = 1) { op.sendMessage(contains("そのアリーナは存在しません")) }
@@ -107,7 +107,7 @@ class OneVsOneAdminCommandTest {
         verify(exactly = 1) { op.sendMessage(contains("を無効にしました")) }
         env.run(op, "arena", "disable", "a2")
         verify(exactly = 1) { op.sendMessage(contains("そのアリーナはすでに無効です！")) }
-        assertEquals(false, env.service.definition("a2")!!.enabled)
+        assertEquals(false, env.service.arena("a2")!!.enabled)
     }
 
     @Test
@@ -130,7 +130,7 @@ class OneVsOneAdminCommandTest {
         op.inventory.setItem(0, env.item(Material.DIAMOND_SWORD))
         env.run(op, "arena", "setInv", "arena1")
         verify(exactly = 1) { op.sendMessage(contains("のインベントリを設定しました")) }
-        assertEquals(Material.DIAMOND_SWORD, env.equipment.kitOf(ArenaId("arena1"))?.items?.get(0)?.type)
+        assertEquals(Material.DIAMOND_SWORD, env.equipment.kitOf(Arena.Id("arena1"))?.items?.get(0)?.type)
     }
 
     @Test

@@ -1,6 +1,6 @@
 package net.ninebolt.onevsone.domain.fixtures
 
-import net.ninebolt.onevsone.domain.ArenaId
+import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.Participant
 import kotlin.uuid.Uuid
@@ -11,7 +11,7 @@ internal val alice = Participant(Uuid.random(), "Alice")
 internal val bob = Participant(Uuid.random(), "Bob")
 internal val carol = Participant(Uuid.random(), "Carol")
 
-internal fun match(requiredWins: Int = 3) = ArenaMatch(ArenaId("arena1"), requiredWins)
+internal fun match(requiredWins: Int = 3) = ArenaMatch(Arena.Id("arena1"), requiredWins)
 
 internal fun startedMatch(requiredWins: Int = 3): ArenaMatch {
     var m = match(requiredWins)

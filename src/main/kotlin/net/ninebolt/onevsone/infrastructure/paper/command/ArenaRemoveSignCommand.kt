@@ -13,7 +13,7 @@ internal class ArenaRemoveSignCommand(
     override fun execute(sender: CommandSender, args: List<String>): Msg? {
         if (sender.denyUnlessOp()) return null
         if (args.size != 1) return messages.usageRemoveSign
-        if (definitionOrWarn(sender, args[0]) == null) return null
+        if (arenaOrWarn(sender, args[0]) == null) return null
         if (admin.signLocation(args[0]) == null) {
             messages.send(sender, messages.signNotRegistered)
             return null

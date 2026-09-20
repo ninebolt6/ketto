@@ -3,7 +3,7 @@ package net.ninebolt.onevsone.infrastructure.paper
 import net.ninebolt.onevsone.application.port.ArenaSignRepository
 import net.ninebolt.onevsone.application.port.FailureReporter
 import net.ninebolt.onevsone.application.port.MatchPresentationPort
-import net.ninebolt.onevsone.domain.ArenaId
+import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.WorldPosition
@@ -85,7 +85,7 @@ class PaperMatchPresentation(
         world.playSound(Location(world, position.x, position.y, position.z), Sound.ENTITY_GENERIC_EXPLODE, 2f, 1f)
     }
 
-    override fun champion(arena: ArenaId, winnerName: String) {
+    override fun champion(arena: Arena.Id, winnerName: String) {
         messages.broadcast(server, messages.champion(arena.name, winnerName))
     }
 
@@ -126,7 +126,7 @@ class PaperMatchPresentation(
         player(playerId)?.scoreboard = manager.newScoreboard
     }
 
-    override fun updateSign(arena: ArenaId, state: ArenaState) {
+    override fun updateSign(arena: Arena.Id, state: ArenaState) {
         val sign = signs.signLocation(arena.name) ?: return
         val world = server.getWorld(sign.world)
         if (world == null) {

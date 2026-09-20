@@ -2,8 +2,7 @@ package net.ninebolt.onevsone.application
 
 import net.ninebolt.onevsone.application.fixtures.TestApp
 import net.ninebolt.onevsone.application.port.PersistenceFailure
-import net.ninebolt.onevsone.domain.ArenaDefinition
-import net.ninebolt.onevsone.domain.ArenaId
+import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatCause
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -21,7 +20,7 @@ class ArenaApplicationServiceResilienceTest {
         val app = TestApp()
         val (p1, p2) = app.joinedTwo()
         app.scheduler.tick(2)
-        app.service.abort(ArenaId("arena1"))
+        app.service.abort(Arena.Id("arena1"))
         assertEquals(ArenaState.WAITING, app.state())
         assertNull(app.service.arenaIdOf(p1.id))
         app.scheduler.tick(6)
@@ -116,7 +115,7 @@ class ArenaApplicationServiceResilienceTest {
         val (p1, p2) = app.startMatch()
         app.matchState.failOnSaveStatus = true
         assertThrows(PersistenceFailure::class.java) {
-            app.service.abort(ArenaId("arena1"))
+            app.service.abort(Arena.Id("arena1"))
         }
         // メモリ上の登録解除は済んでいる
         assertNull(app.service.arenaIdOf(p1.id))
@@ -126,8 +125,8 @@ class ArenaApplicationServiceResilienceTest {
     @Test
     fun `load isolates per arena status persistence failure`() {
         val app = TestApp()
-        app.arenas.save(ArenaDefinition(ArenaId("broken")))
-        app.arenas.save(ArenaDefinition(ArenaId("healthy")))
+        app.arenas.save(Arena(Arena.Id("broken")))
+        app.arenas.save(Arena(Arena.Id("healthy")))
         app.matchState.failOnSaveStatusFor += "broken"
         app.service.load()
         assertEquals(ArenaState.WAITING, app.service.matchOf("broken")!!.state)
@@ -153,14 +152,14 @@ class ArenaApplicationServiceResilienceTest {
         val app = TestApp()
         val (p1, p2) = app.joinedTwo()
         val timer = app.scheduler.timers.last()
-        app.service.abort(ArenaId("arena1"))
+        app.service.abort(Arena.Id("arena1"))
         // 中断後に古いタイマーが走っても自己キャンセルのみ
         timer.run()
         assertTrue(timer.cancelled)
         assertTrue(app.equipment.kitApplies.isEmpty())
         // 新規参加は可能
         val p3 = app.players.add("Carol")
-        assertEquals(JoinReply.JoinedWaiting, app.service.join(p3.id, p3.name, ArenaId("arena1")))
+        assertEquals(JoinReply.JoinedWaiting, app.service.join(p3.id, p3.name, Arena.Id("arena1")))
     }
 
     @Test

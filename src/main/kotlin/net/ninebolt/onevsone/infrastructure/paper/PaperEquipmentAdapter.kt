@@ -4,7 +4,7 @@ import net.ninebolt.onevsone.application.port.BackupRef
 import net.ninebolt.onevsone.application.port.InventoryBackupPort
 import net.ninebolt.onevsone.application.port.KitPort
 import net.ninebolt.onevsone.application.port.PersistenceFailure
-import net.ninebolt.onevsone.domain.ArenaId
+import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.MatchId
 import net.ninebolt.onevsone.domain.Participant
 import net.ninebolt.onevsone.infrastructure.persistence.PersistedBackup
@@ -24,20 +24,20 @@ class PaperEquipmentAdapter(
 ) : KitPort, InventoryBackupPort {
 
     /** アリーナ装備のメモリキャッシュ(arena/<name>.yml の inventory)。 */
-    private val kits = mutableMapOf<ArenaId, PaperInventorySnapshot>()
+    private val kits = mutableMapOf<Arena.Id, PaperInventorySnapshot>()
 
     /** 稼働中に取得/読み込みしたバックアップ実データ(backupId → snapshot)。 */
     private val pendingSnapshots = mutableMapOf<Uuid, PaperInventorySnapshot>()
 
     /** テスト・起動時プリロード用。 */
-    internal fun putKit(arena: ArenaId, kit: PaperInventorySnapshot) {
+    internal fun putKit(arena: Arena.Id, kit: PaperInventorySnapshot) {
         kits[arena] = kit
     }
 
     /** キャッシュ済みのアリーナ装備(テスト検証用。未設定時は null)。 */
-    internal fun kitOf(arena: ArenaId): PaperInventorySnapshot? = kits[arena]
+    internal fun kitOf(arena: Arena.Id): PaperInventorySnapshot? = kits[arena]
 
-    internal fun forgetKit(arena: ArenaId) {
+    internal fun forgetKit(arena: Arena.Id) {
         kits.remove(arena)
     }
 
@@ -86,13 +86,13 @@ class PaperEquipmentAdapter(
     override fun pendingBackups(): List<BackupRef> =
         backups.persistedBackups().onEach { pendingSnapshots[it.ref.backupId] = it.snapshot }.map { it.ref }
 
-    override fun applyKit(arena: ArenaId, playerId: Uuid) {
+    override fun applyKit(arena: Arena.Id, playerId: Uuid) {
         val player = lookup.resolve(playerId)
             ?: throw PersistenceFailure("Player $playerId is not available for kit apply")
         kit(arena).apply(player.inventory)
     }
 
-    override fun saveKit(arena: ArenaId, playerId: Uuid) {
+    override fun saveKit(arena: Arena.Id, playerId: Uuid) {
         val player = lookup.resolve(playerId)
             ?: throw PersistenceFailure("Player $playerId is not available for kit capture")
         val kit = PaperInventorySnapshot.capture(player.inventory)
@@ -100,6 +100,6 @@ class PaperEquipmentAdapter(
         kits[arena] = kit
     }
 
-    private fun kit(arena: ArenaId): PaperInventorySnapshot =
+    private fun kit(arena: Arena.Id): PaperInventorySnapshot =
         kits.getOrPut(arena) { kitStore.loadArenaKit(arena.name) }
 }

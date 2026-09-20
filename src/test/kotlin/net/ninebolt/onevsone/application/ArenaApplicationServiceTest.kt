@@ -1,7 +1,7 @@
 package net.ninebolt.onevsone.application
 
 import net.ninebolt.onevsone.application.fixtures.TestApp
-import net.ninebolt.onevsone.domain.ArenaId
+import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatCause
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -18,12 +18,12 @@ class ArenaApplicationServiceTest {
         val app = TestApp()
         app.newArena()
         val p1 = app.players.add("Alice")
-        assertEquals(JoinReply.JoinedWaiting, app.service.join(p1.id, p1.name, ArenaId("arena1")))
+        assertEquals(JoinReply.JoinedWaiting, app.service.join(p1.id, p1.name, Arena.Id("arena1")))
         assertEquals(ArenaState.ONEMORE, app.state())
-        assertEquals(ArenaId("arena1"), app.service.arenaIdOf(p1.id))
+        assertEquals(Arena.Id("arena1"), app.service.arenaIdOf(p1.id))
 
         val p2 = app.players.add("Bob")
-        assertEquals(JoinReply.JoinedStarting, app.service.join(p2.id, p2.name, ArenaId("arena1")))
+        assertEquals(JoinReply.JoinedStarting, app.service.join(p2.id, p2.name, Arena.Id("arena1")))
         assertEquals(ArenaState.COUNTDOWN, app.state())
         assertEquals(1, app.scheduler.timers.size)
         assertEquals(10L, app.scheduler.timers.last().delay)
@@ -36,9 +36,9 @@ class ArenaApplicationServiceTest {
         app.newArena("a1")
         app.newArena("a2")
         val p = app.players.add("Alice")
-        assertEquals(JoinReply.JoinedWaiting, app.service.join(p.id, p.name, ArenaId("a1")))
-        assertEquals(JoinReply.AlreadyJoined, app.service.join(p.id, p.name, ArenaId("a2")))
-        assertEquals(ArenaId("a1"), app.service.arenaIdOf(p.id))
+        assertEquals(JoinReply.JoinedWaiting, app.service.join(p.id, p.name, Arena.Id("a1")))
+        assertEquals(JoinReply.AlreadyJoined, app.service.join(p.id, p.name, Arena.Id("a2")))
+        assertEquals(Arena.Id("a1"), app.service.arenaIdOf(p.id))
         assertEquals(ArenaState.WAITING, app.service.matchOf("a2")!!.state)
     }
 
@@ -48,14 +48,14 @@ class ArenaApplicationServiceTest {
         app.newArena("enabled")
         app.newArena("disabled", enabled = false)
         val p1 = app.players.add("Alice")
-        assertEquals(JoinReply.NotEnabled, app.service.join(p1.id, p1.name, ArenaId("disabled")))
+        assertEquals(JoinReply.NotEnabled, app.service.join(p1.id, p1.name, Arena.Id("disabled")))
         assertNull(app.service.arenaIdOf(p1.id))
 
-        app.service.join(p1.id, p1.name, ArenaId("enabled"))
+        app.service.join(p1.id, p1.name, Arena.Id("enabled"))
         val p2 = app.players.add("Bob")
-        app.service.join(p2.id, p2.name, ArenaId("enabled"))
+        app.service.join(p2.id, p2.name, Arena.Id("enabled"))
         val p3 = app.players.add("Carol")
-        assertEquals(JoinReply.InMatch, app.service.join(p3.id, p3.name, ArenaId("enabled")))
+        assertEquals(JoinReply.InMatch, app.service.join(p3.id, p3.name, Arena.Id("enabled")))
         assertNull(app.service.arenaIdOf(p3.id))
     }
 
@@ -65,8 +65,8 @@ class ArenaApplicationServiceTest {
         app.newArena()
         val p1 = app.players.add("Alice")
         val p2 = app.players.add("Bob")
-        app.service.join(p1.id, p1.name, ArenaId("arena1"))
-        app.service.join(p2.id, p2.name, ArenaId("arena1"))
+        app.service.join(p1.id, p1.name, Arena.Id("arena1"))
+        app.service.join(p2.id, p2.name, Arena.Id("arena1"))
         app.scheduler.tick(5)
         assertEquals(ArenaState.COUNTDOWN, app.state())
         // 開始前: バックアップもキット適用も走っていない
@@ -140,7 +140,7 @@ class ArenaApplicationServiceTest {
         assertEquals(ArenaState.WAITING, app.state())
         assertNull(app.service.arenaIdOf(p1.id))
         assertNull(app.service.arenaIdOf(p2.id))
-        assertEquals(listOf(ArenaId("arena1") to "Alice"), app.presentation.champions)
+        assertEquals(listOf(Arena.Id("arena1") to "Alice"), app.presentation.champions)
         assertEquals(1, app.stats.stats[p1.id]?.wins)
         assertEquals(1, app.stats.stats[p2.id]?.losses)
         // 両者のバックアップ復元 + ロビー転送 + acknowledge
@@ -173,7 +173,7 @@ class ArenaApplicationServiceTest {
         val app = TestApp()
         app.newArena()
         val p1 = app.players.add("Alice")
-        app.service.join(p1.id, p1.name, ArenaId("arena1"))
+        app.service.join(p1.id, p1.name, Arena.Id("arena1"))
         app.players.disconnect(p1)
         app.players.quittingScope(p1) {
             app.service.quit(p1.id, p1.name)
@@ -191,11 +191,11 @@ class ArenaApplicationServiceTest {
         app.newArena()
         val p1 = app.players.add("Alice")
         assertEquals(LeaveReply.NotJoined, app.service.leave(p1.id))
-        app.service.join(p1.id, p1.name, ArenaId("arena1"))
+        app.service.join(p1.id, p1.name, Arena.Id("arena1"))
         val p2 = app.players.add("Bob")
-        app.service.join(p2.id, p2.name, ArenaId("arena1"))
+        app.service.join(p2.id, p2.name, Arena.Id("arena1"))
         assertEquals(LeaveReply.NotWaiting, app.service.leave(p1.id))
-        assertEquals(ArenaId("arena1"), app.service.arenaIdOf(p1.id))
+        assertEquals(Arena.Id("arena1"), app.service.arenaIdOf(p1.id))
     }
 
     @Test
@@ -203,7 +203,7 @@ class ArenaApplicationServiceTest {
         val app = TestApp()
         app.newArena()
         val p1 = app.players.add("Alice")
-        app.service.join(p1.id, p1.name, ArenaId("arena1"))
+        app.service.join(p1.id, p1.name, Arena.Id("arena1"))
         assertEquals(LeaveReply.Left, app.service.leave(p1.id))
         assertEquals(ArenaState.WAITING, app.state())
         assertNull(app.service.arenaIdOf(p1.id))

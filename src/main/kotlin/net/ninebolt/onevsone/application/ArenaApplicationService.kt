@@ -8,7 +8,7 @@ import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.application.port.PlayerPort
 import net.ninebolt.onevsone.application.port.PlayerStatsRepository
 import net.ninebolt.onevsone.application.port.warnOnFailure
-import net.ninebolt.onevsone.domain.ArenaId
+import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatCause
@@ -37,28 +37,25 @@ class ArenaApplicationService(
     private val recovery: PlayerRecoveryService,
     private val failures: FailureReporter,
     private val progression: MatchProgressionService,
-    private val sync: MatchStateSync,
-    val requiredWins: Int
+    private val sync: MatchStateSync
 ) {
 
     // ---- 起動・停止 -------------------------------------------------------
 
     fun load() {
-        val definitions = try {
+        val loaded = try {
             arenas.loadAll()
         } catch (e: PersistenceFailure) {
             failures.warn("arenalist.yml is unreadable; no arenas loaded this session")
             emptyList()
         }
-        definitions.forEach { definition ->
-            registry.putDefinition(definition)
-            val match = ArenaMatch(definition.id, requiredWins)
-            registry.installMatch(match)
-            failures.warnOnFailure("Could not persist status for arena ${definition.id.name}; continuing startup") {
-                matchState.saveStatus(match)
+        loaded.forEach { arena ->
+            registry.installArena(arena)
+            failures.warnOnFailure("Could not persist status for arena ${arena.id.name}; continuing startup") {
+                registry.match(arena.id)?.let { matchState.saveStatus(it) }
             }
-            failures.warnOnFailure("Could not update sign for arena ${definition.id.name}; continuing startup") {
-                presentation.updateSign(definition.id, ArenaState.WAITING)
+            failures.warnOnFailure("Could not update sign for arena ${arena.id.name}; continuing startup") {
+                presentation.updateSign(arena.id, ArenaState.WAITING)
             }
         }
         failures.warnOnFailure("players.yml is unreadable; pending restores unavailable this session") {
@@ -84,14 +81,14 @@ class ArenaApplicationService(
 
     // ---- 問い合わせ -------------------------------------------------------
 
-    fun arenaIdOf(playerId: Uuid): ArenaId? = registry.arenaOf(playerId)
+    fun arenaIdOf(playerId: Uuid): Arena.Id? = registry.arenaOf(playerId)
 
     fun matchOf(playerId: Uuid): ArenaMatch? =
         registry.arenaOf(playerId)?.let { registry.match(it) }
 
-    fun definition(name: String) = registry.definition(ArenaId(name))
+    fun arena(name: String): Arena? = registry.arena(Arena.Id(name))
 
-    fun matchOf(name: String): ArenaMatch? = registry.match(ArenaId(name))
+    fun matchOf(name: String): ArenaMatch? = registry.match(Arena.Id(name))
 
     /** 破損時は PersistenceFailure を投げる(呼び出し側で扱う)。 */
     fun statsFor(playerId: Uuid): PlayerStats? = stats.find(playerId)
@@ -100,11 +97,11 @@ class ArenaApplicationService(
 
     // ---- 参加・退出・切断 ---------------------------------------------------
 
-    fun join(playerId: Uuid, playerName: String, arenaId: ArenaId): JoinReply {
+    fun join(playerId: Uuid, playerName: String, arenaId: Arena.Id): JoinReply {
         if (registry.isJoined(playerId)) return JoinReply.AlreadyJoined
-        val definition = registry.definition(arenaId) ?: return JoinReply.NotFound
+        val arena = registry.arena(arenaId) ?: return JoinReply.NotFound
         val match = registry.match(arenaId) ?: return JoinReply.NotFound
-        if (!definition.enabled) return JoinReply.NotEnabled
+        if (!arena.enabled) return JoinReply.NotEnabled
         val participant = Participant(playerId, playerName)
 
         // join は純粋関数: コミット前に拒否を確定させる
@@ -121,7 +118,7 @@ class ArenaApplicationService(
         // メンバーシップ登録。失敗時はまだコミット前なので、
         // 何も変わっていない状態で例外を投げる。
         matchState.registerParticipant(participant, arenaId)
-        registry.installMatch(step.match)
+        registry.putMatch(step.match)
         if (step.outcome == JoinOutcome.MatchReady) progression.startInitialCountdown(arenaId)
         sync.publish(step.match)
         return when (step.outcome) {
@@ -206,5 +203,5 @@ class ArenaApplicationService(
 
     // ---- 中断 ---------------------------------------------------------------
 
-    fun abort(arenaId: ArenaId) = progression.abort(arenaId)
+    fun abort(arenaId: Arena.Id) = progression.abort(arenaId)
 }

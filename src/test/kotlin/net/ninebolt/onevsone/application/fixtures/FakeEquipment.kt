@@ -4,7 +4,7 @@ import net.ninebolt.onevsone.application.port.BackupRef
 import net.ninebolt.onevsone.application.port.InventoryBackupPort
 import net.ninebolt.onevsone.application.port.KitPort
 import net.ninebolt.onevsone.application.port.PersistenceFailure
-import net.ninebolt.onevsone.domain.ArenaId
+import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.MatchId
 import net.ninebolt.onevsone.domain.Participant
 import kotlin.uuid.Uuid
@@ -14,8 +14,8 @@ class FakeEquipment(var players: FakePlayers? = null) : KitPort, InventoryBackup
     val storedBackups = linkedMapOf<Uuid, BackupRef>()
     val restored = mutableListOf<BackupRef>()
     val acknowledged = mutableListOf<BackupRef>()
-    val kitApplies = mutableListOf<Pair<ArenaId, Uuid>>()
-    val savedKits = mutableListOf<Pair<ArenaId, Uuid>>()
+    val kitApplies = mutableListOf<Pair<Arena.Id, Uuid>>()
+    val savedKits = mutableListOf<Pair<Arena.Id, Uuid>>()
     var backupCalls = 0
     var applyCalls = 0
     var failOnBackup: PersistenceFailure? = null
@@ -49,13 +49,13 @@ class FakeEquipment(var players: FakePlayers? = null) : KitPort, InventoryBackup
         storedBackups[ref.backupId] = ref
     }
 
-    override fun applyKit(arena: ArenaId, playerId: Uuid) {
+    override fun applyKit(arena: Arena.Id, playerId: Uuid) {
         applyCalls++
         if (applyCalls == failOnApplyAt) throw PersistenceFailure("kit apply failed")
         kitApplies += arena to playerId
     }
 
-    override fun saveKit(arena: ArenaId, playerId: Uuid) {
+    override fun saveKit(arena: Arena.Id, playerId: Uuid) {
         savedKits += arena to playerId
     }
 }

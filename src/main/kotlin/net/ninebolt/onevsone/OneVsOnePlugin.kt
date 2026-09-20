@@ -66,7 +66,7 @@ class OneVsOnePlugin : JavaPlugin() {
         val scheduler = PaperScheduler(this)
         val presentation = PaperMatchPresentation(server, messages, signRepository, failures)
 
-        val registry = ArenaRegistry()
+        val registry = ArenaRegistry(requiredWins)
         val recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepository, presentation, failures)
         val stateSync = MatchStateSync(matchState, presentation, failures)
         val progression = MatchProgressionService(
@@ -91,10 +91,9 @@ class OneVsOnePlugin : JavaPlugin() {
             recovery = recovery,
             failures = failures,
             progression = progression,
-            sync = stateSync,
-            requiredWins = requiredWins
+            sync = stateSync
         )
-        val admin = ArenaAdministrationService(registry, arenaRepository, signRepository, lobbyRepository, equipment, presentation, progression, requiredWins)
+        val admin = ArenaAdministrationService(registry, arenaRepository, signRepository, lobbyRepository, equipment, presentation, progression)
         this.service = service
         service.load()
 
