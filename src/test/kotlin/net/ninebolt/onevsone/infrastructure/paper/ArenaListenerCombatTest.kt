@@ -1,6 +1,5 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
-import net.kyori.adventure.text.Component
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
@@ -8,11 +7,11 @@ import net.ninebolt.onevsone.infrastructure.paper.fixtures.damageEvent
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.deathEvent
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.moveEvent
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.nonPlayer
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.quitEvent
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.twoPlayerIngame
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import org.bukkit.Location
 import org.bukkit.Material
-import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.event.player.PlayerTeleportEvent
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -90,7 +89,7 @@ class ArenaListenerCombatTest {
     fun `quit of outsider does not touch inventory`() {
         val outsider = env.player("Outsider")
         outsider.inventory.setItem(0, env.item(Material.STONE))
-        env.listener.onQuit(PlayerQuitEvent(outsider, Component.empty()))
+        env.listener.onQuit(quitEvent(outsider))
         assertEquals(Material.STONE, outsider.inventory.contents[0]?.type)
     }
 
@@ -99,7 +98,7 @@ class ArenaListenerCombatTest {
         val (p1, p2) = env.twoPlayerIngame()
         p1.inventory.setItem(0, null)
         env.removePlayer(p1)
-        env.listener.onQuit(PlayerQuitEvent(p1, Component.empty()))
+        env.listener.onQuit(quitEvent(p1))
         assertEquals(ArenaState.WAITING, env.state())
         assertEquals(1, env.statsRepo.find(p2.uuid)!!.wins)
     }

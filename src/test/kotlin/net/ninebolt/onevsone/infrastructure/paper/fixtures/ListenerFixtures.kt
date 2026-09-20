@@ -26,12 +26,13 @@ internal fun TestEnv.deathEvent(player: Player): PlayerDeathEvent {
     return PlayerDeathEvent(player, mockk<DamageSource>(relaxed = true), drops, 0, Component.empty())
 }
 
-internal fun quitEvent(player: Player) = PlayerQuitEvent(player, Component.empty())
+internal fun quitEvent(player: Player) =
+    PlayerQuitEvent(player, Component.empty(), PlayerQuitEvent.QuitReason.DISCONNECTED)
 
 internal fun joinEvent(player: Player) = PlayerJoinEvent(player, Component.empty())
 
 internal fun damageEvent(entity: org.bukkit.entity.Entity, damage: Double = 1.0) =
-    EntityDamageEvent(entity, EntityDamageEvent.DamageCause.FALL, damage)
+    EntityDamageEvent(entity, EntityDamageEvent.DamageCause.FALL, mockk<DamageSource>(relaxed = true), damage)
 
 internal fun moveEvent(player: Player, from: Location, to: Location) = PlayerMoveEvent(player, from, to)
 

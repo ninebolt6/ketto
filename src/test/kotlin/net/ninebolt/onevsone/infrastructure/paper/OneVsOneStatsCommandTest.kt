@@ -4,6 +4,7 @@ import io.mockk.every
 import io.mockk.mockk
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.offlineId
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.run
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.writeStats
@@ -13,11 +14,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
-import kotlin.uuid.toKotlinUuid
 
 /** /1vs1 stats と引数なし/権限/未知サブコマンドの検証。 */
-// resolveOfflineId が非推奨の getOfflinePlayer(name) 経路を使うため、その検証経路でも同 API を呼ぶ
-@Suppress("DEPRECATION")
 class OneVsOneStatsCommandTest {
 
     @TempDir
@@ -101,7 +99,7 @@ class OneVsOneStatsCommandTest {
     fun `stats offline uncached resolves through async scheduler on main thread`() {
         val viewer = env.player("Viewer")
         // 未キャッシュ名は getOfflinePlayer が決定論的な OfflinePlayerMock を生成する
-        val uuid = env.server.getOfflinePlayer("Ghost").uniqueId.toKotlinUuid()
+        val uuid = env.offlineId("Ghost")
         env.writeStats(uuid, 2, 1)
         env.run(viewer, "stats", "Ghost")
         assertTrue(viewer.drainMessages().none { it.contains("Win:") })
@@ -112,7 +110,7 @@ class OneVsOneStatsCommandTest {
     @Test
     fun `stats offline lookup failure reports no stats`() {
         val viewer = env.player("Viewer")
-        every { env.server.getOfflinePlayer("Ghost") } throws RuntimeException("lookup failed")
+        every { (env.server as org.bukkit.Server).getOfflinePlayer("Ghost") } throws RuntimeException("lookup failed")
         env.run(viewer, "stats", "Ghost")
         env.runOneShots()
         assertTrue(viewer.drainMessages().any { it.contains("Statsが存在しません") })
