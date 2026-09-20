@@ -35,8 +35,10 @@ composition root として手動で全依存を配線する(DI フレームワ�
   kit(`KitPort`)・backup(`InventoryBackupPort`)・player・scheduler・presentation・failure の
   各 interface と DTO(`BackupRef` 等)。1 アダプターが複数 port を実装してよい
   (`PaperEquipmentAdapter` = キット+バックアップ)
-- `.../infrastructure/paper/` — Bukkit/Paper 実装。`ArenaListener`、`OneVsOneCommand`、
+- `.../infrastructure/paper/` — Bukkit/Paper 実装。`ArenaListener`、`ArenaSignListener`、
   `Messages`、`PaperPlayerAdapter`/`PaperPlayerLookup`(QuitEvent 中の切断者解決)、
+  `command/`(TabExecutor `OneVsOneCommand` + `Subcommand` ルーティング。権限・引数判定は
+  各ハンドラ、`arena` 名前空間は `CommandGroup` の再帰)、
   `PaperEquipmentAdapter` + `PaperInventorySnapshot`(ItemStack をここに閉じ込める)、
   `PaperScheduler`、`PaperMatchPresentation`、`PluginFailureReporter`
 - `.../infrastructure/persistence/` — `YamlStore`(共通 I/O と backup コーデック) +

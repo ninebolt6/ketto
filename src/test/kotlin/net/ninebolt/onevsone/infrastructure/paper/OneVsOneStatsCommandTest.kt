@@ -3,6 +3,7 @@ package net.ninebolt.onevsone.infrastructure.paper
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import net.ninebolt.onevsone.infrastructure.paper.command.OneVsOneCommand
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.contains
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.run

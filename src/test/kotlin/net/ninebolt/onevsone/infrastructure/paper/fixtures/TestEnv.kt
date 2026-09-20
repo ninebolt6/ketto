@@ -24,7 +24,7 @@ import net.ninebolt.onevsone.domain.WorldPosition
 import net.ninebolt.onevsone.infrastructure.paper.ArenaListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaSignListener
 import net.ninebolt.onevsone.infrastructure.paper.Messages
-import net.ninebolt.onevsone.infrastructure.paper.OneVsOneCommand
+import net.ninebolt.onevsone.infrastructure.paper.command.OneVsOneCommand
 import net.ninebolt.onevsone.infrastructure.paper.PaperEquipmentAdapter
 import net.ninebolt.onevsone.infrastructure.paper.PaperInventorySnapshot
 import net.ninebolt.onevsone.infrastructure.paper.PaperMatchPresentation

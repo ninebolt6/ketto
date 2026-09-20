@@ -197,6 +197,16 @@ class OneVsOneAdminCommandTest {
     }
 
     @Test
+    fun `extra args rejected by create but tolerated by info`() {
+        val op = env.opPlayer("Op")
+        env.newArena()
+        env.run(op, "arena", "create", "other", "extra")
+        verify(exactly = 1) { op.sendMessage(contains("§c/1vs1 arena create [arena]")) }
+        env.run(op, "arena", "info", "arena1", "extra")
+        verify(exactly = 1) { op.sendMessage(contains("Arena[§b§larena1§a]")) }
+    }
+
+    @Test
     fun `console can run admin commands`() {
         val console = mockk<BlockCommandSender>(relaxed = true)
         every { console.isOp } returns true

@@ -7,7 +7,7 @@ import net.ninebolt.onevsone.application.PlayerRecoveryService
 import net.ninebolt.onevsone.infrastructure.paper.ArenaListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaSignListener
 import net.ninebolt.onevsone.infrastructure.paper.Messages
-import net.ninebolt.onevsone.infrastructure.paper.OneVsOneCommand
+import net.ninebolt.onevsone.infrastructure.paper.command.OneVsOneCommand
 import net.ninebolt.onevsone.infrastructure.paper.PaperEquipmentAdapter
 import net.ninebolt.onevsone.infrastructure.paper.PaperMatchPresentation
 import net.ninebolt.onevsone.infrastructure.paper.PaperPlayerAdapter
