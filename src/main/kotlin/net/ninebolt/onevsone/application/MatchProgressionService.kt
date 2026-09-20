@@ -21,7 +21,7 @@ import kotlin.uuid.Uuid
 /**
  * 開始カウントダウン・ラウンド遷移・決着・中断の進行機構。
  * ArenaApplicationService からの委譲先として、アリーナごとのタイマーを所有し、
- * 遅延コールバックは世代トークン(ArenaMatch.Token)一致と生存確認で有効性を検証する。
+ * 遅延コールバックは世代(ArenaMatch.epoch)一致と生存確認で有効性を検証する。
  *
  * ArenaMatch は immutable: 遅延実行されるコールバック内では参照をキャプチャせず
  * registry.match(arenaId) で最新状態を再読みすること。
@@ -83,7 +83,7 @@ class MatchProgressionService(
     internal fun endRound(match: ArenaMatch, outcome: DefeatOutcome.RoundWon, death: Boolean) {
         val arenaId = match.arenaId
         cancelCountdown(arenaId)
-        val gen = match.token
+        val gen = match.epoch
 
         val winnerHandle = players.handle(outcome.winner.id)
         if (winnerHandle != null) {
@@ -99,7 +99,7 @@ class MatchProgressionService(
         val loserHandle = players.handle(outcome.loser.id)
         if (death) {
             scheduleDeferred(outcome.loser.id, {
-                registry.match(arenaId)?.token == gen && registry.arenaOf(outcome.loser.id) == arenaId
+                registry.match(arenaId)?.epoch == gen && registry.arenaOf(outcome.loser.id) == arenaId
             }) { h ->
                 rearm(arenaId, outcome.loser, h)
                 registry.match(arenaId)?.let { teleportToSlot(it, outcome.loser, h) }
@@ -129,7 +129,7 @@ class MatchProgressionService(
     ) {
         val arenaId = match.arenaId
         cancelCountdown(arenaId)
-        val gen = match.token
+        val gen = match.epoch
 
         // 復元対象を先に確保してから登録解除・タスク停止へ
         val winnerTicket = recovery.pending(winner.id)
@@ -144,7 +144,7 @@ class MatchProgressionService(
             if (!forfeit) presentation.championFirework(winner.id)
         } else if (winnerHandle != null) {
             scheduleDeferred(winner.id, winnerTicket, {
-                registry.match(arenaId)?.token == gen && registry.arenaOf(winner.id) == null
+                registry.match(arenaId)?.epoch == gen && registry.arenaOf(winner.id) == null
             }) { h ->
                 resetAndRestore(h, winnerTicket)
                 if (!forfeit) presentation.championFirework(winner.id)
@@ -153,7 +153,7 @@ class MatchProgressionService(
 
         if (death) {
             scheduleDeferred(loser.id, loserTicket, {
-                registry.match(arenaId)?.token == gen && registry.arenaOf(loser.id) == null
+                registry.match(arenaId)?.epoch == gen && registry.arenaOf(loser.id) == null
             }) { h ->
                 resetAndRestore(h, loserTicket)
             }
@@ -258,11 +258,11 @@ class MatchProgressionService(
         stillCounting: (ArenaMatch) -> Boolean,
         onTick: CountdownTick.() -> Boolean
     ) {
-        val gen = registry.match(arenaId)?.token ?: return
+        val gen = registry.match(arenaId)?.epoch ?: return
         var remaining = ticks
         timers[arenaId] = scheduler.repeat(10, 20) { task ->
             val match = registry.match(arenaId)
-            if (match == null || match.token != gen || !stillCounting(match)) {
+            if (match == null || match.epoch != gen || !stillCounting(match)) {
                 task.cancel()
                 return@repeat
             }

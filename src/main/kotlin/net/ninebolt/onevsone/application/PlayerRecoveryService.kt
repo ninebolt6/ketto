@@ -15,7 +15,7 @@ import kotlin.uuid.Uuid
  * 参加中かどうかと独立して、終了直後の死亡→切断・停止・次回ログインを扱う。
  *
  * 遅延コールバックは「ticket の同一性」で有効性を判断し、
- * 試合の世代トークン(ArenaMatch.Token)とは分離する。
+ * 試合の世代(ArenaMatch の epoch)とは分離する。
  */
 class PlayerRecoveryService(
     private val backups: InventoryBackupPort,

@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
-/** 敗北通知・ラウンド遷移・解決ガード(世代トークン)の検証。 */
+/** 敗北通知・ラウンド遷移・解決ガード(世代)の検証。 */
 class ArenaMatchDefeatTest {
 
     @Test
@@ -23,7 +23,7 @@ class ArenaMatchDefeatTest {
         assertEquals(1, outcome.round)
         assertEquals(alice, outcome.winner)
         assertEquals(bob, outcome.loser)
-        assertEquals(step.match.token, outcome.resolution)
+        assertEquals(m.epoch + 1, step.match.epoch)
         assertEquals(ArenaState.ROUNDCOUNTDOWN, step.match.state)
         assertTrue(step.match.resolving)
         assertEquals(1, step.match.winsOf(alice.id))
@@ -33,10 +33,10 @@ class ArenaMatchDefeatTest {
     fun `requiredWins 3 ends on third defeat without counting final kill`() {
         var m = startedMatch()
         m = m.recordDefeat(bob.id, DefeatCause.FALL).match
-        m = m.releaseResolution(m.token)
+        m = m.releaseResolution(m.epoch)
         m = m.resumeRound().match
         m = m.recordDefeat(bob.id, DefeatCause.FALL).match
-        m = m.releaseResolution(m.token)
+        m = m.releaseResolution(m.epoch)
         m = m.resumeRound().match
         val step = m.recordDefeat(bob.id, DefeatCause.FALL)
         assertTrue(step.outcome is DefeatOutcome.MatchFinished)
@@ -63,7 +63,7 @@ class ArenaMatchDefeatTest {
             outcome = step.outcome
             if (i < 4) {
                 assertTrue(outcome is DefeatOutcome.RoundWon)
-                m = step.match.releaseResolution(step.match.token)
+                m = step.match.releaseResolution(step.match.epoch)
                 val resumed = m.resumeRound()
                 assertTrue(resumed.outcome)
                 m = resumed.match
@@ -87,11 +87,11 @@ class ArenaMatchDefeatTest {
     fun `fall allowed in ROUNDCOUNTDOWN but death is not`() {
         var m = startedMatch()
         var step = m.recordDefeat(bob.id, DefeatCause.FALL)
-        m = step.match.releaseResolution(step.match.token)
+        m = step.match.releaseResolution(step.match.epoch)
         // ROUNDCOUNTDOWN 中: 落下は受理、死亡は拒否
         step = m.recordDefeat(bob.id, DefeatCause.FALL)
         assertTrue(step.outcome is DefeatOutcome.RoundWon)
-        m = step.match.releaseResolution(step.match.token)
+        m = step.match.releaseResolution(step.match.epoch)
         assertEquals(DefeatOutcome.Rejected, m.recordDefeat(alice.id, DefeatCause.DEATH).outcome)
     }
 
@@ -107,21 +107,21 @@ class ArenaMatchDefeatTest {
     }
 
     @Test
-    fun `releaseResolution with stale token is a no-op`() {
+    fun `releaseResolution with stale epoch is a no-op`() {
         var m = startedMatch()
         val step = m.recordDefeat(bob.id, DefeatCause.FALL)
         assertTrue(step.outcome is DefeatOutcome.RoundWon)
         m = step.match
         assertTrue(m.resolving)
-        // 世代が進んだ後の解放要求は無効(古いトークン)
+        // 世代が進んだ後の解放要求は無効(古い世代)
         val after = ArenaMatch.restored(
             m.arenaId, m.requiredWins, m.state, m.participants, m.wins,
             resolving = m.resolving, epoch = m.epoch + 1
         )
-        assertSame(after, after.releaseResolution(m.token))
+        assertSame(after, after.releaseResolution(m.epoch))
         assertTrue(after.resolving)
-        // 正しいトークンなら解放される
-        assertFalse(m.releaseResolution(m.token).resolving)
+        // 正しい世代なら解放される
+        assertFalse(m.releaseResolution(m.epoch).resolving)
     }
 
     @Test

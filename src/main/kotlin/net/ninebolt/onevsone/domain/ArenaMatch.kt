@@ -5,8 +5,8 @@ import kotlin.uuid.Uuid
 /**
  * 1 アリーナの参加者と進行状態を所有する集約。immutable: 各操作は
  * 新しい状態を持つ Transition を返し、このインスタンス自身は変化しない。
- * Bukkit・スケジューラ・永続化は持たず、タイミング制御のために世代トークン
- * (Token)を発行する。participants の並び順 = 参加順 = スポーンスロット番号。
+ * Bukkit・スケジューラ・永続化は持たず、タイミング制御のために世代(epoch)を
+ * 進める。participants の並び順 = 参加順 = スポーンスロット番号。
  */
 data class ArenaMatch private constructor(
     val arenaId: Arena.Id,
@@ -56,6 +56,7 @@ data class ArenaMatch private constructor(
             require(!resolving || state == ArenaState.ROUNDCOUNTDOWN) {
                 "resolving is only valid in ROUNDCOUNTDOWN (was $state)"
             }
+            require(epoch >= 0) { "epoch must be >= 0 (was $epoch)" }
             return ArenaMatch(arenaId, requiredWins, state, participants, wins, resolving, epoch)
         }
 
@@ -65,22 +66,6 @@ data class ArenaMatch private constructor(
             ArenaState.COUNTDOWN, ArenaState.ROUNDCOUNTDOWN, ArenaState.INGAME -> MAX_PARTICIPANTS
         }
     }
-
-    /**
-     * 試合/カウントダウンの世代トークン。中断・再参加で古い scheduler コールバックを
-     * 無効化するために使う。バックアップ/復元のトークン(BackupRef 相当)とは別系統。
-     */
-    @JvmInline
-    value class Token private constructor(val epoch: Long) {
-        companion object {
-            fun new(epoch: Long): Token {
-                require(epoch >= 0) { "epoch must be >= 0 (was $epoch)" }
-                return Token(epoch)
-            }
-        }
-    }
-
-    val token: Token get() = Token.new(epoch)
 
     val joinable: Boolean get() = state.isJoinable()
 
@@ -177,8 +162,7 @@ data class ArenaMatch private constructor(
             DefeatOutcome.RoundWon(
                 round = next.wins.values.sum(),
                 winner = winner,
-                loser = loser,
-                resolution = next.token
+                loser = loser
             )
         )
     }
@@ -201,11 +185,11 @@ data class ArenaMatch private constructor(
 
     /**
      * 敗北解決区間の終了(リスポーン後の再装備完了、または非死亡ラウンドの次 tick)。
-     * RoundWon が発行した世代トークンと一致する場合のみガードを解放する。
-     * トークン不一致(中断・次ラウンド進行済み等)は no-op。
+     * RoundWon 発行時の世代と一致する場合のみガードを解放する。
+     * 世代不一致(中断・次ラウンド進行済み等)は no-op。
      */
-    fun releaseResolution(token: Token): ArenaMatch =
-        if (this.token == token) copy(resolving = false) else this
+    fun releaseResolution(epoch: Long): ArenaMatch =
+        if (this.epoch == epoch) copy(resolving = false) else this
 
     /** 進行中のカウントダウンや解決待ちコールバックは世代進行で無効化される。 */
     fun abort(): Transition<List<Participant>> =

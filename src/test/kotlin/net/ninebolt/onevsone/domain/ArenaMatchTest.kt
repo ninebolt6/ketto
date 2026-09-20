@@ -123,25 +123,24 @@ class ArenaMatchTest {
     }
 
     @Test
-    fun `token advances on transitions and abort`() {
+    fun `epoch advances on transitions and abort`() {
         var m = match()
-        val t0 = m.token
+        val t0 = m.epoch
         m = m.join(alice).match
         m = m.join(bob).match
         m = m.beginMatch().match
-        assertEquals(t0, m.token)
+        assertEquals(t0, m.epoch)
         m = m.recordDefeat(bob.id, DefeatCause.FALL).match
-        val t1 = m.token
+        val t1 = m.epoch
         assertNotEquals(t0, t1)
         m = m.abort().match
-        assertNotEquals(t1, m.token)
+        assertNotEquals(t1, m.epoch)
     }
 
     @Test
     fun `held snapshot is not mutated by later transitions`() {
-        val m = startedMatch()
-        val snapshot = m
-        val after = m.recordDefeat(bob.id, DefeatCause.FALL).match
+        val snapshot = startedMatch()
+        val after = snapshot.recordDefeat(bob.id, DefeatCause.FALL).match
         // 取得済みスナップショットは後続遷移の影響を受けない
         assertEquals(ArenaState.INGAME, snapshot.state)
         assertEquals(0, snapshot.winsOf(alice.id))
