@@ -197,7 +197,7 @@ class MatchProgressionService(
             if (p1.dead || p2.dead) return@runCountdown false
             // 両者の持ち物を一括保存してから装備を交換する
             val refs = try {
-                backups.backupBeforeMatch(MatchId.newId(), match.participants)
+                backups.backupBeforeMatch(MatchId.new(), match.participants)
             } catch (e: PersistenceFailure) {
                 failures.report("Could not save inventories before starting arena ${arenaId.name}; match aborted", e)
                 abort(arenaId)

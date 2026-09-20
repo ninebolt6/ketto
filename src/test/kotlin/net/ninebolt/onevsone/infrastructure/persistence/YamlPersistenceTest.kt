@@ -129,7 +129,7 @@ class YamlPersistenceTest {
     @Test
     fun `participants registered and pending restores survive registration clear`() {
         val p = Participant.new("Alice")
-        val ref = BackupRef.new(MatchId.newId(), p.id, p.name)
+        val ref = BackupRef.new(MatchId.new(), p.id, p.name)
         val repo = matchState()
         repo.registerParticipant(p, Arena.Id.new("a1"))
         backups().saveBackups(listOf(PersistedBackup(ref, PaperInventorySnapshot())))
@@ -154,7 +154,7 @@ class YamlPersistenceTest {
     @Test
     fun `unregisterParticipant retains backup and deleteBackup removes it`() {
         val p = Participant.new("Alice")
-        val ref = BackupRef.new(MatchId.newId(), p.id, p.name)
+        val ref = BackupRef.new(MatchId.new(), p.id, p.name)
         val repo = matchState()
         val s = backups()
         repo.registerParticipant(p, Arena.Id.new("a1"))
@@ -174,11 +174,11 @@ class YamlPersistenceTest {
     @Test
     fun `deleteBackup ignores mismatched backup id`() {
         val p = Participant.new("Alice")
-        val ref = BackupRef.new(MatchId.newId(), p.id, p.name)
+        val ref = BackupRef.new(MatchId.new(), p.id, p.name)
         val s = backups()
         s.saveBackups(listOf(PersistedBackup(ref, PaperInventorySnapshot())))
 
-        s.deleteBackup(BackupRef.new(MatchId.newId(), p.id, p.name))
+        s.deleteBackup(BackupRef.new(MatchId.new(), p.id, p.name))
         assertNotNull(
             YamlConfiguration.loadConfiguration(File(folder, "status/players.yml"))
                 .getConfigurationSection("inv.Alice")
@@ -220,7 +220,7 @@ class YamlPersistenceTest {
         val repo = matchState()
         repo.registerParticipant(p1, Arena.Id.new("a1"))
         repo.registerParticipant(p2, Arena.Id.new("a1"))
-        val match = MatchId.newId()
+        val match = MatchId.new()
         s.saveBackups(
             listOf(
                 PersistedBackup(BackupRef.new(match, p1.id, p1.name), PaperInventorySnapshot()),

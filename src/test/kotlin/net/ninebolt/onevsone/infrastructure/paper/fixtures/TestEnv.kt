@@ -57,6 +57,7 @@ import org.mockbukkit.mockbukkit.entity.PlayerMock
 import org.mockbukkit.mockbukkit.plugin.PluginMock
 import org.mockbukkit.mockbukkit.world.WorldMock
 import java.io.File
+import java.util.function.Consumer
 import java.util.Locale
 import java.util.UUID
 import java.util.logging.Logger
@@ -84,8 +85,8 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         ConfigurationSerialization.registerClass(ItemStackMock::class.java)
         // async 解決は即時実行に潰し、応答側の runTask は実スケジューラ経由で runOneShots が消化する
         every { server.asyncScheduler } returns asyncScheduler
-        every { asyncScheduler.runNow(any(), any<java.util.function.Consumer<ScheduledTask>>()) } answers {
-            arg<java.util.function.Consumer<ScheduledTask>>(1).accept(mockk(relaxed = true))
+        every { asyncScheduler.runNow(any(), any<Consumer<ScheduledTask>>()) } answers {
+            arg<Consumer<ScheduledTask>>(1).accept(mockk(relaxed = true))
             mockk(relaxed = true)
         }
         every { server.scoreboardManager } returns scoreboardManager

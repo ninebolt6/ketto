@@ -6,6 +6,7 @@ import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.block.Block
 import org.bukkit.damage.DamageSource
+import org.bukkit.entity.Entity
 import org.bukkit.entity.EntityType
 import org.bukkit.entity.Player
 import org.bukkit.event.block.Action
@@ -31,7 +32,7 @@ internal fun quitEvent(player: Player) =
 
 internal fun joinEvent(player: Player) = PlayerJoinEvent(player, Component.empty())
 
-internal fun damageEvent(entity: org.bukkit.entity.Entity, damage: Double = 1.0) =
+internal fun damageEvent(entity: Entity, damage: Double = 1.0) =
     EntityDamageEvent(entity, EntityDamageEvent.DamageCause.FALL, mockk<DamageSource>(relaxed = true), damage)
 
 internal fun moveEvent(player: Player, from: Location, to: Location) = PlayerMoveEvent(player, from, to)

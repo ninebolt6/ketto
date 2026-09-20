@@ -16,7 +16,7 @@ import kotlin.uuid.Uuid
 
 class PlayerRecoveryServiceTest {
 
-    private fun backupRef(id: Uuid, name: String, match: MatchId = MatchId.newId()) =
+    private fun backupRef(id: Uuid, name: String, match: MatchId = MatchId.new()) =
         BackupRef.new(match, id, name)
 
     @Test

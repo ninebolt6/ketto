@@ -17,9 +17,10 @@ Minecraft の 1 対 1 アリーナ PvP プラグイン。
 ## Domain
 
 - immutable な値のみ置く
-- ドメイン値は private ctor + companion ファクトリ(`of`/`new`/`restored`)でのみ生成。
-  呼び出し側が与える必要のない値(新規 id 等)はファクトリ内部で生成し、既存 id の再構築は
-  `restored` か id 引数あり `new` に分離
+- 不変条件を持つドメイン値はコンストラクタを private にし、companion のファクトリ関数
+  (`of`/`new`/`restored`)でのみ生成する(操作の結果を表す型など、不変条件を持たない
+  型は対象外)。呼び出し側が与える必要のない値(新規 id 等)はファクトリ内部で生成し、
+  既存 id の再構築は `restored` か id 引数あり `new` に分離
 - 1 概念 1 ファイル
 
 ## Tests

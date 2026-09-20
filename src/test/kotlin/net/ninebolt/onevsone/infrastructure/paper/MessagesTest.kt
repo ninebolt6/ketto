@@ -1,11 +1,9 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
-import io.mockk.mockk
-import io.mockk.verify
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import net.ninebolt.onevsone.domain.ArenaState
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.containsText
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.RecordingLogger
 import org.bukkit.configuration.file.YamlConfiguration
 import org.mockbukkit.mockbukkit.MockBukkit
 import org.junit.jupiter.api.Test
@@ -130,9 +128,9 @@ class MessagesTest {
     fun `extra language file registers and missing keys warn`() {
         File(folder, "lang").mkdirs()
         File(folder, "lang/messages_de.yml").writeText("match:\n  joined: \"<green>Beigetreten: <name>\"\n")
-        val spyLogger = mockk<Logger>(relaxed = true)
-        val messages = load(logger = spyLogger)
-        verify { spyLogger.warning(containsText("missing key")) }
+        val recording = RecordingLogger()
+        val messages = load(logger = recording)
+        assertTrue(recording.warnings.any { "missing key" in it })
         assertEquals(
             "Beigetreten: a1",
             plain.serialize(messages.render(messages.joined("a1"), "de"))

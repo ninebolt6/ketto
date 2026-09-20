@@ -33,7 +33,7 @@ class YamlBackupStore(private val store: YamlStore) {
             val uuid = yaml.getString("inv.$name.uuid")?.let(::parseUuid)
             val backupId = yaml.getString("inv.$name.id")?.let(::parseUuid) ?: Uuid.random()
             val matchId = yaml.getString("inv.$name.match")?.let(::parseUuid)?.let { MatchId.new(it) }
-                ?: MatchId.newId()
+                ?: MatchId.new()
             PersistedBackup(BackupRef.restored(backupId, matchId, uuid, name), snapshot)
         }
     }

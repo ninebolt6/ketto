@@ -14,17 +14,3 @@ sealed interface JoinReply {
     data object InMatch : JoinReply
     data object NotFound : JoinReply
 }
-
-sealed interface LeaveReply {
-    data object Left : LeaveReply
-    /** ONEMORE 以外では退出不可。 */
-    data object NotWaiting : LeaveReply
-    data object NotJoined : LeaveReply
-}
-
-sealed interface ToggleReply {
-    data object Changed : ToggleReply
-    data object AlreadyEnabled : ToggleReply
-    data object AlreadyDisabled : ToggleReply
-    data object NotFound : ToggleReply
-}

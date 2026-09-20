@@ -12,6 +12,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.bukkit.Server
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
@@ -110,7 +111,7 @@ class OneVsOneStatsCommandTest {
     @Test
     fun `stats offline lookup failure reports no stats`() {
         val viewer = env.player("Viewer")
-        every { (env.server as org.bukkit.Server).getOfflinePlayer("Ghost") } throws RuntimeException("lookup failed")
+        every { (env.server as Server).getOfflinePlayer("Ghost") } throws RuntimeException("lookup failed")
         env.run(viewer, "stats", "Ghost")
         env.runOneShots()
         assertTrue(viewer.drainMessages().any { it.contains("Statsが存在しません") })

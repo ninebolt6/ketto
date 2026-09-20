@@ -128,7 +128,7 @@ class PaperInventoryRecoveryTest {
     @Test
     fun `pending restore applied on join and discarded`() {
         val participant = Participant.new("Alice")
-        val ref = BackupRef.new(MatchId.newId(), participant.id, participant.name)
+        val ref = BackupRef.new(MatchId.new(), participant.id, participant.name)
         env.matchStateRepo.registerParticipant(participant, Arena.Id.new("a1"))
         env.backupStore.saveBackups(listOf(PersistedBackup(ref, PaperInventorySnapshot())))
         env.matchStateRepo.clearRegistrations()
