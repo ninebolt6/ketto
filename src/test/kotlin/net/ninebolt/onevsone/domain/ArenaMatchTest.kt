@@ -96,20 +96,27 @@ class ArenaMatchTest {
     }
 
     @Test
-    fun `forfeit during countdown or ingame ends match for opponent`() {
+    fun `forfeit during initial countdown unregisters and keeps opponent waiting`() {
         var countdown = match()
         countdown = countdown.join(alice).match
         countdown = countdown.join(bob).match
         val step = countdown.forfeit(alice.id)
-        assertTrue(step.outcome is QuitOutcome.MatchEnded)
-        assertEquals(bob, (step.outcome as QuitOutcome.MatchEnded).winner)
-        assertEquals(alice, step.outcome.loser)
-        assertEquals(ArenaState.WAITING, step.match.state)
+        assertTrue(step.outcome is QuitOutcome.WaitingExit)
+        assertEquals(alice, (step.outcome as QuitOutcome.WaitingExit).participant)
+        // 残った 1 人は ONEMORE で待機継続(再参加可能)。進行中のカウントダウンは epoch で無効化
+        assertEquals(ArenaState.ONEMORE, step.match.state)
+        assertEquals(listOf(bob), step.match.participants)
+        assertTrue(step.match.epoch > countdown.epoch)
+    }
 
+    @Test
+    fun `forfeit during ingame ends match for opponent`() {
         val ingame = startedMatch()
         val finished = ingame.forfeit(alice.id)
         assertTrue(finished.outcome is QuitOutcome.MatchEnded)
+        assertEquals(bob, (finished.outcome as QuitOutcome.MatchEnded).winner)
         assertEquals(0, finished.match.participants.size)
+        assertEquals(ArenaState.WAITING, finished.match.state)
     }
 
     @Test

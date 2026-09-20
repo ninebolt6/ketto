@@ -151,21 +151,25 @@ class ArenaApplicationServiceTest {
     }
 
     @Test
-    fun `quit during countdown forfeits without touching inventories`() {
+    fun `quit during countdown unregisters only and keeps opponent waiting`() {
         val app = TestApp()
         val (p1, p2) = app.joinedTwo()
         app.players.disconnect(p1)
         app.players.quittingScope(p1) {
             app.service.quit(p1.id, p1.name)
         }
-        assertEquals(ArenaState.WAITING, app.state())
-        assertNull(app.service.arenaIdOf(p2.id))
-        // バックアップ未作成なので復元もフォールバックも走らない
+        // 試合未開始の切断は登録解除のみ: 戦績・優勝放送・復元は走らない
+        assertEquals(ArenaState.ONEMORE, app.state())
+        assertNull(app.service.arenaIdOf(p1.id))
+        assertEquals(Arena.Id.new("arena1"), app.service.arenaIdOf(p2.id))
+        assertFalse(app.matchState.registrations.containsKey("Alice"))
+        assertTrue(app.matchState.registrations.containsKey("Bob"))
+        assertTrue(app.stats.stats.isEmpty())
         assertTrue(app.equipment.restored.isEmpty())
-        assertEquals(1, app.stats.stats[p2.id]?.wins)
-        assertEquals(1, app.stats.stats[p1.id]?.losses)
-        assertEquals(1, app.presentation.champions.size)
-        assertTrue(app.presentation.fireworks.isEmpty())
+        assertTrue(app.presentation.champions.isEmpty())
+        // 切断者分のカウントダウンは世代無効化で再開しない
+        app.scheduler.tick(6)
+        assertEquals(ArenaState.ONEMORE, app.state())
     }
 
     @Test

@@ -121,14 +121,17 @@ data class ArenaMatch private constructor(
 
     /**
      * 未開始なら登録解除のみ、進行中なら相手を勝者とする不戦敗でマッチ終了。
+     * 初期 COUNTDOWN は試合未開始(テレポート・バックアップ・加点なし)なので
+     * 不戦敗にはせず、残った 1 人は ONEMORE で待機を継続する。
      */
     fun forfeit(id: Uuid): Transition<QuitOutcome> {
         val participant = participant(id) ?: return Transition(this, QuitOutcome.NotParticipant)
-        if (state == ArenaState.ONEMORE || state == ArenaState.WAITING || !full) {
+        if (state == ArenaState.ONEMORE || state == ArenaState.WAITING || state == ArenaState.COUNTDOWN || !full) {
+            val remaining = participants - participant
             return Transition(
                 copy(
-                    participants = participants - participant,
-                    state = ArenaState.WAITING,
+                    participants = remaining,
+                    state = if (remaining.isEmpty()) ArenaState.WAITING else ArenaState.ONEMORE,
                     epoch = epoch + 1
                 ),
                 QuitOutcome.WaitingExit(participant)
