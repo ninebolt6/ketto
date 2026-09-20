@@ -6,8 +6,10 @@ import net.ninebolt.onevsone.infrastructure.paper.fixtures.breakEvent
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.damageEvent
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.dropEvent
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.placeEvent
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.plainBlock
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
+import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.event.player.PlayerCommandPreprocessEvent
 import org.junit.jupiter.api.AfterEach
@@ -19,7 +21,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
-/** 状態ごとの制約(ブロック破壊・アイテムドロップ・コマンド)の検証。実イベントの isCancelled を見る。 */
+/** 状態ごとの制約(ブロック破壊・設置・アイテムドロップ・コマンド)の検証。実イベントの isCancelled を見る。 */
 class ArenaListenerRestrictionTest {
 
     @TempDir
@@ -107,6 +109,37 @@ class ArenaListenerRestrictionTest {
         val free = env.dropEvent(outsider)
         env.listener.onDrop(free)
         assertFalse(free.isCancelled)
+    }
+
+    @Test
+    fun `block place cancelled only while equipped except flint and steel`() {
+        val arena = env.newArena()
+        val p1 = env.player("Alice")
+        env.join(p1, arena)
+        val onemore = env.placeEvent(p1)
+        env.listener.onPlace(onemore)
+        assertFalse(onemore.isCancelled)
+
+        val p2 = env.player("Bob")
+        env.join(p2, arena)
+        val countdown = env.placeEvent(p1)
+        env.listener.onPlace(countdown)
+        assertFalse(countdown.isCancelled)
+
+        env.tick(6)
+        val ingame = env.placeEvent(p1)
+        env.listener.onPlace(ingame)
+        assertTrue(ingame.isCancelled)
+
+        // 着火は許可する
+        val flint = env.placeEvent(p1, held = env.item(Material.FLINT_AND_STEEL))
+        env.listener.onPlace(flint)
+        assertFalse(flint.isCancelled)
+
+        env.service.defeat(p2.uuid, DefeatCause.FALL)
+        val roundCountdown = env.placeEvent(p1)
+        env.listener.onPlace(roundCountdown)
+        assertTrue(roundCountdown.isCancelled)
     }
 
     @Test

@@ -170,6 +170,7 @@ class ArenaMatchTest {
                 horizontalMoveFrozen = false,
                 damageCancelled = false,
                 blockBreakCancelled = false,
+                blockPlaceCancelled = false,
                 itemDropCancelled = false,
                 commandsBlocked = false
             ),
@@ -177,6 +178,7 @@ class ArenaMatchTest {
                 horizontalMoveFrozen = false,
                 damageCancelled = false,
                 blockBreakCancelled = false,
+                blockPlaceCancelled = false,
                 itemDropCancelled = false,
                 commandsBlocked = true
             ),
@@ -184,6 +186,7 @@ class ArenaMatchTest {
                 horizontalMoveFrozen = true,
                 damageCancelled = true,
                 blockBreakCancelled = true,
+                blockPlaceCancelled = true,
                 itemDropCancelled = true,
                 commandsBlocked = true
             ),
@@ -191,6 +194,7 @@ class ArenaMatchTest {
                 horizontalMoveFrozen = false,
                 damageCancelled = false,
                 blockBreakCancelled = true,
+                blockPlaceCancelled = true,
                 itemDropCancelled = true,
                 commandsBlocked = true
             )

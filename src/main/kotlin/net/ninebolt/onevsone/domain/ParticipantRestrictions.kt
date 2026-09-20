@@ -8,6 +8,8 @@ data class ParticipantRestrictions(
     val horizontalMoveFrozen: Boolean,
     val damageCancelled: Boolean,
     val blockBreakCancelled: Boolean,
+    /** 破壊禁止中は設置物を撤去できないため、アリーナの汚染と籠城を防ぐ */
+    val blockPlaceCancelled: Boolean,
     /** 装備交換後はインベントリが開始時バックアップで上書きされるため、持ち出しを防ぐ */
     val itemDropCancelled: Boolean,
     /** ONEMORE 待機中のみコマンドを許可する */
@@ -19,6 +21,7 @@ data class ParticipantRestrictions(
                 horizontalMoveFrozen = true,
                 damageCancelled = true,
                 blockBreakCancelled = true,
+                blockPlaceCancelled = true,
                 itemDropCancelled = true,
                 commandsBlocked = true
             )
@@ -26,6 +29,7 @@ data class ParticipantRestrictions(
                 horizontalMoveFrozen = false,
                 damageCancelled = false,
                 blockBreakCancelled = true,
+                blockPlaceCancelled = true,
                 itemDropCancelled = true,
                 commandsBlocked = true
             )
@@ -33,6 +37,7 @@ data class ParticipantRestrictions(
                 horizontalMoveFrozen = false,
                 damageCancelled = false,
                 blockBreakCancelled = false,
+                blockPlaceCancelled = false,
                 itemDropCancelled = false,
                 commandsBlocked = true
             )
@@ -42,6 +47,7 @@ data class ParticipantRestrictions(
                 horizontalMoveFrozen = false,
                 damageCancelled = false,
                 blockBreakCancelled = false,
+                blockPlaceCancelled = false,
                 itemDropCancelled = false,
                 commandsBlocked = false
             )
@@ -49,6 +55,7 @@ data class ParticipantRestrictions(
                 horizontalMoveFrozen = false,
                 damageCancelled = false,
                 blockBreakCancelled = false,
+                blockPlaceCancelled = false,
                 itemDropCancelled = false,
                 commandsBlocked = true
             )

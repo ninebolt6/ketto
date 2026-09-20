@@ -12,6 +12,7 @@ import org.bukkit.entity.Player
 import org.bukkit.event.block.Action
 import org.bukkit.event.block.BlockBreakEvent
 import org.bukkit.block.BlockFace
+import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.player.PlayerInteractEvent
@@ -20,6 +21,7 @@ import org.bukkit.event.player.PlayerJoinEvent
 import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.inventory.EquipmentSlot
+import org.bukkit.inventory.ItemStack
 
 /** ArenaListener テスト用の実イベント構築と 2 人マッチ開始フィクスチャ。 */
 
@@ -64,6 +66,12 @@ internal fun breakEvent(player: Player, block: Block) = BlockBreakEvent(block, p
 /** 実アイテムエンティティを落としてドロップイベントを作る。 */
 internal fun TestEnv.dropEvent(player: Player): PlayerDropItemEvent =
     PlayerDropItemEvent(player, world().dropItem(player.location, item(Material.STONE)))
+
+/** 設置イベント。held 省略時は石ブロックを持つ想定。 */
+internal fun TestEnv.placeEvent(player: Player, held: ItemStack? = null): BlockPlaceEvent {
+    val block = plainBlock()
+    return BlockPlaceEvent(block, block.state, block, held ?: item(Material.STONE), player, true, EquipmentSlot.HAND)
+}
 
 /** 看板ではない実ブロック。 */
 internal fun TestEnv.plainBlock(x: Int = 9, y: Int = 64, z: Int = 9): Block =

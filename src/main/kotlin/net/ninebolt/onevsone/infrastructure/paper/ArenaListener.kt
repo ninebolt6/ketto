@@ -3,11 +3,13 @@ package net.ninebolt.onevsone.infrastructure.paper
 import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.domain.ParticipantRestrictions
+import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
 import org.bukkit.event.block.BlockBreakEvent
+import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.player.PlayerCommandPreprocessEvent
@@ -89,6 +91,16 @@ class ArenaListener(
         if (ParticipantRestrictions.forState(match.state).blockBreakCancelled) {
             event.isCancelled = true
         }
+    }
+
+    @EventHandler
+    fun onPlace(event: BlockPlaceEvent) {
+        val match = service.matchOf(event.player.uniqueId.toKotlinUuid()) ?: return
+        if (!ParticipantRestrictions.forState(match.state).blockPlaceCancelled) return
+        // 火打ち石は設置ではなく着火なので許可する(通常は BlockPlaceEvent を発火しないが、
+        // 発火する実装でも着火の許可を維持する)
+        if (event.itemInHand.type == Material.FLINT_AND_STEEL) return
+        event.isCancelled = true
     }
 
     @EventHandler
