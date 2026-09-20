@@ -3,7 +3,6 @@ package net.ninebolt.onevsone.infrastructure.persistence
 import net.ninebolt.onevsone.application.port.ArenaRepository
 import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.domain.Arena
-import net.ninebolt.onevsone.domain.isValidArenaName
 import java.util.Locale
 
 /** arenalist.yml・arena/<name>.yml の永続化。arenalist は登録順の index として内部管理する。 */
@@ -13,7 +12,7 @@ class YamlArenaRepository(private val store: YamlStore) : ArenaRepository {
         val names = store.load(store.arenaListFile).getStringList("arenas")
         val seen = mutableSetOf<String>()
         return names.mapNotNull { name ->
-            if (!isValidArenaName(name)) {
+            if (Arena.Id.of(name) == null) {
                 store.warn("Ignoring invalid arena name '$name' in arenalist.yml")
                 return@mapNotNull null
             }
@@ -33,10 +32,10 @@ class YamlArenaRepository(private val store: YamlStore) : ArenaRepository {
     }
 
     override fun find(name: String): Arena? {
-        if (!isValidArenaName(name)) return null
+        val id = Arena.Id.of(name) ?: return null
         val cfg = store.load(store.arenaFile(name))
         return Arena(
-            id = Arena.Id(name),
+            id = id,
             enabled = cfg.getBoolean("enabled", false),
             spawn1 = store.readLocation(cfg, "spawn1"),
             spawn2 = store.readLocation(cfg, "spawn2")

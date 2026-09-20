@@ -26,7 +26,9 @@ composition root として手動で全依存を配線する(DI フレームワ�
 - `.../domain/` — 純粋 Kotlin/JDK のみ。`Arena`(永続エンティティ: id/enabled/spawn、
   immutable data class)、`ArenaMatch`(アリーナのセッション集約。immutable: 各操作は新状態を
   持つ `Transition` を返し、呼び出し側がレジストリへ書き戻す。状態遷移・勝敗規則・世代トークン)、
-  `ParticipantRestrictions`、`PlayerStats`、識別子(`Arena.Id`/`MatchId`)
+  `ParticipantRestrictions`、`PlayerStats`、識別子(`Arena.Id`/`MatchId`)。
+  ドメイン値は private ctor + companion ファクトリ(`of`/`invoke`/`restored`)でのみ生成し、
+  生成済みインスタンスは常に不変条件を満たす(検証ロジックを層外に置かない)
 - `.../application/` — domain + `application/port` のみに依存。
   `ArenaApplicationService`(参加/退出/勝敗入口・ライフサイクルの facade)、
   `MatchProgressionService`(カウントダウン/ラウンド遷移/決着/中断の進行機構。

@@ -7,7 +7,6 @@ import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.MatchId
 import net.ninebolt.onevsone.domain.Participant
 import net.ninebolt.onevsone.domain.WorldPosition
-import net.ninebolt.onevsone.domain.isValidArenaName
 import net.ninebolt.onevsone.infrastructure.paper.PaperInventorySnapshot
 import org.bukkit.configuration.file.YamlConfiguration
 import org.junit.jupiter.api.Assertions.assertArrayEquals
@@ -112,7 +111,7 @@ class YamlPersistenceTest {
     fun `status file persists names keyed players and wins`() {
         val id1 = Uuid.random()
         val id2 = Uuid.random()
-        val match = ArenaMatch(
+        val match = ArenaMatch.restored(
             Arena.Id("a1"),
             requiredWins = 3,
             state = ArenaState.INGAME,
@@ -247,6 +246,16 @@ class YamlPersistenceTest {
     }
 
     @Test
+    fun `negative stats yaml throws`() {
+        val uuid = Uuid.random()
+        File(folder, "stats").mkdirs()
+        File(folder, "stats/$uuid.yml").writeText("win: -1\nlose: 0\n")
+        assertThrows(IllegalStateException::class.java) {
+            stats().find(uuid)
+        }
+    }
+
+    @Test
     fun `legacy pending restore without uuid is loaded`() {
         File(folder, "status").mkdirs()
         val file = File(folder, "status/players.yml")
@@ -333,9 +342,10 @@ class YamlPersistenceTest {
     @Test
     fun `invalid arena names rejected`() {
         for (bad in listOf("", "a/b", "a\\b", "a.b", "..", "players", "PLAYERS", "Players", "a b", "ab", "x".repeat(65))) {
-            assertFalse(isValidArenaName(bad), "expected '$bad' rejected")
+            assertNull(Arena.Id.of(bad))
+            assertThrows(IllegalArgumentException::class.java) { Arena.Id(bad) }
         }
-        assertTrue(isValidArenaName("arena-1_2"))
+        assertNotNull(Arena.Id.of("arena-1_2"))
     }
 
     @Test

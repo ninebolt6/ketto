@@ -32,7 +32,10 @@ class ArenaSignListener(
         if (block.state !is Sign) return
         val name = admin.signOwner(block.world.name, block.x, block.y, block.z) ?: return
         // joinable の事前判定は行わず、join の拒否結果(InMatch 等)の描画に委ねる
-        renderJoin(event.player, name, service.join(event.player.uniqueId.toKotlinUuid(), event.player.name, Arena.Id(name)))
+        val reply = Arena.Id.of(name)
+            ?.let { service.join(event.player.uniqueId.toKotlinUuid(), event.player.name, it) }
+            ?: JoinReply.NotFound
+        renderJoin(event.player, name, reply)
     }
 
     /** 登録中の看板は誰も壊せない。解除は /1vs1 arena removesign か arena remove のみ。 */

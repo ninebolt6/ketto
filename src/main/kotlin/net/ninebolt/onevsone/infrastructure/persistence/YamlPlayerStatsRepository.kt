@@ -1,5 +1,6 @@
 package net.ninebolt.onevsone.infrastructure.persistence
 
+import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.application.port.PlayerStatsRepository
 import net.ninebolt.onevsone.domain.PlayerStats
 import kotlin.uuid.Uuid
@@ -12,7 +13,11 @@ class YamlPlayerStatsRepository(private val store: YamlStore) : PlayerStatsRepos
         val file = store.statsFile(playerId)
         if (!file.exists()) return null
         val yaml = store.load(file)
-        return PlayerStats(wins = yaml.getInt("win"), losses = yaml.getInt("lose"))
+        return try {
+            PlayerStats(wins = yaml.getInt("win"), losses = yaml.getInt("lose"))
+        } catch (e: IllegalArgumentException) {
+            throw PersistenceFailure("Corrupt stats file ${file.name}", e)
+        }
     }
 
     override fun recordWin(playerId: Uuid) = write(playerId, winDelta = 1, loseDelta = 0)

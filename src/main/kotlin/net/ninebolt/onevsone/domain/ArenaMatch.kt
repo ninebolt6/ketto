@@ -8,7 +8,7 @@ import kotlin.uuid.Uuid
  * Bukkit・スケジューラ・永続化は持たず、タイミング制御のために世代トークン
  * (MatchToken)を発行する。participants の並び順 = 参加順 = スポーンスロット番号。
  */
-data class ArenaMatch(
+data class ArenaMatch private constructor(
     val arenaId: Arena.Id,
     val requiredWins: Int,
     val state: ArenaState = ArenaState.WAITING,
@@ -23,6 +23,47 @@ data class ArenaMatch(
 ) {
     companion object {
         const val MAX_PARTICIPANTS = 2
+
+        /** 新規(WAITING・0 人)の集約。 */
+        operator fun invoke(arenaId: Arena.Id, requiredWins: Int): ArenaMatch {
+            require(requiredWins >= 1) { "requiredWins must be >= 1 (was $requiredWins)" }
+            return ArenaMatch(arenaId, requiredWins)
+        }
+
+        /**
+         * スナップショット等からの全状態再構築。遷移関数が維持する不変条件
+         * (状態↔参加人数・参加者一意・wins は参加者のみ・resolving は
+         * ROUNDCOUNTDOWN のみ)をここで検証する。
+         */
+        fun restored(
+            arenaId: Arena.Id,
+            requiredWins: Int,
+            state: ArenaState,
+            participants: List<Participant>,
+            wins: Map<Uuid, Int>,
+            resolving: Boolean = false,
+            epoch: Long = 0L
+        ): ArenaMatch {
+            require(requiredWins >= 1) { "requiredWins must be >= 1 (was $requiredWins)" }
+            require(participants.size == expectedParticipants(state)) {
+                "state $state expects ${expectedParticipants(state)} participants (was ${participants.size})"
+            }
+            require(participants.distinctBy { it.id }.size == participants.size) {
+                "duplicate participant ids"
+            }
+            val ids = participants.mapTo(HashSet()) { it.id }
+            require(wins.keys.all { it in ids }) { "wins recorded for non-participant" }
+            require(!resolving || state == ArenaState.ROUNDCOUNTDOWN) {
+                "resolving is only valid in ROUNDCOUNTDOWN (was $state)"
+            }
+            return ArenaMatch(arenaId, requiredWins, state, participants, wins, resolving, epoch)
+        }
+
+        private fun expectedParticipants(state: ArenaState): Int = when (state) {
+            ArenaState.WAITING -> 0
+            ArenaState.ONEMORE -> 1
+            ArenaState.COUNTDOWN, ArenaState.ROUNDCOUNTDOWN, ArenaState.INGAME -> MAX_PARTICIPANTS
+        }
     }
 
     val token: MatchToken get() = MatchToken(epoch)

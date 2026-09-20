@@ -11,7 +11,6 @@ import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.Participant
 import net.ninebolt.onevsone.domain.PlayerStats
 import net.ninebolt.onevsone.domain.WorldPosition
-import net.ninebolt.onevsone.domain.isValidArenaName
 import java.util.Locale
 import kotlin.uuid.Uuid
 
@@ -25,7 +24,7 @@ class InMemoryArenaRepository : ArenaRepository, LobbyRepository, ArenaSignRepos
     override fun loadAll(): List<Arena> {
         val seen = mutableSetOf<String>()
         return names.mapNotNull { name ->
-            if (!isValidArenaName(name) || !seen.add(name.lowercase(Locale.ROOT))) null else find(name)
+            if (Arena.Id.of(name) == null || !seen.add(name.lowercase(Locale.ROOT))) null else find(name)
         }
     }
 

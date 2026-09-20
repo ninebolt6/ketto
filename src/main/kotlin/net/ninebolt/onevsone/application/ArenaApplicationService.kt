@@ -86,9 +86,9 @@ class ArenaApplicationService(
     fun matchOf(playerId: Uuid): ArenaMatch? =
         registry.arenaOf(playerId)?.let { registry.match(it) }
 
-    fun arena(name: String): Arena? = registry.arena(Arena.Id(name))
+    fun arena(name: String): Arena? = Arena.Id.of(name)?.let { registry.arena(it) }
 
-    fun matchOf(name: String): ArenaMatch? = registry.match(Arena.Id(name))
+    fun matchOf(name: String): ArenaMatch? = Arena.Id.of(name)?.let { registry.match(it) }
 
     /** 破損時は PersistenceFailure を投げる(呼び出し側で扱う)。 */
     fun statsFor(playerId: Uuid): PlayerStats? = stats.find(playerId)

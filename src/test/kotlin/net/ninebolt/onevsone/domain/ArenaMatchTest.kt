@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertSame
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -195,5 +196,33 @@ class ArenaMatchTest {
             assertEquals(expected, ParticipantRestrictions.forState(state), "state=$state")
         }
         assertNull(m.participant(alice.id))
+    }
+
+    @Test
+    fun `factories reject invalid construction`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            ArenaMatch(Arena.Id("a1"), 0)
+        }
+        // 状態と参加人数の不整合
+        assertThrows(IllegalArgumentException::class.java) {
+            ArenaMatch.restored(Arena.Id("a1"), 3, ArenaState.WAITING, listOf(alice), emptyMap())
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            ArenaMatch.restored(Arena.Id("a1"), 3, ArenaState.INGAME, listOf(alice), emptyMap())
+        }
+        // 非参加者への加点
+        assertThrows(IllegalArgumentException::class.java) {
+            ArenaMatch.restored(
+                Arena.Id("a1"), 3, ArenaState.INGAME, listOf(alice, bob),
+                wins = mapOf(carol.id to 1)
+            )
+        }
+        // resolving は ROUNDCOUNTDOWN のみ
+        assertThrows(IllegalArgumentException::class.java) {
+            ArenaMatch.restored(
+                Arena.Id("a1"), 3, ArenaState.INGAME, listOf(alice, bob),
+                wins = emptyMap(), resolving = true
+            )
+        }
     }
 }

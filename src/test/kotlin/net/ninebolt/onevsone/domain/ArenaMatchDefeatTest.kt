@@ -114,7 +114,10 @@ class ArenaMatchDefeatTest {
         m = step.match
         assertTrue(m.resolving)
         // 世代が進んだ後の解放要求は無効(古いトークン)
-        val after = m.copy(epoch = m.epoch + 1)
+        val after = ArenaMatch.restored(
+            m.arenaId, m.requiredWins, m.state, m.participants, m.wins,
+            resolving = m.resolving, epoch = m.epoch + 1
+        )
         assertSame(after, after.releaseResolution(m.token))
         assertTrue(after.resolving)
         // 正しいトークンなら解放される
