@@ -6,6 +6,7 @@ import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
 import org.bukkit.Server
 import org.bukkit.command.CommandSender
+import java.util.Locale
 
 /** 状態の色・文字列、Adventure 変換、アイテム表示名をここに集約する。 */
 class Messages(prefixRaw: String) {
@@ -83,7 +84,7 @@ class Messages(prefixRaw: String) {
     fun champion(arena: String, name: String) = "§eアリーナ: ${arena}で§c${name}が優勝しました！"
     fun statWin(win: Int) = "§cWin: §b$win"
     fun statLose(lose: Int) = "§cLose: §b$lose"
-    fun statRatio(stats: PlayerStats) = "§cW/L(勝率): §b${stats.ratio}"
+    fun statRatio(stats: PlayerStats) = "§cW/L(勝率): §b${"%.2f".format(Locale.ROOT, stats.ratio)}"
     val noStats = "§cStatsが存在しません"
 
     val signTitle = "§4[§6§l1vs1§4]"

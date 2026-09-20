@@ -2,27 +2,27 @@ package net.ninebolt.onevsone.infrastructure.paper
 
 import net.ninebolt.onevsone.application.port.Cancellation
 import net.ninebolt.onevsone.application.port.SchedulerPort
+import org.bukkit.Bukkit
 import org.bukkit.plugin.java.JavaPlugin
-import org.bukkit.scheduler.BukkitRunnable
+import org.bukkit.scheduler.BukkitTask
 
 /** BukkitTask をこのクラスに限定する。 */
 class PaperScheduler(private val plugin: JavaPlugin) : SchedulerPort {
 
     override fun schedule(delayTicks: Long, action: () -> Unit): Cancellation {
-        val task = object : BukkitRunnable() {
-            override fun run() = action()
-        }
-        task.runTaskLater(plugin, delayTicks)
+        val task = Bukkit.getScheduler().runTaskLater(plugin, Runnable { action() }, delayTicks)
         return Cancellation { task.cancel() }
     }
 
     override fun repeat(initialDelayTicks: Long, periodTicks: Long, action: (Cancellation) -> Unit): Cancellation {
-        var task: BukkitRunnable? = null
+        var task: BukkitTask? = null
         val cancellation = Cancellation { task?.cancel() }
-        task = object : BukkitRunnable() {
-            override fun run() = action(cancellation)
-        }
-        task.runTaskTimer(plugin, initialDelayTicks, periodTicks)
+        task = Bukkit.getScheduler().runTaskTimer(
+            plugin,
+            Runnable { action(cancellation) },
+            initialDelayTicks,
+            periodTicks
+        )
         return cancellation
     }
 }

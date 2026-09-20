@@ -9,5 +9,5 @@ interface ArenaSignRepository {
     fun signLocation(arenaName: String): WorldPosition?
     fun setSign(arenaName: String, position: WorldPosition)
     fun clearSign(arenaName: String)
-    fun signOwner(world: String, x: Double, y: Double, z: Double): String?
+    fun signOwner(world: String, x: Int, y: Int, z: Int): String?
 }

@@ -179,11 +179,7 @@ class YamlStore(folder: File, private val logger: Logger) {
     }
 
     private fun parseUuid(raw: String): UUID? =
-        try {
-            UUID.fromString(raw)
-        } catch (e: IllegalArgumentException) {
-            null
-        }
+        runCatching { UUID.fromString(raw) }.getOrNull()
 }
 
 /** 永続化層が返すバックアップ一式。実データはアプリケーションへ出さない。 */

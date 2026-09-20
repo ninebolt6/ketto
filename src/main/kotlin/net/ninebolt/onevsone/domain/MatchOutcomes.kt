@@ -4,7 +4,8 @@ package net.ninebolt.onevsone.domain
  * 試合/カウントダウンの世代トークン。中断・再参加で古い scheduler コールバックを
  * 無効化するために使う。バックアップ/復元のトークン(BackupRef 相当)とは別系統。
  */
-data class MatchToken(val epoch: Long)
+@JvmInline
+value class MatchToken(val epoch: Long)
 
 /** 敗北の通知経路。落下(非死亡)は ROUNDCOUNTDOWN 中も受理される。 */
 enum class DefeatCause { DEATH, FALL }
@@ -25,9 +26,9 @@ sealed interface JoinOutcome {
 }
 
 sealed interface LeaveOutcome {
-    /** participant は退出者(参加者不一致の到達不能ケースでは null)。 */
-    data class Left(val participant: Participant?) : LeaveOutcome
-    /** ONEMORE 以外では退出できない */
+    /** participant は退出者。 */
+    data class Left(val participant: Participant) : LeaveOutcome
+    /** ONEMORE 以外(または非参加者)では退出できない */
     data object NotWaiting : LeaveOutcome
 }
 

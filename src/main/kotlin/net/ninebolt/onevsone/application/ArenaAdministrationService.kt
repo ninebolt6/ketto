@@ -90,7 +90,7 @@ class ArenaAdministrationService(
 
     fun signLocation(arenaName: String): WorldPosition? = signs.signLocation(arenaName)
 
-    fun signOwner(world: String, x: Double, y: Double, z: Double): String? =
+    fun signOwner(world: String, x: Int, y: Int, z: Int): String? =
         signs.signOwner(world, x, y, z)
 
     fun setSign(name: String, position: WorldPosition): Boolean {

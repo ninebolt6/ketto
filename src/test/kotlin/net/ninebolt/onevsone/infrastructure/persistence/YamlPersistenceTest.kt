@@ -273,10 +273,10 @@ class YamlPersistenceTest {
         assertEquals(45.5f, lobby.yaw, 0.001f)
         val sign = signs().signLocation("a1")!!
         assertEquals(5.0, sign.x)
-        assertEquals("a1", signs().signOwner("world", 5.0, 64.0, 5.0))
+        assertEquals("a1", signs().signOwner("world", 5, 64, 5))
         signs().clearSign("a1")
         assertNull(signs().signLocation("a1"))
-        assertNull(signs().signOwner("world", 5.0, 64.0, 5.0))
+        assertNull(signs().signOwner("world", 5, 64, 5))
     }
 
     @Test
@@ -296,7 +296,7 @@ class YamlPersistenceTest {
     fun `sign index is rebuilt from arena files by a new instance`() {
         signs().setSign("a1", WorldPosition("world", 5.0, 64.0, 5.0))
         // 別インスタンスは index を持たないので arena/<name>.yml から構築する
-        assertEquals("a1", signs().signOwner("world", 5.0, 64.0, 5.0))
+        assertEquals("a1", signs().signOwner("world", 5, 64, 5))
         assertEquals(5.0, signs().signLocation("a1")!!.x)
     }
 
@@ -305,8 +305,8 @@ class YamlPersistenceTest {
         val repo = signs()
         repo.setSign("a1", WorldPosition("world", 5.0, 64.0, 5.0))
         repo.setSign("a1", WorldPosition("world", 9.0, 64.0, 9.0))
-        assertNull(repo.signOwner("world", 5.0, 64.0, 5.0))
-        assertEquals("a1", repo.signOwner("world", 9.0, 64.0, 9.0))
+        assertNull(repo.signOwner("world", 5, 64, 5))
+        assertEquals("a1", repo.signOwner("world", 9, 64, 9))
         assertEquals(9.0, repo.signLocation("a1")!!.x)
     }
 
@@ -317,7 +317,7 @@ class YamlPersistenceTest {
         arenas().delete("a1")
         repo.clearSign("a1")
         assertFalse(File(folder, "arena/a1.yml").exists())
-        assertNull(repo.signOwner("world", 5.0, 64.0, 5.0))
+        assertNull(repo.signOwner("world", 5, 64, 5))
     }
 
     @Test
@@ -326,7 +326,7 @@ class YamlPersistenceTest {
         arenas().save(ArenaDefinition(ArenaId("a1"), enabled = true))
         val yaml = YamlConfiguration.loadConfiguration(File(folder, "arena/a1.yml"))
         assertNotNull(yaml.getConfigurationSection("sign"))
-        assertEquals("a1", signs().signOwner("world", 5.0, 64.0, 5.0))
+        assertEquals("a1", signs().signOwner("world", 5, 64, 5))
     }
 
     @Test

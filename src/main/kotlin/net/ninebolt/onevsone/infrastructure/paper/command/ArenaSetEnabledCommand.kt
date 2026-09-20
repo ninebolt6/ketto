@@ -21,7 +21,7 @@ internal class ArenaSetEnabledCommand(
             ToggleReply.NotFound -> messages.send(sender, messages.noArena)
             ToggleReply.AlreadyEnabled -> messages.send(sender, messages.alreadyEnabled)
             ToggleReply.AlreadyDisabled -> messages.send(sender, messages.alreadyDisabled)
-            else -> messages.send(sender, if (enabled) messages.enabled(args[0]) else messages.disabled(args[0]))
+            ToggleReply.Changed -> messages.send(sender, if (enabled) messages.enabled(args[0]) else messages.disabled(args[0]))
         }
         return null
     }

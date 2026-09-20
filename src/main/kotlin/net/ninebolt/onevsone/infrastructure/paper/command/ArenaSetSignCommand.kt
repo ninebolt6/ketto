@@ -21,12 +21,7 @@ internal class ArenaSetSignCommand(
             messages.send(sender, messages.lookAtSign)
             return null
         }
-        val existing = admin.signOwner(
-            target.world.name,
-            target.x.toDouble(),
-            target.y.toDouble(),
-            target.z.toDouble()
-        )
+        val existing = admin.signOwner(target.world.name, target.x, target.y, target.z)
         if (existing != null && existing != definition.name) {
             messages.send(sender, messages.signTaken)
             return null

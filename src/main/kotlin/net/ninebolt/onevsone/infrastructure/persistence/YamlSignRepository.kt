@@ -13,12 +13,9 @@ import org.bukkit.configuration.file.YamlConfiguration
  */
 class YamlSignRepository(private val store: YamlStore) : ArenaSignRepository {
 
-    private data class SignPos(val world: String, val x: Double, val y: Double, val z: Double)
+    private data class SignPos(val world: String, val x: Int, val y: Int, val z: Int)
 
-    private var index: MutableMap<SignPos, String>? = null
-
-    private fun indexOrScan(): MutableMap<SignPos, String> =
-        index ?: scan().also { index = it }
+    private val index: MutableMap<SignPos, String> by lazy { scan() }
 
     private fun scan(): MutableMap<SignPos, String> {
         val found = mutableMapOf<SignPos, String>()
@@ -38,20 +35,25 @@ class YamlSignRepository(private val store: YamlStore) : ArenaSignRepository {
     private fun signPos(yaml: YamlConfiguration): SignPos? {
         val world = yaml.getString("sign.world") ?: return null
         if (!yaml.contains("sign.x")) return null
-        return SignPos(world, yaml.getDouble("sign.x"), yaml.getDouble("sign.y"), yaml.getDouble("sign.z"))
+        return SignPos(
+            world,
+            yaml.getDouble("sign.x").toInt(),
+            yaml.getDouble("sign.y").toInt(),
+            yaml.getDouble("sign.z").toInt()
+        )
     }
 
     override fun signLocation(arenaName: String): WorldPosition? =
-        indexOrScan().entries.firstOrNull { it.value == arenaName }
-            ?.let { (pos) -> WorldPosition(pos.world, pos.x, pos.y, pos.z) }
+        index.entries.firstOrNull { it.value == arenaName }
+            ?.let { (pos) -> WorldPosition(pos.world, pos.x.toDouble(), pos.y.toDouble(), pos.z.toDouble()) }
 
     override fun setSign(arenaName: String, position: WorldPosition) {
         val file = store.arenaFile(arenaName)
         val yaml = store.load(file)
         store.writeLocation(yaml, "sign", position)
         store.save(yaml, file)
-        indexOrScan().values.remove(arenaName)
-        indexOrScan()[SignPos(position.world, position.x, position.y, position.z)] = arenaName
+        index.values.remove(arenaName)
+        index[SignPos(position.world, position.x.toInt(), position.y.toInt(), position.z.toInt())] = arenaName
     }
 
     override fun clearSign(arenaName: String) {
@@ -63,9 +65,9 @@ class YamlSignRepository(private val store: YamlStore) : ArenaSignRepository {
                 store.save(yaml, file)
             }
         }
-        indexOrScan().entries.removeIf { it.value == arenaName }
+        index.entries.removeIf { it.value == arenaName }
     }
 
-    override fun signOwner(world: String, x: Double, y: Double, z: Double): String? =
-        indexOrScan()[SignPos(world, x, y, z)]
+    override fun signOwner(world: String, x: Int, y: Int, z: Int): String? =
+        index[SignPos(world, x, y, z)]
 }

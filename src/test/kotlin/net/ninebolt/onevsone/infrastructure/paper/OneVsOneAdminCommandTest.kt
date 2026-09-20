@@ -163,7 +163,7 @@ class OneVsOneAdminCommandTest {
         every { second.getTargetBlockExact(10) } returns block
 
         env.run(op, "arena", "setsign", "arena1")
-        assertEquals("arena1", env.signRepo.signOwner("world", 4.0, 64.0, 4.0))
+        assertEquals("arena1", env.signRepo.signOwner("world", 4, 64, 4))
 
         env.run(second, "arena", "setsign", "arena2")
         verify(exactly = 1) { second.sendMessage(contains("その看板はすでに登録されています")) }
@@ -177,7 +177,7 @@ class OneVsOneAdminCommandTest {
 
         env.run(op, "arena", "removesign", "arena1")
         verify(exactly = 1) { op.sendMessage(contains("の看板登録を解除しました")) }
-        assertNull(env.signRepo.signOwner("world", 4.0, 64.0, 4.0))
+        assertNull(env.signRepo.signOwner("world", 4, 64, 4))
         assertNull(env.signRepo.signLocation("arena1"))
 
         env.run(op, "arena", "removesign", "arena1")

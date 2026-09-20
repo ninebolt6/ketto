@@ -64,7 +64,7 @@ data class ArenaMatch(
     /** 退出しても持ち物には関知しない(未開始のため)。 */
     fun leaveWaiting(id: UUID): Transition<LeaveOutcome> {
         if (state != ArenaState.ONEMORE) return Transition(this, LeaveOutcome.NotWaiting)
-        val participant = participant(id)
+        val participant = participant(id) ?: return Transition(this, LeaveOutcome.NotWaiting)
         return Transition(
             copy(
                 participants = participants.filterNot { it.id == id },

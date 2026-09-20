@@ -1,7 +1,5 @@
 package net.ninebolt.onevsone.domain
 
-import java.math.BigDecimal
-import java.math.RoundingMode
 import java.util.UUID
 
 /** Bukkit の Player もインベントリも持たず、識別子と表示名だけを持つ。 */
@@ -34,11 +32,9 @@ data class ArenaDefinition(
     }
 }
 
-/** 勝率の数値計算をここに集約する。 */
+/** 勝率の数値計算をここに集約する。表示書式は呼び出し側。 */
 data class PlayerStats(val wins: Int, val losses: Int) {
-    /** win/lose を小数第 2 位 HALF_UP で。lose == 0 のときは win / 1。 */
-    val ratio: String
-        get() = BigDecimal.valueOf(wins.toLong())
-            .divide(BigDecimal.valueOf(losses.coerceAtLeast(1).toLong()), 2, RoundingMode.HALF_UP)
-            .toPlainString()
+    /** win/lose。lose == 0 のときは win / 1。 */
+    val ratio: Double
+        get() = wins.toDouble() / losses.coerceAtLeast(1)
 }

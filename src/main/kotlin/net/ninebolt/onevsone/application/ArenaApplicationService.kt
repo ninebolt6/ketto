@@ -62,44 +62,33 @@ class ArenaApplicationService(
             registry.putDefinition(definition)
             val match = ArenaMatch(definition.id, requiredWins)
             registry.installMatch(match)
-            try {
+            warnOnFailure("Could not persist status for arena ${definition.id.name}; continuing startup") {
                 matchState.saveStatus(match)
-            } catch (e: PersistenceFailure) {
-                failures.warn("Could not persist status for arena ${definition.id.name}; continuing startup")
             }
-            try {
+            warnOnFailure("Could not update sign for arena ${definition.id.name}; continuing startup") {
                 presentation.updateSign(definition.id, ArenaState.WAITING)
-            } catch (e: PersistenceFailure) {
-                failures.warn("Could not update sign for arena ${definition.id.name}; continuing startup")
             }
         }
-        try {
+        warnOnFailure("players.yml is unreadable; pending restores unavailable this session") {
             recovery.loadPersisted()
-        } catch (e: PersistenceFailure) {
-            failures.warn("players.yml is unreadable; pending restores unavailable this session")
         }
-        try {
+        warnOnFailure("Could not clear stale players.yml registrations") {
             matchState.clearRegistrations()
-        } catch (e: PersistenceFailure) {
-            failures.warn("Could not clear stale players.yml registrations")
         }
     }
 
     fun shutdown() {
-        registry.matches().forEach { (arenaId) ->
+        registry.matches().forEach { match ->
+            val arenaId = match.arenaId
             timers.remove(arenaId)?.cancel()
             val left = registry.transact(arenaId) { it.abort() }?.outcome ?: emptyList()
             left.forEach { (_, name) ->
-                try {
+                warnOnFailure("Could not unregister $name from players.yml; membership record may be stale") {
                     matchState.unregisterParticipant(name)
-                } catch (e: PersistenceFailure) {
-                    failures.warn("Could not unregister $name from players.yml; membership record may be stale")
                 }
             }
-            try {
+            warnOnFailure("Could not persist shutdown state for arena $arenaId; continuing shutdown") {
                 registry.match(arenaId)?.let { matchState.saveStatus(it) }
-            } catch (e: PersistenceFailure) {
-                failures.warn("Could not persist shutdown state for arena $arenaId; continuing shutdown")
             }
         }
         recovery.restoreAllOnline()
@@ -162,12 +151,8 @@ class ArenaApplicationService(
         when (val outcome = step.outcome) {
             LeaveOutcome.NotWaiting -> return LeaveReply.NotWaiting
             is LeaveOutcome.Left -> {
-                outcome.participant?.let { participant ->
-                    try {
-                        matchState.unregisterParticipant(participant.name)
-                    } catch (e: PersistenceFailure) {
-                        failures.warn("Could not unregister ${participant.name} from players.yml; membership record may be stale")
-                    }
+                warnOnFailure("Could not unregister ${outcome.participant.name} from players.yml; membership record may be stale") {
+                    matchState.unregisterParticipant(outcome.participant.name)
                 }
                 // 未開始の退出では持ち物を変更しない(バックアップ無し・フォールバック無し)
                 matchState.saveStatus(step.match)
@@ -195,10 +180,8 @@ class ArenaApplicationService(
         val step = registry.transact(arenaId) { it.forfeit(playerId) } ?: return
         when (val outcome = step.outcome) {
             is QuitOutcome.WaitingExit -> {
-                try {
+                warnOnFailure("Could not unregister ${outcome.participant.name} from players.yml; membership record may be stale") {
                     matchState.unregisterParticipant(outcome.participant.name)
-                } catch (e: PersistenceFailure) {
-                    failures.warn("Could not unregister ${outcome.participant.name} from players.yml; membership record may be stale")
                 }
                 matchState.saveStatus(step.match)
                 presentation.updateSign(arenaId, step.match.state)
@@ -252,10 +235,8 @@ class ArenaApplicationService(
         val left = step.outcome
         val tickets = left.map { it to recovery.pending(it.id) }
         left.forEach { (_, name) ->
-            try {
+            warnOnFailure("Could not unregister $name from players.yml; pending restore retained in memory") {
                 matchState.unregisterParticipant(name)
-            } catch (e: PersistenceFailure) {
-                failures.warn("Could not unregister $name from players.yml; pending restore retained in memory")
             }
         }
         tickets.forEach { (participant, ticket) ->
@@ -333,10 +314,8 @@ class ArenaApplicationService(
         val winnerTicket = recovery.pending(winner.id)
         val loserTicket = recovery.pending(loser.id)
         listOf(winner, loser).forEach { (_, name) ->
-            try {
+            warnOnFailure("Could not unregister $name from players.yml; pending restore retained in memory") {
                 matchState.unregisterParticipant(name)
-            } catch (e: PersistenceFailure) {
-                failures.warn("Could not unregister $name from players.yml; pending restore retained in memory")
             }
         }
 
@@ -504,6 +483,15 @@ class ArenaApplicationService(
     }
 
     // ---- 内部: 共通 ---------------------------------------------------------
+
+    /** PersistenceFailure を warn に潰す共通の失敗経路。 */
+    private inline fun warnOnFailure(message: String, block: () -> Unit) {
+        try {
+            block()
+        } catch (e: PersistenceFailure) {
+            failures.warn(message)
+        }
+    }
 
     /**
      * 次 tick に死亡中プレイヤーの復元系後処理を行う。

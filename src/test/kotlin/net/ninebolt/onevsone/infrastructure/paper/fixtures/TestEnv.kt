@@ -46,13 +46,11 @@ import org.bukkit.Server
 import org.bukkit.World
 import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.entity.Player
-import org.bukkit.inventory.ItemFactory
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.PlayerInventory
 import org.bukkit.inventory.meta.ItemMeta
 import org.bukkit.plugin.Plugin
 import org.bukkit.plugin.java.JavaPlugin
-import org.bukkit.scheduler.BukkitRunnable
 import org.bukkit.scheduler.BukkitScheduler
 import org.bukkit.scheduler.BukkitTask
 import org.bukkit.scoreboard.Criteria
@@ -73,7 +71,6 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     val plugin: JavaPlugin = mockk(relaxed = true)
     val scheduler: BukkitScheduler = mockk(relaxed = true)
     val scoreboardManager: ScoreboardManager = mockk(relaxed = true)
-    val itemFactory: ItemFactory = mockk(relaxed = true)
 
     val messages = Messages("&8[&61vs1&8] ")
     val failures = PluginFailureReporter { plugin.logger }
@@ -93,7 +90,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         private set
     var statsRepo: PlayerStatsRepository = YamlPlayerStatsRepository(store)
         private set
-    var equipment = PaperEquipmentAdapter(store, lookup, server, messages)
+    var equipment = PaperEquipmentAdapter(store, lookup, messages)
         private set
     var presentation = PaperMatchPresentation(server, messages, signRepo, failures)
         private set
@@ -126,7 +123,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         signRepo = YamlSignRepository(store)
         matchStateRepo = matchState
         this.statsRepo = statsRepo
-        equipment = PaperEquipmentAdapter(store, lookup, server, messages)
+        equipment = PaperEquipmentAdapter(store, lookup, messages)
         presentation = PaperMatchPresentation(server, messages, signRepo, failures)
         registry = ArenaRegistry()
         recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepo, presentation, failures)
@@ -134,7 +131,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         admin = ArenaAdministrationService(registry, arenaRepo, signRepo, lobbyRepo, equipment, presentation, service)
     }
 
-    data class TimerRecord(val runnable: BukkitRunnable, val delay: Long, val period: Long, val taskId: Int)
+    data class TimerRecord(val runnable: Runnable, val delay: Long, val period: Long, val taskId: Int)
 
     val timers = mutableListOf<TimerRecord>()
     val cancelledTaskIds = mutableListOf<Int>()
@@ -148,13 +145,16 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         mockkStatic(Bukkit::class, ItemStack::class)
         every { Bukkit.getServer() } returns server
         every { Bukkit.getScheduler() } returns scheduler
-        every { Bukkit.getItemFactory() } returns itemFactory
         every { Bukkit.getScoreboardCriteria(any<String>()) } answers { mockk<Criteria>(relaxed = true) }
         every { ItemStack.of(any<Material>()) } answers { mockk(relaxed = true) }
         every { ItemStack.of(any<Material>(), any<Int>()) } answers { mockk(relaxed = true) }
 
         mockkConstructor(ItemStack::class)
         every { anyConstructed<ItemStack>().itemMeta = any() } just Runs
+        every { anyConstructed<ItemStack>().editMeta(any<java.util.function.Consumer<ItemMeta>>()) } answers {
+            firstArg<java.util.function.Consumer<ItemMeta>>().accept(mockk<ItemMeta>(relaxed = true))
+            true
+        }
         listOf(Material.COMPASS, Material.FEATHER).forEach { material ->
             every { constructedWith<ItemStack>(EqMatcher(material)).type } returns material
             every { constructedWith<ItemStack>(EqMatcher(material)).clone() } answers { item(material) }
@@ -172,7 +172,6 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
 
         every { server.scheduler } returns scheduler
         every { server.scoreboardManager } returns scoreboardManager
-        every { server.itemFactory } returns itemFactory
         every { server.getPlayer(any<UUID>()) } answers { players[firstArg()] }
         every { server.getPlayerExact(any<String>()) } answers {
             players.values.firstOrNull { it.name == firstArg<String>() }
@@ -196,9 +195,6 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
             boards += board
             board
         }
-        every { itemFactory.getItemMeta(any<Material>()) } answers { mockk<ItemMeta>(relaxed = true) }
-        every { itemFactory.asMetaFor(any<ItemMeta>(), any<ItemStack>()) } answers { firstArg() }
-
         every {
             scheduler.runTaskTimer(
                 any<Plugin>(),
@@ -207,10 +203,11 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
                 any<Long>()
             )
         } answers {
-            val runnable = arg<Runnable>(1) as BukkitRunnable
+            val runnable = arg<Runnable>(1)
             val task = mockk<BukkitTask>(relaxed = true)
             val id = nextTaskId++
             every { task.taskId } returns id
+            every { task.cancel() } answers { cancelledTaskIds += id }
             timers += TimerRecord(runnable, arg(2), arg(3), id)
             task
         }

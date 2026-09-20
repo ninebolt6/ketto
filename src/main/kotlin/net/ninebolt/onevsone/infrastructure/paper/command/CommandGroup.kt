@@ -2,6 +2,7 @@ package net.ninebolt.onevsone.infrastructure.paper.command
 
 import net.ninebolt.onevsone.infrastructure.paper.Messages
 import org.bukkit.command.CommandSender
+import org.bukkit.util.StringUtil
 import java.util.Locale
 
 /** サブコマンド名でルーティングする名前空間。root と arena 配下で共用する。 */
@@ -22,10 +23,8 @@ internal class CommandGroup(
 
     override fun tabComplete(sender: CommandSender, args: List<String>): List<String> {
         if (args.size == 1) {
-            return byName.entries
-                .filter { it.value.visibleTo(sender) }
-                .map { it.key }
-                .filter { it.startsWith(args[0], ignoreCase = true) }
+            val visible = byName.entries.filter { it.value.visibleTo(sender) }.map { it.key }
+            return StringUtil.copyPartialMatches(args[0], visible, mutableListOf())
         }
         val sub = byName[args.firstOrNull()?.lowercase(Locale.ROOT)] ?: return emptyList()
         return sub.tabComplete(sender, args.drop(1))

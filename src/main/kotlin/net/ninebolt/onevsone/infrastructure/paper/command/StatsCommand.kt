@@ -14,9 +14,7 @@ internal class StatsCommand(
     private val plugin: JavaPlugin,
     private val service: ArenaApplicationService,
     messages: Messages,
-    private val resolveOffline: (String) -> CompletableFuture<UUID> = { name ->
-        CompletableFuture.supplyAsync { plugin.server.getOfflinePlayer(name).uniqueId }
-    }
+    private val resolveOffline: (String) -> CompletableFuture<UUID>
 ) : AbstractSubcommand(messages) {
 
     override fun visibleTo(sender: CommandSender): Boolean = true

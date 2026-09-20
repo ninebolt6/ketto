@@ -58,9 +58,9 @@ class InMemoryArenaRepository : ArenaRepository, LobbyRepository, ArenaSignRepos
         signs.remove(arenaName)
     }
 
-    override fun signOwner(world: String, x: Double, y: Double, z: Double): String? =
+    override fun signOwner(world: String, x: Int, y: Int, z: Int): String? =
         signs.entries.firstOrNull { (_, pos) ->
-            pos.world == world && pos.x == x && pos.y == y && pos.z == z
+            pos.world == world && pos.x.toInt() == x && pos.y.toInt() == y && pos.z.toInt() == z
         }?.key
 }
 

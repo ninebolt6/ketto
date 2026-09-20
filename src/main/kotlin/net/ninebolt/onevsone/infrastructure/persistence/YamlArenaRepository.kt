@@ -13,28 +13,24 @@ class YamlArenaRepository(private val store: YamlStore) : ArenaRepository {
     override fun loadAll(): List<ArenaDefinition> {
         val names = store.load(store.arenaListFile).getStringList("arenas")
         val seen = mutableSetOf<String>()
-        val definitions = mutableListOf<ArenaDefinition>()
-        names.forEach { name ->
+        return names.mapNotNull { name ->
             if (!isValidArenaName(name)) {
                 store.warn("Ignoring invalid arena name '$name' in arenalist.yml")
-                return@forEach
+                return@mapNotNull null
             }
             if (!seen.add(name.lowercase(Locale.ROOT))) {
                 store.warn("Ignoring duplicate arena name '$name' in arenalist.yml")
-                return@forEach
+                return@mapNotNull null
             }
-            val definition = try {
+            try {
                 find(name)
             } catch (e: PersistenceFailure) {
                 null
-            }
-            if (definition == null) {
+            } ?: run {
                 store.warn("Arena '$name' could not be loaded; skipping")
-                return@forEach
+                null
             }
-            definitions += definition
         }
-        return definitions
     }
 
     override fun find(name: String): ArenaDefinition? {

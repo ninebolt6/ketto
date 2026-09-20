@@ -10,7 +10,6 @@ import net.ninebolt.onevsone.domain.Participant
 import net.ninebolt.onevsone.infrastructure.persistence.PersistedBackup
 import net.ninebolt.onevsone.infrastructure.persistence.YamlStore
 import org.bukkit.Material
-import org.bukkit.Server
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import java.util.UUID
@@ -22,7 +21,6 @@ import java.util.UUID
 class PaperEquipmentAdapter(
     private val store: YamlStore,
     private val lookup: PaperPlayerLookup,
-    private val server: Server,
     private val messages: Messages
 ) : KitPort, InventoryBackupPort {
 
@@ -116,15 +114,9 @@ class PaperEquipmentAdapter(
 
     private fun giveLobbyItems(player: Player) {
         val compass = ItemStack(Material.COMPASS)
-        server.itemFactory.getItemMeta(Material.COMPASS)?.let { meta ->
-            meta.displayName(messages.component(messages.compassName))
-            compass.itemMeta = meta
-        }
+        compass.editMeta { it.displayName(messages.component(messages.compassName)) }
         val feather = ItemStack(Material.FEATHER)
-        server.itemFactory.getItemMeta(Material.FEATHER)?.let { meta ->
-            meta.displayName(messages.component(messages.featherName))
-            feather.itemMeta = meta
-        }
+        feather.editMeta { it.displayName(messages.component(messages.featherName)) }
         player.inventory.setItem(0, compass)
         player.inventory.setItem(8, feather)
     }

@@ -28,12 +28,7 @@ class ArenaSignListener(
         if (event.hand != EquipmentSlot.HAND) return
         val block = event.clickedBlock ?: return
         if (block.state !is Sign) return
-        val name = admin.signOwner(
-            block.world.name,
-            block.x.toDouble(),
-            block.y.toDouble(),
-            block.z.toDouble()
-        ) ?: return
+        val name = admin.signOwner(block.world.name, block.x, block.y, block.z) ?: return
         val match = service.matchOf(name) ?: return
         if (match.joinable) {
             renderJoin(event.player, name, service.join(event.player.uniqueId, event.player.name, match.arenaId))
@@ -47,13 +42,7 @@ class ArenaSignListener(
     fun onBreak(event: BlockBreakEvent) {
         val block = event.block
         if (block.state !is Sign) return
-        if (admin.signOwner(
-                block.world.name,
-                block.x.toDouble(),
-                block.y.toDouble(),
-                block.z.toDouble()
-            ) != null
-        ) {
+        if (admin.signOwner(block.world.name, block.x, block.y, block.z) != null) {
             event.isCancelled = true
         }
     }

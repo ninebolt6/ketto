@@ -3,12 +3,14 @@ package net.ninebolt.onevsone.domain
 import java.util.UUID
 
 /** アリーナ識別子。永続化・看板・ファイル名と一致する名前を包む。 */
-data class ArenaId(val name: String) {
+@JvmInline
+value class ArenaId(val name: String) {
     override fun toString(): String = name
 }
 
 /** 1 回の試合(バックアップ〜終了復元まで)を識別するトークン的 ID。 */
-data class MatchId(val value: UUID) {
+@JvmInline
+value class MatchId(val value: UUID) {
     companion object {
         fun newId(): MatchId = MatchId(UUID.randomUUID())
     }

@@ -90,8 +90,8 @@ class ArenaRegistry {
      * このアリーナを指しているエントリのみ外す(他アリーナ参加と混ざらないよう)。
      */
     private fun reconcileIndex(id: ArenaId, before: ArenaMatch?, after: ArenaMatch?) {
-        val beforeIds = before?.participants?.mapTo(HashSet()) { it.id } ?: emptySet()
-        val afterIds = after?.participants?.mapTo(HashSet()) { it.id } ?: emptySet()
+        val beforeIds = before?.participants?.map { it.id }?.toSet() ?: emptySet()
+        val afterIds = after?.participants?.map { it.id }?.toSet() ?: emptySet()
         for (playerId in beforeIds - afterIds) {
             if (playerArena[playerId] == id) playerArena.remove(playerId)
         }
