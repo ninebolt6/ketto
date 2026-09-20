@@ -71,9 +71,9 @@ class OneVsOneStatsCommandTest {
 
         env.writeStats(p.uniqueId, 3, 0)
         env.run(p, "stats")
-        verify(exactly = 1) { p.sendMessage(contains("Win: §b3")) }
-        verify(exactly = 1) { p.sendMessage(contains("Lose: §b0")) }
-        verify(exactly = 1) { p.sendMessage(contains("W/L(勝率): §b3.00")) }
+        verify(exactly = 1) { p.sendMessage(contains("Win: 3")) }
+        verify(exactly = 1) { p.sendMessage(contains("Lose: 0")) }
+        verify(exactly = 1) { p.sendMessage(contains("W/L(勝率): 3.00")) }
     }
 
     @Test
@@ -82,9 +82,9 @@ class OneVsOneStatsCommandTest {
         val target = env.player("Target")
         env.writeStats(target.uniqueId, 0, 2)
         env.run(viewer, "stats", "Target")
-        verify(exactly = 1) { viewer.sendMessage(contains("Win: §b0")) }
-        verify(exactly = 1) { viewer.sendMessage(contains("Lose: §b2")) }
-        verify(exactly = 1) { viewer.sendMessage(contains("W/L(勝率): §b0.00")) }
+        verify(exactly = 1) { viewer.sendMessage(contains("Win: 0")) }
+        verify(exactly = 1) { viewer.sendMessage(contains("Lose: 2")) }
+        verify(exactly = 1) { viewer.sendMessage(contains("W/L(勝率): 0.00")) }
     }
 
     @Test
@@ -96,7 +96,7 @@ class OneVsOneStatsCommandTest {
         every { offline.uniqueId } returns uuid
         every { env.server.getOfflinePlayerIfCached("Ghost") } returns offline
         env.run(viewer, "stats", "Ghost")
-        verify(exactly = 1) { viewer.sendMessage(contains("W/L(勝率): §b1.00")) }
+        verify(exactly = 1) { viewer.sendMessage(contains("W/L(勝率): 1.00")) }
     }
 
     @Test
@@ -110,7 +110,7 @@ class OneVsOneStatsCommandTest {
         env.run(viewer, "stats", "Ghost")
         verify(exactly = 0) { viewer.sendMessage(contains("Win:")) }
         env.runOneShots()
-        verify(exactly = 1) { viewer.sendMessage(contains("Win: §b2")) }
+        verify(exactly = 1) { viewer.sendMessage(contains("Win: 2")) }
     }
 
     @Test

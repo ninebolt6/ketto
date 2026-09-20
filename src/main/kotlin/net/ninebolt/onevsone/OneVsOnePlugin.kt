@@ -21,6 +21,7 @@ import net.ninebolt.onevsone.infrastructure.persistence.YamlSignRepository
 import net.ninebolt.onevsone.infrastructure.persistence.YamlPlayerStatsRepository
 import net.ninebolt.onevsone.infrastructure.persistence.YamlStore
 import org.bukkit.plugin.java.JavaPlugin
+import java.io.File
 
 /**
  * composition root。設定値を読み、実装を手動で生成・注入し、
@@ -46,7 +47,14 @@ class OneVsOnePlugin : JavaPlugin() {
         val signRepository = YamlSignRepository(store)
         val matchState = YamlMatchStateRepository(store)
         val stats = YamlPlayerStatsRepository(store)
-        val messages = Messages(config.getString("prefix") ?: "&8[&61vs1&8] ")
+        saveResource("lang/messages_ja.yml", false)
+        saveResource("lang/messages_en.yml", false)
+        val messages = Messages.load(
+            langDir = File(dataFolder, "lang"),
+            defaultLang = config.getString("default-language") ?: "ja",
+            language = config.getString("language") ?: "auto",
+            logger = logger
+        )
 
         val lookup = PaperPlayerLookup(server)
         val playerPort = PaperPlayerAdapter(lookup, server, failures)

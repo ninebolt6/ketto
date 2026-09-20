@@ -10,6 +10,7 @@ import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.contains
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.containsText
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.view
 import org.bukkit.Location
 import org.bukkit.Material
@@ -140,7 +141,7 @@ class PaperArenaFailureTest {
         verify(exactly = 1) {
             logger.log(
                 eq(Level.SEVERE),
-                contains("Failed to record"),
+                containsText("Failed to record"),
                 any<Throwable>()
             )
         }

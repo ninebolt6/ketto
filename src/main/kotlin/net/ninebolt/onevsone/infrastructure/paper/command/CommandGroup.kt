@@ -1,13 +1,14 @@
 package net.ninebolt.onevsone.infrastructure.paper.command
 
 import net.ninebolt.onevsone.infrastructure.paper.Messages
+import net.ninebolt.onevsone.infrastructure.paper.Msg
 import org.bukkit.command.CommandSender
 import org.bukkit.util.StringUtil
 import java.util.Locale
 
 /** サブコマンド名でルーティングする名前空間。root と arena 配下で共用する。 */
 internal class CommandGroup(
-    private val usage: String,
+    private val usage: Msg,
     private val messages: Messages,
     subs: Map<String, Subcommand>
 ) : Subcommand {
@@ -16,7 +17,7 @@ internal class CommandGroup(
     // 名前空間自体は常に表示する。配下の可視性は子の visibleTo が判断する
     override fun visibleTo(sender: CommandSender): Boolean = true
 
-    override fun execute(sender: CommandSender, args: List<String>): String? {
+    override fun execute(sender: CommandSender, args: List<String>): Msg? {
         val sub = args.firstOrNull()?.let { byName[it.lowercase(Locale.ROOT)] } ?: return usage
         return sub.execute(sender, args.drop(1))
     }

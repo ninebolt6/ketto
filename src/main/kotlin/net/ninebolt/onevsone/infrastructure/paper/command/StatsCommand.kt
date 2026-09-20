@@ -3,6 +3,7 @@ package net.ninebolt.onevsone.infrastructure.paper.command
 import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.infrastructure.paper.Messages
+import net.ninebolt.onevsone.infrastructure.paper.Msg
 import org.bukkit.command.CommandSender
 import org.bukkit.plugin.IllegalPluginAccessException
 import org.bukkit.plugin.java.JavaPlugin
@@ -17,7 +18,7 @@ internal class StatsCommand(
 
     override fun visibleTo(sender: CommandSender): Boolean = true
 
-    override fun execute(sender: CommandSender, args: List<String>): String? {
+    override fun execute(sender: CommandSender, args: List<String>): Msg? {
         val player = sender.requirePlayer() ?: return null
         if (args.isEmpty()) {
             showStats(player, player.uniqueId)

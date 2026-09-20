@@ -1,0 +1,86 @@
+# 1vs1 messages (English)
+# MiniMessage format. <name> etc. are placeholders. Add a language by placing lang/messages_<lang>.yml.
+prefix: "<dark_gray>[<gold>1vs1<dark_gray>] "
+
+usage:
+  root: "<yellow>/1vs1 stats | /1vs1 stats [player]"
+  arena: "<yellow>/1vs1 arena info [arena]"
+  create: "<red>/1vs1 arena create [arena]"
+  remove: "<red>/1vs1 arena remove [arena]"
+  set-spawn: "<red>/1vs1 arena setspawn<n> [arena]"
+  enable: "<red>/1vs1 arena enable [arena]"
+  disable: "<red>/1vs1 arena disable [arena]"
+  set-inv: "<red>/1vs1 arena setInv [arena]"
+  set-sign: "<red>/1vs1 arena setsign [arena]"
+  remove-sign: "<red>/1vs1 arena removesign [arena]"
+
+command:
+  no-permission: "<red>You don't have permission!"
+  player-only: "<red>This command can only be used by players"
+  blocked: "<red>You cannot use commands right now!"
+
+lobby:
+  set: "<green>Lobby location set"
+
+arena:
+  exists: "<red>That arena already exists"
+  not-found: "<red>That arena does not exist"
+  created: "<green>Created arena: <name>"
+  removed: "<green>Removed arena: <name>"
+  spawn-set: "<green>Set spawn <slot> for arena: <name>"
+  enabled: "<green>Enabled arena: <name>"
+  already-enabled: "<red>That arena is already enabled!"
+  disabled: "<green>Disabled arena: <name>"
+  already-disabled: "<red>That arena is already disabled!"
+  inventory-set: "<green>Set inventory for arena: <name>"
+  not-enabled: "<red>That arena is not enabled!"
+  info:
+    header: "<yellow>=== <green>Arena[<aqua><bold><name><green>] <yellow>==="
+    state: "<yellow>State: <display>"
+    versus: "<red>[<gold><name1><red>] vs [<gold><name2><red>]"
+    wins: "<yellow>Wins: <green><wins1>-<wins2>"
+
+match:
+  joined: "<green>Joined arena: <name>"
+  wait-one-more: "<yellow>Waiting for one more player."
+  already-joined: "<red>You are already in another arena"
+  in-game: "<red>This arena is currently in a match"
+  left: "<red>You left the arena"
+  cannot-leave: "<red>You cannot leave during the countdown!"
+  not-joined: "<red>You are not in an arena!"
+  teleport-in: "<green>Teleporting in: <n>s"
+  game-start: "<green>Game start!"
+  start-in: "<green>Starting in: <n>s"
+  round-start: "<green>Go!"
+  round-winner: "<aqua>Round[<gold><round><aqua>] winner: <name>"
+  champion: "<yellow><name> won the match in arena <arena>!"
+
+stats:
+  win: "<red>Win: <aqua><wins>"
+  lose: "<red>Lose: <aqua><losses>"
+  ratio: "<red>W/L(ratio): <aqua><ratio>"
+  none: "<red>No stats found"
+
+sign:
+  look-at: "<red>Look at a sign and run the command"
+  taken: "<red>That sign is already registered"
+  removed: "<green>Unregistered sign for arena: <name>"
+  not-registered: "<red>No sign is registered for that arena"
+  title: "<dark_red>[<gold><bold>1vs1<dark_red>]"
+  arena: "<aqua><name>"
+  join: "<blue>Join"
+  cannot-join: "<dark_red>Cannot join"
+
+state:
+  waiting: "<green>Waiting"
+  onemore: "<yellow>1 More"
+  countdown: "<red>Countdown"
+  ingame: "<red><bold>Ingame"
+
+scoreboard:
+  title: "<green><bold><arena>"
+  entry: "<gold><name>"
+
+item:
+  compass: "<yellow>Game Selector - Right click to open"
+  feather: "<red>Feather - Right click to Fly (VIP only)"

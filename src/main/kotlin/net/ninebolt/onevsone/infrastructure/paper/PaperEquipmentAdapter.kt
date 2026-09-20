@@ -114,9 +114,9 @@ class PaperEquipmentAdapter(
 
     private fun giveLobbyItems(player: Player) {
         val compass = ItemStack(Material.COMPASS)
-        compass.editMeta { it.displayName(messages.component(messages.compassName)) }
+        compass.editMeta { it.displayName(messages.render(messages.compassName)) }
         val feather = ItemStack(Material.FEATHER)
-        feather.editMeta { it.displayName(messages.component(messages.featherName)) }
+        feather.editMeta { it.displayName(messages.render(messages.featherName)) }
         player.inventory.setItem(0, compass)
         player.inventory.setItem(8, feather)
     }

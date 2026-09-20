@@ -109,11 +109,13 @@ class PaperMatchPresentation(
         val objective = board.registerNewObjective(
             "1vs1",
             Criteria.DUMMY,
-            messages.component(messages.scoreboardTitle(match.arenaId.name))
+            messages.render(messages.scoreboardTitle(match.arenaId.name))
         )
         objective.displaySlot = DisplaySlot.SIDEBAR
         match.participants.forEach { (id, name) ->
-            objective.getScore(messages.scoreboardEntry(name)).score = match.winsOf(id)
+            val score = objective.getScore(name)
+            score.customName(messages.render(messages.scoreboardEntry(name)))
+            score.score = match.winsOf(id)
         }
         match.participants.forEach { (id) ->
             player(id)?.scoreboard = board
@@ -135,10 +137,10 @@ class PaperMatchPresentation(
         val blockState = world.getBlockAt(sign.x.toInt(), sign.y.toInt(), sign.z.toInt()).state
         if (blockState !is Sign) return
         val front = blockState.getSide(Side.FRONT)
-        front.line(0, messages.component(messages.signTitle))
-        front.line(1, messages.component(messages.signArena(arena.name)))
-        front.line(2, messages.component(if (state.isJoinable()) messages.signJoin else messages.signCannotJoin))
-        front.line(3, messages.component(messages.stateDisplay(state)))
+        front.line(0, messages.render(messages.signTitle))
+        front.line(1, messages.render(messages.signArena(arena.name)))
+        front.line(2, messages.render(if (state.isJoinable()) messages.signJoin else messages.signCannotJoin))
+        front.line(3, messages.render(messages.stateDisplay(state)))
         blockState.update()
     }
 }

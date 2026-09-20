@@ -4,6 +4,7 @@ import net.ninebolt.onevsone.application.ArenaAdministrationService
 import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.infrastructure.paper.Messages
+import net.ninebolt.onevsone.infrastructure.paper.Msg
 import org.bukkit.command.CommandSender
 
 /** /1vs1 arena info。非 OP でも参照可能な唯一の arena サブコマンド。 */
@@ -15,14 +16,14 @@ internal class ArenaInfoCommand(
 
     override fun visibleTo(sender: CommandSender): Boolean = true
 
-    override fun execute(sender: CommandSender, args: List<String>): String? {
+    override fun execute(sender: CommandSender, args: List<String>): Msg? {
         if (args.isEmpty()) return messages.usageArena
         val match = service.matchOf(args[0]) ?: run {
             messages.send(sender, messages.noArena)
             return null
         }
         messages.send(sender, messages.arenaHeader(match.arenaId.name))
-        messages.send(sender, messages.arenaState(messages.stateDisplay(match.state)))
+        messages.send(sender, messages.arenaState(match.state))
         if ((match.state == ArenaState.ROUNDCOUNTDOWN || match.state == ArenaState.INGAME) &&
             match.full
         ) {

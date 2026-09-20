@@ -12,7 +12,10 @@ repositories {
 
 dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.1-R0.1-SNAPSHOT")
+    // Paper が実行時提供するが、推移依存への暗黙依存を避けるため明示する
+    compileOnly("net.kyori:adventure-text-minimessage:4.17.0")
     testImplementation("io.papermc.paper:paper-api:1.21.1-R0.1-SNAPSHOT")
+    testImplementation("net.kyori:adventure-text-serializer-plain:4.17.0")
     testImplementation(kotlin("test-junit5"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.13.4")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.13.4")

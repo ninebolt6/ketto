@@ -47,6 +47,7 @@ import org.bukkit.Material
 import org.bukkit.Server
 import org.bukkit.World
 import org.bukkit.configuration.file.YamlConfiguration
+import org.bukkit.command.ConsoleCommandSender
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.PlayerInventory
@@ -61,6 +62,7 @@ import org.bukkit.scoreboard.Score
 import org.bukkit.scoreboard.Scoreboard
 import org.bukkit.scoreboard.ScoreboardManager
 import java.io.File
+import java.util.Locale
 import java.util.UUID
 import java.util.function.Consumer
 import java.util.logging.Logger
@@ -75,8 +77,9 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     val scheduler: BukkitScheduler = mockk(relaxed = true)
     val asyncScheduler: AsyncScheduler = mockk(relaxed = true)
     val scoreboardManager: ScoreboardManager = mockk(relaxed = true)
+    val console: ConsoleCommandSender = mockk(relaxed = true)
 
-    val messages = Messages("&8[&61vs1&8] ")
+    val messages = Messages.load(File(folder, "lang"), "ja", "auto", Logger.getLogger("1vs1-test"))
     val failures = PluginFailureReporter { plugin.logger }
     val lookup = PaperPlayerLookup(server)
     val playerPort = PaperPlayerAdapter(lookup, server, failures)
@@ -170,7 +173,6 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         every { plugin.logger } returns Logger.getLogger("1vs1-test")
         every { plugin.dataFolder } returns folder
         val config = YamlConfiguration()
-        config.set("prefix", "&8[&61vs1&8] ")
         config.set("required-wins", requiredWins)
         every { plugin.config } returns config
 
@@ -181,6 +183,8 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         every { server.getPlayerExact(any<String>()) } answers {
             players.values.firstOrNull { it.name == firstArg<String>() }
         }
+        every { server.onlinePlayers } answers { players.values.toList() }
+        every { server.consoleSender } returns console
         every { server.getWorld(any<String>()) } answers { worlds[firstArg()] }
         every { server.getOfflinePlayerIfCached(any<String>()) } returns null
 
@@ -288,6 +292,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         every { p.inventory } returns inv
         every { p.isOnline } returns true
         every { p.world } returns w
+        every { p.locale() } returns Locale.JAPAN
         every { p.location } returns Location(w, 0.0, 64.0, 0.0)
         every { p.spigot() } returns spigot
         every { p.getAttribute(any()) } returns null

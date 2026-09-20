@@ -1,5 +1,6 @@
 package net.ninebolt.onevsone.infrastructure.paper.command
 
+import net.ninebolt.onevsone.infrastructure.paper.Msg
 import org.bukkit.command.CommandSender
 
 /**
@@ -11,7 +12,7 @@ internal interface Subcommand {
     fun visibleTo(sender: CommandSender): Boolean = sender.isOp
 
     /** @return 構文エラー時に表示すべき usage。応答送信済みなら null */
-    fun execute(sender: CommandSender, args: List<String>): String?
+    fun execute(sender: CommandSender, args: List<String>): Msg?
 
     fun tabComplete(sender: CommandSender, args: List<String>): List<String> = emptyList()
 }

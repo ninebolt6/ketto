@@ -44,7 +44,9 @@ composition root として手動で全依存を配線する(DI フレームワ�
 - `.../infrastructure/persistence/` — `YamlStore`(共通 I/O と backup コーデック) +
   `YamlArenaRepository`/`YamlLobbyRepository`/`YamlSignRepository`/
   `YamlMatchStateRepository`/`YamlPlayerStatsRepository`
-- `src/main/resources/` — plugin.yml(version は processResources で展開), config.yml
+- `src/main/resources/` — plugin.yml(version は processResources で展開), config.yml,
+  `lang/messages_<lang>.yml`(MiniMessage 文言。`Messages` が Msg キー+引数を宛先ロケールで
+  描画。`language: auto` でクライアントロケール、共有面は `default-language`)
 - `src/test/kotlin/...` — domain/application は純粋テスト + fake、infrastructure は
   JUnit5 + MockK(モック Server/Player/Scheduler、静的 Bukkit を mockkStatic)の TestEnv 統合。
   `ArchitectureTest` が内側層の禁止参照を検査。

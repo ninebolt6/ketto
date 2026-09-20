@@ -126,7 +126,8 @@ class PaperMatchProgressionTest {
         }
         env.tick()
         assertEquals(ArenaState.INGAME, env.view().state)
-        verify(exactly = 1) { p1.sendMessage(contains("§aスタート！")) }
+        // ラウンド開始「スタート！」はゲーム開始「ゲームスタート！」の部分文字列なので prefix 境界で区別する
+        verify(exactly = 1) { p1.sendMessage(contains("] スタート！")) }
     }
 
     @Test

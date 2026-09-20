@@ -70,10 +70,10 @@ class OneVsOneAdminCommandTest {
         env.service.defeat(p2.uniqueId, DefeatCause.FALL)
 
         env.run(viewer, "arena", "info", "arena1")
-        verify(exactly = 1) { viewer.sendMessage(contains("=== §aArena[§b§larena1§a] §e===")) }
-        verify(exactly = 1) { viewer.sendMessage(contains("状態: §c§lIngame")) }
-        verify(exactly = 1) { viewer.sendMessage(contains("[§6Alice§c] vs [§6Bob§c]")) }
-        verify(exactly = 1) { viewer.sendMessage(contains("勝数: §a1-0")) }
+        verify(exactly = 1) { viewer.sendMessage(contains("=== Arena[arena1] ===")) }
+        verify(exactly = 1) { viewer.sendMessage(contains("状態: Ingame")) }
+        verify(exactly = 1) { viewer.sendMessage(contains("[Alice] vs [Bob]")) }
+        verify(exactly = 1) { viewer.sendMessage(contains("勝数: 1-0")) }
     }
 
     @Test
@@ -105,7 +105,7 @@ class OneVsOneAdminCommandTest {
         env.run(op, "arena", "disable", "a2")
         verify(exactly = 1) { op.sendMessage(contains("を無効にしました")) }
         env.run(op, "arena", "disable", "a2")
-        verify(exactly = 1) { op.sendMessage(contains("§cそのアリーナはすでに無効です！")) }
+        verify(exactly = 1) { op.sendMessage(contains("そのアリーナはすでに無効です！")) }
         assertEquals(false, env.service.definition("a2")!!.enabled)
     }
 
@@ -191,9 +191,9 @@ class OneVsOneAdminCommandTest {
     fun `missing arg shows red usage`() {
         val op = env.opPlayer("Op")
         env.run(op, "arena", "create")
-        verify(exactly = 1) { op.sendMessage(contains("§c/1vs1 arena create [arena]")) }
+        verify(exactly = 1) { op.sendMessage(contains("/1vs1 arena create [arena]")) }
         env.run(op, "arena", "setsign")
-        verify(exactly = 1) { op.sendMessage(contains("§c/1vs1 arena setsign [arena]")) }
+        verify(exactly = 1) { op.sendMessage(contains("/1vs1 arena setsign [arena]")) }
     }
 
     @Test
@@ -201,9 +201,9 @@ class OneVsOneAdminCommandTest {
         val op = env.opPlayer("Op")
         env.newArena()
         env.run(op, "arena", "create", "other", "extra")
-        verify(exactly = 1) { op.sendMessage(contains("§c/1vs1 arena create [arena]")) }
+        verify(exactly = 1) { op.sendMessage(contains("/1vs1 arena create [arena]")) }
         env.run(op, "arena", "info", "arena1", "extra")
-        verify(exactly = 1) { op.sendMessage(contains("Arena[§b§larena1§a]")) }
+        verify(exactly = 1) { op.sendMessage(contains("Arena[arena1]")) }
     }
 
     @Test
