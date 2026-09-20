@@ -25,12 +25,13 @@ data class Arena private constructor(
         companion object {
             /**
              * アリーナ名の受理規則。永続化ファイル名に直結するため、パスに使えない
-             * 文字や予約名(players)を拒否する。
+             * 文字・前後の空白・予約名(players)を拒否する。
              */
             private fun isValidName(name: String): Boolean =
                 name.isNotBlank() &&
                     name.length <= 64 &&
-                    name.none { it == '/' || it == '\\' || it == '.' || it.isISOControl() } &&
+                    name.trim() == name &&
+                    name.none { it == '/' || it == '\\' || it == '.' || it == ':' || it.isISOControl() } &&
                     !name.equals("players", ignoreCase = true)
 
             /** コマンド引数・永続化データなどの外部入力からの変換。不正名は null。 */
