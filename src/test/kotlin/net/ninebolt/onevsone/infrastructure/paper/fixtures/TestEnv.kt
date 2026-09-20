@@ -27,6 +27,7 @@ import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.WorldPosition
 import net.ninebolt.onevsone.infrastructure.paper.ArenaListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaSignListener
+import net.ninebolt.onevsone.infrastructure.paper.LobbyItems
 import net.ninebolt.onevsone.infrastructure.paper.Messages
 import net.ninebolt.onevsone.infrastructure.paper.command.OneVsOneCommand
 import net.ninebolt.onevsone.infrastructure.paper.PaperEquipmentAdapter
@@ -108,7 +109,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         private set
     var kitStore: YamlKitStore = YamlKitStore(store)
         private set
-    var equipment = PaperEquipmentAdapter(backupStore, kitStore, lookup, messages)
+    var equipment = PaperEquipmentAdapter(backupStore, kitStore, lookup, LobbyItems(messages))
         private set
     var presentation = PaperMatchPresentation(server, messages, signRepo, failures)
         private set
@@ -151,7 +152,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         signRepo = YamlSignRepository(store)
         matchStateRepo = matchState
         this.statsRepo = statsRepo
-        equipment = PaperEquipmentAdapter(backupStore, kitStore, lookup, messages)
+        equipment = PaperEquipmentAdapter(backupStore, kitStore, lookup, LobbyItems(messages))
         presentation = PaperMatchPresentation(server, messages, signRepo, failures)
         registry = ArenaRegistry()
         recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepo, presentation, failures)

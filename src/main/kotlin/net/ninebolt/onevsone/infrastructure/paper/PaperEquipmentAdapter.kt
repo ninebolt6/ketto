@@ -10,9 +10,7 @@ import net.ninebolt.onevsone.domain.Participant
 import net.ninebolt.onevsone.infrastructure.persistence.PersistedBackup
 import net.ninebolt.onevsone.infrastructure.persistence.YamlBackupStore
 import net.ninebolt.onevsone.infrastructure.persistence.YamlKitStore
-import org.bukkit.Material
 import org.bukkit.entity.Player
-import org.bukkit.inventory.ItemStack
 import kotlin.uuid.Uuid
 
 /**
@@ -23,7 +21,7 @@ class PaperEquipmentAdapter(
     private val backups: YamlBackupStore,
     private val kitStore: YamlKitStore,
     private val lookup: PaperPlayerLookup,
-    private val messages: Messages
+    private val lobby: LobbyItems
 ) : KitPort, InventoryBackupPort {
 
     /** アリーナ装備のメモリキャッシュ(arena/<name>.yml の inventory)。 */
@@ -79,7 +77,7 @@ class PaperEquipmentAdapter(
             ?: throw PersistenceFailure("Player ${backup.playerName} is not available for restore")
         player.inventory.clear()
         if (snapshot.isEmpty) {
-            giveLobbyItems(player)
+            lobby.give(player)
         } else {
             snapshot.apply(player.inventory)
         }
@@ -113,13 +111,4 @@ class PaperEquipmentAdapter(
 
     private fun kit(arena: ArenaId): PaperInventorySnapshot =
         kits.getOrPut(arena) { kitStore.loadArenaKit(arena.name) }
-
-    private fun giveLobbyItems(player: Player) {
-        val compass = ItemStack(Material.COMPASS)
-        compass.editMeta { it.displayName(messages.render(messages.compassName)) }
-        val feather = ItemStack(Material.FEATHER)
-        feather.editMeta { it.displayName(messages.render(messages.featherName)) }
-        player.inventory.setItem(0, compass)
-        player.inventory.setItem(8, feather)
-    }
 }

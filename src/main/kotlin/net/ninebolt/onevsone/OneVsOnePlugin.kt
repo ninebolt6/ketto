@@ -8,6 +8,7 @@ import net.ninebolt.onevsone.application.MatchStateSync
 import net.ninebolt.onevsone.application.PlayerRecoveryService
 import net.ninebolt.onevsone.infrastructure.paper.ArenaListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaSignListener
+import net.ninebolt.onevsone.infrastructure.paper.LobbyItems
 import net.ninebolt.onevsone.infrastructure.paper.Messages
 import net.ninebolt.onevsone.infrastructure.paper.command.OneVsOneCommand
 import net.ninebolt.onevsone.infrastructure.paper.PaperEquipmentAdapter
@@ -62,7 +63,7 @@ class OneVsOnePlugin : JavaPlugin() {
 
         val lookup = PaperPlayerLookup(server)
         val playerPort = PaperPlayerAdapter(lookup, server, failures)
-        val equipment = PaperEquipmentAdapter(YamlBackupStore(store), YamlKitStore(store), lookup, messages)
+        val equipment = PaperEquipmentAdapter(YamlBackupStore(store), YamlKitStore(store), lookup, LobbyItems(messages))
         val scheduler = PaperScheduler(this)
         val presentation = PaperMatchPresentation(server, messages, signRepository, failures)
 
