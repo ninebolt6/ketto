@@ -4,12 +4,15 @@ import net.ninebolt.onevsone.application.ArenaAdministrationService
 import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.application.JoinReply
 import net.ninebolt.onevsone.domain.Arena
+import org.bukkit.block.Block
 import org.bukkit.block.Sign
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
 import org.bukkit.event.block.BlockBreakEvent
+import org.bukkit.event.block.BlockExplodeEvent
+import org.bukkit.event.entity.EntityExplodeEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.inventory.EquipmentSlot
 import kotlin.uuid.toKotlinUuid
@@ -44,12 +47,24 @@ class ArenaSignListener(
     /** 登録中の看板は誰も壊せない。解除は /1vs1 arena removesign か arena remove のみ。 */
     @EventHandler
     fun onBreak(event: BlockBreakEvent) {
-        val block = event.block
-        if (block.state !is Sign) return
-        if (admin.signOwner(block.world.name, block.x, block.y, block.z) != null) {
+        if (isRegisteredSign(event.block)) {
             event.isCancelled = true
         }
     }
+
+    @EventHandler
+    fun onEntityExplode(event: EntityExplodeEvent) {
+        event.blockList().removeIf(::isRegisteredSign)
+    }
+
+    @EventHandler
+    fun onBlockExplode(event: BlockExplodeEvent) {
+        event.blockList().removeIf(::isRegisteredSign)
+    }
+
+    /** 登録済みアリーナの参加看板か。 */
+    private fun isRegisteredSign(block: Block): Boolean =
+        block.state is Sign && admin.signOwner(block.world.name, block.x, block.y, block.z) != null
 
     /** join ユースケース結果の文言変換。看板参加の経路で共有する。 */
     fun renderJoin(player: Player, arenaName: String, reply: JoinReply) {

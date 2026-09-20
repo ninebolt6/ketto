@@ -7,11 +7,15 @@ import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.breakEvent
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.interact
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.nonPlayer
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.plainBlock
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.signBlock
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.twoPlayerIngame
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
+import org.bukkit.ExplosionResult
 import org.bukkit.event.block.Action
+import org.bukkit.event.block.BlockExplodeEvent
+import org.bukkit.event.entity.EntityExplodeEvent
 import org.bukkit.event.player.PlayerJoinEvent
 import org.bukkit.inventory.EquipmentSlot
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -111,6 +115,24 @@ class ArenaListenerSignTest {
         val freed = breakEvent(p1, env.signBlock(3, 64, 3))
         env.signListener.onBreak(freed)
         assertFalse(freed.isCancelled)
+    }
+
+    @Test
+    fun `registered sign survives explosions`() {
+        env.newArena()
+        env.signRepo.setSign("arena1", WorldPosition.new("world", 3.0, 64.0, 3.0))
+        val sign = env.signBlock(3, 64, 3)
+        val plain = env.plainBlock(9, 64, 9)
+
+        val explode = EntityExplodeEvent(
+            env.nonPlayer(), sign.location, mutableListOf(sign, plain), 0f, ExplosionResult.DESTROY
+        )
+        env.signListener.onEntityExplode(explode)
+        assertEquals(listOf(plain), explode.blockList())
+
+        val blockExplode = BlockExplodeEvent(sign, sign.state, mutableListOf(sign, plain), 0f, ExplosionResult.DESTROY)
+        env.signListener.onBlockExplode(blockExplode)
+        assertEquals(listOf(plain), blockExplode.blockList())
     }
 
     @Test
