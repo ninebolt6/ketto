@@ -7,8 +7,6 @@ import org.bukkit.command.Command
 import org.bukkit.command.CommandSender
 import org.bukkit.command.TabExecutor
 import org.bukkit.plugin.java.JavaPlugin
-import java.util.UUID
-import java.util.concurrent.CompletableFuture
 
 /**
  * /1vs1 の TabExecutor。plugin.yml からの登録点はここだけで、
@@ -18,14 +16,11 @@ class OneVsOneCommand(
     plugin: JavaPlugin,
     service: ArenaApplicationService,
     admin: ArenaAdministrationService,
-    private val messages: Messages,
-    resolveOffline: (String) -> CompletableFuture<UUID> = { name ->
-        CompletableFuture.supplyAsync { plugin.server.getOfflinePlayer(name).uniqueId }
-    }
+    private val messages: Messages
 ) : TabExecutor {
 
     private val root = CommandGroup(messages.usageRoot, messages, mapOf(
-        "stats" to StatsCommand(plugin, service, messages, resolveOffline),
+        "stats" to StatsCommand(plugin, service, messages),
         "leave" to LeaveCommand(service, messages),
         "setlobby" to SetLobbyCommand(admin, messages),
         "arena" to CommandGroup(messages.usageArena, messages, mapOf(

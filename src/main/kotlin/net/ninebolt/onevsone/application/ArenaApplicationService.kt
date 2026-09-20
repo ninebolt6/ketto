@@ -374,92 +374,47 @@ class ArenaApplicationService(
     // ---- 内部: カウントダウン -------------------------------------------------
 
     private fun startInitialCountdown(arenaId: ArenaId) {
-        val gen = registry.match(arenaId)?.token ?: return
-        var remaining = 5
-        timers[arenaId] = scheduler.repeat(10, 20) { task ->
-            val match = registry.match(arenaId)
-            if (match == null || match.token != gen || !match.canBeginMatch) {
-                task.cancel()
-                return@repeat
-            }
-            val first = match.participantAt(0)
-            val second = match.participantAt(1)
-            if (first == null || second == null) {
-                task.cancel()
-                return@repeat
-            }
-            val p1 = players.handle(first.id)
-            val p2 = players.handle(second.id)
-            if (p1 == null || p2 == null) {
-                task.cancel()
-                abort(arenaId)
-                return@repeat
-            }
+        runCountdown(arenaId, ticks = 5, stillCounting = { it.canBeginMatch }) {
             if (remaining > 0) {
-                presentation.countdownTick(match.participants.map { it.id }, remaining)
-            } else {
-                // 開始直前に両者の接続・生存を再確認(死亡中は開始を保留)
-                if (p1.dead || p2.dead) return@repeat
-                // 両者の持ち物を一括保存してから装備を交換する
-                val refs = try {
-                    backups.backupBeforeMatch(MatchId.newId(), match.participants)
-                } catch (e: PersistenceFailure) {
-                    failures.report("Could not save inventories before starting arena ${arenaId.name}; match aborted", e)
-                    task.cancel()
-                    abort(arenaId)
-                    return@repeat
-                }
-                recovery.register(refs)
-                try {
-                    kit.applyKit(arenaId, first.id)
-                    kit.applyKit(arenaId, second.id)
-                    p1.prepareForMatch()
-                    p2.prepareForMatch()
-                    teleportToSlot(match, first, p1)
-                    teleportToSlot(match, second, p2)
-                    presentation.matchStart(match.participants.map { it.id })
-                    val began = registry.transact(arenaId) { it.beginMatch() }
-                    if (began != null && began.outcome) {
-                        presentation.updateScoreboard(began.match)
-                        matchState.saveStatus(began.match)
-                        presentation.updateSign(arenaId, ArenaState.INGAME)
-                    }
-                } catch (e: Exception) {
-                    // 交換途中失敗: 取得済みバックアップで中断・復元する
-                    failures.report("Could not apply equipment before starting arena ${arenaId.name}; match aborted", e)
-                    task.cancel()
-                    abort(arenaId)
-                    return@repeat
-                }
-                task.cancel()
+                presentation.countdownTick(participantIds, remaining)
+                return@runCountdown false
             }
-            remaining--
+            // 開始直前に両者の接続・生存を再確認(死亡中は開始を保留)
+            if (p1.dead || p2.dead) return@runCountdown false
+            // 両者の持ち物を一括保存してから装備を交換する
+            val refs = try {
+                backups.backupBeforeMatch(MatchId.newId(), match.participants)
+            } catch (e: PersistenceFailure) {
+                failures.report("Could not save inventories before starting arena ${arenaId.name}; match aborted", e)
+                abort(arenaId)
+                return@runCountdown true
+            }
+            recovery.register(refs)
+            try {
+                kit.applyKit(arenaId, first.id)
+                kit.applyKit(arenaId, second.id)
+                p1.prepareForMatch()
+                p2.prepareForMatch()
+                teleportToSlot(match, first, p1)
+                teleportToSlot(match, second, p2)
+                presentation.matchStart(participantIds)
+                val began = registry.transact(arenaId) { it.beginMatch() }
+                if (began != null && began.outcome) {
+                    presentation.updateScoreboard(began.match)
+                    matchState.saveStatus(began.match)
+                    presentation.updateSign(arenaId, ArenaState.INGAME)
+                }
+            } catch (e: Exception) {
+                // 交換途中失敗: 取得済みバックアップで中断・復元する
+                failures.report("Could not apply equipment before starting arena ${arenaId.name}; match aborted", e)
+                abort(arenaId)
+            }
+            true
         }
     }
 
     private fun startRoundCountdown(arenaId: ArenaId) {
-        val gen = registry.match(arenaId)?.token ?: return
-        var remaining = 7
-        timers[arenaId] = scheduler.repeat(10, 20) { task ->
-            val match = registry.match(arenaId)
-            if (match == null || match.token != gen || !match.canResumeRound) {
-                task.cancel()
-                return@repeat
-            }
-            val first = match.participantAt(0)
-            val second = match.participantAt(1)
-            if (first == null || second == null) {
-                task.cancel()
-                return@repeat
-            }
-            val p1 = players.handle(first.id)
-            val p2 = players.handle(second.id)
-            if (p1 == null || p2 == null) {
-                task.cancel()
-                abort(arenaId)
-                return@repeat
-            }
-            val ids = match.participants.map { it.id }
+        runCountdown(arenaId, ticks = 7, stillCounting = { it.canResumeRound }) {
             when (remaining) {
                 7 -> {
                     kit.applyKit(arenaId, first.id)
@@ -467,19 +422,68 @@ class ArenaApplicationService(
                     p1.prepareForMatch()
                     p2.prepareForMatch()
                 }
-                in 1..5 -> presentation.roundCountdownTick(ids, remaining)
+                in 1..5 -> presentation.roundCountdownTick(participantIds, remaining)
                 0 -> {
-                    presentation.roundStart(ids)
+                    presentation.roundStart(participantIds)
                     val resumed = registry.transact(arenaId) { it.resumeRound() }
                     if (resumed != null && resumed.outcome) {
                         matchState.saveStatus(resumed.match)
                         presentation.updateSign(arenaId, ArenaState.INGAME)
                     }
-                    task.cancel()
                 }
             }
+            remaining == 0
+        }
+    }
+
+    /**
+     * カウントダウン共通骨格。毎 tick 最新の match を再読みし、世代トークン一致と
+     * stillCounting の進行条件を確認してから両者のハンドルを解決する。
+     * ハンドル消失(切断)時はタスク終了と併せて abort する。onTick が true を
+     * 返した tick で終了。remaining は ticks から減り 0 以下でも呼ばれる。
+     */
+    private fun runCountdown(
+        arenaId: ArenaId,
+        ticks: Int,
+        stillCounting: (ArenaMatch) -> Boolean,
+        onTick: CountdownTick.() -> Boolean
+    ) {
+        val gen = registry.match(arenaId)?.token ?: return
+        var remaining = ticks
+        timers[arenaId] = scheduler.repeat(10, 20) { task ->
+            val match = registry.match(arenaId)
+            if (match == null || match.token != gen || !stillCounting(match)) {
+                task.cancel()
+                return@repeat
+            }
+            val first = match.participantAt(0)
+            val second = match.participantAt(1)
+            if (first == null || second == null) {
+                task.cancel()
+                return@repeat
+            }
+            val p1 = players.handle(first.id)
+            val p2 = players.handle(second.id)
+            if (p1 == null || p2 == null) {
+                task.cancel()
+                abort(arenaId)
+                return@repeat
+            }
+            if (CountdownTick(match, first, second, p1, p2, remaining).onTick()) task.cancel()
             remaining--
         }
+    }
+
+    /** runCountdown の各 tick に渡す、match と両者ハンドルを解決済みのコンテキスト。 */
+    private class CountdownTick(
+        val match: ArenaMatch,
+        val first: Participant,
+        val second: Participant,
+        val p1: PlayerHandle,
+        val p2: PlayerHandle,
+        val remaining: Int
+    ) {
+        val participantIds: List<UUID> get() = match.participants.map { it.id }
     }
 
     // ---- 内部: 共通 ---------------------------------------------------------

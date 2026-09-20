@@ -9,6 +9,8 @@ import io.mockk.mockkConstructor
 import io.mockk.mockkStatic
 import io.mockk.unmockkConstructor
 import io.mockk.unmockkStatic
+import io.papermc.paper.threadedregions.scheduler.AsyncScheduler
+import io.papermc.paper.threadedregions.scheduler.ScheduledTask
 import net.ninebolt.onevsone.application.ArenaAdministrationService
 import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.application.ArenaRegistry
@@ -60,6 +62,7 @@ import org.bukkit.scoreboard.Scoreboard
 import org.bukkit.scoreboard.ScoreboardManager
 import java.io.File
 import java.util.UUID
+import java.util.function.Consumer
 import java.util.logging.Logger
 
 /**
@@ -70,6 +73,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     val server: Server = mockk(relaxed = true)
     val plugin: JavaPlugin = mockk(relaxed = true)
     val scheduler: BukkitScheduler = mockk(relaxed = true)
+    val asyncScheduler: AsyncScheduler = mockk(relaxed = true)
     val scoreboardManager: ScoreboardManager = mockk(relaxed = true)
 
     val messages = Messages("&8[&61vs1&8] ")
@@ -151,8 +155,8 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
 
         mockkConstructor(ItemStack::class)
         every { anyConstructed<ItemStack>().itemMeta = any() } just Runs
-        every { anyConstructed<ItemStack>().editMeta(any<java.util.function.Consumer<ItemMeta>>()) } answers {
-            firstArg<java.util.function.Consumer<ItemMeta>>().accept(mockk<ItemMeta>(relaxed = true))
+        every { anyConstructed<ItemStack>().editMeta(any<Consumer<ItemMeta>>()) } answers {
+            firstArg<Consumer<ItemMeta>>().accept(mockk<ItemMeta>(relaxed = true))
             true
         }
         listOf(Material.COMPASS, Material.FEATHER).forEach { material ->
@@ -171,6 +175,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         every { plugin.config } returns config
 
         every { server.scheduler } returns scheduler
+        every { server.asyncScheduler } returns asyncScheduler
         every { server.scoreboardManager } returns scoreboardManager
         every { server.getPlayer(any<UUID>()) } answers { players[firstArg()] }
         every { server.getPlayerExact(any<String>()) } answers {
@@ -227,6 +232,13 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         }
         every { scheduler.cancelTask(any<Int>()) } answers {
             cancelledTaskIds += firstArg<Int>()
+        }
+
+        // async タスクは即時実行に潰す。応答側の runTask が oneShots へ溜まるので runOneShots で同期化できる
+        every { asyncScheduler.runNow(any<Plugin>(), any<Consumer<ScheduledTask>>()) } answers {
+            val task = mockk<ScheduledTask>(relaxed = true)
+            arg<Consumer<ScheduledTask>>(1).accept(task)
+            task
         }
     }
 

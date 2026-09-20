@@ -7,14 +7,12 @@ import org.bukkit.command.CommandSender
 import org.bukkit.plugin.IllegalPluginAccessException
 import org.bukkit.plugin.java.JavaPlugin
 import java.util.UUID
-import java.util.concurrent.CompletableFuture
 
 /** /1vs1 stats。offline プレイヤーの UUID 解決は非同期で行いメインスレッドへ戻す。 */
 internal class StatsCommand(
     private val plugin: JavaPlugin,
     private val service: ArenaApplicationService,
-    messages: Messages,
-    private val resolveOffline: (String) -> CompletableFuture<UUID>
+    messages: Messages
 ) : AbstractSubcommand(messages) {
 
     override fun visibleTo(sender: CommandSender): Boolean = true
@@ -35,18 +33,19 @@ internal class StatsCommand(
             showStats(player, cached.uniqueId)
             return null
         }
-        resolveOffline(args[0]).handle { uuid, error ->
+        // オフライン名解決はブロッキングなので asyncScheduler で実行し、応答はメインスレッドへ戻す
+        plugin.server.asyncScheduler.runNow(plugin) {
+            val uuid = runCatching { plugin.server.getOfflinePlayer(args[0]).uniqueId }.getOrNull()
             try {
                 if (plugin.isEnabled) {
                     plugin.server.scheduler.runTask(plugin, Runnable {
                         if (player.isOnline) {
-                            if (error != null) messages.send(player, messages.noStats) else showStats(player, uuid)
+                            if (uuid == null) messages.send(player, messages.noStats) else showStats(player, uuid)
                         }
                     })
                 }
             } catch (e: IllegalPluginAccessException) {
             }
-            null
         }
         return null
     }

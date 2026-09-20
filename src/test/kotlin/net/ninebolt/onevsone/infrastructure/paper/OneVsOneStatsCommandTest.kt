@@ -3,7 +3,6 @@ package net.ninebolt.onevsone.infrastructure.paper
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import net.ninebolt.onevsone.infrastructure.paper.command.OneVsOneCommand
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.contains
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.run
@@ -18,7 +17,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import java.util.UUID
-import java.util.concurrent.CompletableFuture
 
 /** /1vs1 stats と引数なし/権限/未知サブコマンドの検証。 */
 class OneVsOneStatsCommandTest {
@@ -102,14 +100,14 @@ class OneVsOneStatsCommandTest {
     }
 
     @Test
-    fun `stats offline uncached resolves through future on main thread`() {
+    fun `stats offline uncached resolves through async scheduler on main thread`() {
         val viewer = env.player("Viewer")
         val uuid = UUID.randomUUID()
         env.writeStats(uuid, 2, 1)
-        val command = OneVsOneCommand(env.plugin, env.service, env.admin, env.messages) {
-            CompletableFuture.completedFuture(uuid)
-        }
-        command.onCommand(viewer, cmd, "1vs1", arrayOf("stats", "Ghost"))
+        val offline = mockk<OfflinePlayer>(relaxed = true)
+        every { offline.uniqueId } returns uuid
+        every { env.server.getOfflinePlayer("Ghost") } returns offline
+        env.run(viewer, "stats", "Ghost")
         verify(exactly = 0) { viewer.sendMessage(contains("Win:")) }
         env.runOneShots()
         verify(exactly = 1) { viewer.sendMessage(contains("Win: §b2")) }
@@ -118,10 +116,8 @@ class OneVsOneStatsCommandTest {
     @Test
     fun `stats offline lookup failure reports no stats`() {
         val viewer = env.player("Viewer")
-        val command = OneVsOneCommand(env.plugin, env.service, env.admin, env.messages) {
-            CompletableFuture.failedFuture<UUID>(RuntimeException("lookup failed"))
-        }
-        command.onCommand(viewer, cmd, "1vs1", arrayOf("stats", "Ghost"))
+        every { env.server.getOfflinePlayer("Ghost") } throws RuntimeException("lookup failed")
+        env.run(viewer, "stats", "Ghost")
         env.runOneShots()
         verify(exactly = 1) { viewer.sendMessage(contains("Statsが存在しません")) }
     }
@@ -130,10 +126,7 @@ class OneVsOneStatsCommandTest {
     fun `stats offline callback skipped when plugin disabled`() {
         val viewer = env.player("Viewer")
         every { env.plugin.isEnabled } returns false
-        val command = OneVsOneCommand(env.plugin, env.service, env.admin, env.messages) {
-            CompletableFuture.completedFuture(UUID.randomUUID())
-        }
-        command.onCommand(viewer, cmd, "1vs1", arrayOf("stats", "Ghost"))
+        env.run(viewer, "stats", "Ghost")
         env.runOneShots()
         verify(exactly = 0) { viewer.sendMessage(any<Component>()) }
     }
