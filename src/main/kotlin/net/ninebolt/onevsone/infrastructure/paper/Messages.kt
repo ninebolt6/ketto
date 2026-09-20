@@ -129,6 +129,7 @@ class Messages private constructor(
     fun statRatio(stats: PlayerStats) =
         Msg(MessageKeys.STATS_RATIO, Msg.Str("ratio", "%.2f".format(Locale.ROOT, stats.ratio)))
     val noStats = Msg(MessageKeys.STATS_NONE)
+    val statsCooldown = Msg(MessageKeys.STATS_COOLDOWN)
 
     val signTitle = Msg(MessageKeys.SIGN_TITLE)
     fun signArena(name: String) = Msg(MessageKeys.SIGN_ARENA, Msg.Str("name", name))

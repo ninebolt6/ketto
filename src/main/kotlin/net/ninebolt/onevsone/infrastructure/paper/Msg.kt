@@ -79,6 +79,7 @@ object MessageKeys {
     const val STATS_LOSE = "${STATS}.lose"
     const val STATS_RATIO = "${STATS}.ratio"
     const val STATS_NONE = "${STATS}.none"
+    const val STATS_COOLDOWN = "${STATS}.cooldown"
 
     private const val SIGN = "sign"
     const val SIGN_LOOK_AT = "${SIGN}.look-at"

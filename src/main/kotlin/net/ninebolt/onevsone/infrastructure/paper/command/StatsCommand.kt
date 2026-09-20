@@ -18,14 +18,26 @@ internal class StatsCommand(
     messages: Messages
 ) : AbstractSubcommand(messages) {
 
+    /** 引数付き検索の実行時刻。間隔が空いた分は毎回捨てるので直近の要求だけを保持する。 */
+    private val lastLookup = mutableMapOf<Uuid, Long>()
+
     override fun visibleTo(sender: CommandSender): Boolean = true
 
     override fun execute(sender: CommandSender, args: List<String>): Msg? {
         val player = sender.requirePlayer() ?: return null
+        val playerId = player.uniqueId.toKotlinUuid()
         if (args.isEmpty()) {
-            showStats(player, player.uniqueId.toKotlinUuid())
+            showStats(player, playerId)
             return null
         }
+        // 未キャッシュ名の UUID 解決は外部参照を伴うため、連投を抑える
+        val now = System.nanoTime()
+        lastLookup.entries.removeAll { now - it.value >= LOOKUP_COOLDOWN_NANOS }
+        if (playerId in lastLookup) {
+            messages.send(player, messages.statsCooldown)
+            return null
+        }
+        lastLookup[playerId] = now
         players.resolveOfflineId(args[0]) { uuid ->
             if (player.isOnline) {
                 if (uuid == null) messages.send(player, messages.noStats) else showStats(player, uuid)
@@ -49,5 +61,10 @@ internal class StatsCommand(
         messages.send(sender, messages.statWin(stats.wins))
         messages.send(sender, messages.statLose(stats.losses))
         messages.send(sender, messages.statRatio(stats))
+    }
+
+    private companion object {
+        /** 引数付き stats の連投を抑える間隔。 */
+        const val LOOKUP_COOLDOWN_NANOS = 3_000_000_000L
     }
 }

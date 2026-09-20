@@ -60,6 +60,7 @@ stats:
   lose: "<red>Lose: <aqua><losses>"
   ratio: "<red>W/L(ratio): <aqua><ratio>"
   none: "<red>No stats found"
+  cooldown: "<red>Please wait a moment before searching stats again"
 
 sign:
   look-at: "<red>Look at a sign and run the command"

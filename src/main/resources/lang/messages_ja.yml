@@ -60,6 +60,7 @@ stats:
   lose: "<red>Lose: <aqua><losses>"
   ratio: "<red>W/L(勝率): <aqua><ratio>"
   none: "<red>Statsが存在しません"
+  cooldown: "<red>戦績の検索は連続で実行できません。しばらく待ってください"
 
 sign:
   look-at: "<red>看板を見て実行してください"

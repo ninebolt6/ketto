@@ -127,6 +127,22 @@ class OneVsOneStatsCommandTest {
     }
 
     @Test
+    fun `repeated stats lookup is rate limited`() {
+        val viewer = env.player("Viewer")
+        val target = env.player("Target")
+        env.writeStats(target.uuid, 1, 0)
+        env.run(viewer, "stats", "Target")
+        assertTrue(viewer.drainMessages().any { it.contains("Win: 1") })
+
+        env.run(viewer, "stats", "Target")
+        assertTrue(viewer.drainMessages().any { it.contains("連続で実行できません") })
+
+        // 自分自身の表示は解決を伴わないため対象外
+        env.run(viewer, "stats")
+        assertTrue(viewer.drainMessages().any { it.contains("Statsが存在しません") })
+    }
+
+    @Test
     fun `unknown subcommand falls back to usage`() {
         val p = env.player("Alice")
         env.run(p, "bogus")
