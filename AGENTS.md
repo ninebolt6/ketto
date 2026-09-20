@@ -43,9 +43,11 @@ composition root として手動で全依存を配線する(DI フレームワ�
   各ハンドラ、`arena` 名前空間は `CommandGroup` の再帰)、
   `PaperEquipmentAdapter` + `PaperInventorySnapshot`(ItemStack をここに閉じ込める)、
   `PaperScheduler`、`PaperMatchPresentation`、`PluginFailureReporter`
-- `.../infrastructure/persistence/` — `YamlStore`(共通 I/O と backup コーデック) +
-  `YamlArenaRepository`/`YamlLobbyRepository`/`YamlSignRepository`/
-  `YamlMatchStateRepository`/`YamlPlayerStatsRepository`
+- `.../infrastructure/persistence/` — `YamlStore`(ファイル配置・共通 I/O・
+  コーデックのみ) + `YamlBackupStore`(players.yml の inv.\*)/`YamlKitStore`
+  (arena/<name>.yml の inventory)/`YamlArenaRepository`/`YamlLobbyRepository`/
+  `YamlSignRepository`/`YamlMatchStateRepository`/`YamlPlayerStatsRepository`。
+  1 ファイルを複数クラスが共有する場合、セクション所有者は各クラス名で区別する
 - `src/main/resources/` — plugin.yml(version は processResources で展開), config.yml,
   `lang/messages_<lang>.yml`(MiniMessage 文言。`Messages` が Msg キー+引数を宛先ロケールで
   描画。`language: auto` でクライアントロケール、共有面は `default-language`)

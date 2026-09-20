@@ -17,6 +17,8 @@ import net.ninebolt.onevsone.infrastructure.paper.PaperPlayerLookup
 import net.ninebolt.onevsone.infrastructure.paper.PaperScheduler
 import net.ninebolt.onevsone.infrastructure.paper.PluginFailureReporter
 import net.ninebolt.onevsone.infrastructure.persistence.YamlArenaRepository
+import net.ninebolt.onevsone.infrastructure.persistence.YamlBackupStore
+import net.ninebolt.onevsone.infrastructure.persistence.YamlKitStore
 import net.ninebolt.onevsone.infrastructure.persistence.YamlLobbyRepository
 import net.ninebolt.onevsone.infrastructure.persistence.YamlMatchStateRepository
 import net.ninebolt.onevsone.infrastructure.persistence.YamlSignRepository
@@ -60,7 +62,7 @@ class OneVsOnePlugin : JavaPlugin() {
 
         val lookup = PaperPlayerLookup(server)
         val playerPort = PaperPlayerAdapter(lookup, server, failures)
-        val equipment = PaperEquipmentAdapter(store, lookup, messages)
+        val equipment = PaperEquipmentAdapter(YamlBackupStore(store), YamlKitStore(store), lookup, messages)
         val scheduler = PaperScheduler(this)
         val presentation = PaperMatchPresentation(server, messages, signRepository, failures)
 

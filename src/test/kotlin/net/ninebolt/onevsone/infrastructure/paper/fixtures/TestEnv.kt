@@ -37,6 +37,8 @@ import net.ninebolt.onevsone.infrastructure.paper.PaperPlayerLookup
 import net.ninebolt.onevsone.infrastructure.paper.PaperScheduler
 import net.ninebolt.onevsone.infrastructure.paper.PluginFailureReporter
 import net.ninebolt.onevsone.infrastructure.persistence.YamlArenaRepository
+import net.ninebolt.onevsone.infrastructure.persistence.YamlBackupStore
+import net.ninebolt.onevsone.infrastructure.persistence.YamlKitStore
 import net.ninebolt.onevsone.infrastructure.persistence.YamlLobbyRepository
 import net.ninebolt.onevsone.infrastructure.persistence.YamlMatchStateRepository
 import net.ninebolt.onevsone.infrastructure.persistence.YamlSignRepository
@@ -102,7 +104,11 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         private set
     var statsRepo: PlayerStatsRepository = YamlPlayerStatsRepository(store)
         private set
-    var equipment = PaperEquipmentAdapter(store, lookup, messages)
+    var backupStore: YamlBackupStore = YamlBackupStore(store)
+        private set
+    var kitStore: YamlKitStore = YamlKitStore(store)
+        private set
+    var equipment = PaperEquipmentAdapter(backupStore, kitStore, lookup, messages)
         private set
     var presentation = PaperMatchPresentation(server, messages, signRepo, failures)
         private set
@@ -133,16 +139,19 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     /** store または各ポートを差し替えて全依存を再構築(障害注入用)。 */
     fun rebuildWith(
         newStore: YamlStore = store,
+        backupStore: YamlBackupStore = YamlBackupStore(newStore),
         matchState: MatchStateRepository = YamlMatchStateRepository(newStore),
         statsRepo: PlayerStatsRepository = YamlPlayerStatsRepository(newStore)
     ) {
         store = newStore
+        this.backupStore = backupStore
+        kitStore = YamlKitStore(newStore)
         arenaRepo = YamlArenaRepository(store)
         lobbyRepo = YamlLobbyRepository(store)
         signRepo = YamlSignRepository(store)
         matchStateRepo = matchState
         this.statsRepo = statsRepo
-        equipment = PaperEquipmentAdapter(store, lookup, messages)
+        equipment = PaperEquipmentAdapter(backupStore, kitStore, lookup, messages)
         presentation = PaperMatchPresentation(server, messages, signRepo, failures)
         registry = ArenaRegistry()
         recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepo, presentation, failures)

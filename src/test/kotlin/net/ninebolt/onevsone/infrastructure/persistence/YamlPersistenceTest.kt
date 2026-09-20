@@ -36,6 +36,8 @@ class YamlPersistenceTest {
     private fun signs() = YamlSignRepository(store())
     private fun matchState() = YamlMatchStateRepository(store())
     private fun stats() = YamlPlayerStatsRepository(store())
+    private fun backups() = YamlBackupStore(store())
+    private fun kits() = YamlKitStore(store())
 
     @Test
     fun `directories are created`() {
@@ -132,7 +134,7 @@ class YamlPersistenceTest {
         val ref = BackupRef(Uuid.random(), MatchId.newId(), uuid, "Alice")
         val repo = matchState()
         repo.registerParticipant(Participant(uuid, "Alice"), ArenaId("a1"))
-        store().saveBackups(listOf(PersistedBackup(ref, PaperInventorySnapshot())))
+        backups().saveBackups(listOf(PersistedBackup(ref, PaperInventorySnapshot())))
 
         var yaml = YamlConfiguration.loadConfiguration(File(folder, "status/players.yml"))
         assertTrue(yaml.getStringList("players").contains("Alice"))
@@ -145,7 +147,7 @@ class YamlPersistenceTest {
         assertNull(yaml.getString("arena.Alice"))
         assertNotNull(yaml.getConfigurationSection("inv.Alice"))
 
-        val pending = store().persistedBackups()
+        val pending = backups().persistedBackups()
         assertEquals(1, pending.size)
         assertEquals(uuid, pending[0].ref.playerId)
         assertEquals("Alice", pending[0].ref.playerName)
@@ -156,7 +158,7 @@ class YamlPersistenceTest {
         val uuid = Uuid.random()
         val ref = BackupRef(Uuid.random(), MatchId.newId(), uuid, "Alice")
         val repo = matchState()
-        val s = store()
+        val s = backups()
         repo.registerParticipant(Participant(uuid, "Alice"), ArenaId("a1"))
         s.saveBackups(listOf(PersistedBackup(ref, PaperInventorySnapshot())))
 
@@ -175,7 +177,7 @@ class YamlPersistenceTest {
     fun `deleteBackup ignores mismatched backup id`() {
         val uuid = Uuid.random()
         val ref = BackupRef(Uuid.random(), MatchId.newId(), uuid, "Alice")
-        val s = store()
+        val s = backups()
         s.saveBackups(listOf(PersistedBackup(ref, PaperInventorySnapshot())))
 
         s.deleteBackup(BackupRef(Uuid.random(), MatchId.newId(), uuid, "Alice"))
@@ -215,7 +217,7 @@ class YamlPersistenceTest {
 
     @Test
     fun `saveBackups persists both snapshots in one file`() {
-        val s = store()
+        val s = backups()
         val u1 = Uuid.random()
         val u2 = Uuid.random()
         val repo = matchState()
@@ -253,7 +255,7 @@ class YamlPersistenceTest {
         yaml.set("inv.Legacy.armor", emptyList<Any>())
         yaml.set("inv.Legacy.item", emptyList<Any>())
         yaml.save(file)
-        val pending = store().persistedBackups()
+        val pending = backups().persistedBackups()
         assertEquals(1, pending.size)
         assertEquals("Legacy", pending[0].ref.playerName)
         assertNull(pending[0].ref.playerId)
@@ -351,7 +353,7 @@ class YamlPersistenceTest {
     @Test
     fun `saveArena keeps inventory section written by equipment adapter`() {
         val repo = arenas()
-        val s = store()
+        val s = kits()
         val def = ArenaDefinition(ArenaId("a1"), enabled = true)
         repo.save(def)
         s.saveArenaKit("a1", PaperInventorySnapshot(items = listOf(null)))

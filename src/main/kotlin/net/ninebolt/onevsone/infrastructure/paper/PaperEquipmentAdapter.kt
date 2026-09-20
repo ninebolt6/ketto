@@ -8,7 +8,8 @@ import net.ninebolt.onevsone.domain.ArenaId
 import net.ninebolt.onevsone.domain.MatchId
 import net.ninebolt.onevsone.domain.Participant
 import net.ninebolt.onevsone.infrastructure.persistence.PersistedBackup
-import net.ninebolt.onevsone.infrastructure.persistence.YamlStore
+import net.ninebolt.onevsone.infrastructure.persistence.YamlBackupStore
+import net.ninebolt.onevsone.infrastructure.persistence.YamlKitStore
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
@@ -19,7 +20,8 @@ import kotlin.uuid.Uuid
  * PaperInventorySnapshot としてこの層に閉じ込める。
  */
 class PaperEquipmentAdapter(
-    private val store: YamlStore,
+    private val backups: YamlBackupStore,
+    private val kitStore: YamlKitStore,
     private val lookup: PaperPlayerLookup,
     private val messages: Messages
 ) : KitPort, InventoryBackupPort {
@@ -60,7 +62,7 @@ class PaperEquipmentAdapter(
                 PaperInventorySnapshot.capture(player.inventory)
             )
         }
-        store.saveBackups(captured)
+        backups.saveBackups(captured)
         captured.forEach { (ref, snapshot) -> pendingSnapshots[ref.backupId] = snapshot }
         return captured.map { it.ref }
     }
@@ -71,7 +73,7 @@ class PaperEquipmentAdapter(
      */
     override fun restore(backup: BackupRef) {
         val snapshot = pendingSnapshots[backup.backupId]
-            ?: store.backupFor(backup)?.snapshot
+            ?: backups.backupFor(backup)?.snapshot
             ?: throw PersistenceFailure("No stored backup ${backup.backupId} for ${backup.playerName}")
         val player = resolve(backup)
             ?: throw PersistenceFailure("Player ${backup.playerName} is not available for restore")
@@ -88,12 +90,12 @@ class PaperEquipmentAdapter(
 
     /** backupId が一致する記録だけを消す。 */
     override fun acknowledge(backup: BackupRef) {
-        store.deleteBackup(backup)
+        backups.deleteBackup(backup)
         pendingSnapshots.remove(backup.backupId)
     }
 
     override fun pendingBackups(): List<BackupRef> =
-        store.persistedBackups().onEach { pendingSnapshots[it.ref.backupId] = it.snapshot }.map { it.ref }
+        backups.persistedBackups().onEach { pendingSnapshots[it.ref.backupId] = it.snapshot }.map { it.ref }
 
     override fun applyKit(arena: ArenaId, playerId: Uuid) {
         val player = lookup.resolve(playerId)
@@ -105,12 +107,12 @@ class PaperEquipmentAdapter(
         val player = lookup.resolve(playerId)
             ?: throw PersistenceFailure("Player $playerId is not available for kit capture")
         val kit = PaperInventorySnapshot.capture(player.inventory)
-        store.saveArenaKit(arena.name, kit)
+        kitStore.saveArenaKit(arena.name, kit)
         kits[arena] = kit
     }
 
     private fun kit(arena: ArenaId): PaperInventorySnapshot =
-        kits.getOrPut(arena) { store.loadArenaKit(arena.name) }
+        kits.getOrPut(arena) { kitStore.loadArenaKit(arena.name) }
 
     private fun giveLobbyItems(player: Player) {
         val compass = ItemStack(Material.COMPASS)

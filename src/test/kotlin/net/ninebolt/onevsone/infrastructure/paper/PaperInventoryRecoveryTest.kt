@@ -144,7 +144,7 @@ class PaperInventoryRecoveryTest {
         val uuid = Uuid.random()
         val ref = BackupRef(Uuid.random(), MatchId.newId(), uuid, "Alice")
         env.matchStateRepo.registerParticipant(Participant(uuid, "Alice"), ArenaId("a1"))
-        env.store.saveBackups(listOf(PersistedBackup(ref, PaperInventorySnapshot())))
+        env.backupStore.saveBackups(listOf(PersistedBackup(ref, PaperInventorySnapshot())))
         env.matchStateRepo.clearRegistrations()
         env.service.load()
 

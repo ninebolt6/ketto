@@ -68,9 +68,9 @@ class PaperArenaFailureTest {
 
     @Test
     fun `snapshot persistence failure aborts match before equipment`() {
-        val spyStore = spyk(env.store)
-        every { spyStore.saveBackups(any()) } throws PersistenceFailure("disk full")
-        env.rebuildWith(spyStore)
+        val spyBackups = spyk(env.backupStore)
+        every { spyBackups.saveBackups(any()) } throws PersistenceFailure("disk full")
+        env.rebuildWith(backupStore = spyBackups)
         val arena = env.newArena("spy-arena", enabled = true)
         env.setKit(arena, PaperInventorySnapshot(items = listOf(env.item(Material.IRON_SWORD))))
         val p1 = env.player("Alice")
