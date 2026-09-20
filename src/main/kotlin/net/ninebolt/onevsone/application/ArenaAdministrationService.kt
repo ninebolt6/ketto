@@ -43,6 +43,7 @@ class ArenaAdministrationService(
         registry.removeArena(id)
         arenas.delete(name)
         signs.clearSign(name)
+        kit.forgetKit(id)
         return true
     }
 

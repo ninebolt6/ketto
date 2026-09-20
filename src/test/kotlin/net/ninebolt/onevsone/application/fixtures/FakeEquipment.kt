@@ -16,6 +16,7 @@ class FakeEquipment(var players: FakePlayers? = null) : KitPort, InventoryBackup
     val acknowledged = mutableListOf<BackupRef>()
     val kitApplies = mutableListOf<Pair<Arena.Id, Uuid>>()
     val savedKits = mutableListOf<Pair<Arena.Id, Uuid>>()
+    val forgottenKits = mutableListOf<Arena.Id>()
     var backupCalls = 0
     var applyCalls = 0
     var failOnBackup: PersistenceFailure? = null
@@ -57,5 +58,9 @@ class FakeEquipment(var players: FakePlayers? = null) : KitPort, InventoryBackup
 
     override fun saveKit(arena: Arena.Id, playerId: Uuid) {
         savedKits += arena to playerId
+    }
+
+    override fun forgetKit(arena: Arena.Id) {
+        forgottenKits += arena
     }
 }

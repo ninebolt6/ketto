@@ -201,6 +201,22 @@ class PaperArenaMembershipTest {
     }
 
     @Test
+    fun `recreated arena does not reuse removed kit`() {
+        val arena = env.newArena()
+        env.setKit(arena, PaperInventorySnapshot(items = listOf(env.item(Material.IRON_SWORD))))
+        env.admin.remove("arena1")
+        assertNull(env.equipment.kitOf(arena))
+
+        env.newArena("arena1")
+        val p1 = env.player("Alice")
+        val p2 = env.player("Bob")
+        env.join(p1, arena)
+        env.join(p2, arena)
+        env.tick(6)
+        assertNull(p1.inventory.contents[0])
+    }
+
+    @Test
     fun `enabled persists across service load`() {
         env.arenaRepo.save(Arena.new(Arena.Id.new("arena1"), enabled = true))
         env.service.load()

@@ -47,6 +47,8 @@ class ArenaAdministrationServiceTest {
         assertNull(app.admin.signLocation("arena1"))
         assertNull(app.arenas.signs["arena1"])
         assertFalse(app.arenas.names.contains("arena1"))
+        // 同名で作り直しても古い装備を適用しないようキャッシュを破棄する
+        assertEquals(listOf(arena), app.equipment.forgottenKits)
 
         assertFalse(app.admin.remove("arena1"))
         assertFalse(app.admin.remove("bad name!"))

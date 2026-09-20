@@ -37,7 +37,7 @@ class PaperEquipmentAdapter(
     /** キャッシュ済みのアリーナ装備(テスト検証用。未設定時は null)。 */
     internal fun kitOf(arena: Arena.Id): PaperInventorySnapshot? = kits[arena]
 
-    internal fun forgetKit(arena: Arena.Id) {
+    override fun forgetKit(arena: Arena.Id) {
         kits.remove(arena)
     }
 
