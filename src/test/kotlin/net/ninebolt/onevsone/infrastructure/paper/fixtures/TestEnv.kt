@@ -16,6 +16,7 @@ import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.application.ArenaRegistry
 import net.ninebolt.onevsone.application.JoinReply
 import net.ninebolt.onevsone.application.LeaveReply
+import net.ninebolt.onevsone.application.MatchProgressionService
 import net.ninebolt.onevsone.application.PlayerRecoveryService
 import net.ninebolt.onevsone.application.port.MatchStateRepository
 import net.ninebolt.onevsone.application.port.PlayerStatsRepository
@@ -116,10 +117,16 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     val signListener: ArenaSignListener by lazy { ArenaSignListener(service, admin, messages) }
     val command: OneVsOneCommand by lazy { OneVsOneCommand(plugin, service, admin, messages) }
 
-    private fun buildService() = ArenaApplicationService(
-        registry, arenaRepo, matchStateRepo, statsRepo, equipment, equipment, playerPort,
-        schedulerPort, presentation, recovery, failures, requiredWins
-    )
+    private fun buildService(): ArenaApplicationService {
+        val progression = MatchProgressionService(
+            registry, matchStateRepo, statsRepo, equipment, equipment, playerPort,
+            schedulerPort, presentation, recovery, failures
+        )
+        return ArenaApplicationService(
+            registry, arenaRepo, matchStateRepo, statsRepo, playerPort,
+            presentation, recovery, failures, progression, requiredWins
+        )
+    }
 
     /** store または各ポートを差し替えて全依存を再構築(障害注入用)。 */
     fun rebuildWith(

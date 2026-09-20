@@ -3,6 +3,7 @@ package net.ninebolt.onevsone
 import net.ninebolt.onevsone.application.ArenaAdministrationService
 import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.application.ArenaRegistry
+import net.ninebolt.onevsone.application.MatchProgressionService
 import net.ninebolt.onevsone.application.PlayerRecoveryService
 import net.ninebolt.onevsone.infrastructure.paper.ArenaListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaSignListener
@@ -64,9 +65,8 @@ class OneVsOnePlugin : JavaPlugin() {
 
         val registry = ArenaRegistry()
         val recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepository, presentation, failures)
-        val service = ArenaApplicationService(
+        val progression = MatchProgressionService(
             registry = registry,
-            arenas = arenaRepository,
             matchState = matchState,
             stats = stats,
             backups = equipment,
@@ -75,7 +75,18 @@ class OneVsOnePlugin : JavaPlugin() {
             scheduler = scheduler,
             presentation = presentation,
             recovery = recovery,
+            failures = failures
+        )
+        val service = ArenaApplicationService(
+            registry = registry,
+            arenas = arenaRepository,
+            matchState = matchState,
+            stats = stats,
+            players = playerPort,
+            presentation = presentation,
+            recovery = recovery,
             failures = failures,
+            progression = progression,
             requiredWins = requiredWins
         )
         val admin = ArenaAdministrationService(registry, arenaRepository, signRepository, lobbyRepository, equipment, presentation, service)

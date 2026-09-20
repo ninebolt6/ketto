@@ -28,7 +28,9 @@ composition root として手動で全依存を配線する(DI フレームワ�
   `ArenaDefinition`(immutable data class)、`ParticipantRestrictions`、`PlayerStats`、
   識別子(`ArenaId`/`MatchId`)
 - `.../application/` — domain + `application/port` のみに依存。
-  `ArenaApplicationService`(参加/開始/決着/終了/中断のオーケストレーション)、
+  `ArenaApplicationService`(参加/退出/勝敗入口・ライフサイクルの facade)、
+  `MatchProgressionService`(カウントダウン/ラウンド遷移/決着/中断の進行機構。
+  タイマー所有。ApplicationService から一方向に委譲される)、
   `PlayerRecoveryService`(未復元バックアップの台帳・復元)、`ArenaAdministrationService`、
   `ArenaRegistry`(共有レジストリ)。`port/` に repository(`ArenaRepository`・
   `LobbyRepository`・`ArenaSignRepository`・`MatchStateRepository`・`PlayerStatsRepository`)・
