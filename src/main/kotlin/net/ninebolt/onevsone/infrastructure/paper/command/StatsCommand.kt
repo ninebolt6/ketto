@@ -1,19 +1,20 @@
 package net.ninebolt.onevsone.infrastructure.paper.command
 
 import net.ninebolt.onevsone.application.ArenaApplicationService
+import net.ninebolt.onevsone.application.port.FailureReporter
 import net.ninebolt.onevsone.application.port.PersistenceFailure
+import net.ninebolt.onevsone.application.port.PlayerPort
 import net.ninebolt.onevsone.infrastructure.paper.Messages
 import net.ninebolt.onevsone.infrastructure.paper.Msg
 import org.bukkit.command.CommandSender
-import org.bukkit.plugin.IllegalPluginAccessException
-import org.bukkit.plugin.java.JavaPlugin
 import kotlin.uuid.Uuid
 import kotlin.uuid.toKotlinUuid
 
-/** /1vs1 stats。offline プレイヤーの UUID 解決は非同期で行いメインスレッドへ戻す。 */
+/** /1vs1 stats。offline プレイヤーの UUID 解決は PlayerPort の非同期経路に委譲する。 */
 internal class StatsCommand(
-    private val plugin: JavaPlugin,
     private val service: ArenaApplicationService,
+    private val players: PlayerPort,
+    private val failures: FailureReporter,
     messages: Messages
 ) : AbstractSubcommand(messages) {
 
@@ -25,24 +26,9 @@ internal class StatsCommand(
             showStats(player, player.uniqueId.toKotlinUuid())
             return null
         }
-        val known = plugin.server.getPlayerExact(args[0])
-            ?: plugin.server.getOfflinePlayerIfCached(args[0])
-        if (known != null) {
-            showStats(player, known.uniqueId.toKotlinUuid())
-            return null
-        }
-        // オフライン名解決はブロッキングなので asyncScheduler で実行し、応答はメインスレッドへ戻す
-        plugin.server.asyncScheduler.runNow(plugin) {
-            val uuid = runCatching { plugin.server.getOfflinePlayer(args[0]).uniqueId.toKotlinUuid() }.getOrNull()
-            try {
-                if (plugin.isEnabled) {
-                    plugin.server.scheduler.runTask(plugin, Runnable {
-                        if (player.isOnline) {
-                            if (uuid == null) messages.send(player, messages.noStats) else showStats(player, uuid)
-                        }
-                    })
-                }
-            } catch (e: IllegalPluginAccessException) {
+        players.resolveOfflineId(args[0]) { uuid ->
+            if (player.isOnline) {
+                if (uuid == null) messages.send(player, messages.noStats) else showStats(player, uuid)
             }
         }
         return null
@@ -53,7 +39,7 @@ internal class StatsCommand(
         val stats = try {
             service.statsFor(uuid)
         } catch (e: PersistenceFailure) {
-            plugin.logger.warning("Could not read stats for $uuid: ${e.message}")
+            failures.warn("Could not read stats for $uuid: ${e.message}")
             null
         }
         if (stats == null) {

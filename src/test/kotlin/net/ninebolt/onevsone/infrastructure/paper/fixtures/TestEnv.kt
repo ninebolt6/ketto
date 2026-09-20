@@ -90,7 +90,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     val messages = Messages.load(File(folder, "lang"), "ja", "auto", Logger.getLogger("1vs1-test"))
     val failures = PluginFailureReporter { plugin.logger }
     val lookup = PaperPlayerLookup(server)
-    val playerPort = PaperPlayerAdapter(lookup, server, failures)
+    val playerPort = PaperPlayerAdapter(lookup, server, plugin, failures)
     val schedulerPort = PaperScheduler(plugin)
 
     var store = YamlStore(folder, Logger.getLogger("1vs1-test"))
@@ -125,7 +125,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         private set
     val listener: ArenaListener by lazy { ArenaListener(service, lookup, messages) }
     val signListener: ArenaSignListener by lazy { ArenaSignListener(service, admin, messages) }
-    val command: OneVsOneCommand by lazy { OneVsOneCommand(plugin, service, admin, messages) }
+    val command: OneVsOneCommand by lazy { OneVsOneCommand(service, admin, playerPort, failures, messages) }
 
     private fun buildProgression() = MatchProgressionService(
         registry, MatchStateSync(matchStateRepo, presentation, failures), statsRepo,

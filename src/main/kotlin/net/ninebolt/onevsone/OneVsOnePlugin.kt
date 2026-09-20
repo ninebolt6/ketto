@@ -62,7 +62,7 @@ class OneVsOnePlugin : JavaPlugin() {
         )
 
         val lookup = PaperPlayerLookup(server)
-        val playerPort = PaperPlayerAdapter(lookup, server, failures)
+        val playerPort = PaperPlayerAdapter(lookup, server, this, failures)
         val equipment = PaperEquipmentAdapter(YamlBackupStore(store), YamlKitStore(store), lookup, LobbyItems(messages))
         val scheduler = PaperScheduler(this)
         val presentation = PaperMatchPresentation(server, messages, signRepository, failures)
@@ -99,7 +99,7 @@ class OneVsOnePlugin : JavaPlugin() {
         this.service = service
         service.load()
 
-        val executor = OneVsOneCommand(this, service, admin, messages)
+        val executor = OneVsOneCommand(service, admin, playerPort, failures, messages)
         val command = getCommand("1vs1")
         @Suppress("UsePropertyAccessSyntax") // setter が @Nullable 引数のため executor は val 扱い
         command?.setExecutor(executor)

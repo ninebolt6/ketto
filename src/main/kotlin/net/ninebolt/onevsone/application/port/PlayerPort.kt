@@ -14,6 +14,14 @@ interface PlayerPort {
      * QuitEvent 処理中として登録した切断中プレイヤーを返す。それ以外は null。
      */
     fun handle(playerId: Uuid): PlayerHandle?
+
+    /**
+     * 名前から UUID を解決する。オンライン・キャッシュ済みなら即時、
+     * 未キャッシュならブロッキング解決をアダプター側の非同期へ逃がす。
+     * callback はメインスレッドで呼ばれ、プラグイン無効化後は呼ばれない。
+     * 応答先プレイヤーの存亡は callback 側で確認すること。
+     */
+    fun resolveOfflineId(name: String, callback: (Uuid?) -> Unit)
 }
 
 interface PlayerHandle {

@@ -9,6 +9,8 @@ import org.bukkit.Location
 import org.bukkit.Server
 import org.bukkit.attribute.Attribute
 import org.bukkit.entity.Player
+import org.bukkit.plugin.IllegalPluginAccessException
+import org.bukkit.plugin.java.JavaPlugin
 import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
 import kotlin.uuid.toKotlinUuid
@@ -40,10 +42,29 @@ class PaperPlayerLookup(private val server: Server) {
 class PaperPlayerAdapter(
     private val lookup: PaperPlayerLookup,
     private val server: Server,
+    private val plugin: JavaPlugin,
     private val failures: FailureReporter
 ) : PlayerPort {
     override fun handle(playerId: Uuid): PlayerHandle? =
         lookup.resolve(playerId)?.let { PaperPlayerHandle(it, server, failures) }
+
+    override fun resolveOfflineId(name: String, callback: (Uuid?) -> Unit) {
+        val known = server.getPlayerExact(name) ?: server.getOfflinePlayerIfCached(name)
+        if (known != null) {
+            callback(known.uniqueId.toKotlinUuid())
+            return
+        }
+        // オフライン名解決はブロッキングなので asyncScheduler で実行し、応答はメインスレッドへ戻す
+        server.asyncScheduler.runNow(plugin) {
+            val uuid = runCatching { server.getOfflinePlayer(name).uniqueId.toKotlinUuid() }.getOrNull()
+            try {
+                if (plugin.isEnabled) {
+                    server.scheduler.runTask(plugin, Runnable { callback(uuid) })
+                }
+            } catch (e: IllegalPluginAccessException) {
+            }
+        }
+    }
 }
 
 private class PaperPlayerHandle(

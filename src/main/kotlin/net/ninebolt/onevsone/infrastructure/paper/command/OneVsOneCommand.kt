@@ -2,25 +2,27 @@ package net.ninebolt.onevsone.infrastructure.paper.command
 
 import net.ninebolt.onevsone.application.ArenaAdministrationService
 import net.ninebolt.onevsone.application.ArenaApplicationService
+import net.ninebolt.onevsone.application.port.FailureReporter
+import net.ninebolt.onevsone.application.port.PlayerPort
 import net.ninebolt.onevsone.infrastructure.paper.Messages
 import org.bukkit.command.Command
 import org.bukkit.command.CommandSender
 import org.bukkit.command.TabExecutor
-import org.bukkit.plugin.java.JavaPlugin
 
 /**
  * /1vs1 の TabExecutor。plugin.yml からの登録点はここだけで、
  * 実処理は CommandGroup 経由で各サブコマンドへルーティングする。
  */
 class OneVsOneCommand(
-    plugin: JavaPlugin,
     service: ArenaApplicationService,
     admin: ArenaAdministrationService,
+    players: PlayerPort,
+    failures: FailureReporter,
     private val messages: Messages
 ) : TabExecutor {
 
     private val root = CommandGroup(messages.usageRoot, messages, mapOf(
-        "stats" to StatsCommand(plugin, service, messages),
+        "stats" to StatsCommand(service, players, failures, messages),
         "leave" to LeaveCommand(service, messages),
         "setlobby" to SetLobbyCommand(admin, messages),
         "arena" to CommandGroup(messages.usageArena, messages, mapOf(
