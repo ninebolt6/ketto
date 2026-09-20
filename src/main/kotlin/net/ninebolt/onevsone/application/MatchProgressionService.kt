@@ -57,17 +57,8 @@ class MatchProgressionService(
         val tickets = left.map { it to recovery.pending(it.id) }
         left.forEach { unregisterKeepingRestore(it) }
         tickets.forEach { (participant, ticket) ->
-            val handle = players.handle(participant.id) ?: return@forEach
-            if (handle.dead) {
-                if (ticket != null) {
-                    scheduleTicketed(participant.id, ticket) { h ->
-                        recovery.restoreNow(h, ticket, respawn = false, lobby = false)
-                    }
-                } else {
-                    requestRespawn(participant.id)
-                }
-            } else {
-                recovery.restoreNow(handle, ticket, respawn = false, lobby = false)
+            runNowOrAfterRespawn(participant.id, ticket) { h ->
+                recovery.restoreNow(h, ticket, respawn = false, lobby = false)
             }
         }
         sync.publish(step.match)
@@ -97,22 +88,21 @@ class MatchProgressionService(
         presentation.updateScoreboard(match)
 
         val loserHandle = players.handle(outcome.loser.id)
+        val release = { registry.updateMatch(arenaId) { it.releaseResolution(gen) } }
         if (death) {
             scheduleDeferred(outcome.loser.id, {
                 registry.match(arenaId)?.epoch == gen && registry.arenaOf(outcome.loser.id) == arenaId
             }) { h ->
                 rearm(arenaId, outcome.loser, h)
                 registry.match(arenaId)?.let { teleportToSlot(it, outcome.loser, h) }
-                registry.updateMatch(arenaId) { it.releaseResolution(gen) }
+                release()
             }
         } else if (loserHandle != null) {
             rearm(arenaId, outcome.loser, loserHandle)
             teleportToSlot(match, outcome.loser, loserHandle)
-            scheduler.schedule(0) {
-                registry.updateMatch(arenaId) { it.releaseResolution(gen) }
-            }
+            scheduler.schedule(0) { release() }
         } else {
-            registry.updateMatch(arenaId) { it.releaseResolution(gen) }
+            release()
         }
         winnerHandle?.let { teleportToSlot(match, outcome.winner, it) }
 
@@ -138,32 +128,30 @@ class MatchProgressionService(
 
         presentation.champion(arenaId, winner.name)
 
-        val winnerHandle = players.handle(winner.id)
-        if (winnerHandle != null && !winnerHandle.dead) {
-            resetAndRestore(winnerHandle, winnerTicket)
+        runNowOrAfterRespawn(
+            winner.id,
+            winnerTicket,
+            valid = { registry.match(arenaId)?.epoch == gen && registry.arenaOf(winner.id) == null }
+        ) { h ->
+            resetAndRestore(h, winnerTicket)
             if (!forfeit) presentation.championFirework(winner.id)
-        } else if (winnerHandle != null) {
-            scheduleDeferred(winner.id, winnerTicket, {
-                registry.match(arenaId)?.epoch == gen && registry.arenaOf(winner.id) == null
-            }) { h ->
-                resetAndRestore(h, winnerTicket)
-                if (!forfeit) presentation.championFirework(winner.id)
-            }
         }
 
         if (death) {
-            scheduleDeferred(loser.id, loserTicket, {
-                registry.match(arenaId)?.epoch == gen && registry.arenaOf(loser.id) == null
-            }) { h ->
+            runNowOrAfterRespawn(
+                loser.id,
+                loserTicket,
+                valid = { registry.match(arenaId)?.epoch == gen && registry.arenaOf(loser.id) == null }
+            ) { h ->
                 resetAndRestore(h, loserTicket)
             }
         } else {
-            val loserHandle = players.handle(loser.id)
-            if (loserHandle != null) {
+            // 非死亡の敗者は即時処理。quit 経由の死者も含むため dead 判定で遅延化しない
+            players.handle(loser.id)?.let { h ->
                 if (forfeit) {
-                    recovery.restoreNow(loserHandle, loserTicket, respawn = false, lobby = false)
+                    recovery.restoreNow(h, loserTicket, respawn = false, lobby = false)
                 } else {
-                    resetAndRestore(loserHandle, loserTicket)
+                    resetAndRestore(h, loserTicket)
                 }
             }
         }
@@ -314,6 +302,25 @@ class MatchProgressionService(
     private fun resetAndRestore(handle: PlayerHandle, ticket: PlayerRecoveryService.RestoreTicket?) {
         handle.resetVitals()
         recovery.restoreNow(handle, ticket, respawn = false, lobby = true)
+    }
+
+    /**
+     * 退出・後処理対象の参加者へ action を振り分ける。生存なら即時、
+     * 死亡中なら次 tick の respawn 後に実行する。オフライン(ハンドル無し)は
+     * 何もしない。遅延経路の有効条件は ticket 同一性(優先)、無ければ valid。
+     */
+    private fun runNowOrAfterRespawn(
+        playerId: Uuid,
+        ticket: PlayerRecoveryService.RestoreTicket?,
+        valid: () -> Boolean = { true },
+        action: (PlayerHandle) -> Unit
+    ) {
+        val handle = players.handle(playerId) ?: return
+        if (!handle.dead) {
+            action(handle)
+            return
+        }
+        scheduleDeferred(playerId, ticket, valid, action)
     }
 
     /**
