@@ -9,12 +9,12 @@
 ```yaml
 # config.yml
 language: auto # auto=各プレイヤーのクライアントロケール。ja/en 等でサーバー固定
-default-language: ja # フォールバック + 看板・スコアボード・アイテム名等の共有面
+default-language: ja # フォールバック + 看板・スコアボード等の共有面
 ```
 
 - `language: auto` 時、チャット/broadcast は `Player.locale()`(`ja_jp` → 完全一致 → `ja`
   言語部一致)で言語を解決する。未対応ロケールは `default-language` にフォールバック
-- 看板・スコアボード・アイテム名・コンソールは共有面のため固定言語(`language` 固定値、
+- 看板・スコアボード・コンソールは共有面のため固定言語(`language` 固定値、
   auto 時は `default-language`)で描画する
 - 言語ファイルは `plugins/1vs1/lang/messages_<lang>.yml` に配置。jar 同梱の既定言語を
   基底に dataFolder 側の同名ファイルでキー単位に上書きできる。新言語は

@@ -138,9 +138,6 @@ class Messages private constructor(
     fun scoreboardTitle(arena: String) = Msg(MessageKeys.SCOREBOARD_TITLE, Msg.Str("arena", arena))
     fun scoreboardEntry(name: String) = Msg(MessageKeys.SCOREBOARD_ENTRY, Msg.Str("name", name))
 
-    val compassName = Msg(MessageKeys.ITEM_COMPASS)
-    val featherName = Msg(MessageKeys.ITEM_FEATHER)
-
     fun stateDisplay(state: ArenaState): Msg = Msg(when (state) {
         ArenaState.WAITING -> MessageKeys.STATE_WAITING
         ArenaState.ONEMORE -> MessageKeys.STATE_ONEMORE

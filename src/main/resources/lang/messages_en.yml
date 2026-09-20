@@ -80,7 +80,3 @@ state:
 scoreboard:
   title: "<green><bold><arena>"
   entry: "<gold><name>"
-
-item:
-  compass: "<yellow>Game Selector - Right click to open"
-  feather: "<red>Feather - Right click to Fly (VIP only)"

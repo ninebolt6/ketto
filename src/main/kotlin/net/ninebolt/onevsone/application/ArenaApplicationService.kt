@@ -139,7 +139,7 @@ class ArenaApplicationService(
             LeaveOutcome.NotWaiting -> return LeaveReply.NotWaiting
             is LeaveOutcome.Left -> {
                 sync.unregister(outcome.participant)
-                // 未開始の退出では持ち物を変更しない(バックアップ無し・フォールバック無し)
+                // 未開始の退出では持ち物を変更しない(バックアップ無し・復元無し)
                 sync.publish(step.match)
                 return LeaveReply.Left
             }

@@ -84,19 +84,6 @@ class PaperInventorySnapshotTest {
     }
 
     @Test
-    fun `isEmpty for all null and empty lists`() {
-        assertTrue(PaperInventorySnapshot().isEmpty)
-        assertTrue(PaperInventorySnapshot(armor = listOf(null), items = listOf(null, null)).isEmpty)
-        assertFalse(PaperInventorySnapshot(items = listOf(env.item(Material.BREAD))).isEmpty)
-    }
-
-    @Test
-    fun `isEmpty treats AIR entries as empty`() {
-        assertTrue(PaperInventorySnapshot(items = listOf(env.item(Material.AIR))).isEmpty)
-        assertTrue(PaperInventorySnapshot(armor = listOf(env.item(Material.AIR))).isEmpty)
-    }
-
-    @Test
     fun `apply always writes four armor slots`() {
         val inv = env.inventory()
         val helmet = env.item(Material.IRON_HELMET)

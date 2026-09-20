@@ -78,7 +78,7 @@ class PaperInventoryRecoveryTest {
         env.service.defeat(p2.uuid, DefeatCause.DEATH)
         env.service.abort(arena)
         env.runOneShots()
-        assertEquals(Material.COMPASS, p2.inventory.contents[0]?.type)
+        assertNull(p2.inventory.contents[0])
     }
 
     @Test
@@ -108,7 +108,7 @@ class PaperInventoryRecoveryTest {
     }
 
     @Test
-    fun `empty snapshot falls back to lobby items on restore`() {
+    fun `empty snapshot restores to empty inventory`() {
         val arena = env.newArena()
         val p1 = env.player("Alice")
         val p2 = env.player("Bob")
@@ -117,13 +117,9 @@ class PaperInventoryRecoveryTest {
         env.tick(6)
         env.removePlayer(p1)
         env.quit(p1)
+        assertNull(p1.inventory.contents[0])
         val inv1 = p1.inventory
-        val slot0Items = mutableListOf<ItemStack>()
-        val slot8Items = mutableListOf<ItemStack>()
-        verify(exactly = 1) { inv1.setItem(0, capture(slot0Items)) }
-        verify(exactly = 1) { inv1.setItem(8, capture(slot8Items)) }
-        assertEquals(1, slot0Items.count { it.type == Material.COMPASS })
-        assertEquals(1, slot8Items.count { it.type == Material.FEATHER })
+        verify(exactly = 0) { inv1.setItem(any<Int>(), ofType(ItemStack::class)) }
     }
 
     @Test
@@ -152,9 +148,8 @@ class PaperInventoryRecoveryTest {
         p.inventory.setItem(0, env.item(Material.STONE))
         env.service.restorePending(p.uuid, p.name)
         val inv = p.inventory
-        val restoredItems = mutableListOf<ItemStack>()
-        verify { inv.setItem(0, capture(restoredItems)) }
-        assertEquals(1, restoredItems.count { it.type == Material.COMPASS })
+        verify(exactly = 1) { inv.clear() }
+        assertNull(p.inventory.contents[0])
         assertNull(env.playersYaml().getConfigurationSection("inv.Alice"))
     }
 

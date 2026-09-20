@@ -20,8 +20,7 @@ import kotlin.uuid.Uuid
 class PaperEquipmentAdapter(
     private val backups: YamlBackupStore,
     private val kitStore: YamlKitStore,
-    private val lookup: PaperPlayerLookup,
-    private val lobby: LobbyItems
+    private val lookup: PaperPlayerLookup
 ) : KitPort, InventoryBackupPort {
 
     /** アリーナ装備のメモリキャッシュ(arena/<name>.yml の inventory)。 */
@@ -65,22 +64,14 @@ class PaperEquipmentAdapter(
         return captured.map { it.ref }
     }
 
-    /**
-     * バックアップへ復元。退避済みの空スナップショットのときだけ
-     * 既存フォールバック(ロビーアイテム)を適用する。
-     */
+    /** バックアップへ復元。空スナップショットは空インベントリへ戻すだけ。 */
     override fun restore(backup: BackupRef) {
         val snapshot = pendingSnapshots[backup.backupId]
             ?: backups.backupFor(backup)?.snapshot
             ?: throw PersistenceFailure("No stored backup ${backup.backupId} for ${backup.playerName}")
         val player = resolve(backup)
             ?: throw PersistenceFailure("Player ${backup.playerName} is not available for restore")
-        player.inventory.clear()
-        if (snapshot.isEmpty) {
-            lobby.give(player)
-        } else {
-            snapshot.apply(player.inventory)
-        }
+        snapshot.apply(player.inventory)
     }
 
     private fun resolve(backup: BackupRef): Player? =

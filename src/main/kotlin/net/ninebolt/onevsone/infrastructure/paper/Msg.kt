@@ -99,8 +99,4 @@ object MessageKeys {
     private const val SCOREBOARD = "scoreboard"
     const val SCOREBOARD_TITLE = "${SCOREBOARD}.title"
     const val SCOREBOARD_ENTRY = "${SCOREBOARD}.entry"
-
-    private const val ITEM = "item"
-    const val ITEM_COMPASS = "${ITEM}.compass"
-    const val ITEM_FEATHER = "${ITEM}.feather"
 }

@@ -1,6 +1,5 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
-import org.bukkit.Material
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.PlayerInventory
 
@@ -13,17 +12,11 @@ data class PaperInventorySnapshot(
     val armor: List<ItemStack?> = emptyList(),
     val items: List<ItemStack?> = emptyList()
 ) {
-    val isEmpty: Boolean
-        get() = armor.all { it.isNullOrAir() } && items.all { it.isNullOrAir() }
-
     fun apply(inventory: PlayerInventory) {
         inventory.clear()
         inventory.contents = Array(inventory.contents.size) { items.getOrNull(it)?.clone() }
         inventory.armorContents = Array(4) { armor.getOrNull(it)?.clone() }
     }
-
-    private fun ItemStack?.isNullOrAir(): Boolean =
-        this == null || type == Material.AIR || type == Material.CAVE_AIR || type == Material.VOID_AIR
 
     companion object {
         fun capture(inventory: PlayerInventory): PaperInventorySnapshot = PaperInventorySnapshot(

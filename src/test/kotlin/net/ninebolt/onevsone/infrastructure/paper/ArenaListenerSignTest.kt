@@ -137,13 +137,13 @@ class ArenaListenerSignTest {
         every { p2.isOnline } returns false
         env.service.abort(ArenaId("arena1"))
 
-        // 再参加時に PlayerJoinEvent 経由で復元(空バックアップ→ロビーアイテム)
+        // 再参加時に PlayerJoinEvent 経由で復元(空バックアップ→空インベントリ)
         every { p2.isOnline } returns true
         p2.inventory.setItem(0, null)
         env.players[p2.uniqueId] = p2
         val join = mockk<PlayerJoinEvent>(relaxed = true)
         every { join.player } returns p2
         env.listener.onJoin(join)
-        assertEquals(Material.COMPASS, p2.inventory.contents[0]?.type)
+        assertNull(p2.inventory.contents[0])
     }
 }

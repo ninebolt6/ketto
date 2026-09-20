@@ -58,7 +58,7 @@ composition root として手動で全依存を配線する(DI フレームワ�
 - 状態はメモリ(domain の `ArenaMatch` + `ArenaRegistry`)、YAML は永続化専用。詳細仕様は docs/ を参照
 - インベントリスナップショットは**マッチ開始時**(初期カウントダウン終了、キット適用直前)に
   両者分を取得し、一括保存に成功してからキットを適用する。参加登録・開始前の退出では持ち物を変更しない。
-  (バックアップ無しは「キット未適用」を意味し、退出時に復元もフォールバックアイテムも行わない。
+  (バックアップ無しは「キット未適用」を意味し、退出時に復元を行わない。
   例外: 前回マッチの pending restore 完了は再参加時にインベントリへ適用し得る)
 - 禁止: domain/application で `org.bukkit`・`io.papermc`・`net.kyori`・`YamlConfiguration`・
   `java.io.File`・`java.nio.file`・`infrastructure` パッケージ参照(ArchitectureTest で検出)
