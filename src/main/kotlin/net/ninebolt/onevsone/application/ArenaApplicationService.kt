@@ -37,6 +37,7 @@ class ArenaApplicationService(
     private val recovery: PlayerRecoveryService,
     private val failures: FailureReporter,
     private val progression: MatchProgressionService,
+    private val sync: MatchStateSync,
     val requiredWins: Int
 ) {
 
@@ -73,11 +74,7 @@ class ArenaApplicationService(
             val arenaId = match.arenaId
             progression.cancelCountdown(arenaId)
             val left = registry.transact(arenaId) { it.abort() }?.outcome ?: emptyList()
-            left.forEach { (_, name) ->
-                failures.warnOnFailure("Could not unregister $name from players.yml; membership record may be stale") {
-                    matchState.unregisterParticipant(name)
-                }
-            }
+            left.forEach { sync.unregister(it) }
             failures.warnOnFailure("Could not persist shutdown state for arena $arenaId; continuing shutdown") {
                 registry.match(arenaId)?.let { matchState.saveStatus(it) }
             }
@@ -126,8 +123,7 @@ class ArenaApplicationService(
         matchState.registerParticipant(participant, arenaId)
         registry.installMatch(step.match)
         if (step.outcome == JoinOutcome.MatchReady) progression.startInitialCountdown(arenaId)
-        matchState.saveStatus(step.match)
-        presentation.updateSign(arenaId, step.match.state)
+        sync.publish(step.match)
         return when (step.outcome) {
             JoinOutcome.FirstJoined -> JoinReply.JoinedWaiting
             JoinOutcome.MatchReady -> JoinReply.JoinedStarting
@@ -142,12 +138,9 @@ class ArenaApplicationService(
         when (val outcome = step.outcome) {
             LeaveOutcome.NotWaiting -> return LeaveReply.NotWaiting
             is LeaveOutcome.Left -> {
-                failures.warnOnFailure("Could not unregister ${outcome.participant.name} from players.yml; membership record may be stale") {
-                    matchState.unregisterParticipant(outcome.participant.name)
-                }
+                sync.unregister(outcome.participant)
                 // 未開始の退出では持ち物を変更しない(バックアップ無し・フォールバック無し)
-                matchState.saveStatus(step.match)
-                presentation.updateSign(arenaId, step.match.state)
+                sync.publish(step.match)
                 return LeaveReply.Left
             }
         }
@@ -171,11 +164,8 @@ class ArenaApplicationService(
         val step = registry.transact(arenaId) { it.forfeit(playerId) } ?: return
         when (val outcome = step.outcome) {
             is QuitOutcome.WaitingExit -> {
-                failures.warnOnFailure("Could not unregister ${outcome.participant.name} from players.yml; membership record may be stale") {
-                    matchState.unregisterParticipant(outcome.participant.name)
-                }
-                matchState.saveStatus(step.match)
-                presentation.updateSign(arenaId, step.match.state)
+                sync.unregister(outcome.participant)
+                sync.publish(step.match)
             }
             is QuitOutcome.MatchEnded -> {
                 progression.finishMatch(step.match, outcome.winner, outcome.loser, forfeit = true, death = false)

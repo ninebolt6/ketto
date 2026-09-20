@@ -17,6 +17,7 @@ import net.ninebolt.onevsone.application.ArenaRegistry
 import net.ninebolt.onevsone.application.JoinReply
 import net.ninebolt.onevsone.application.LeaveReply
 import net.ninebolt.onevsone.application.MatchProgressionService
+import net.ninebolt.onevsone.application.MatchStateSync
 import net.ninebolt.onevsone.application.PlayerRecoveryService
 import net.ninebolt.onevsone.application.port.MatchStateRepository
 import net.ninebolt.onevsone.application.port.PlayerStatsRepository
@@ -118,13 +119,14 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     val command: OneVsOneCommand by lazy { OneVsOneCommand(plugin, service, admin, messages) }
 
     private fun buildService(): ArenaApplicationService {
+        val stateSync = MatchStateSync(matchStateRepo, presentation, failures)
         val progression = MatchProgressionService(
-            registry, matchStateRepo, statsRepo, equipment, equipment, playerPort,
+            registry, stateSync, statsRepo, equipment, equipment, playerPort,
             schedulerPort, presentation, recovery, failures
         )
         return ArenaApplicationService(
             registry, arenaRepo, matchStateRepo, statsRepo, playerPort,
-            presentation, recovery, failures, progression, requiredWins
+            presentation, recovery, failures, progression, stateSync, requiredWins
         )
     }
 

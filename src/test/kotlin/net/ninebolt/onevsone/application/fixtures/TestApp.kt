@@ -5,6 +5,7 @@ import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.application.ArenaRegistry
 import net.ninebolt.onevsone.application.JoinReply
 import net.ninebolt.onevsone.application.MatchProgressionService
+import net.ninebolt.onevsone.application.MatchStateSync
 import net.ninebolt.onevsone.application.PlayerRecoveryService
 import net.ninebolt.onevsone.domain.ArenaDefinition
 import net.ninebolt.onevsone.domain.ArenaId
@@ -25,11 +26,12 @@ class TestApp(val requiredWins: Int = 3) {
     val presentation = RecordingPresentation()
     val failures = RecordingFailures()
     val recovery = PlayerRecoveryService(equipment, players, arenas, presentation, failures)
+    val stateSync = MatchStateSync(matchState, presentation, failures)
     val progression = MatchProgressionService(
-        registry, matchState, stats, equipment, equipment, players, scheduler, presentation, recovery, failures
+        registry, stateSync, stats, equipment, equipment, players, scheduler, presentation, recovery, failures
     )
     val service = ArenaApplicationService(
-        registry, arenas, matchState, stats, players, presentation, recovery, failures, progression, requiredWins
+        registry, arenas, matchState, stats, players, presentation, recovery, failures, progression, stateSync, requiredWins
     )
     val admin = ArenaAdministrationService(registry, arenas, arenas, arenas, equipment, presentation, service)
 

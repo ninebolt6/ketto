@@ -5,16 +5,13 @@ import net.ninebolt.onevsone.application.port.FailureReporter
 import net.ninebolt.onevsone.application.port.InventoryBackupPort
 import net.ninebolt.onevsone.application.port.KitPort
 import net.ninebolt.onevsone.application.port.MatchPresentationPort
-import net.ninebolt.onevsone.application.port.MatchStateRepository
 import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.application.port.PlayerHandle
 import net.ninebolt.onevsone.application.port.PlayerPort
 import net.ninebolt.onevsone.application.port.PlayerStatsRepository
 import net.ninebolt.onevsone.application.port.SchedulerPort
-import net.ninebolt.onevsone.application.port.warnOnFailure
 import net.ninebolt.onevsone.domain.ArenaId
 import net.ninebolt.onevsone.domain.ArenaMatch
-import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatOutcome
 import net.ninebolt.onevsone.domain.MatchId
 import net.ninebolt.onevsone.domain.Participant
@@ -31,7 +28,7 @@ import kotlin.uuid.Uuid
  */
 class MatchProgressionService(
     private val registry: ArenaRegistry,
-    private val matchState: MatchStateRepository,
+    private val sync: MatchStateSync,
     private val stats: PlayerStatsRepository,
     private val backups: InventoryBackupPort,
     private val kit: KitPort,
@@ -57,11 +54,7 @@ class MatchProgressionService(
         val step = registry.transact(arenaId) { it.abort() } ?: return
         val left = step.outcome
         val tickets = left.map { it to recovery.pending(it.id) }
-        left.forEach { (_, name) ->
-            failures.warnOnFailure("Could not unregister $name from players.yml; pending restore retained in memory") {
-                matchState.unregisterParticipant(name)
-            }
-        }
+        left.forEach { sync.unregisterKeepingRestore(it) }
         tickets.forEach { (participant, ticket) ->
             val handle = players.handle(participant.id) ?: return@forEach
             if (handle.dead) {
@@ -72,8 +65,7 @@ class MatchProgressionService(
                 recovery.restoreNow(handle, ticket, respawn = false, lobby = false)
             }
         }
-        matchState.saveStatus(step.match)
-        presentation.updateSign(arenaId, ArenaState.WAITING)
+        sync.publish(step.match)
     }
 
     /** 走行中のカウントダウンだけを止める(shutdown 用)。 */
@@ -122,8 +114,7 @@ class MatchProgressionService(
         }
         winnerHandle?.let { teleportToSlot(match, outcome.winner, it) }
 
-        matchState.saveStatus(match)
-        presentation.updateSign(arenaId, ArenaState.ROUNDCOUNTDOWN)
+        sync.publish(match)
         startRoundCountdown(arenaId)
     }
 
@@ -141,11 +132,7 @@ class MatchProgressionService(
         // 復元対象を先に確保してから登録解除・タスク停止へ
         val winnerTicket = recovery.pending(winner.id)
         val loserTicket = recovery.pending(loser.id)
-        listOf(winner, loser).forEach { (_, name) ->
-            failures.warnOnFailure("Could not unregister $name from players.yml; pending restore retained in memory") {
-                matchState.unregisterParticipant(name)
-            }
-        }
+        listOf(winner, loser).forEach { sync.unregisterKeepingRestore(it) }
 
         presentation.champion(arenaId, winner.name)
 
@@ -179,8 +166,7 @@ class MatchProgressionService(
             }
         }
 
-        matchState.saveStatus(match)
-        presentation.updateSign(arenaId, ArenaState.WAITING)
+        sync.publish(match)
         recordResult(winner, loser)
     }
 
@@ -229,8 +215,7 @@ class MatchProgressionService(
                 val began = registry.transact(arenaId) { it.beginMatch() }
                 if (began?.outcome == true) {
                     presentation.updateScoreboard(began.match)
-                    matchState.saveStatus(began.match)
-                    presentation.updateSign(arenaId, ArenaState.INGAME)
+                    sync.publish(began.match)
                 }
             } catch (e: Exception) {
                 // 交換途中失敗: 取得済みバックアップで中断・復元する
@@ -255,8 +240,7 @@ class MatchProgressionService(
                     presentation.roundStart(participantIds)
                     val resumed = registry.transact(arenaId) { it.resumeRound() }
                     if (resumed?.outcome == true) {
-                        matchState.saveStatus(resumed.match)
-                        presentation.updateSign(arenaId, ArenaState.INGAME)
+                        sync.publish(resumed.match)
                     }
                 }
             }
