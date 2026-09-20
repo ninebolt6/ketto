@@ -139,9 +139,9 @@ class YamlStore(folder: File, private val logger: Logger) {
         val inv = yaml.getConfigurationSection("inv") ?: return emptyList()
         return inv.getKeys(false).map { name ->
             val snapshot = readSnapshot(yaml, "inv.$name")
-            val uuid = yaml.getString("inv.$name.uuid")?.let { parseUuid(it) }
-            val backupId = yaml.getString("inv.$name.id")?.let { parseUuid(it) } ?: Uuid.random()
-            val matchId = yaml.getString("inv.$name.match")?.let { parseUuid(it) }?.let { MatchId(it) }
+            val uuid = yaml.getString("inv.$name.uuid")?.let(::parseUuid)
+            val backupId = yaml.getString("inv.$name.id")?.let(::parseUuid) ?: Uuid.random()
+            val matchId = yaml.getString("inv.$name.match")?.let(::parseUuid)?.let(::MatchId)
                 ?: MatchId.newId()
             PersistedBackup(BackupRef(backupId, matchId, uuid, name), snapshot)
         }

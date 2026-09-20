@@ -32,20 +32,18 @@ class PlayerRecoveryService(
 
     /** 起動時に呼ばれる。 */
     fun loadPersisted() {
-        backups.pendingBackups().forEach { ref ->
-            val ticket = RestoreTicket(ref)
-            ref.playerId?.let { ticketsByUuid[it] = ticket }
-            ticketsByName[ref.playerName] = ticket
-        }
+        backups.pendingBackups().forEach(::registerTicket)
     }
 
     /** backupBeforeMatch 成功後に呼ぶ。 */
     fun register(refs: List<BackupRef>) {
-        refs.forEach { ref ->
-            val ticket = RestoreTicket(ref)
-            ref.playerId?.let { ticketsByUuid[it] = ticket }
-            ticketsByName[ref.playerName] = ticket
-        }
+        refs.forEach(::registerTicket)
+    }
+
+    private fun registerTicket(ref: BackupRef) {
+        val ticket = RestoreTicket(ref)
+        ref.playerId?.let { ticketsByUuid[it] = ticket }
+        ticketsByName[ref.playerName] = ticket
     }
 
     /** UUID 優先、名前は uuid 一致(または uuid 無し)の場合のみ採用。 */
@@ -89,8 +87,8 @@ class PlayerRecoveryService(
     }
 
     private fun forget(ticket: RestoreTicket) {
-        ticketsByUuid.entries.removeIf { it.value === ticket }
-        ticketsByName.entries.removeIf { it.value === ticket }
+        ticketsByUuid.values.remove(ticket)
+        ticketsByName.values.remove(ticket)
     }
 
     private fun teleportLobby(handle: PlayerHandle) {

@@ -25,14 +25,10 @@ internal class StatsCommand(
             showStats(player, player.uniqueId.toKotlinUuid())
             return null
         }
-        val online = plugin.server.getPlayerExact(args[0])
-        if (online != null) {
-            showStats(player, online.uniqueId.toKotlinUuid())
-            return null
-        }
-        val cached = plugin.server.getOfflinePlayerIfCached(args[0])
-        if (cached != null) {
-            showStats(player, cached.uniqueId.toKotlinUuid())
+        val known = plugin.server.getPlayerExact(args[0])
+            ?: plugin.server.getOfflinePlayerIfCached(args[0])
+        if (known != null) {
+            showStats(player, known.uniqueId.toKotlinUuid())
             return null
         }
         // オフライン名解決はブロッキングなので asyncScheduler で実行し、応答はメインスレッドへ戻す

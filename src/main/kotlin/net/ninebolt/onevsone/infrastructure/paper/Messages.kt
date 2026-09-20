@@ -34,9 +34,10 @@ class Messages private constructor(
     private fun localeOf(sender: CommandSender): String {
         if (chatLang != null) return chatLang
         val locale = (sender as? Player)?.let { runCatching { it.locale() }.getOrNull() } ?: return defaultLang
+        val langTag = locale.toString().lowercase(Locale.ROOT)
         return when {
-            bundles.containsKey(locale.toString().lowercase(Locale.ROOT)) -> locale.toString().lowercase(Locale.ROOT)
-            bundles.containsKey(locale.language) -> locale.language
+            langTag in bundles -> langTag
+            locale.language in bundles -> locale.language
             else -> defaultLang
         }
     }
@@ -171,14 +172,14 @@ class Messages private constructor(
                 .associateWith { (bundled[it] ?: emptyMap()) + (overrides[it] ?: emptyMap()) }
             (bundles[defaultLang]?.keys ?: emptySet()).forEach { key ->
                 bundles.filterKeys { it != defaultLang }
-                    .filter { (lang, table) -> !table.containsKey(key) }
-                    .forEach { (lang) -> logger.warning("messages_$lang.yml is missing key '$key' (falls back to '$defaultLang')") }
+                    .filterValues { key !in it }
+                    .keys.forEach { lang -> logger.warning("messages_$lang.yml is missing key '$key' (falls back to '$defaultLang')") }
             }
-            return Messages(bundles, defaultLang, if (language.equals("auto", true)) null else language, logger)
+            return Messages(bundles, defaultLang, if (language.equals("auto", ignoreCase = true)) null else language, logger)
         }
 
         /** ネストした YAML を a.b.c キーのテンプレートマップへ平坦化する。 */
         private fun flatten(config: YamlConfiguration): Map<String, String> =
-            config.getKeys(true).filter { config.isString(it) }.associateWith { config.getString(it)!! }
+            config.getKeys(true).mapNotNull { key -> config.getString(key)?.let { key to it } }.toMap()
     }
 }

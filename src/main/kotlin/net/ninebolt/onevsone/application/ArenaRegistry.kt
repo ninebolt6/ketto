@@ -18,8 +18,8 @@ import kotlin.uuid.Uuid
  * これらのメソッドで置き換える。
  */
 class ArenaRegistry {
-    private val definitions = LinkedHashMap<ArenaId, ArenaDefinition>()
-    private val matches = LinkedHashMap<ArenaId, ArenaMatch>()
+    private val definitions = linkedMapOf<ArenaId, ArenaDefinition>()
+    private val matches = linkedMapOf<ArenaId, ArenaMatch>()
     private val playerArena = mutableMapOf<Uuid, ArenaId>()
 
     // ---- アリーナ定義 -----------------------------------------------------
@@ -82,7 +82,7 @@ class ArenaRegistry {
 
     fun arenaOf(playerId: Uuid): ArenaId? = playerArena[playerId]
 
-    fun isJoined(playerId: Uuid): Boolean = playerArena.containsKey(playerId)
+    fun isJoined(playerId: Uuid): Boolean = playerId in playerArena
 
     /**
      * 書き戻し前後の参加者差分を索引へ反映する。

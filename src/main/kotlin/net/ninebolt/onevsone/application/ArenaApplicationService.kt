@@ -399,7 +399,7 @@ class ArenaApplicationService(
                 teleportToSlot(match, second, p2)
                 presentation.matchStart(participantIds)
                 val began = registry.transact(arenaId) { it.beginMatch() }
-                if (began != null && began.outcome) {
+                if (began?.outcome == true) {
                     presentation.updateScoreboard(began.match)
                     matchState.saveStatus(began.match)
                     presentation.updateSign(arenaId, ArenaState.INGAME)
@@ -426,7 +426,7 @@ class ArenaApplicationService(
                 0 -> {
                     presentation.roundStart(participantIds)
                     val resumed = registry.transact(arenaId) { it.resumeRound() }
-                    if (resumed != null && resumed.outcome) {
+                    if (resumed?.outcome == true) {
                         matchState.saveStatus(resumed.match)
                         presentation.updateSign(arenaId, ArenaState.INGAME)
                     }

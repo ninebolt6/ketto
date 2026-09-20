@@ -31,11 +31,12 @@ class ArenaListener(
     @EventHandler(priority = EventPriority.HIGH)
     fun onDeath(event: PlayerDeathEvent) {
         val player = event.entity
-        if (service.matchOf(player.uniqueId.toKotlinUuid()) == null) return
+        val id = player.uniqueId.toKotlinUuid()
+        if (service.matchOf(id) == null) return
         event.keepInventory = true
         event.drops.clear()
-        if (!service.defeat(player.uniqueId.toKotlinUuid(), DefeatCause.DEATH)) {
-            service.requestRespawn(player.uniqueId.toKotlinUuid())
+        if (!service.defeat(id, DefeatCause.DEATH)) {
+            service.requestRespawn(id)
         }
     }
 

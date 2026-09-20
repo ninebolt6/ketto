@@ -17,8 +17,7 @@ class YamlSignRepository(private val store: YamlStore) : ArenaSignRepository {
 
     private val index: MutableMap<SignPos, String> by lazy { scan() }
 
-    private fun scan(): MutableMap<SignPos, String> {
-        val found = mutableMapOf<SignPos, String>()
+    private fun scan(): MutableMap<SignPos, String> = mutableMapOf<SignPos, String>().apply {
         store.arenaDir.listFiles()?.forEach { file ->
             if (!file.isFile || file.extension != "yml") return@forEach
             val pos = try {
@@ -27,9 +26,8 @@ class YamlSignRepository(private val store: YamlStore) : ArenaSignRepository {
                 store.warn("Skipping unreadable arena file ${file.name} for sign index")
                 null
             } ?: return@forEach
-            found[pos] = file.nameWithoutExtension
+            put(pos, file.nameWithoutExtension)
         }
-        return found
     }
 
     private fun signPos(yaml: YamlConfiguration): SignPos? {
@@ -44,8 +42,8 @@ class YamlSignRepository(private val store: YamlStore) : ArenaSignRepository {
     }
 
     override fun signLocation(arenaName: String): WorldPosition? =
-        index.entries.firstOrNull { it.value == arenaName }
-            ?.let { (pos) -> WorldPosition(pos.world, pos.x.toDouble(), pos.y.toDouble(), pos.z.toDouble()) }
+        index.entries.firstOrNull { it.value == arenaName }?.key
+            ?.let { WorldPosition(it.world, it.x.toDouble(), it.y.toDouble(), it.z.toDouble()) }
 
     override fun setSign(arenaName: String, position: WorldPosition) {
         val file = store.arenaFile(arenaName)
@@ -65,7 +63,7 @@ class YamlSignRepository(private val store: YamlStore) : ArenaSignRepository {
                 store.save(yaml, file)
             }
         }
-        index.entries.removeIf { it.value == arenaName }
+        index.entries.removeAll { it.value == arenaName }
     }
 
     override fun signOwner(world: String, x: Int, y: Int, z: Int): String? =

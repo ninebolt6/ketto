@@ -117,8 +117,6 @@ class PaperMatchPresentation(
             val score = objective.getScore(name)
             score.customName(messages.render(messages.scoreboardEntry(name)))
             score.score = match.winsOf(id)
-        }
-        match.participants.forEach { (id) ->
             player(id)?.scoreboard = board
         }
     }
