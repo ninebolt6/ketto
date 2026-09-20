@@ -38,7 +38,7 @@ class OneVsOneStatsCommandTest {
     fun `no args shows usage`() {
         val p = env.player("Alice")
         env.run(p)
-        assertTrue(p.drainMessages().any { it.contains("/1vs1 stats | /1vs1 stats [player]") })
+        assertTrue(p.drainMessages().any { it.contains("/1vs1 stats [player] | /1vs1 leave") })
     }
 
     @Test
@@ -130,7 +130,7 @@ class OneVsOneStatsCommandTest {
     fun `unknown subcommand falls back to usage`() {
         val p = env.player("Alice")
         env.run(p, "bogus")
-        assertTrue(p.drainMessages().any { it.contains("/1vs1 stats | /1vs1 stats [player]") })
+        assertTrue(p.drainMessages().any { it.contains("/1vs1 stats [player] | /1vs1 leave") })
         env.run(p, "arena", "bogus")
         assertTrue(p.drainMessages().any { it.contains("/1vs1 arena info [arena]") })
     }

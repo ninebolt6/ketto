@@ -8,6 +8,7 @@ import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.opPlayer
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.run
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.signBlock
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.tab
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import org.bukkit.Location
 import org.bukkit.Material
@@ -191,6 +192,15 @@ class OneVsOneAdminCommandTest {
         assertTrue(op.drainMessages().any { it.contains("/1vs1 arena create [arena]") })
         env.run(op, "arena", "info", "arena1", "extra")
         assertTrue(op.drainMessages().any { it.contains("Arena[arena1]") })
+    }
+
+    @Test
+    fun `tab completion keeps the registered name case`() {
+        val op = env.opPlayer("Op")
+        env.newArena("Arena1")
+        assertTrue(env.tab(op, "").containsAll(listOf("stats", "leave", "setlobby", "arena")))
+        assertEquals(listOf("setInv"), env.tab(op, "arena", "seti"))
+        assertEquals(listOf("Arena1"), env.tab(op, "arena", "info", "arena"))
     }
 
     @Test

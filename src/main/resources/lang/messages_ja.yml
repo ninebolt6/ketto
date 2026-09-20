@@ -3,7 +3,7 @@
 prefix: "<dark_gray>[<gold>1vs1<dark_gray>] "
 
 usage:
-  root: "<yellow>/1vs1 stats | /1vs1 stats [player]"
+  root: "<yellow>/1vs1 stats [player] | /1vs1 leave | /1vs1 arena info [arena]"
   arena: "<yellow>/1vs1 arena info [arena]"
   create: "<red>/1vs1 arena create [arena]"
   remove: "<red>/1vs1 arena remove [arena]"

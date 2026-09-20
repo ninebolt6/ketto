@@ -12,6 +12,9 @@ import kotlin.uuid.toKotlinUuid
 internal fun TestEnv.run(sender: CommandSender, vararg args: String) =
     command.onCommand(sender, mockk<Command>(relaxed = true), "1vs1", arrayOf(*args))
 
+internal fun TestEnv.tab(sender: CommandSender, vararg args: String) =
+    command.onTabComplete(sender, mockk<Command>(relaxed = true), "1vs1", arrayOf(*args))
+
 internal fun TestEnv.writeStats(uuid: Uuid, win: Int, lose: Int) {
     repeat(win) { statsRepo.recordWin(uuid) }
     repeat(lose) { statsRepo.recordLoss(uuid) }
