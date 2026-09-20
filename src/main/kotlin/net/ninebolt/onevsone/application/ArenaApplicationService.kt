@@ -23,7 +23,7 @@ import net.ninebolt.onevsone.domain.MatchId
 import net.ninebolt.onevsone.domain.Participant
 import net.ninebolt.onevsone.domain.PlayerStats
 import net.ninebolt.onevsone.domain.QuitOutcome
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 /**
  * 参加・開始・決着・終了・復元・中断のオーケストレーション。
@@ -96,9 +96,9 @@ class ArenaApplicationService(
 
     // ---- 問い合わせ -------------------------------------------------------
 
-    fun arenaIdOf(playerId: UUID): ArenaId? = registry.arenaOf(playerId)
+    fun arenaIdOf(playerId: Uuid): ArenaId? = registry.arenaOf(playerId)
 
-    fun matchOf(playerId: UUID): ArenaMatch? =
+    fun matchOf(playerId: Uuid): ArenaMatch? =
         registry.arenaOf(playerId)?.let { registry.match(it) }
 
     fun definition(name: String) = registry.definition(ArenaId(name))
@@ -106,13 +106,13 @@ class ArenaApplicationService(
     fun matchOf(name: String): ArenaMatch? = registry.match(ArenaId(name))
 
     /** 破損時は PersistenceFailure を投げる(呼び出し側で扱う)。 */
-    fun statsFor(playerId: UUID): PlayerStats? = stats.find(playerId)
+    fun statsFor(playerId: Uuid): PlayerStats? = stats.find(playerId)
 
-    fun pendingRestore(playerId: UUID) = recovery.pending(playerId)
+    fun pendingRestore(playerId: Uuid) = recovery.pending(playerId)
 
     // ---- 参加・退出・切断 ---------------------------------------------------
 
-    fun join(playerId: UUID, playerName: String, arenaId: ArenaId): JoinReply {
+    fun join(playerId: Uuid, playerName: String, arenaId: ArenaId): JoinReply {
         if (registry.isJoined(playerId)) return JoinReply.AlreadyJoined
         val definition = registry.definition(arenaId) ?: return JoinReply.NotFound
         val match = registry.match(arenaId) ?: return JoinReply.NotFound
@@ -144,7 +144,7 @@ class ArenaApplicationService(
         }
     }
 
-    fun leave(playerId: UUID): LeaveReply {
+    fun leave(playerId: Uuid): LeaveReply {
         val arenaId = registry.arenaOf(playerId) ?: return LeaveReply.NotJoined
         val step = registry.transact(arenaId) { it.leaveWaiting(playerId) }
             ?: return LeaveReply.NotJoined
@@ -166,7 +166,7 @@ class ArenaApplicationService(
      * QuitEvent 中はアダプターが切断中プレイヤーの操作ハンドルを
      * 提供するので、ここでは UUID だけで処理する。
      */
-    fun quit(playerId: UUID, playerName: String) {
+    fun quit(playerId: Uuid, playerName: String) {
         val arenaId = registry.arenaOf(playerId)
         if (arenaId == null) {
             // 参加していなくても未復元バックアップがあれば復元して切断に備える
@@ -194,7 +194,7 @@ class ArenaApplicationService(
     }
 
     /** PlayerJoinEvent 相当。 */
-    fun restorePending(playerId: UUID, playerName: String) {
+    fun restorePending(playerId: Uuid, playerName: String) {
         if (registry.isJoined(playerId)) return
         val ticket = recovery.ticketFor(playerId, playerName) ?: return
         val handle = players.handle(playerId) ?: return
@@ -204,7 +204,7 @@ class ArenaApplicationService(
     // ---- 勝敗 --------------------------------------------------------------
 
     /** 受理されれば true。 */
-    fun defeat(playerId: UUID, cause: DefeatCause): Boolean {
+    fun defeat(playerId: Uuid, cause: DefeatCause): Boolean {
         val arenaId = registry.arenaOf(playerId) ?: return false
         val step = registry.transact(arenaId) { it.recordDefeat(playerId, cause) } ?: return false
         return when (val outcome = step.outcome) {
@@ -221,7 +221,7 @@ class ArenaApplicationService(
     }
 
     /** 死亡したが敗北として受理されなかった場合のリスポーン予約。 */
-    fun requestRespawn(playerId: UUID) {
+    fun requestRespawn(playerId: Uuid) {
         scheduler.schedule(0) {
             players.handle(playerId)?.takeIf { it.dead }?.respawn()
         }
@@ -483,7 +483,7 @@ class ArenaApplicationService(
         val p2: PlayerHandle,
         val remaining: Int
     ) {
-        val participantIds: List<UUID> get() = match.participants.map { it.id }
+        val participantIds: List<Uuid> get() = match.participants.map { it.id }
     }
 
     // ---- 内部: 共通 ---------------------------------------------------------
@@ -504,7 +504,7 @@ class ArenaApplicationService(
      * オフライン等でハンドルを得られなければ何もしない。
      */
     private fun scheduleDeferred(
-        playerId: UUID,
+        playerId: Uuid,
         ticket: PlayerRecoveryService.RestoreTicket?,
         valid: () -> Boolean,
         action: (PlayerHandle) -> Unit

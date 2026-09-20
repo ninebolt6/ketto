@@ -15,6 +15,7 @@ import org.bukkit.event.player.PlayerJoinEvent
 import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.event.player.PlayerTeleportEvent
+import kotlin.uuid.toKotlinUuid
 
 /**
  * Bukkit イベントの入力アダプター。イベント/位置/引数の変換に限定し、
@@ -30,18 +31,18 @@ class ArenaListener(
     @EventHandler(priority = EventPriority.HIGH)
     fun onDeath(event: PlayerDeathEvent) {
         val player = event.entity
-        if (service.matchOf(player.uniqueId) == null) return
+        if (service.matchOf(player.uniqueId.toKotlinUuid()) == null) return
         event.keepInventory = true
         event.drops.clear()
-        if (!service.defeat(player.uniqueId, DefeatCause.DEATH)) {
-            service.requestRespawn(player.uniqueId)
+        if (!service.defeat(player.uniqueId.toKotlinUuid(), DefeatCause.DEATH)) {
+            service.requestRespawn(player.uniqueId.toKotlinUuid())
         }
     }
 
     @EventHandler(priority = EventPriority.HIGH)
     fun onDamage(event: EntityDamageEvent) {
         val player = event.entity as? Player ?: return
-        val match = service.matchOf(player.uniqueId) ?: return
+        val match = service.matchOf(player.uniqueId.toKotlinUuid()) ?: return
         if (ParticipantRestrictions.forState(match.state).damageCancelled) {
             event.isCancelled = true
         }
@@ -52,19 +53,19 @@ class ArenaListener(
         // 切断中プレイヤーは Server から取得できなくなるため、
         // イベントの Player を同期処理中だけ解決できるスコープで呼ぶ。
         lookup.scopeQuitting(event.player) {
-            service.quit(event.player.uniqueId, event.player.name)
+            service.quit(event.player.uniqueId.toKotlinUuid(), event.player.name)
         }
     }
 
     @EventHandler
     fun onJoin(event: PlayerJoinEvent) {
-        service.restorePending(event.player.uniqueId, event.player.name)
+        service.restorePending(event.player.uniqueId.toKotlinUuid(), event.player.name)
     }
 
     @EventHandler
     fun onMove(event: PlayerMoveEvent) {
         if (event is PlayerTeleportEvent) return
-        val match = service.matchOf(event.player.uniqueId) ?: return
+        val match = service.matchOf(event.player.uniqueId.toKotlinUuid()) ?: return
         if (ParticipantRestrictions.forState(match.state).horizontalMoveFrozen) {
             val from = event.from
             val to = event.to
@@ -73,13 +74,13 @@ class ArenaListener(
             }
         }
         if (match.resolvesVoidFall && event.to.y <= 0) {
-            service.defeat(event.player.uniqueId, DefeatCause.FALL)
+            service.defeat(event.player.uniqueId.toKotlinUuid(), DefeatCause.FALL)
         }
     }
 
     @EventHandler
     fun onBreak(event: BlockBreakEvent) {
-        val match = service.matchOf(event.player.uniqueId) ?: return
+        val match = service.matchOf(event.player.uniqueId.toKotlinUuid()) ?: return
         if (ParticipantRestrictions.forState(match.state).blockBreakCancelled) {
             event.isCancelled = true
         }
@@ -87,7 +88,7 @@ class ArenaListener(
 
     @EventHandler
     fun onCommand(event: PlayerCommandPreprocessEvent) {
-        val match = service.matchOf(event.player.uniqueId) ?: return
+        val match = service.matchOf(event.player.uniqueId.toKotlinUuid()) ?: return
         if (ParticipantRestrictions.forState(match.state).commandsBlocked) {
             event.isCancelled = true
             messages.send(event.player, messages.commandBlocked)

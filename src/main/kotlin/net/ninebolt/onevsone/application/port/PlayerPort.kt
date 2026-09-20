@@ -1,7 +1,7 @@
 package net.ninebolt.onevsone.application.port
 
 import net.ninebolt.onevsone.domain.WorldPosition
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 /**
  * オンライン(または切断処理中)のプレイヤーへの限定操作。
@@ -13,11 +13,11 @@ interface PlayerPort {
      * プレイヤーの操作ハンドル。オンラインのプレイヤー、およびアダプターが
      * QuitEvent 処理中として登録した切断中プレイヤーを返す。それ以外は null。
      */
-    fun handle(playerId: UUID): PlayerHandle?
+    fun handle(playerId: Uuid): PlayerHandle?
 }
 
 interface PlayerHandle {
-    val id: UUID
+    val id: Uuid
     val name: String
     val online: Boolean
     val dead: Boolean

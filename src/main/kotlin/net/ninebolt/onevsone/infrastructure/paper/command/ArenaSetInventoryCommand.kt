@@ -4,6 +4,7 @@ import net.ninebolt.onevsone.application.ArenaAdministrationService
 import net.ninebolt.onevsone.infrastructure.paper.Messages
 import net.ninebolt.onevsone.infrastructure.paper.Msg
 import org.bukkit.command.CommandSender
+import kotlin.uuid.toKotlinUuid
 
 internal class ArenaSetInventoryCommand(
     admin: ArenaAdministrationService,
@@ -15,7 +16,7 @@ internal class ArenaSetInventoryCommand(
         val player = sender.requirePlayer() ?: return null
         if (args.size != 1) return messages.usageSetInv
         val definition = definitionOrWarn(sender, args[0]) ?: return null
-        admin.setKit(definition.name, player.uniqueId)
+        admin.setKit(definition.name, player.uniqueId.toKotlinUuid())
         messages.send(sender, messages.inventorySet(definition.name))
         return null
     }

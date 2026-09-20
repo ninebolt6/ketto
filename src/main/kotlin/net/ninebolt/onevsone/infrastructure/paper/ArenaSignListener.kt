@@ -11,6 +11,7 @@ import org.bukkit.event.block.Action
 import org.bukkit.event.block.BlockBreakEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.inventory.EquipmentSlot
+import kotlin.uuid.toKotlinUuid
 
 /**
  * 参加看板のイベント面。クリックによる参加と、登録中の看板の破壊防止を担う。
@@ -31,7 +32,7 @@ class ArenaSignListener(
         val name = admin.signOwner(block.world.name, block.x, block.y, block.z) ?: return
         val match = service.matchOf(name) ?: return
         if (match.joinable) {
-            renderJoin(event.player, name, service.join(event.player.uniqueId, event.player.name, match.arenaId))
+            renderJoin(event.player, name, service.join(event.player.uniqueId.toKotlinUuid(), event.player.name, match.arenaId))
         } else {
             messages.send(event.player, messages.arenaInGame)
         }

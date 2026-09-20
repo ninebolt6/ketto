@@ -19,7 +19,8 @@ import org.bukkit.entity.Firework
 import org.bukkit.entity.Player
 import org.bukkit.scoreboard.Criteria
 import org.bukkit.scoreboard.DisplaySlot
-import java.util.UUID
+import kotlin.uuid.Uuid
+import kotlin.uuid.toJavaUuid
 
 class PaperMatchPresentation(
     private val server: Server,
@@ -28,13 +29,13 @@ class PaperMatchPresentation(
     private val failures: FailureReporter
 ) : MatchPresentationPort {
 
-    private fun player(id: UUID): Player? = server.getPlayer(id)
+    private fun player(id: Uuid): Player? = server.getPlayer(id.toJavaUuid())
 
     private fun pling(player: Player, pitch: Float) {
         player.playSound(player.location, Sound.BLOCK_NOTE_BLOCK_PLING, 5f, pitch)
     }
 
-    override fun countdownTick(participantIds: List<UUID>, secondsLeft: Int) {
+    override fun countdownTick(participantIds: List<Uuid>, secondsLeft: Int) {
         val message = messages.teleportIn(secondsLeft)
         participantIds.forEach { id ->
             player(id)?.let { p ->
@@ -44,7 +45,7 @@ class PaperMatchPresentation(
         }
     }
 
-    override fun roundCountdownTick(participantIds: List<UUID>, secondsLeft: Int) {
+    override fun roundCountdownTick(participantIds: List<Uuid>, secondsLeft: Int) {
         val message = messages.startIn(secondsLeft)
         participantIds.forEach { id ->
             player(id)?.let { p ->
@@ -54,7 +55,7 @@ class PaperMatchPresentation(
         }
     }
 
-    override fun matchStart(participantIds: List<UUID>) {
+    override fun matchStart(participantIds: List<Uuid>) {
         participantIds.forEach { id ->
             player(id)?.let { p ->
                 pling(p, 2f)
@@ -63,7 +64,7 @@ class PaperMatchPresentation(
         }
     }
 
-    override fun roundStart(participantIds: List<UUID>) {
+    override fun roundStart(participantIds: List<Uuid>) {
         participantIds.forEach { id ->
             player(id)?.let { p ->
                 pling(p, 2f)
@@ -72,7 +73,7 @@ class PaperMatchPresentation(
         }
     }
 
-    override fun roundWon(participantIds: List<UUID>, round: Int, winnerName: String) {
+    override fun roundWon(participantIds: List<Uuid>, round: Int, winnerName: String) {
         val message = messages.roundWinner(round, winnerName)
         participantIds.forEach { id ->
             player(id)?.let { messages.send(it, message) }
@@ -88,7 +89,7 @@ class PaperMatchPresentation(
         messages.broadcast(server, messages.champion(arena.name, winnerName))
     }
 
-    override fun championFirework(playerId: UUID) {
+    override fun championFirework(playerId: Uuid) {
         val player = player(playerId) ?: return
         val firework = player.world.spawnEntity(player.location, EntityType.FIREWORK_ROCKET) as? Firework ?: return
         val meta = firework.fireworkMeta
@@ -122,7 +123,7 @@ class PaperMatchPresentation(
         }
     }
 
-    override fun clearScoreboard(playerId: UUID) {
+    override fun clearScoreboard(playerId: Uuid) {
         val manager = server.scoreboardManager
         player(playerId)?.scoreboard = manager.newScoreboard
     }

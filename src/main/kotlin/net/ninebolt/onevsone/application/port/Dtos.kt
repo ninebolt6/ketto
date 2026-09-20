@@ -1,7 +1,7 @@
 package net.ninebolt.onevsone.application.port
 
 import net.ninebolt.onevsone.domain.MatchId
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 /**
  * 開始直前に取得したインベントリバックアップの識別子。
@@ -11,8 +11,8 @@ import java.util.UUID
  * playerId は uuid 未記録のバックアップでは null になり得る。
  */
 data class BackupRef(
-    val backupId: UUID,
+    val backupId: Uuid,
     val matchId: MatchId,
-    val playerId: UUID?,
+    val playerId: Uuid?,
     val playerName: String
 )

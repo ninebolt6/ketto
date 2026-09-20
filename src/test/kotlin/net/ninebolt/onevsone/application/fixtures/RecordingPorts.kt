@@ -6,40 +6,40 @@ import net.ninebolt.onevsone.domain.ArenaId
 import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.WorldPosition
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 class RecordingPresentation : MatchPresentationPort {
-    data class Countdown(val ids: List<UUID>, val seconds: Int)
+    data class Countdown(val ids: List<Uuid>, val seconds: Int)
 
     val countdownTicks = mutableListOf<Countdown>()
     val roundCountdownTicks = mutableListOf<Countdown>()
-    val matchStarts = mutableListOf<List<UUID>>()
-    val roundStarts = mutableListOf<List<UUID>>()
-    val roundWins = mutableListOf<Triple<List<UUID>, Int, String>>()
+    val matchStarts = mutableListOf<List<Uuid>>()
+    val roundStarts = mutableListOf<List<Uuid>>()
+    val roundWins = mutableListOf<Triple<List<Uuid>, Int, String>>()
     val roundEndSounds = mutableListOf<WorldPosition>()
     val champions = mutableListOf<Pair<ArenaId, String>>()
-    val fireworks = mutableListOf<UUID>()
+    val fireworks = mutableListOf<Uuid>()
     val scoreboards = mutableListOf<ArenaMatch>()
-    val clearedScoreboards = mutableListOf<UUID>()
+    val clearedScoreboards = mutableListOf<Uuid>()
     val signUpdates = mutableListOf<Pair<ArenaId, ArenaState>>()
 
-    override fun countdownTick(participantIds: List<UUID>, secondsLeft: Int) {
+    override fun countdownTick(participantIds: List<Uuid>, secondsLeft: Int) {
         countdownTicks += Countdown(participantIds, secondsLeft)
     }
 
-    override fun roundCountdownTick(participantIds: List<UUID>, secondsLeft: Int) {
+    override fun roundCountdownTick(participantIds: List<Uuid>, secondsLeft: Int) {
         roundCountdownTicks += Countdown(participantIds, secondsLeft)
     }
 
-    override fun matchStart(participantIds: List<UUID>) {
+    override fun matchStart(participantIds: List<Uuid>) {
         matchStarts += participantIds
     }
 
-    override fun roundStart(participantIds: List<UUID>) {
+    override fun roundStart(participantIds: List<Uuid>) {
         roundStarts += participantIds
     }
 
-    override fun roundWon(participantIds: List<UUID>, round: Int, winnerName: String) {
+    override fun roundWon(participantIds: List<Uuid>, round: Int, winnerName: String) {
         roundWins += Triple(participantIds, round, winnerName)
     }
 
@@ -51,7 +51,7 @@ class RecordingPresentation : MatchPresentationPort {
         champions += arena to winnerName
     }
 
-    override fun championFirework(playerId: UUID) {
+    override fun championFirework(playerId: Uuid) {
         fireworks += playerId
     }
 
@@ -59,7 +59,7 @@ class RecordingPresentation : MatchPresentationPort {
         scoreboards += match
     }
 
-    override fun clearScoreboard(playerId: UUID) {
+    override fun clearScoreboard(playerId: Uuid) {
         clearedScoreboards += playerId
     }
 

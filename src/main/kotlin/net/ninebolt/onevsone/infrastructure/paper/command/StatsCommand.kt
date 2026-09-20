@@ -7,7 +7,8 @@ import net.ninebolt.onevsone.infrastructure.paper.Msg
 import org.bukkit.command.CommandSender
 import org.bukkit.plugin.IllegalPluginAccessException
 import org.bukkit.plugin.java.JavaPlugin
-import java.util.UUID
+import kotlin.uuid.Uuid
+import kotlin.uuid.toKotlinUuid
 
 /** /1vs1 stats。offline プレイヤーの UUID 解決は非同期で行いメインスレッドへ戻す。 */
 internal class StatsCommand(
@@ -21,22 +22,22 @@ internal class StatsCommand(
     override fun execute(sender: CommandSender, args: List<String>): Msg? {
         val player = sender.requirePlayer() ?: return null
         if (args.isEmpty()) {
-            showStats(player, player.uniqueId)
+            showStats(player, player.uniqueId.toKotlinUuid())
             return null
         }
         val online = plugin.server.getPlayerExact(args[0])
         if (online != null) {
-            showStats(player, online.uniqueId)
+            showStats(player, online.uniqueId.toKotlinUuid())
             return null
         }
         val cached = plugin.server.getOfflinePlayerIfCached(args[0])
         if (cached != null) {
-            showStats(player, cached.uniqueId)
+            showStats(player, cached.uniqueId.toKotlinUuid())
             return null
         }
         // オフライン名解決はブロッキングなので asyncScheduler で実行し、応答はメインスレッドへ戻す
         plugin.server.asyncScheduler.runNow(plugin) {
-            val uuid = runCatching { plugin.server.getOfflinePlayer(args[0]).uniqueId }.getOrNull()
+            val uuid = runCatching { plugin.server.getOfflinePlayer(args[0]).uniqueId.toKotlinUuid() }.getOrNull()
             try {
                 if (plugin.isEnabled) {
                     plugin.server.scheduler.runTask(plugin, Runnable {
@@ -51,7 +52,7 @@ internal class StatsCommand(
         return null
     }
 
-    private fun showStats(sender: CommandSender, uuid: UUID) {
+    private fun showStats(sender: CommandSender, uuid: Uuid) {
         // 破損した stats は警告のうえ「なし」として扱う
         val stats = try {
             service.statsFor(uuid)

@@ -10,7 +10,7 @@ import net.ninebolt.onevsone.domain.ArenaId
 import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.WorldPosition
 import net.ninebolt.onevsone.domain.isValidArenaName
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 /**
  * create/remove/enable/disable、スポーン・装備・看板・ロビー設定の管理操作。
@@ -78,7 +78,7 @@ class ArenaAdministrationService(
     }
 
     /** 実行者の現在装備をアリーナ装備として保存する。 */
-    fun setKit(name: String, playerId: UUID): Boolean {
+    fun setKit(name: String, playerId: Uuid): Boolean {
         val definition = registry.definition(ArenaId(name)) ?: return false
         kit.saveKit(definition.id, playerId)
         return true

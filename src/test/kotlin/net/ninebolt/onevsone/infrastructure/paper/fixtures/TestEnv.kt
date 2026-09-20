@@ -66,6 +66,9 @@ import java.util.Locale
 import java.util.UUID
 import java.util.function.Consumer
 import java.util.logging.Logger
+import kotlin.uuid.Uuid
+import kotlin.uuid.toJavaUuid
+import kotlin.uuid.toKotlinUuid
 
 /**
  * Bukkit モック上に実アダプター・実サービスを配線する統合テスト環境。
@@ -282,12 +285,12 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         return inv
     }
 
-    fun player(name: String, uuid: UUID = UUID.randomUUID(), worldName: String = "world"): Player {
+    fun player(name: String, uuid: Uuid = Uuid.random(), worldName: String = "world"): Player {
         val w = world(worldName)
         val p = mockk<Player>(relaxed = true)
         val inv = inventory()
         val spigot = mockk<Player.Spigot>(relaxed = true)
-        every { p.uniqueId } returns uuid
+        every { p.uniqueId } returns uuid.toJavaUuid()
         every { p.name } returns name
         every { p.inventory } returns inv
         every { p.isOnline } returns true
@@ -296,7 +299,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         every { p.location } returns Location(w, 0.0, 64.0, 0.0)
         every { p.spigot() } returns spigot
         every { p.getAttribute(any()) } returns null
-        players[uuid] = p
+        players[uuid.toJavaUuid()] = p
         return p
     }
 
@@ -333,7 +336,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
 
     /** 看板参加と同じ経路で join し、応答メッセージも配送する。 */
     fun join(player: Player, arena: ArenaId): JoinReply {
-        val reply = service.join(player.uniqueId, player.name, arena)
+        val reply = service.join(player.uuid, player.name, arena)
         signListener.renderJoin(player, arena.name, reply)
         return reply
     }
@@ -341,13 +344,13 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     /** QuitEvent と同じく切断スコープ内で quit を呼ぶ。 */
     fun quit(player: Player) {
         lookup.scopeQuitting(player) {
-            service.quit(player.uniqueId, player.name)
+            service.quit(player.uuid, player.name)
         }
     }
 
     /** /1vs1 leave と同じく応答メッセージを配送する。 */
     fun leave(player: Player): LeaveReply {
-        val reply = service.leave(player.uniqueId)
+        val reply = service.leave(player.uuid)
         when (reply) {
             LeaveReply.Left -> messages.send(player, messages.leftArena)
             LeaveReply.NotWaiting -> messages.send(player, messages.cannotLeave)
@@ -363,3 +366,6 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         unmockkStatic(Bukkit::class, ItemStack::class)
     }
 }
+
+/** モック Player の Bukkit 側 ID(java.util.UUID)をドメインの Uuid へ変換する。 */
+internal val Player.uuid: Uuid get() = uniqueId.toKotlinUuid()

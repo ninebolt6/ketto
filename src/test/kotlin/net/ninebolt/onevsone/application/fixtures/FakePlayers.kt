@@ -3,11 +3,11 @@ package net.ninebolt.onevsone.application.fixtures
 import net.ninebolt.onevsone.application.port.PlayerHandle
 import net.ninebolt.onevsone.application.port.PlayerPort
 import net.ninebolt.onevsone.domain.WorldPosition
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 class FakePlayers : PlayerPort {
     class FakeHandle(
-        override val id: UUID,
+        override val id: Uuid,
         override val name: String
     ) : PlayerHandle {
         override var online = true
@@ -39,12 +39,12 @@ class FakePlayers : PlayerPort {
         }
     }
 
-    val players = mutableMapOf<UUID, FakeHandle>()
+    val players = mutableMapOf<Uuid, FakeHandle>()
 
-    override fun handle(playerId: UUID): PlayerHandle? =
+    override fun handle(playerId: Uuid): PlayerHandle? =
         players[playerId]?.takeIf { it.online || it.quitting }
 
-    fun add(name: String, id: UUID = UUID.randomUUID()): FakeHandle =
+    fun add(name: String, id: Uuid = Uuid.random()): FakeHandle =
         FakeHandle(id, name).also { players[id] = it }
 
     fun disconnect(handle: FakeHandle) {

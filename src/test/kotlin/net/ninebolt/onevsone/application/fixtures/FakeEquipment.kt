@@ -7,15 +7,15 @@ import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.domain.ArenaId
 import net.ninebolt.onevsone.domain.MatchId
 import net.ninebolt.onevsone.domain.Participant
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 /** インベントリ操作の記録・障害注入用フェイク。実データは持たず BackupRef のみ。 */
 class FakeEquipment(var players: FakePlayers? = null) : KitPort, InventoryBackupPort {
-    val storedBackups = linkedMapOf<UUID, BackupRef>()
+    val storedBackups = linkedMapOf<Uuid, BackupRef>()
     val restored = mutableListOf<BackupRef>()
     val acknowledged = mutableListOf<BackupRef>()
-    val kitApplies = mutableListOf<Pair<ArenaId, UUID>>()
-    val savedKits = mutableListOf<Pair<ArenaId, UUID>>()
+    val kitApplies = mutableListOf<Pair<ArenaId, Uuid>>()
+    val savedKits = mutableListOf<Pair<ArenaId, Uuid>>()
     var backupCalls = 0
     var applyCalls = 0
     var failOnBackup: PersistenceFailure? = null
@@ -27,7 +27,7 @@ class FakeEquipment(var players: FakePlayers? = null) : KitPort, InventoryBackup
         backupCalls++
         failOnBackup?.let { throw it }
         return participants.map { p ->
-            BackupRef(UUID.randomUUID(), match, p.id, p.name)
+            BackupRef(Uuid.random(), match, p.id, p.name)
         }.onEach { storedBackups[it.backupId] = it }
     }
 
@@ -49,13 +49,13 @@ class FakeEquipment(var players: FakePlayers? = null) : KitPort, InventoryBackup
         storedBackups[ref.backupId] = ref
     }
 
-    override fun applyKit(arena: ArenaId, playerId: UUID) {
+    override fun applyKit(arena: ArenaId, playerId: Uuid) {
         applyCalls++
         if (applyCalls == failOnApplyAt) throw PersistenceFailure("kit apply failed")
         kitApplies += arena to playerId
     }
 
-    override fun saveKit(arena: ArenaId, playerId: UUID) {
+    override fun saveKit(arena: ArenaId, playerId: Uuid) {
         savedKits += arena to playerId
     }
 }

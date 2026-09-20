@@ -6,6 +6,7 @@ import io.mockk.verify
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.contains
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.run
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.writeStats
 import net.kyori.adventure.text.Component
 import org.bukkit.OfflinePlayer
@@ -16,7 +17,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
-import java.util.UUID
+import kotlin.uuid.Uuid
+import kotlin.uuid.toJavaUuid
 
 /** /1vs1 stats と引数なし/権限/未知サブコマンドの検証。 */
 class OneVsOneStatsCommandTest {
@@ -69,7 +71,7 @@ class OneVsOneStatsCommandTest {
         env.run(p, "stats")
         verify(exactly = 1) { p.sendMessage(contains("Statsが存在しません")) }
 
-        env.writeStats(p.uniqueId, 3, 0)
+        env.writeStats(p.uuid, 3, 0)
         env.run(p, "stats")
         verify(exactly = 1) { p.sendMessage(contains("Win: 3")) }
         verify(exactly = 1) { p.sendMessage(contains("Lose: 0")) }
@@ -80,7 +82,7 @@ class OneVsOneStatsCommandTest {
     fun `stats of other online player by exact name`() {
         val viewer = env.player("Viewer")
         val target = env.player("Target")
-        env.writeStats(target.uniqueId, 0, 2)
+        env.writeStats(target.uuid, 0, 2)
         env.run(viewer, "stats", "Target")
         verify(exactly = 1) { viewer.sendMessage(contains("Win: 0")) }
         verify(exactly = 1) { viewer.sendMessage(contains("Lose: 2")) }
@@ -90,10 +92,10 @@ class OneVsOneStatsCommandTest {
     @Test
     fun `stats of offline cached player resolves uuid`() {
         val viewer = env.player("Viewer")
-        val uuid = UUID.randomUUID()
+        val uuid = Uuid.random()
         env.writeStats(uuid, 5, 5)
         val offline = mockk<OfflinePlayer>(relaxed = true)
-        every { offline.uniqueId } returns uuid
+        every { offline.uniqueId } returns uuid.toJavaUuid()
         every { env.server.getOfflinePlayerIfCached("Ghost") } returns offline
         env.run(viewer, "stats", "Ghost")
         verify(exactly = 1) { viewer.sendMessage(contains("W/L(勝率): 1.00")) }
@@ -102,10 +104,10 @@ class OneVsOneStatsCommandTest {
     @Test
     fun `stats offline uncached resolves through async scheduler on main thread`() {
         val viewer = env.player("Viewer")
-        val uuid = UUID.randomUUID()
+        val uuid = Uuid.random()
         env.writeStats(uuid, 2, 1)
         val offline = mockk<OfflinePlayer>(relaxed = true)
-        every { offline.uniqueId } returns uuid
+        every { offline.uniqueId } returns uuid.toJavaUuid()
         every { env.server.getOfflinePlayer("Ghost") } returns offline
         env.run(viewer, "stats", "Ghost")
         verify(exactly = 0) { viewer.sendMessage(contains("Win:")) }

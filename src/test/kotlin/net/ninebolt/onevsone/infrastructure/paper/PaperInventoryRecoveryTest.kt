@@ -10,6 +10,7 @@ import net.ninebolt.onevsone.domain.MatchId
 import net.ninebolt.onevsone.domain.Participant
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.playersYaml
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.view
 import net.ninebolt.onevsone.infrastructure.persistence.PersistedBackup
 import org.bukkit.Location
@@ -23,7 +24,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 /** インベントリバックアップの取得・復元・保留のシナリオ。 */
 class PaperInventoryRecoveryTest {
@@ -74,7 +75,7 @@ class PaperInventoryRecoveryTest {
         env.tick(6)
 
         every { p2.isDead } returns true
-        env.service.defeat(p2.uniqueId, DefeatCause.DEATH)
+        env.service.defeat(p2.uuid, DefeatCause.DEATH)
         env.service.abort(arena)
         env.runOneShots()
         assertEquals(Material.COMPASS, p2.inventory.contents[0]?.type)
@@ -96,14 +97,14 @@ class PaperInventoryRecoveryTest {
         assertEquals(Material.IRON_SWORD, p2.inventory.contents[0]?.type)
 
         every { p2.isDead } returns true
-        env.service.defeat(p2.uniqueId, DefeatCause.DEATH)
+        env.service.defeat(p2.uuid, DefeatCause.DEATH)
         assertEquals(ArenaState.WAITING, env.view().state)
         env.runOneShots()
         val spigot2 = p2.spigot()
         verify(exactly = 1) { spigot2.respawn() }
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
-        assertEquals(1, env.statsRepo.find(p1.uniqueId)!!.wins)
-        assertEquals(1, env.statsRepo.find(p2.uniqueId)!!.losses)
+        assertEquals(1, env.statsRepo.find(p1.uuid)!!.wins)
+        assertEquals(1, env.statsRepo.find(p2.uuid)!!.losses)
     }
 
     @Test
@@ -140,8 +141,8 @@ class PaperInventoryRecoveryTest {
 
     @Test
     fun `pending restore applied on join and discarded`() {
-        val uuid = UUID.randomUUID()
-        val ref = BackupRef(UUID.randomUUID(), MatchId.newId(), uuid, "Alice")
+        val uuid = Uuid.random()
+        val ref = BackupRef(Uuid.random(), MatchId.newId(), uuid, "Alice")
         env.matchStateRepo.registerParticipant(Participant(uuid, "Alice"), ArenaId("a1"))
         env.store.saveBackups(listOf(PersistedBackup(ref, PaperInventorySnapshot())))
         env.matchStateRepo.clearRegistrations()
@@ -149,7 +150,7 @@ class PaperInventoryRecoveryTest {
 
         val p = env.player("Alice", uuid)
         p.inventory.setItem(0, env.item(Material.STONE))
-        env.service.restorePending(p.uniqueId, p.name)
+        env.service.restorePending(p.uuid, p.name)
         val inv = p.inventory
         val restoredItems = mutableListOf<ItemStack>()
         verify { inv.setItem(0, capture(restoredItems)) }
@@ -170,7 +171,7 @@ class PaperInventoryRecoveryTest {
         env.tick(6)
 
         every { p2.isDead } returns true
-        env.service.defeat(p2.uniqueId, DefeatCause.DEATH)
+        env.service.defeat(p2.uuid, DefeatCause.DEATH)
         assertEquals(ArenaState.WAITING, env.view().state)
 
         env.removePlayer(p2)
@@ -198,14 +199,14 @@ class PaperInventoryRecoveryTest {
         env.tick(6)
 
         every { p2.isDead } returns true
-        env.service.defeat(p2.uniqueId, DefeatCause.DEATH)
+        env.service.defeat(p2.uuid, DefeatCause.DEATH)
         env.service.shutdown()
 
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
         assertEquals(p2.uniqueId.toString(), env.playersYaml().getString("inv.Bob.uuid"))
 
         every { p2.isDead } returns false
-        env.service.restorePending(p2.uniqueId, p2.name)
+        env.service.restorePending(p2.uuid, p2.name)
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
         assertNull(env.playersYaml().getConfigurationSection("inv.Bob"))
 
@@ -225,14 +226,14 @@ class PaperInventoryRecoveryTest {
         env.tick(6)
 
         every { p2.isDead } returns true
-        env.service.defeat(p2.uniqueId, DefeatCause.DEATH)
+        env.service.defeat(p2.uuid, DefeatCause.DEATH)
         env.service.abort(arena)
         env.runOneShots()
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
 
         every { p2.isDead } returns false
         env.join(p2, arena)
-        assertEquals(arena, env.service.arenaIdOf(p2.uniqueId))
+        assertEquals(arena, env.service.arenaIdOf(p2.uuid))
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
     }
 
@@ -253,7 +254,7 @@ class PaperInventoryRecoveryTest {
 
         every { p2.isOnline } returns true
         env.players[p2.uniqueId] = p2
-        env.service.restorePending(p2.uniqueId, p2.name)
+        env.service.restorePending(p2.uuid, p2.name)
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
         assertNull(env.playersYaml().getConfigurationSection("inv.Bob"))
     }
@@ -261,7 +262,7 @@ class PaperInventoryRecoveryTest {
     @Test
     fun `name collision does not restore and renamed uuid does`() {
         val arena = env.newArena()
-        val uuid = UUID.randomUUID()
+        val uuid = Uuid.random()
         val original = env.player("Alice", uuid)
         val bob = env.player("Bob")
         original.inventory.setItem(0, env.item(Material.DIAMOND))
@@ -271,13 +272,13 @@ class PaperInventoryRecoveryTest {
         env.removePlayer(original)
         env.service.abort(arena)
 
-        val squatter = env.player("Alice", UUID.randomUUID())
+        val squatter = env.player("Alice", Uuid.random())
         squatter.inventory.setItem(0, env.item(Material.STONE))
-        env.service.restorePending(squatter.uniqueId, squatter.name)
+        env.service.restorePending(squatter.uuid, squatter.name)
         assertEquals(Material.STONE, squatter.inventory.contents[0]?.type)
 
         val renamed = env.player("Alice2", uuid)
-        env.service.restorePending(renamed.uniqueId, renamed.name)
+        env.service.restorePending(renamed.uuid, renamed.name)
         assertEquals(Material.DIAMOND, renamed.inventory.contents[0]?.type)
         assertNull(env.playersYaml().getConfigurationSection("inv.Alice"))
     }
@@ -315,15 +316,15 @@ class PaperInventoryRecoveryTest {
         env.join(p2, arena)
         env.tick(6)
 
-        env.service.defeat(p2.uniqueId, DefeatCause.FALL)
+        env.service.defeat(p2.uuid, DefeatCause.FALL)
         env.runOneShots()
         env.tick(8)
         assertEquals(ArenaState.INGAME, env.view().state)
-        env.service.defeat(p2.uniqueId, DefeatCause.FALL)
+        env.service.defeat(p2.uuid, DefeatCause.FALL)
         env.runOneShots()
         env.tick(8)
         assertEquals(ArenaState.INGAME, env.view().state)
-        env.service.defeat(p2.uniqueId, DefeatCause.FALL)
+        env.service.defeat(p2.uuid, DefeatCause.FALL)
         assertEquals(ArenaState.WAITING, env.view().state)
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
     }

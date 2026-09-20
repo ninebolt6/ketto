@@ -6,6 +6,7 @@ import io.mockk.verify
 import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.contains
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import org.bukkit.event.block.BlockBreakEvent
 import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.player.PlayerCommandPreprocessEvent
@@ -103,7 +104,7 @@ class ArenaListenerRestrictionTest {
         env.tick(6)
         assertState(damageCancelled = false, breakCancelled = true, commandBlocked = true) // INGAME
 
-        env.service.defeat(p2.uniqueId, DefeatCause.FALL)
+        env.service.defeat(p2.uuid, DefeatCause.FALL)
         assertState(damageCancelled = true, breakCancelled = true, commandBlocked = true) // ROUNDCOUNTDOWN
     }
 }

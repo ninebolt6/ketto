@@ -9,6 +9,7 @@ import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.deathEvent
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.moveEvent
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.twoPlayerIngame
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import org.bukkit.Location
 import org.bukkit.entity.Entity
 import org.bukkit.event.entity.EntityDamageEvent
@@ -49,7 +50,7 @@ class ArenaListenerCombatTest {
         verify(exactly = 1) { event.keepInventory = true }
         assertTrue(event.drops.isEmpty())
         assertEquals(ArenaState.ROUNDCOUNTDOWN, env.state())
-        assertEquals(1, env.service.matchOf("arena1")!!.winsOf(p1.uniqueId))
+        assertEquals(1, env.service.matchOf("arena1")!!.winsOf(p1.uuid))
     }
 
     @Test
@@ -80,7 +81,7 @@ class ArenaListenerCombatTest {
     @Test
     fun `damage cancelled in round countdown state`() {
         val (p1, p2) = env.twoPlayerIngame()
-        env.service.defeat(p2.uniqueId, DefeatCause.FALL)
+        env.service.defeat(p2.uuid, DefeatCause.FALL)
         assertEquals(ArenaState.ROUNDCOUNTDOWN, env.state())
         val event = mockk<EntityDamageEvent>(relaxed = true)
         every { event.entity } returns p1
@@ -108,7 +109,7 @@ class ArenaListenerCombatTest {
         every { event.player } returns p1
         env.listener.onQuit(event)
         assertEquals(ArenaState.WAITING, env.state())
-        assertEquals(1, env.statsRepo.find(p2.uniqueId)!!.wins)
+        assertEquals(1, env.statsRepo.find(p2.uuid)!!.wins)
     }
 
     @Test
@@ -130,13 +131,13 @@ class ArenaListenerCombatTest {
         val fall = moveEvent(p1, Location(w, 0.0, 1.0, 0.0), Location(w, 0.0, -1.0, 0.0))
         env.listener.onMove(fall)
         assertEquals(ArenaState.ROUNDCOUNTDOWN, env.state())
-        assertEquals(1, env.service.matchOf("arena1")!!.winsOf(p2.uniqueId))
+        assertEquals(1, env.service.matchOf("arena1")!!.winsOf(p2.uuid))
     }
 
     @Test
     fun `round countdown freezes xz movement but allows y only`() {
         val (p1, p2) = env.twoPlayerIngame()
-        env.service.defeat(p2.uniqueId, DefeatCause.FALL)
+        env.service.defeat(p2.uuid, DefeatCause.FALL)
 
         val w = env.world()
         val from = Location(w, 0.0, 64.0, 0.0)
@@ -152,7 +153,7 @@ class ArenaListenerCombatTest {
     @Test
     fun `teleport events are excluded from move handling`() {
         val (p1, p2) = env.twoPlayerIngame()
-        env.service.defeat(p2.uniqueId, DefeatCause.FALL)
+        env.service.defeat(p2.uuid, DefeatCause.FALL)
         val w = env.world()
         val event = mockk<PlayerTeleportEvent>(relaxed = true)
         every { event.player } returns p1
@@ -165,18 +166,18 @@ class ArenaListenerCombatTest {
     @Test
     fun `void fall in ROUNDCOUNTDOWN scores again after resolving guard released`() {
         val (p1, p2) = env.twoPlayerIngame()
-        env.service.defeat(p2.uniqueId, DefeatCause.FALL)
+        env.service.defeat(p2.uuid, DefeatCause.FALL)
         assertEquals(ArenaState.ROUNDCOUNTDOWN, env.state())
         val roundTimerId = env.timers.last().taskId
 
         env.runOneShots()
         val w = env.world()
         env.listener.onMove(moveEvent(p2, Location(w, 0.0, 1.0, 0.0), Location(w, 0.0, -1.0, 0.0)))
-        assertEquals(2, env.service.matchOf("arena1")!!.winsOf(p1.uniqueId))
+        assertEquals(2, env.service.matchOf("arena1")!!.winsOf(p1.uuid))
         env.timers.first { it.taskId == roundTimerId }.runnable.run()
         assertTrue(env.cancelledTaskIds.contains(roundTimerId))
 
         env.listener.onMove(moveEvent(p2, Location(w, 0.0, 1.0, 0.0), Location(w, 0.0, -1.0, 0.0)))
-        assertEquals(2, env.service.matchOf("arena1")!!.winsOf(p1.uniqueId))
+        assertEquals(2, env.service.matchOf("arena1")!!.winsOf(p1.uuid))
     }
 }

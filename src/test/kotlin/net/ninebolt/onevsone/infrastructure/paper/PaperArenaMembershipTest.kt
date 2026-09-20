@@ -11,6 +11,7 @@ import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.contains
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.lastBroadcast
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.playersYaml
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.view
 import org.bukkit.Location
 import org.bukkit.Material
@@ -57,10 +58,10 @@ class PaperArenaMembershipTest {
         env.quit(p2)
 
         assertEquals(ArenaState.WAITING, env.view().state)
-        assertNull(env.service.arenaIdOf(p1.uniqueId))
-        assertNull(env.service.arenaIdOf(p2.uniqueId))
-        assertEquals(1, env.statsRepo.find(p1.uniqueId)!!.wins)
-        assertEquals(1, env.statsRepo.find(p2.uniqueId)!!.losses)
+        assertNull(env.service.arenaIdOf(p1.uuid))
+        assertNull(env.service.arenaIdOf(p2.uuid))
+        assertEquals(1, env.statsRepo.find(p1.uuid)!!.wins)
+        assertEquals(1, env.statsRepo.find(p2.uuid)!!.losses)
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
         assertTrue(env.lastBroadcast().contains("Alice"))
     }
@@ -75,8 +76,8 @@ class PaperArenaMembershipTest {
         env.removePlayer(p1)
         env.quit(p1)
         assertEquals(ArenaState.WAITING, env.view().state)
-        assertEquals(1, env.statsRepo.find(p2.uniqueId)!!.wins)
-        assertEquals(1, env.statsRepo.find(p1.uniqueId)!!.losses)
+        assertEquals(1, env.statsRepo.find(p2.uuid)!!.wins)
+        assertEquals(1, env.statsRepo.find(p1.uuid)!!.losses)
     }
 
     @Test
@@ -88,8 +89,8 @@ class PaperArenaMembershipTest {
         env.removePlayer(p1)
         env.quit(p1)
         assertEquals(ArenaState.WAITING, env.view().state)
-        assertNull(env.service.arenaIdOf(p1.uniqueId))
-        assertNull(env.statsRepo.find(p1.uniqueId))
+        assertNull(env.service.arenaIdOf(p1.uuid))
+        assertNull(env.statsRepo.find(p1.uuid))
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
     }
 
@@ -105,7 +106,7 @@ class PaperArenaMembershipTest {
         env.join(p2, arena)
         assertEquals(LeaveReply.NotWaiting, env.leave(p1))
         verify(exactly = 1) { p1.sendMessage(contains("カウントダウン中はアリーナから退出できません！")) }
-        assertEquals(arena, env.service.arenaIdOf(p1.uniqueId))
+        assertEquals(arena, env.service.arenaIdOf(p1.uuid))
     }
 
     @Test
@@ -117,7 +118,7 @@ class PaperArenaMembershipTest {
         assertEquals(LeaveReply.Left, env.leave(p1))
         verify(exactly = 1) { p1.sendMessage(contains("アリーナから退出しました")) }
         assertEquals(ArenaState.WAITING, env.view().state)
-        assertNull(env.service.arenaIdOf(p1.uniqueId))
+        assertNull(env.service.arenaIdOf(p1.uuid))
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
     }
 
@@ -129,14 +130,14 @@ class PaperArenaMembershipTest {
         env.join(p1, arena)
         env.join(p2, arena)
         env.tick(6)
-        env.service.defeat(p2.uniqueId, DefeatCause.FALL)
+        env.service.defeat(p2.uuid, DefeatCause.FALL)
         assertEquals(ArenaState.ROUNDCOUNTDOWN, env.view().state)
 
         env.removePlayer(p1)
         env.quit(p1)
         assertEquals(ArenaState.WAITING, env.view().state)
-        assertEquals(1, env.statsRepo.find(p2.uniqueId)!!.wins)
-        assertEquals(1, env.statsRepo.find(p1.uniqueId)!!.losses)
+        assertEquals(1, env.statsRepo.find(p2.uuid)!!.wins)
+        assertEquals(1, env.statsRepo.find(p1.uuid)!!.losses)
     }
 
     @Test
@@ -202,14 +203,14 @@ class PaperArenaMembershipTest {
         env.removePlayer(p1)
         env.quit(p1)
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
-        assertNull(env.service.pendingRestore(p1.uniqueId))
+        assertNull(env.service.pendingRestore(p1.uuid))
 
         val p2 = env.player("Bob")
         p2.inventory.setItem(0, env.item(Material.APPLE))
         env.join(p2, arena)
         env.admin.setEnabled("arena1", false)
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
-        assertNull(env.service.pendingRestore(p2.uniqueId))
+        assertNull(env.service.pendingRestore(p2.uuid))
         env.admin.setEnabled("arena1", true)
 
         val p3 = env.player("Carol")
@@ -234,8 +235,8 @@ class PaperArenaMembershipTest {
         assertEquals(ArenaState.WAITING, env.view().state)
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
-        assertEquals(1, env.statsRepo.find(p2.uniqueId)!!.wins)
-        assertEquals(1, env.statsRepo.find(p1.uniqueId)!!.losses)
+        assertEquals(1, env.statsRepo.find(p2.uuid)!!.wins)
+        assertEquals(1, env.statsRepo.find(p1.uuid)!!.losses)
         val yaml = env.playersYaml()
         assertNull(yaml.getConfigurationSection("inv.Alice"))
         assertNull(yaml.getConfigurationSection("inv.Bob"))
@@ -250,7 +251,7 @@ class PaperArenaMembershipTest {
         assertTrue(env.service.definition("arena1")!!.enabled)
         assertEquals(ArenaState.WAITING, env.view().state)
         assertTrue(env.view().participants.isEmpty())
-        assertNull(env.service.arenaIdOf(p1.uniqueId))
+        assertNull(env.service.arenaIdOf(p1.uuid))
     }
 
     @Test
@@ -263,8 +264,8 @@ class PaperArenaMembershipTest {
         assertEquals(ToggleReply.Changed, env.admin.setEnabled("arena1", false))
         assertFalse(env.service.definition("arena1")!!.enabled)
         assertEquals(ArenaState.WAITING, env.view().state)
-        assertNull(env.service.arenaIdOf(p1.uniqueId))
-        assertNull(env.service.arenaIdOf(p2.uniqueId))
+        assertNull(env.service.arenaIdOf(p1.uuid))
+        assertNull(env.service.arenaIdOf(p2.uuid))
         env.tick(6)
         verify(exactly = 0) { p1.teleport(any<Location>()) }
         val reloaded = env.arenaRepo.find("arena1")!!

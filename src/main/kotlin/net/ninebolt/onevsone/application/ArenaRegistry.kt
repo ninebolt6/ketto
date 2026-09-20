@@ -4,7 +4,7 @@ import net.ninebolt.onevsone.domain.ArenaDefinition
 import net.ninebolt.onevsone.domain.ArenaId
 import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.Transition
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 /**
  * アリーナ定義・試合集約・UUID→アリーナ索引の共有レジストリ。
@@ -20,7 +20,7 @@ import java.util.UUID
 class ArenaRegistry {
     private val definitions = LinkedHashMap<ArenaId, ArenaDefinition>()
     private val matches = LinkedHashMap<ArenaId, ArenaMatch>()
-    private val playerArena = mutableMapOf<UUID, ArenaId>()
+    private val playerArena = mutableMapOf<Uuid, ArenaId>()
 
     // ---- アリーナ定義 -----------------------------------------------------
 
@@ -80,9 +80,9 @@ class ArenaRegistry {
 
     // ---- 参加索引 ----------------------------------------------------------
 
-    fun arenaOf(playerId: UUID): ArenaId? = playerArena[playerId]
+    fun arenaOf(playerId: Uuid): ArenaId? = playerArena[playerId]
 
-    fun isJoined(playerId: UUID): Boolean = playerArena.containsKey(playerId)
+    fun isJoined(playerId: Uuid): Boolean = playerArena.containsKey(playerId)
 
     /**
      * 書き戻し前後の参加者差分を索引へ反映する。

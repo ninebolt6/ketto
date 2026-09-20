@@ -21,8 +21,8 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
-import java.util.UUID
 import java.util.logging.Logger
+import kotlin.uuid.Uuid
 
 /** YamlPersistence のシナリオを repository 経由の API で検証する。 */
 class YamlPersistenceTest {
@@ -96,7 +96,7 @@ class YamlPersistenceTest {
     @Test
     fun `stats file uses uuid and records win lose`() {
         val repo = stats()
-        val uuid = UUID.randomUUID()
+        val uuid = Uuid.random()
         assertNull(repo.find(uuid))
         repo.recordWin(uuid)
         repo.recordLoss(uuid)
@@ -109,8 +109,8 @@ class YamlPersistenceTest {
 
     @Test
     fun `status file persists names keyed players and wins`() {
-        val id1 = UUID.randomUUID()
-        val id2 = UUID.randomUUID()
+        val id1 = Uuid.random()
+        val id2 = Uuid.random()
         val match = ArenaMatch(
             ArenaId("a1"),
             requiredWins = 3,
@@ -128,8 +128,8 @@ class YamlPersistenceTest {
 
     @Test
     fun `participants registered and pending restores survive registration clear`() {
-        val uuid = UUID.randomUUID()
-        val ref = BackupRef(UUID.randomUUID(), MatchId.newId(), uuid, "Alice")
+        val uuid = Uuid.random()
+        val ref = BackupRef(Uuid.random(), MatchId.newId(), uuid, "Alice")
         val repo = matchState()
         repo.registerParticipant(Participant(uuid, "Alice"), ArenaId("a1"))
         store().saveBackups(listOf(PersistedBackup(ref, PaperInventorySnapshot())))
@@ -153,8 +153,8 @@ class YamlPersistenceTest {
 
     @Test
     fun `unregisterParticipant retains backup and deleteBackup removes it`() {
-        val uuid = UUID.randomUUID()
-        val ref = BackupRef(UUID.randomUUID(), MatchId.newId(), uuid, "Alice")
+        val uuid = Uuid.random()
+        val ref = BackupRef(Uuid.random(), MatchId.newId(), uuid, "Alice")
         val repo = matchState()
         val s = store()
         repo.registerParticipant(Participant(uuid, "Alice"), ArenaId("a1"))
@@ -173,12 +173,12 @@ class YamlPersistenceTest {
 
     @Test
     fun `deleteBackup ignores mismatched backup id`() {
-        val uuid = UUID.randomUUID()
-        val ref = BackupRef(UUID.randomUUID(), MatchId.newId(), uuid, "Alice")
+        val uuid = Uuid.random()
+        val ref = BackupRef(Uuid.random(), MatchId.newId(), uuid, "Alice")
         val s = store()
         s.saveBackups(listOf(PersistedBackup(ref, PaperInventorySnapshot())))
 
-        s.deleteBackup(BackupRef(UUID.randomUUID(), MatchId.newId(), uuid, "Alice"))
+        s.deleteBackup(BackupRef(Uuid.random(), MatchId.newId(), uuid, "Alice"))
         assertNotNull(
             YamlConfiguration.loadConfiguration(File(folder, "status/players.yml"))
                 .getConfigurationSection("inv.Alice")
@@ -205,7 +205,7 @@ class YamlPersistenceTest {
 
     @Test
     fun `registerParticipant writes membership only`() {
-        val uuid = UUID.randomUUID()
+        val uuid = Uuid.random()
         matchState().registerParticipant(Participant(uuid, "Alice"), ArenaId("a1"))
         val yaml = YamlConfiguration.loadConfiguration(File(folder, "status/players.yml"))
         assertTrue(yaml.getStringList("players").contains("Alice"))
@@ -216,16 +216,16 @@ class YamlPersistenceTest {
     @Test
     fun `saveBackups persists both snapshots in one file`() {
         val s = store()
-        val u1 = UUID.randomUUID()
-        val u2 = UUID.randomUUID()
+        val u1 = Uuid.random()
+        val u2 = Uuid.random()
         val repo = matchState()
         repo.registerParticipant(Participant(u1, "Alice"), ArenaId("a1"))
         repo.registerParticipant(Participant(u2, "Bob"), ArenaId("a1"))
         val match = MatchId.newId()
         s.saveBackups(
             listOf(
-                PersistedBackup(BackupRef(UUID.randomUUID(), match, u1, "Alice"), PaperInventorySnapshot()),
-                PersistedBackup(BackupRef(UUID.randomUUID(), match, u2, "Bob"), PaperInventorySnapshot())
+                PersistedBackup(BackupRef(Uuid.random(), match, u1, "Alice"), PaperInventorySnapshot()),
+                PersistedBackup(BackupRef(Uuid.random(), match, u2, "Bob"), PaperInventorySnapshot())
             )
         )
         val yaml = YamlConfiguration.loadConfiguration(File(folder, "status/players.yml"))
@@ -237,7 +237,7 @@ class YamlPersistenceTest {
 
     @Test
     fun `malformed stats yaml throws`() {
-        val uuid = UUID.randomUUID()
+        val uuid = Uuid.random()
         File(folder, "stats").mkdirs()
         File(folder, "stats/$uuid.yml").writeText("win: [broken")
         assertThrows(IllegalStateException::class.java) {

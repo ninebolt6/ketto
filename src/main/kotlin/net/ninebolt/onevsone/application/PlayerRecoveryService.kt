@@ -8,7 +8,7 @@ import net.ninebolt.onevsone.application.port.MatchPresentationPort
 import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.application.port.PlayerHandle
 import net.ninebolt.onevsone.application.port.PlayerPort
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 /**
  * 未復元バックアップと復元トークン(RestoreTicket)を管理する。
@@ -27,7 +27,7 @@ class PlayerRecoveryService(
     /** 復元対象 1 件のトークン。遅延コールバックは参照同一性で照合する。 */
     class RestoreTicket(val ref: BackupRef)
 
-    private val ticketsByUuid = mutableMapOf<UUID, RestoreTicket>()
+    private val ticketsByUuid = mutableMapOf<Uuid, RestoreTicket>()
     private val ticketsByName = mutableMapOf<String, RestoreTicket>()
 
     /** 起動時に呼ばれる。 */
@@ -49,11 +49,11 @@ class PlayerRecoveryService(
     }
 
     /** UUID 優先、名前は uuid 一致(または uuid 無し)の場合のみ採用。 */
-    fun ticketFor(playerId: UUID, playerName: String): RestoreTicket? =
+    fun ticketFor(playerId: Uuid, playerName: String): RestoreTicket? =
         ticketsByUuid[playerId]
             ?: ticketsByName[playerName]?.takeIf { it.ref.playerId == null || it.ref.playerId == playerId }
 
-    fun pending(playerId: UUID): RestoreTicket? = ticketsByUuid[playerId]
+    fun pending(playerId: Uuid): RestoreTicket? = ticketsByUuid[playerId]
 
     private fun ownedBy(handle: PlayerHandle, ticket: RestoreTicket): Boolean =
         ticketsByUuid[handle.id] === ticket ||

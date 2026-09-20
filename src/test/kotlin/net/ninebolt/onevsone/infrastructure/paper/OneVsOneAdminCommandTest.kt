@@ -10,6 +10,7 @@ import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.contains
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.opPlayer
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.run
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.block.Block
@@ -67,7 +68,7 @@ class OneVsOneAdminCommandTest {
         env.join(p1, arena)
         env.join(p2, arena)
         env.tick(6)
-        env.service.defeat(p2.uniqueId, DefeatCause.FALL)
+        env.service.defeat(p2.uuid, DefeatCause.FALL)
 
         env.run(viewer, "arena", "info", "arena1")
         verify(exactly = 1) { viewer.sendMessage(contains("=== Arena[arena1] ===")) }

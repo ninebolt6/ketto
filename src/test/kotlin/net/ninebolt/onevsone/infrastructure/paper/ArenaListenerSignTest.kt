@@ -11,6 +11,7 @@ import net.ninebolt.onevsone.infrastructure.paper.fixtures.contains
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.interact
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.signBlock
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.twoPlayerIngame
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import org.bukkit.Material
 import org.bukkit.block.Block
 import org.bukkit.block.BlockState
@@ -51,15 +52,15 @@ class ArenaListenerSignTest {
 
         val unregistered = interact(p1, env.signBlock(9, 64, 9))
         env.signListener.onInteract(unregistered)
-        assertNull(env.service.arenaIdOf(p1.uniqueId))
+        assertNull(env.service.arenaIdOf(p1.uuid))
 
         val registered = interact(p1, env.signBlock(3, 64, 3))
         env.signListener.onInteract(registered)
-        assertEquals(arena, env.service.arenaIdOf(p1.uniqueId))
+        assertEquals(arena, env.service.arenaIdOf(p1.uuid))
 
         val offhand = interact(env.player("Bob"), env.signBlock(3, 64, 3), EquipmentSlot.OFF_HAND)
         env.signListener.onInteract(offhand)
-        assertNull(env.service.arenaIdOf(env.players.values.first { it.name == "Bob" }.uniqueId))
+        assertNull(env.service.arenaIdOf(env.players.values.first { it.name == "Bob" }.uuid))
     }
 
     @Test
@@ -91,7 +92,7 @@ class ArenaListenerSignTest {
         val leftClick = interact(p1, env.signBlock(3, 64, 3))
         every { leftClick.action } returns Action.LEFT_CLICK_BLOCK
         env.signListener.onInteract(leftClick)
-        assertNull(env.service.arenaIdOf(p1.uniqueId))
+        assertNull(env.service.arenaIdOf(p1.uuid))
     }
 
     @Test

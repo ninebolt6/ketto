@@ -14,7 +14,7 @@ import net.ninebolt.onevsone.domain.PlayerStats
 import net.ninebolt.onevsone.domain.WorldPosition
 import net.ninebolt.onevsone.domain.isValidArenaName
 import java.util.Locale
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 class InMemoryArenaRepository : ArenaRepository, LobbyRepository, ArenaSignRepository {
     val names = mutableListOf<String>()
@@ -95,23 +95,23 @@ class InMemoryMatchStateRepository : MatchStateRepository {
 }
 
 class InMemoryPlayerStatsRepository : PlayerStatsRepository {
-    val stats = mutableMapOf<UUID, PlayerStats>()
+    val stats = mutableMapOf<Uuid, PlayerStats>()
     var failOnWin: Throwable? = null
     var failOnLoss: Throwable? = null
     var failOnFind: Throwable? = null
 
-    override fun find(playerId: UUID): PlayerStats? {
+    override fun find(playerId: Uuid): PlayerStats? {
         failOnFind?.let { throw it }
         return stats[playerId]
     }
 
-    override fun recordWin(playerId: UUID) {
+    override fun recordWin(playerId: Uuid) {
         failOnWin?.let { throw it }
         val s = stats[playerId] ?: PlayerStats(0, 0)
         stats[playerId] = PlayerStats(s.wins + 1, s.losses)
     }
 
-    override fun recordLoss(playerId: UUID) {
+    override fun recordLoss(playerId: Uuid) {
         failOnLoss?.let { throw it }
         val s = stats[playerId] ?: PlayerStats(0, 0)
         stats[playerId] = PlayerStats(s.wins, s.losses + 1)

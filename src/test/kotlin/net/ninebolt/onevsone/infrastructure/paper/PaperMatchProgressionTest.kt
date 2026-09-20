@@ -8,6 +8,7 @@ import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.contains
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.lastBroadcast
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.view
 import org.bukkit.Location
 import org.bukkit.Material
@@ -45,7 +46,7 @@ class PaperMatchProgressionTest {
         val p1 = env.player("Alice")
         env.join(p1, arena)
         assertEquals(ArenaState.ONEMORE, env.view().state)
-        assertEquals(arena, env.service.arenaIdOf(p1.uniqueId))
+        assertEquals(arena, env.service.arenaIdOf(p1.uuid))
         verify(exactly = 1) { p1.sendMessage(contains("に参加しました")) }
         verify(exactly = 1) { p1.sendMessage(contains("あと一人参加するのを待っています")) }
 
@@ -64,7 +65,7 @@ class PaperMatchProgressionTest {
         val p1 = env.player("Alice")
         env.join(p1, disabled)
         verify(exactly = 1) { p1.sendMessage(contains("アリーナが有効になっていません！")) }
-        assertNull(env.service.arenaIdOf(p1.uniqueId))
+        assertNull(env.service.arenaIdOf(p1.uuid))
 
         env.join(p1, arena)
         env.join(p1, arena)
@@ -75,7 +76,7 @@ class PaperMatchProgressionTest {
         val p3 = env.player("Carol")
         env.join(p3, arena)
         verify(exactly = 1) { p3.sendMessage(contains("このアリーナは現在ゲーム中です")) }
-        assertNull(env.service.arenaIdOf(p3.uniqueId))
+        assertNull(env.service.arenaIdOf(p3.uuid))
     }
 
     @Test
@@ -112,9 +113,9 @@ class PaperMatchProgressionTest {
         env.tick(6)
         assertEquals(ArenaState.INGAME, env.view().state)
 
-        env.service.defeat(p2.uniqueId, DefeatCause.FALL)
+        env.service.defeat(p2.uuid, DefeatCause.FALL)
         assertEquals(ArenaState.ROUNDCOUNTDOWN, env.view().state)
-        assertEquals(1, env.view().winsOf(p1.uniqueId))
+        assertEquals(1, env.view().winsOf(p1.uuid))
         verify(exactly = 1) { p1.sendMessage(contains("ラウンド[")) }
         verify(exactly = 1) { p1.sendMessage(contains("勝者: Alice")) }
 
@@ -139,22 +140,22 @@ class PaperMatchProgressionTest {
         env.join(p2, arena)
         env.tick(6)
 
-        env.service.defeat(p2.uniqueId, DefeatCause.FALL)
-        assertEquals(1, env.view().winsOf(p1.uniqueId))
+        env.service.defeat(p2.uuid, DefeatCause.FALL)
+        assertEquals(1, env.view().winsOf(p1.uuid))
         env.tick(8)
-        env.service.defeat(p2.uniqueId, DefeatCause.FALL)
-        assertEquals(2, env.view().winsOf(p1.uniqueId))
+        env.service.defeat(p2.uuid, DefeatCause.FALL)
+        assertEquals(2, env.view().winsOf(p1.uuid))
         env.tick(8)
-        env.service.defeat(p2.uniqueId, DefeatCause.FALL)
+        env.service.defeat(p2.uuid, DefeatCause.FALL)
 
         assertEquals(ArenaState.WAITING, env.view().state)
         assertTrue(env.view().wins.isEmpty())
         assertTrue(env.view().participants.isEmpty())
-        assertNull(env.service.arenaIdOf(p1.uniqueId))
-        assertNull(env.service.arenaIdOf(p2.uniqueId))
+        assertNull(env.service.arenaIdOf(p1.uuid))
+        assertNull(env.service.arenaIdOf(p2.uuid))
         assertTrue(env.lastBroadcast().contains("が優勝しました！"))
-        assertEquals(1, env.statsRepo.find(p1.uniqueId)!!.wins)
-        assertEquals(1, env.statsRepo.find(p2.uniqueId)!!.losses)
+        assertEquals(1, env.statsRepo.find(p1.uuid)!!.wins)
+        assertEquals(1, env.statsRepo.find(p2.uuid)!!.losses)
     }
 
     @Test
@@ -167,7 +168,7 @@ class PaperMatchProgressionTest {
         env.join(p1, arena)
         env.join(p2, arena)
         env.tick(6)
-        env.service.defeat(p2.uniqueId, DefeatCause.FALL)
+        env.service.defeat(p2.uuid, DefeatCause.FALL)
         assertEquals(ArenaState.WAITING, env.view().state)
         assertTrue(env.lastBroadcast().contains("Alice"))
     }
@@ -183,7 +184,7 @@ class PaperMatchProgressionTest {
 
         val sequence = listOf(p2, p2, p1, p1, p2)
         sequence.withIndex().forEach { (i, loser) ->
-            env.service.defeat(loser.uniqueId, DefeatCause.FALL)
+            env.service.defeat(loser.uuid, DefeatCause.FALL)
             if (i < 4) {
                 assertEquals(ArenaState.ROUNDCOUNTDOWN, env.view().state)
                 env.tick(8)
@@ -192,7 +193,7 @@ class PaperMatchProgressionTest {
         }
         assertEquals(ArenaState.WAITING, env.view().state)
         assertTrue(env.lastBroadcast().contains("Alice"))
-        assertEquals(1, env.statsRepo.find(p1.uniqueId)!!.wins)
+        assertEquals(1, env.statsRepo.find(p1.uuid)!!.wins)
     }
 
     @Test
@@ -206,8 +207,8 @@ class PaperMatchProgressionTest {
 
         every { p2.isDead } returns true
         every { p2.killer } returns null
-        assertTrue(env.service.defeat(p2.uniqueId, DefeatCause.DEATH))
-        assertEquals(1, env.view().winsOf(p1.uniqueId))
+        assertTrue(env.service.defeat(p2.uuid, DefeatCause.DEATH))
+        assertEquals(1, env.view().winsOf(p1.uuid))
         assertEquals(ArenaState.ROUNDCOUNTDOWN, env.view().state)
     }
 
@@ -223,7 +224,7 @@ class PaperMatchProgressionTest {
         p1.inventory.setItem(0, null)
 
         every { p2.isDead } returns true
-        env.service.defeat(p2.uniqueId, DefeatCause.DEATH)
+        env.service.defeat(p2.uuid, DefeatCause.DEATH)
         assertEquals(1, env.oneShots.size)
         env.runOneShots()
         val spigot2 = p2.spigot()
@@ -245,12 +246,12 @@ class PaperMatchProgressionTest {
         env.tick(6)
         every { p2.isDead } returns true
 
-        assertTrue(env.service.defeat(p2.uniqueId, DefeatCause.DEATH))
-        assertFalse(env.service.defeat(p2.uniqueId, DefeatCause.DEATH))
-        assertFalse(env.service.defeat(p2.uniqueId, DefeatCause.FALL))
-        assertEquals(1, env.view().winsOf(p1.uniqueId))
-        assertNull(env.statsRepo.find(p1.uniqueId))
-        assertNull(env.statsRepo.find(p2.uniqueId))
+        assertTrue(env.service.defeat(p2.uuid, DefeatCause.DEATH))
+        assertFalse(env.service.defeat(p2.uuid, DefeatCause.DEATH))
+        assertFalse(env.service.defeat(p2.uuid, DefeatCause.FALL))
+        assertEquals(1, env.view().winsOf(p1.uuid))
+        assertNull(env.statsRepo.find(p1.uuid))
+        assertNull(env.statsRepo.find(p2.uuid))
     }
 
     @Test
@@ -262,16 +263,16 @@ class PaperMatchProgressionTest {
         env.join(p2, arena)
         env.tick(6)
 
-        assertTrue(env.service.defeat(p2.uniqueId, DefeatCause.FALL))
+        assertTrue(env.service.defeat(p2.uuid, DefeatCause.FALL))
         val roundTimerId = env.timers.last().taskId
         assertEquals(ArenaState.ROUNDCOUNTDOWN, env.view().state)
 
-        assertFalse(env.service.defeat(p2.uniqueId, DefeatCause.FALL))
-        assertEquals(1, env.view().winsOf(p1.uniqueId))
+        assertFalse(env.service.defeat(p2.uuid, DefeatCause.FALL))
+        assertEquals(1, env.view().winsOf(p1.uuid))
 
         env.runOneShots()
-        assertTrue(env.service.defeat(p2.uniqueId, DefeatCause.FALL))
-        assertEquals(2, env.view().winsOf(p1.uniqueId))
+        assertTrue(env.service.defeat(p2.uuid, DefeatCause.FALL))
+        assertEquals(2, env.view().winsOf(p1.uuid))
         assertEquals(ArenaState.ROUNDCOUNTDOWN, env.view().state)
 
         env.timers.first { it.taskId == roundTimerId }.runnable.run()
@@ -289,7 +290,7 @@ class PaperMatchProgressionTest {
         env.join(p2, arena)
         env.tick(6)
 
-        env.service.defeat(p2.uniqueId, DefeatCause.FALL)
+        env.service.defeat(p2.uuid, DefeatCause.FALL)
         verify(exactly = 2) { p1.health = 20.0 }
         verify(exactly = 2) { p1.foodLevel = 20 }
         verify(exactly = 2) { p1.fireTicks = 0 }
@@ -317,6 +318,6 @@ class PaperMatchProgressionTest {
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
         val inv1 = p1.inventory
         verify(exactly = 0) { inv1.clear() }
-        assertNull(env.service.arenaIdOf(p1.uniqueId))
+        assertNull(env.service.arenaIdOf(p1.uuid))
     }
 }

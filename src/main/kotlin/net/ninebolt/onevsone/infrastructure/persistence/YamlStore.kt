@@ -13,8 +13,8 @@ import java.io.IOException
 import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
-import java.util.UUID
 import java.util.logging.Logger
+import kotlin.uuid.Uuid
 
 /**
  * 共通 YAML I/O とファイル配置。temp+replace の原子的保存を維持する。
@@ -38,7 +38,7 @@ class YamlStore(folder: File, private val logger: Logger) {
 
     internal fun arenaFile(name: String) = File(arenaDir, "$name.yml")
     internal fun statusFile(name: String) = File(statusDir, "$name.yml")
-    internal fun statsFile(uuid: UUID) = File(statsDir, "$uuid.yml")
+    internal fun statsFile(uuid: Uuid) = File(statsDir, "$uuid.yml")
 
     internal fun load(file: File): YamlConfiguration {
         if (!file.exists()) return YamlConfiguration()
@@ -140,7 +140,7 @@ class YamlStore(folder: File, private val logger: Logger) {
         return inv.getKeys(false).map { name ->
             val snapshot = readSnapshot(yaml, "inv.$name")
             val uuid = yaml.getString("inv.$name.uuid")?.let { parseUuid(it) }
-            val backupId = yaml.getString("inv.$name.id")?.let { parseUuid(it) } ?: UUID.randomUUID()
+            val backupId = yaml.getString("inv.$name.id")?.let { parseUuid(it) } ?: Uuid.random()
             val matchId = yaml.getString("inv.$name.match")?.let { parseUuid(it) }?.let { MatchId(it) }
                 ?: MatchId.newId()
             PersistedBackup(BackupRef(backupId, matchId, uuid, name), snapshot)
@@ -178,8 +178,7 @@ class YamlStore(folder: File, private val logger: Logger) {
         }
     }
 
-    private fun parseUuid(raw: String): UUID? =
-        runCatching { UUID.fromString(raw) }.getOrNull()
+    private fun parseUuid(raw: String): Uuid? = Uuid.parseOrNull(raw)
 }
 
 /** 永続化層が返すバックアップ一式。実データはアプリケーションへ出さない。 */

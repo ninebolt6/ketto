@@ -12,17 +12,17 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 class PlayerRecoveryServiceTest {
 
-    private fun backupRef(id: UUID, name: String, match: MatchId = MatchId.newId()) =
-        BackupRef(UUID.randomUUID(), match, id, name)
+    private fun backupRef(id: Uuid, name: String, match: MatchId = MatchId.newId()) =
+        BackupRef(Uuid.random(), match, id, name)
 
     @Test
     fun `persisted backups load into tickets on startup`() {
         val app = TestApp()
-        val ref = backupRef(UUID.randomUUID(), "Alice")
+        val ref = backupRef(Uuid.random(), "Alice")
         app.equipment.seedBackup(ref)
         app.recovery.loadPersisted()
         assertNotNull(app.recovery.ticketFor(ref.playerId!!, "Alice"))

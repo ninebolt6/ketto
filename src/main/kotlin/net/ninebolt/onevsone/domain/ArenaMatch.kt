@@ -1,6 +1,6 @@
 package net.ninebolt.onevsone.domain
 
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 /**
  * 1 アリーナの参加者と進行状態を所有する集約。immutable: 各操作は
@@ -13,7 +13,7 @@ data class ArenaMatch(
     val requiredWins: Int,
     val state: ArenaState = ArenaState.WAITING,
     val participants: List<Participant> = emptyList(),
-    val wins: Map<UUID, Int> = emptyMap(),
+    val wins: Map<Uuid, Int> = emptyMap(),
     /**
      * 敗北の解決(リスポーン・再装備)が完了するまでの重複決着ガード。
      * 同じ解決区間での二重加点を防ぐ。
@@ -39,15 +39,15 @@ data class ArenaMatch(
 
     val canResumeRound: Boolean get() = state == ArenaState.ROUNDCOUNTDOWN && full
 
-    fun participant(id: UUID): Participant? = participants.firstOrNull { it.id == id }
+    fun participant(id: Uuid): Participant? = participants.firstOrNull { it.id == id }
 
     /** 参加者のスポーンスロット(0 始まり = spawn1/spawn2)。非参加なら null。 */
-    fun slotOf(id: UUID): Int? =
+    fun slotOf(id: Uuid): Int? =
         participants.indexOfFirst { it.id == id }.takeIf { it >= 0 }
 
     fun participantAt(slot: Int): Participant? = participants.getOrNull(slot)
 
-    fun winsOf(id: UUID): Int = wins[id] ?: 0
+    fun winsOf(id: Uuid): Int = wins[id] ?: 0
 
     fun join(participant: Participant): Transition<JoinOutcome> {
         if (!state.isJoinable() || full || participants.any { it.id == participant.id }) {
@@ -62,7 +62,7 @@ data class ArenaMatch(
     }
 
     /** 退出しても持ち物には関知しない(未開始のため)。 */
-    fun leaveWaiting(id: UUID): Transition<LeaveOutcome> {
+    fun leaveWaiting(id: Uuid): Transition<LeaveOutcome> {
         if (state != ArenaState.ONEMORE) return Transition(this, LeaveOutcome.NotWaiting)
         val participant = participant(id) ?: return Transition(this, LeaveOutcome.NotWaiting)
         return Transition(
@@ -78,7 +78,7 @@ data class ArenaMatch(
     /**
      * 未開始なら登録解除のみ、進行中なら相手を勝者とする不戦敗でマッチ終了。
      */
-    fun forfeit(id: UUID): Transition<QuitOutcome> {
+    fun forfeit(id: Uuid): Transition<QuitOutcome> {
         val participant = participant(id) ?: return Transition(this, QuitOutcome.NotParticipant)
         if (state == ArenaState.ONEMORE || state == ArenaState.WAITING || !full) {
             return Transition(
@@ -98,7 +98,7 @@ data class ArenaMatch(
      * 死亡/落下の敗北通知。受理されれば RoundWon か MatchFinished。
      * 死亡は INGAME のみ、落下は INGAME/ROUNDCOUNTDOWN で受理する現挙動を維持。
      */
-    fun recordDefeat(id: UUID, cause: DefeatCause): Transition<DefeatOutcome> {
+    fun recordDefeat(id: Uuid, cause: DefeatCause): Transition<DefeatOutcome> {
         if (!state.acceptsDefeat(cause)) return Transition(this, DefeatOutcome.Rejected)
         if (!full || resolving) return Transition(this, DefeatOutcome.Rejected)
         val loser = participant(id) ?: return Transition(this, DefeatOutcome.Rejected)

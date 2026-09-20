@@ -1,9 +1,9 @@
 package net.ninebolt.onevsone.domain
 
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 /** Bukkit の Player もインベントリも持たず、識別子と表示名だけを持つ。 */
-data class Participant(val id: UUID, val name: String)
+data class Participant(val id: Uuid, val name: String)
 
 /** Paper の Location を含まない純粋な座標値。 */
 data class WorldPosition(

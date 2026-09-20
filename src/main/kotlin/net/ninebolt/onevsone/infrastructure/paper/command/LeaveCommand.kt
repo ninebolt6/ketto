@@ -5,6 +5,7 @@ import net.ninebolt.onevsone.application.LeaveReply
 import net.ninebolt.onevsone.infrastructure.paper.Messages
 import net.ninebolt.onevsone.infrastructure.paper.Msg
 import org.bukkit.command.CommandSender
+import kotlin.uuid.toKotlinUuid
 
 internal class LeaveCommand(
     private val service: ArenaApplicationService,
@@ -15,7 +16,7 @@ internal class LeaveCommand(
 
     override fun execute(sender: CommandSender, args: List<String>): Msg? {
         val player = sender.requirePlayer() ?: return null
-        when (service.leave(player.uniqueId)) {
+        when (service.leave(player.uniqueId.toKotlinUuid())) {
             LeaveReply.Left -> messages.send(player, messages.leftArena)
             LeaveReply.NotWaiting -> messages.send(player, messages.cannotLeave)
             LeaveReply.NotJoined -> messages.send(player, messages.notJoined)

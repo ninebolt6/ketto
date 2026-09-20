@@ -9,26 +9,29 @@ import org.bukkit.Location
 import org.bukkit.Server
 import org.bukkit.attribute.Attribute
 import org.bukkit.entity.Player
-import java.util.UUID
+import kotlin.uuid.Uuid
+import kotlin.uuid.toJavaUuid
+import kotlin.uuid.toKotlinUuid
 
 /**
  * オンラインプレイヤーの解決。QuitEvent 中は Server から取得できなくなる
  * 切断者を、イベントの Player を短時間参照できるスコープとして提供する。
  */
 class PaperPlayerLookup(private val server: Server) {
-    private val quitting = HashMap<UUID, Player>()
+    private val quitting = HashMap<Uuid, Player>()
 
     /** QuitEvent の Player を同期処理の間だけ UUID で解決可能にする。 */
     fun <R> scopeQuitting(player: Player, block: () -> R): R {
-        quitting[player.uniqueId] = player
+        val id = player.uniqueId.toKotlinUuid()
+        quitting[id] = player
         try {
             return block()
         } finally {
-            quitting.remove(player.uniqueId)
+            quitting.remove(id)
         }
     }
 
-    fun resolve(id: UUID): Player? = quitting[id] ?: server.getPlayer(id)
+    fun resolve(id: Uuid): Player? = quitting[id] ?: server.getPlayer(id.toJavaUuid())
 
     fun resolveByName(name: String): Player? =
         quitting.values.firstOrNull { it.name == name } ?: server.getPlayerExact(name)
@@ -39,7 +42,7 @@ class PaperPlayerAdapter(
     private val server: Server,
     private val failures: FailureReporter
 ) : PlayerPort {
-    override fun handle(playerId: UUID): PlayerHandle? =
+    override fun handle(playerId: Uuid): PlayerHandle? =
         lookup.resolve(playerId)?.let { PaperPlayerHandle(it, server, failures) }
 }
 
@@ -48,7 +51,7 @@ private class PaperPlayerHandle(
     private val server: Server,
     private val failures: FailureReporter
 ) : PlayerHandle {
-    override val id: UUID get() = player.uniqueId
+    override val id: Uuid get() = player.uniqueId.toKotlinUuid()
     override val name: String get() = player.name
     override val online: Boolean get() = player.isOnline
     override val dead: Boolean get() = player.isDead
