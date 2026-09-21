@@ -12,6 +12,10 @@ data class ParticipantRestrictions(
     val blockPlaceCancelled: Boolean,
     /** 装備交換後はインベントリが開始時バックアップで上書きされるため、持ち出しを防ぐ */
     val itemDropCancelled: Boolean,
+    /** コンテナ・額縁・防具立て・取引など、インベントリ⇄外界の移動を遮断する */
+    val inventoryTransferCancelled: Boolean,
+    /** 拾得・収穫・矢回収・ディスペンサー装備などの直接獲得を遮断する */
+    val itemPickupCancelled: Boolean,
     /** ONEMORE 待機中のみコマンドを許可する */
     val commandsBlocked: Boolean
 ) {
@@ -23,6 +27,8 @@ data class ParticipantRestrictions(
                 blockBreakCancelled = true,
                 blockPlaceCancelled = true,
                 itemDropCancelled = true,
+                inventoryTransferCancelled = true,
+                itemPickupCancelled = true,
                 commandsBlocked = true
             )
             ArenaState.INGAME -> ParticipantRestrictions(
@@ -31,6 +37,8 @@ data class ParticipantRestrictions(
                 blockBreakCancelled = true,
                 blockPlaceCancelled = true,
                 itemDropCancelled = true,
+                inventoryTransferCancelled = true,
+                itemPickupCancelled = true,
                 commandsBlocked = true
             )
             ArenaState.COUNTDOWN -> ParticipantRestrictions(
@@ -39,6 +47,8 @@ data class ParticipantRestrictions(
                 blockBreakCancelled = false,
                 blockPlaceCancelled = false,
                 itemDropCancelled = false,
+                inventoryTransferCancelled = false,
+                itemPickupCancelled = false,
                 commandsBlocked = true
             )
             // WAITING / ONEMORE: 制約なし。WAITING で参加者が存在する経路は無いが、
@@ -49,6 +59,8 @@ data class ParticipantRestrictions(
                 blockBreakCancelled = false,
                 blockPlaceCancelled = false,
                 itemDropCancelled = false,
+                inventoryTransferCancelled = false,
+                itemPickupCancelled = false,
                 commandsBlocked = false
             )
             ArenaState.WAITING -> ParticipantRestrictions(
@@ -57,6 +69,8 @@ data class ParticipantRestrictions(
                 blockBreakCancelled = false,
                 blockPlaceCancelled = false,
                 itemDropCancelled = false,
+                inventoryTransferCancelled = false,
+                itemPickupCancelled = false,
                 commandsBlocked = true
             )
         }

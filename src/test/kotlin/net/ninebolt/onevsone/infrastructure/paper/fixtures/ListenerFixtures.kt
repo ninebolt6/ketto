@@ -20,6 +20,7 @@ import org.bukkit.event.player.PlayerDropItemEvent
 import org.bukkit.event.player.PlayerJoinEvent
 import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.event.player.PlayerQuitEvent
+import org.bukkit.entity.Item
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
 
@@ -58,14 +59,25 @@ internal fun interact(
     player: Player,
     block: Block,
     hand: EquipmentSlot = EquipmentSlot.HAND,
-    action: Action = Action.RIGHT_CLICK_BLOCK
-) = PlayerInteractEvent(player, action, null, block, BlockFace.SELF, hand)
+    action: Action = Action.RIGHT_CLICK_BLOCK,
+    item: ItemStack? = null
+) = PlayerInteractEvent(player, action, item, block, BlockFace.SELF, hand)
 
 internal fun breakEvent(player: Player, block: Block) = BlockBreakEvent(block, player)
 
 /** 実アイテムエンティティを落としてドロップイベントを作る。 */
 internal fun TestEnv.dropEvent(player: Player): PlayerDropItemEvent =
     PlayerDropItemEvent(player, world().dropItem(player.location, item(Material.STONE)))
+
+/** 指定 type の実ブロック。コンテナ等の BlockState 判定を MockBukkit 上で再現する。 */
+internal fun TestEnv.blockOf(type: Material, x: Int = 8, y: Int = 64, z: Int = 8): Block =
+    world().getBlockAt(x, y, z).also { it.type = type }
+
+internal fun TestEnv.itemEntity(): Item =
+    world().dropItem(Location(world(), 0.0, 64.0, 0.0), item(Material.STONE))
+
+internal fun TestEnv.spawn(type: EntityType) =
+    world().spawnEntity(Location(world(), 0.0, 64.0, 0.0), type)
 
 /** 設置イベント。held 省略時は石ブロックを持つ想定。 */
 internal fun TestEnv.placeEvent(player: Player, held: ItemStack? = null): BlockPlaceEvent {

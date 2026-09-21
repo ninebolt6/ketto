@@ -179,6 +179,8 @@ class ArenaMatchTest {
                 blockBreakCancelled = false,
                 blockPlaceCancelled = false,
                 itemDropCancelled = false,
+                inventoryTransferCancelled = false,
+                itemPickupCancelled = false,
                 commandsBlocked = false
             ),
             ArenaState.COUNTDOWN to ParticipantRestrictions(
@@ -187,6 +189,8 @@ class ArenaMatchTest {
                 blockBreakCancelled = false,
                 blockPlaceCancelled = false,
                 itemDropCancelled = false,
+                inventoryTransferCancelled = false,
+                itemPickupCancelled = false,
                 commandsBlocked = true
             ),
             ArenaState.ROUNDCOUNTDOWN to ParticipantRestrictions(
@@ -195,6 +199,8 @@ class ArenaMatchTest {
                 blockBreakCancelled = true,
                 blockPlaceCancelled = true,
                 itemDropCancelled = true,
+                inventoryTransferCancelled = true,
+                itemPickupCancelled = true,
                 commandsBlocked = true
             ),
             ArenaState.INGAME to ParticipantRestrictions(
@@ -203,6 +209,8 @@ class ArenaMatchTest {
                 blockBreakCancelled = true,
                 blockPlaceCancelled = true,
                 itemDropCancelled = true,
+                inventoryTransferCancelled = true,
+                itemPickupCancelled = true,
                 commandsBlocked = true
             )
         )
