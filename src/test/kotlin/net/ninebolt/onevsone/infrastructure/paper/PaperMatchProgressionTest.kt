@@ -168,14 +168,15 @@ class PaperMatchProgressionTest {
         env.join(p1, arena)
         env.join(p2, arena)
         env.tick(6)
-        p1.inventory.setItem(0, null)
+        // 再装備の有無をスロット記録で識別できるよう、敗北者の先頭スロットを空にする
+        p2.inventory.setItem(0, null)
 
         p2.health = 0.0
         env.service.defeat(p2.uuid, DefeatCause.DEATH)
         env.runOneShots()
         assertEquals(1, p2.respawnCount)
-        // リスポーン時点ではまだキット再適用前であることをスロット記録で検証
-        // (順序の網羅的検証は application 層の deferred restore テストで担保)
+        // リスポーン時点ではまだキット未適用(= null)。再装備は respawn の後に走る
+        assertNull(p2.slotAtRespawn)
         assertEquals(Material.IRON_SWORD, p2.inventory.contents[0]?.type)
     }
 

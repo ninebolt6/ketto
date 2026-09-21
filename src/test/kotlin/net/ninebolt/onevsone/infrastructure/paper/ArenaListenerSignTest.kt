@@ -1,5 +1,6 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import net.ninebolt.onevsone.domain.WorldPosition
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.breakBlock
@@ -12,6 +13,8 @@ import net.ninebolt.onevsone.infrastructure.paper.fixtures.simulation
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.twoPlayerIngame
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import org.bukkit.ExplosionResult
+import org.bukkit.block.Sign
+import org.bukkit.block.sign.Side
 import org.bukkit.event.Event
 import org.bukkit.event.block.Action
 import org.bukkit.event.block.BlockExplodeEvent
@@ -143,6 +146,25 @@ class ArenaListenerSignTest {
 
         val event = p1.simulation().breakBlock(env.plainBlock(3, 64, 3))
         assertFalse(event.isCancelled)
+    }
+
+    @Test
+    fun `registered sign renders arena name and state`() {
+        env.newArena()
+        val block = env.signBlock(3, 64, 3)
+        env.admin.setSign("arena1", WorldPosition.new("world", 3.0, 64.0, 3.0))
+
+        val plain = PlainTextComponentSerializer.plainText()
+        fun lines() = (0..3).map {
+            plain.serialize((block.state as Sign).getSide(Side.FRONT).line(it))
+        }
+
+        assertTrue(lines()[1].contains("arena1"))
+        assertTrue(lines()[2].contains("Join"))
+        assertTrue(lines()[3].contains("Waiting"))
+
+        env.join(env.player("Alice"))
+        assertTrue(lines()[3].contains("1 More"))
     }
 
     @Test

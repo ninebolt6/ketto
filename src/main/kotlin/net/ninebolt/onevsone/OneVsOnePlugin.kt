@@ -33,7 +33,8 @@ import java.io.File
  * composition root。設定値を読み、実装を手動で生成・注入し、
  * イベントとコマンドを登録する。main FQCN は維持。
  */
-class OneVsOnePlugin : JavaPlugin() {
+// MockBukkit がロード時にプロキシサブクラスを生成するため open が必要
+open class OneVsOnePlugin : JavaPlugin() {
 
     var service: ArenaApplicationService? = null
         private set

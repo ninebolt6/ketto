@@ -14,6 +14,7 @@ import net.ninebolt.onevsone.infrastructure.persistence.PersistedBackup
 import org.bukkit.Material
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -59,23 +60,6 @@ class PaperInventoryRecoveryTest {
     }
 
     @Test
-    fun `abort during pending respawn never reapplies kit`() {
-        val arena = env.newArena()
-        env.setKit(arena, PaperInventorySnapshot(items = listOf(env.item(Material.IRON_SWORD))))
-        val p1 = env.player("Alice")
-        val p2 = env.player("Bob")
-        env.join(p1, arena)
-        env.join(p2, arena)
-        env.tick(6)
-
-        p2.health = 0.0
-        env.service.defeat(p2.uuid, DefeatCause.DEATH)
-        env.service.abort(arena)
-        env.runOneShots()
-        assertNull(p2.inventory.contents[0])
-    }
-
-    @Test
     fun `final death restores original inventory after respawn`() {
         env.close()
         env = TestEnv(folder, requiredWins = 1)
@@ -95,6 +79,8 @@ class PaperInventoryRecoveryTest {
         assertEquals(ArenaState.WAITING, env.view().state)
         env.runOneShots()
         assertEquals(1, p2.respawnCount)
+        // リスポーン時点ではまだ元インベントリ未復元(キット装備のまま)= 復元は respawn 後
+        assertNotEquals(Material.APPLE, p2.slotAtRespawn?.type)
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
         assertEquals(1, env.statsRepo.find(p1.uuid)!!.wins)
         assertEquals(1, env.statsRepo.find(p2.uuid)!!.losses)

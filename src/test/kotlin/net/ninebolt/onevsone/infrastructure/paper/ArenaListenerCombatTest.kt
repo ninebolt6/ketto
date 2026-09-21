@@ -21,6 +21,7 @@ import org.bukkit.event.entity.PlayerDeathEvent
 import org.mockbukkit.mockbukkit.world.WorldMock
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -63,6 +64,25 @@ class ArenaListenerCombatTest {
         val outsider = env.player("Outsider")
         outsider.simulateDamage(100.0, genericDamage())
         env.assertFired<PlayerDeathEvent> { event -> !event.keepInventory && !event.keepLevel }
+    }
+
+    @Test
+    fun `participant death while waiting respawns without resolving match`() {
+        val arena = env.newArena()
+        val p1 = env.player("Alice")
+        env.join(p1, arena)
+        assertEquals(ArenaState.ONEMORE, env.state())
+
+        p1.simulateDamage(100.0, genericDamage())
+        // 試合未開始の参加者死亡は敗北にせず、次 tick でリスポーンさせる
+        // (keepInventory の実効は MockBukkit がエミュレートしないためフラグ設定までを検証)
+        env.assertFired<PlayerDeathEvent> { event -> event.keepInventory && event.keepLevel }
+        assertEquals(ArenaState.ONEMORE, env.state())
+        assertEquals(arena, env.service.arenaIdOf(p1.uuid))
+
+        env.runOneShots()
+        assertEquals(1, p1.respawnCount)
+        assertNull(env.statsRepo.find(p1.uuid))
     }
 
     @Test
