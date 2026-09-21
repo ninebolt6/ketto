@@ -13,7 +13,6 @@ import org.bukkit.event.block.Action
 import org.bukkit.event.block.BlockBreakEvent
 import org.bukkit.block.BlockFace
 import org.bukkit.event.block.BlockPlaceEvent
-import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerDropItemEvent
 import org.bukkit.entity.Item
@@ -57,9 +56,6 @@ internal fun PlayerSimulation.breakBlock(block: Block): BlockBreakEvent =
 internal fun PlayerSimulation.placeBlock(material: Material, location: Location): BlockPlaceEvent =
     simulateBlockPlace(material, location) ?: error("simulateBlockPlace returned null")
 
-internal fun damageEvent(entity: Entity, damage: Double = 1.0) =
-    EntityDamageEvent(entity, EntityDamageEvent.DamageCause.FALL, genericDamage(), damage)
-
 internal fun TestEnv.twoPlayerIngame(): Pair<ArenaPlayerMock, ArenaPlayerMock> {
     val arena = newArena()
     val p1 = player("Alice")
@@ -82,8 +78,6 @@ internal fun interact(
     item: ItemStack? = null
 ) = PlayerInteractEvent(player, action, item, block, BlockFace.SELF, hand)
 
-internal fun breakEvent(player: Player, block: Block) = BlockBreakEvent(block, player)
-
 /** 実アイテムエンティティを落としてドロップイベントを作る。 */
 internal fun TestEnv.dropEvent(player: Player): PlayerDropItemEvent =
     PlayerDropItemEvent(player, world().dropItem(player.location, item(Material.STONE)))
@@ -101,12 +95,6 @@ internal fun TestEnv.spawn(type: EntityType) =
 /** simulateDamage を持つ LivingEntityMock 系のモブ。 */
 internal fun TestEnv.mob(): LivingEntityMock =
     world().spawn(Location(world(), 0.0, 64.0, 0.0), Zombie::class.java) as LivingEntityMock
-
-/** 設置イベント。held 省略時は石ブロックを持つ想定。 */
-internal fun TestEnv.placeEvent(player: Player, held: ItemStack? = null): BlockPlaceEvent {
-    val block = plainBlock()
-    return BlockPlaceEvent(block, block.state, block, held ?: item(Material.STONE), player, true, EquipmentSlot.HAND)
-}
 
 /** 看板ではない実ブロック。 */
 internal fun TestEnv.plainBlock(x: Int = 9, y: Int = 64, z: Int = 9): Block =

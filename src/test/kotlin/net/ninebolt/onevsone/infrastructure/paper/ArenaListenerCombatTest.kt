@@ -5,10 +5,8 @@ import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.assertFired
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.attackDamage
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.damageEvent
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.genericDamage
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.mob
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.nonPlayer
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.projectileDamage
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.simulation
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.spawn
@@ -69,8 +67,7 @@ class ArenaListenerCombatTest {
 
     @Test
     fun `non player damage ignored`() {
-        val event = damageEvent(env.nonPlayer())
-        env.fire(event)
+        val event = env.mob().simulateDamage(1.0, genericDamage())
         assertFalse(event.isCancelled)
     }
 

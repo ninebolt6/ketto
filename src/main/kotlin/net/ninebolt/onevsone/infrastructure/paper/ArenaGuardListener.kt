@@ -1,7 +1,6 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
 import net.ninebolt.onevsone.application.ArenaApplicationService
-import net.ninebolt.onevsone.domain.ParticipantRestrictions
 import org.bukkit.Material
 import org.bukkit.Tag
 import org.bukkit.block.Block
@@ -36,7 +35,6 @@ import org.bukkit.event.player.PlayerInteractEntityEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerPickupArrowEvent
 import org.bukkit.inventory.InventoryHolder
-import kotlin.uuid.toKotlinUuid
 
 /**
  * 試合中のアリーナ改変とキット品の外界移動を遮断する入力アダプター。
@@ -49,14 +47,14 @@ class ArenaGuardListener(
 
     @EventHandler
     fun onBreak(event: BlockBreakEvent) {
-        if (restrictionsOf(event.player)?.blockBreakCancelled == true) {
+        if (service.restrictionsOf(event.player)?.blockBreakCancelled == true) {
             event.isCancelled = true
         }
     }
 
     @EventHandler
     fun onPlace(event: BlockPlaceEvent) {
-        val restrictions = restrictionsOf(event.player) ?: return
+        val restrictions = service.restrictionsOf(event.player) ?: return
         if (!restrictions.blockPlaceCancelled) return
         // 火打ち石は設置ではなく着火なので許可する(通常は BlockPlaceEvent を発火しないが、
         // 発火する実装でも着火の許可を維持する)
@@ -66,7 +64,7 @@ class ArenaGuardListener(
 
     @EventHandler
     fun onDrop(event: PlayerDropItemEvent) {
-        if (restrictionsOf(event.player)?.itemDropCancelled == true) {
+        if (service.restrictionsOf(event.player)?.itemDropCancelled == true) {
             event.isCancelled = true
         }
     }
@@ -89,12 +87,12 @@ class ArenaGuardListener(
         val top = event.view.topInventory.type
         if (top == InventoryType.CRAFTING || top == InventoryType.PLAYER) return false
         val player = event.whoClicked as? Player ?: return false
-        return restrictionsOf(player)?.inventoryTransferCancelled == true
+        return service.restrictionsOf(player)?.inventoryTransferCancelled == true
     }
 
     @EventHandler
     fun onInteract(event: PlayerInteractEvent) {
-        val restrictions = restrictionsOf(event.player) ?: return
+        val restrictions = service.restrictionsOf(event.player) ?: return
         val block = event.clickedBlock
         if (restrictions.inventoryTransferCancelled && block != null && storesItems(block)) {
             denyInteract(event)
@@ -127,7 +125,7 @@ class ArenaGuardListener(
 
     @EventHandler
     fun onInteractEntity(event: PlayerInteractEntityEvent) {
-        if (restrictionsOf(event.player)?.inventoryTransferCancelled != true) return
+        if (service.restrictionsOf(event.player)?.inventoryTransferCancelled != true) return
         val entity = event.rightClicked
         // InventoryHolder: チェスト付きトロッコ/ボート・村人(取引画面自体を開かせない)・Allay 等
         if (entity is InventoryHolder || entity is ItemFrame || entity is ArmorStand) {
@@ -143,7 +141,7 @@ class ArenaGuardListener(
 
     @EventHandler
     fun onArmorStandManipulate(event: PlayerArmorStandManipulateEvent) {
-        if (restrictionsOf(event.player)?.inventoryTransferCancelled == true) {
+        if (service.restrictionsOf(event.player)?.inventoryTransferCancelled == true) {
             event.isCancelled = true
         }
     }
@@ -151,80 +149,78 @@ class ArenaGuardListener(
     @EventHandler
     fun onEntityPlace(event: EntityPlaceEvent) {
         val player = event.player ?: return
-        if (restrictionsOf(player)?.blockPlaceCancelled == true) event.isCancelled = true
+        if (service.restrictionsOf(player)?.blockPlaceCancelled == true) event.isCancelled = true
     }
 
     @EventHandler
     fun onHangingPlace(event: HangingPlaceEvent) {
         val player = event.player ?: return
-        if (restrictionsOf(player)?.blockPlaceCancelled == true) event.isCancelled = true
+        if (service.restrictionsOf(player)?.blockPlaceCancelled == true) event.isCancelled = true
     }
 
     @EventHandler
     fun onBucketEmpty(event: PlayerBucketEmptyEvent) {
-        if (restrictionsOf(event.player)?.blockPlaceCancelled == true) event.isCancelled = true
+        if (service.restrictionsOf(event.player)?.blockPlaceCancelled == true) event.isCancelled = true
     }
 
     @EventHandler
     fun onBucketFill(event: PlayerBucketFillEvent) {
-        if (restrictionsOf(event.player)?.blockBreakCancelled == true) event.isCancelled = true
+        if (service.restrictionsOf(event.player)?.blockBreakCancelled == true) event.isCancelled = true
     }
 
     @EventHandler
     fun onBucketEntity(event: PlayerBucketEntityEvent) {
-        if (restrictionsOf(event.player)?.blockBreakCancelled == true) event.isCancelled = true
+        if (service.restrictionsOf(event.player)?.blockBreakCancelled == true) event.isCancelled = true
     }
 
     // PlayerBucketEntityEvent に置き換えられた非推奨イベント。発火する実装に備えて残す
     @Suppress("DEPRECATION")
     @EventHandler
     fun onBucketFish(event: PlayerBucketFishEvent) {
-        if (restrictionsOf(event.player)?.blockBreakCancelled == true) event.isCancelled = true
+        if (service.restrictionsOf(event.player)?.blockBreakCancelled == true) event.isCancelled = true
     }
 
     @EventHandler
     fun onEntityPickupItem(event: EntityPickupItemEvent) {
         val player = event.entity as? Player ?: return
-        if (restrictionsOf(player)?.itemPickupCancelled == true) event.isCancelled = true
+        if (service.restrictionsOf(player)?.itemPickupCancelled == true) event.isCancelled = true
     }
 
     @EventHandler
     fun onAttemptPickupItem(event: PlayerAttemptPickupItemEvent) {
-        if (restrictionsOf(event.player)?.itemPickupCancelled == true) event.isCancelled = true
+        if (service.restrictionsOf(event.player)?.itemPickupCancelled == true) event.isCancelled = true
     }
 
     @EventHandler
     fun onPickupArrow(event: PlayerPickupArrowEvent) {
         // 観戦者が射込んだ矢/トライデントを参加者が回収する密輸経路も塞ぐ
-        if (restrictionsOf(event.player)?.itemPickupCancelled == true) event.isCancelled = true
+        if (service.restrictionsOf(event.player)?.itemPickupCancelled == true) event.isCancelled = true
     }
 
     @EventHandler
     fun onHarvest(event: PlayerHarvestBlockEvent) {
         // ベリー系の収穫は拾得イベントを介さず直接インベントリへ入る
-        if (restrictionsOf(event.player)?.itemPickupCancelled == true) event.isCancelled = true
+        if (service.restrictionsOf(event.player)?.itemPickupCancelled == true) event.isCancelled = true
     }
 
     @EventHandler
     fun onDispenseArmor(event: BlockDispenseArmorEvent) {
         val player = event.targetEntity as? Player ?: return
-        if (restrictionsOf(player)?.itemPickupCancelled == true) event.isCancelled = true
+        if (service.restrictionsOf(player)?.itemPickupCancelled == true) event.isCancelled = true
     }
 
     @EventHandler
     fun onFertilize(event: BlockFertilizeEvent) {
         // 骨粉による樹木・作物の成長はブロック設置と同じアリーナ改変
         val player = event.player ?: return
-        if (restrictionsOf(player)?.blockPlaceCancelled == true) event.isCancelled = true
+        if (service.restrictionsOf(player)?.blockPlaceCancelled == true) event.isCancelled = true
     }
 
     @EventHandler
     fun onSignChange(event: SignChangeEvent) {
         // 未ワックス看板は誰でも文字を書き換えられるため、設置禁止と同じ制約で守る
-        if (restrictionsOf(event.player)?.blockPlaceCancelled == true) event.isCancelled = true
+        if (service.restrictionsOf(event.player)?.blockPlaceCancelled == true) event.isCancelled = true
     }
 
-    private fun restrictionsOf(player: Player): ParticipantRestrictions? =
-        service.matchOf(player.uniqueId.toKotlinUuid())
-            ?.let { ParticipantRestrictions.forState(it.state) }
 }
+

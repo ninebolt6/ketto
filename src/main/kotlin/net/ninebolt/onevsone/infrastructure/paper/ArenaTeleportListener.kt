@@ -1,7 +1,6 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
 import net.ninebolt.onevsone.application.ArenaApplicationService
-import net.ninebolt.onevsone.domain.ParticipantRestrictions
 import net.ninebolt.onevsone.domain.TeleportTrigger
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
@@ -32,7 +31,7 @@ class ArenaTeleportListener(
     }
 
     private fun restrictTeleport(event: PlayerTeleportEvent) {
-        val restrictions = restrictionsOf(event.player) ?: return
+        val restrictions = service.restrictionsOf(event.player) ?: return
         // プラグイン自身の移送は cause が PLUGIN とは限らないため、マーカーで先に識別する
         val trigger = when {
             lookup.isPluginTeleport(event.player.uniqueId.toKotlinUuid()) -> TeleportTrigger.INTERNAL
@@ -46,10 +45,8 @@ class ArenaTeleportListener(
     @EventHandler
     fun onVehicleEnter(event: VehicleEnterEvent) {
         val player = event.entered as? Player ?: return
-        if (restrictionsOf(player)?.horizontalMoveFrozen == true) event.isCancelled = true
+        if (service.restrictionsOf(player)?.horizontalMoveFrozen == true) event.isCancelled = true
     }
 
-    private fun restrictionsOf(player: Player): ParticipantRestrictions? =
-        service.matchOf(player.uniqueId.toKotlinUuid())
-            ?.let { ParticipantRestrictions.forState(it.state) }
 }
+
