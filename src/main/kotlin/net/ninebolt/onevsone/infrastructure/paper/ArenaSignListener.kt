@@ -7,7 +7,6 @@ import net.ninebolt.onevsone.domain.Arena
 import org.bukkit.block.Block
 import org.bukkit.block.Sign
 import org.bukkit.entity.Player
-import org.bukkit.event.Event
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
@@ -37,8 +36,7 @@ class ArenaSignListener(
         val name = admin.signOwner(block.world.name, block.x, block.y, block.z) ?: return
         // 未waxの看板はバニラの右クリックで誰でも編集画面を開けるため、処理済みのクリックは
         // ブロック操作とアイテム使用の両方を拒否する
-        event.setUseInteractedBlock(Event.Result.DENY)
-        event.setUseItemInHand(Event.Result.DENY)
+        event.denyUse()
         // joinable の事前判定は行わず、join の拒否結果(InMatch 等)の描画に委ねる
         val reply = Arena.Id.of(name)
             ?.let { service.join(event.player.uniqueId.toKotlinUuid(), event.player.name, it) }

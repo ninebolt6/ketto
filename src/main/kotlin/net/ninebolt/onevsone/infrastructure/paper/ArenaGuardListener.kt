@@ -7,7 +7,6 @@ import org.bukkit.block.Block
 import org.bukkit.entity.ArmorStand
 import org.bukkit.entity.ItemFrame
 import org.bukkit.entity.Player
-import org.bukkit.event.Event
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.block.BlockBreakEvent
@@ -95,13 +94,13 @@ class ArenaGuardListener(
         val restrictions = service.restrictionsOf(event.player) ?: return
         val block = event.clickedBlock
         if (restrictions.inventoryTransferCancelled && block != null && storesItems(block)) {
-            denyInteract(event)
+            event.denyUse()
             return
         }
         if (restrictions.blockPlaceCancelled &&
             event.item?.type?.name?.endsWith("_SPAWN_EGG") == true
         ) {
-            denyInteract(event)
+            event.denyUse()
         }
     }
 
@@ -115,12 +114,6 @@ class ArenaGuardListener(
         val type = block.type
         return type == Material.ENDER_CHEST || type == Material.RESPAWN_ANCHOR ||
             Tag.BEDS.isTagged(type) || type == Material.FLOWER_POT || type.name.startsWith("POTTED_")
-    }
-
-    /** 登録看板と同じく、ブロック操作とアイテム使用の両方を拒否する。 */
-    private fun denyInteract(event: PlayerInteractEvent) {
-        event.setUseInteractedBlock(Event.Result.DENY)
-        event.setUseItemInHand(Event.Result.DENY)
     }
 
     @EventHandler

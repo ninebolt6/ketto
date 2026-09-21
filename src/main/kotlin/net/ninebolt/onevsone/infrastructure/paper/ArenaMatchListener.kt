@@ -50,8 +50,7 @@ class ArenaMatchListener(
         }
         // 落下・火・溶岩などの環境ダメージは帰属できないため従来通り敗北として受理する
         val player = event.entity as? Player ?: return
-        val match = service.matchOf(player.uniqueId.toKotlinUuid()) ?: return
-        if (ParticipantRestrictions.forState(match.state).damageCancelled) {
+        if (service.restrictionsOf(player)?.damageCancelled == true) {
             event.isCancelled = true
         }
     }
@@ -106,8 +105,7 @@ class ArenaMatchListener(
 
     @EventHandler
     fun onCommand(event: PlayerCommandPreprocessEvent) {
-        val match = service.matchOf(event.player.uniqueId.toKotlinUuid()) ?: return
-        if (ParticipantRestrictions.forState(match.state).commandsBlocked) {
+        if (service.restrictionsOf(event.player)?.commandsBlocked == true) {
             event.isCancelled = true
             messages.send(event.player, messages.commandBlocked)
         }
