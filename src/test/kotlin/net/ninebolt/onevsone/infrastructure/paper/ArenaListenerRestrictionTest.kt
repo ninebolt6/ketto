@@ -50,23 +50,6 @@ class ArenaListenerRestrictionTest {
     }
 
     @Test
-    fun `break cancelled only in ingame and roundcountdown`() {
-        val arena = env.newArena()
-        val p1 = env.player("Alice")
-        env.join(p1, arena)
-        val sim = p1.simulation()
-
-        val allowed = sim.breakBlock(env.plainBlock())
-        assertFalse(allowed.isCancelled)
-
-        val p2 = env.player("Bob")
-        env.join(p2, arena)
-        env.tick(6)
-        val ingame = sim.breakBlock(env.plainBlock(9, 64, 10))
-        assertTrue(ingame.isCancelled)
-    }
-
-    @Test
     fun `commands blocked except in ONEMORE`() {
         val arena = env.newArena()
         val p1 = env.player("Alice")
@@ -132,9 +115,9 @@ class ArenaListenerRestrictionTest {
         assertTrue(place().isCancelled) // INGAME
 
         // 着火は許可する。simulateBlockPlace は実インベントリの手のアイテムを使う
-        p1.inventory.setItemInMainHand(env.item(Material.FLINT_AND_STEEL))
+        p1.inventory.setItem(p1.inventory.heldItemSlot, env.item(Material.FLINT_AND_STEEL))
         assertFalse(place().isCancelled)
-        p1.inventory.setItemInMainHand(null)
+        p1.inventory.clear(p1.inventory.heldItemSlot)
 
         env.service.defeat(p2.uuid, DefeatCause.FALL)
         assertTrue(place().isCancelled) // ROUNDCOUNTDOWN

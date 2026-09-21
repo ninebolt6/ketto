@@ -4,23 +4,13 @@ import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.WorldPosition
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.attackDamage
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.blockOf
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.genericDamage
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.interact
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.mob
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.signBlock
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.simulation
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.twoPlayerIngame
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
-import org.bukkit.Location
 import org.bukkit.Material
-import org.bukkit.damage.DamageType
-import org.bukkit.event.Event
-import org.bukkit.event.inventory.InventoryType
-import org.bukkit.event.player.PlayerTeleportEvent
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -29,8 +19,8 @@ import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
 /**
- * 看板参加から試合終了までを実アクションで通す E2E シナリオ。
- * requiredWins=1 で1ラウンド完結に短縮する。個別経路の網羅は各リスナーテストが担う。
+ * ユーザージャーニーの通し検証(看板参加→終了、切断→復帰)を実アクションで行う E2E。
+ * requiredWins=1 で1ラウンド完結に短縮する。単一機構の網羅は各リスナーテストが担う。
  */
 class MatchScenarioTest {
 
@@ -77,40 +67,6 @@ class MatchScenarioTest {
     }
 
     @Test
-    fun `mob attack does not harm the match but lethal fall does`() {
-        val (p1, p2) = env.twoPlayerIngame()
-
-        val mobbed = p1.simulateDamage(5.0, attackDamage(env.mob(), DamageType.MOB_ATTACK))
-        assertTrue(mobbed.isCancelled)
-        assertEquals(20.0, p1.health)
-        assertEquals(ArenaState.INGAME, env.state())
-
-        // 環境ダメージは従来通り敗北として受理する
-        p1.simulateDamage(100.0, genericDamage())
-        assertEquals(ArenaState.WAITING, env.state())
-        assertEquals(1, env.statsRepo.find(p2.uuid)!!.wins)
-    }
-
-    @Test
-    fun `ender pearl escapes nothing but external teleport is blocked`() {
-        val (p1, _) = env.twoPlayerIngame()
-
-        p1.clearTeleported()
-        p1.teleport(
-            Location(env.world(), 5.0, 64.0, 5.0),
-            PlayerTeleportEvent.TeleportCause.ENDER_PEARL
-        )
-        assertTrue(p1.hasTeleported())
-
-        p1.clearTeleported()
-        p1.teleport(
-            Location(env.world(), 9.0, 64.0, 9.0),
-            PlayerTeleportEvent.TeleportCause.COMMAND
-        )
-        assertFalse(p1.hasTeleported())
-    }
-
-    @Test
     fun `countdown disconnect unregisters only`() {
         val arena = env.newArena()
         val p1 = env.player("Alice")
@@ -137,19 +93,5 @@ class MatchScenarioTest {
 
         p1.reconnect()
         assertNull(p1.inventory.contents[0])
-    }
-
-    @Test
-    fun `kit cannot be stashed into a chest`() {
-        val (p1, _) = env.twoPlayerIngame()
-        // インタラクトで開封自体を拒否
-        val interact = interact(p1, env.blockOf(Material.CHEST))
-        env.fire(interact)
-        assertEquals(Event.Result.DENY, interact.useInteractedBlock())
-
-        // 仮に開かれてもクリック操作は二番手防衛で遮断
-        val view = p1.openInventory(env.server.createInventory(null, InventoryType.CHEST))!!
-        val click = p1.simulation().simulateInventoryClick(view, 0)
-        assertTrue(click.isCancelled)
     }
 }

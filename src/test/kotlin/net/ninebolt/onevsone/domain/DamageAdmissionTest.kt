@@ -4,6 +4,7 @@ import net.ninebolt.onevsone.domain.fixtures.alice
 import net.ninebolt.onevsone.domain.fixtures.bob
 import net.ninebolt.onevsone.domain.fixtures.carol
 import net.ninebolt.onevsone.domain.fixtures.dave
+import net.ninebolt.onevsone.domain.fixtures.match
 import net.ninebolt.onevsone.domain.fixtures.startedMatch
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -15,8 +16,6 @@ class DamageAdmissionTest {
 
     private val ingame = startedMatch()          // alice vs bob、INGAME
     private val waiting = match().join(alice).match // alice のみ、ONEMORE
-
-    private fun match() = ArenaMatch.new(Arena.Id.new("arena1"), 3)
 
     @Test
     fun `both unrestricted passes through`() {

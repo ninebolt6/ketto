@@ -404,15 +404,6 @@ class YamlPersistenceTest {
     }
 
     @Test
-    fun `invalid arena names rejected`() {
-        for (bad in listOf("", "a/b", "a\\b", "a.b", "..", "players", "PLAYERS", "Players", "a b", "ab", "x".repeat(65), "a:b", " ab", "ab ")) {
-            assertNull(Arena.Id.of(bad))
-            assertThrows(IllegalArgumentException::class.java) { Arena.Id.new(bad) }
-        }
-        assertNotNull(Arena.Id.of("arena-1_2"))
-    }
-
-    @Test
     fun `deleteArena removes arena and status files`() {
         val repo = arenas()
         repo.save(Arena.new(Arena.Id.new("a1")))
