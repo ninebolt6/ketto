@@ -151,8 +151,12 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         private set
     var admin = ArenaAdministrationService(registry, arenaRepo, signRepo, lobbyRepo, equipment, presentation, progression)
         private set
-    val signListener: ArenaSignListener by lazy { ArenaSignListener(service, admin, messages) }
-    val command: OneVsOneCommand by lazy { OneVsOneCommand(service, admin, playerPort, failures, messages) }
+    // rebuildWith 後も現在の依存を参照するため eager var とし、再構築時に再代入する。
+    // command は stats レート制限の内部状態を持つため、同一環境内ではインスタンスを維持する
+    var signListener = ArenaSignListener(service, admin, messages)
+        private set
+    var command = OneVsOneCommand(service, admin, playerPort, failures, messages)
+        private set
 
     private fun buildProgression() = MatchProgressionService(
         registry, MatchStateSync(matchStateRepo, presentation), statsRepo,
@@ -186,6 +190,8 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         progression = buildProgression()
         service = buildService()
         admin = ArenaAdministrationService(registry, arenaRepo, signRepo, lobbyRepo, equipment, presentation, progression)
+        signListener = ArenaSignListener(service, admin, messages)
+        command = OneVsOneCommand(service, admin, playerPort, failures, messages)
     }
 
     /**
@@ -257,7 +263,11 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         return reply
     }
 
-    /** QuitEvent と同じく切断スコープ内で quit を呼ぶ。 */
+    /**
+     * QuitEvent と同じく切断スコープ内で quit を呼ぶ。
+     * リスナー登録済みの環境で disconnect() 済みなら quit は実イベント経路で駆動済みのため、
+     * これを併用すると二重呼出になる(現状は冪等だが意図が曖昧になる)。
+     */
     fun quit(player: Player) {
         lookup.scopeQuitting(player) {
             service.quit(player.uuid, player.name)
