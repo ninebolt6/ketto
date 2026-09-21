@@ -5,13 +5,16 @@ import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.damageEvent
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.deathEvent
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.entityDamageEvent
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.moveEvent
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.nonPlayer
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.quitEvent
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.spawn
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.twoPlayerIngame
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import org.bukkit.Location
 import org.bukkit.Material
+import org.bukkit.entity.EntityType
 import org.bukkit.event.player.PlayerTeleportEvent
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -88,6 +91,75 @@ class ArenaListenerCombatTest {
         val event = damageEvent(p1)
         env.listener.onDamage(event)
         assertTrue(event.isCancelled)
+    }
+
+    @Test
+    fun `opponent entity damage allowed in INGAME`() {
+        val (p1, p2) = env.twoPlayerIngame()
+        val event = entityDamageEvent(p1, p2)
+        env.listener.onDamage(event)
+        assertFalse(event.isCancelled)
+    }
+
+    @Test
+    fun `third party and mob damage cancelled in INGAME`() {
+        val (p1, _) = env.twoPlayerIngame()
+        val outsider = env.player("Outsider")
+
+        val sniped = entityDamageEvent(outsider, p1)
+        env.listener.onDamage(sniped)
+        assertTrue(sniped.isCancelled)
+
+        val mob = entityDamageEvent(env.nonPlayer(), p1)
+        env.listener.onDamage(mob)
+        assertTrue(mob.isCancelled)
+    }
+
+    @Test
+    fun `opponent projectile damage attributed via causing entity`() {
+        val (p1, p2) = env.twoPlayerIngame()
+        val arrow = env.spawn(EntityType.ARROW)
+        // 直接の damager は矢でも、causingEntity が対戦相手なら許可
+        val allowed = entityDamageEvent(arrow, p1, causingEntity = p2)
+        env.listener.onDamage(allowed)
+        assertFalse(allowed.isCancelled)
+
+        val smuggled = entityDamageEvent(arrow, p1, causingEntity = env.player("Outsider"))
+        env.listener.onDamage(smuggled)
+        assertTrue(smuggled.isCancelled)
+    }
+
+    @Test
+    fun `participant cannot damage outsiders or mobs`() {
+        val (p1, _) = env.twoPlayerIngame()
+        val outsider = env.player("Outsider")
+
+        val hitPlayer = entityDamageEvent(p1, outsider)
+        env.listener.onDamage(hitPlayer)
+        assertTrue(hitPlayer.isCancelled)
+
+        val hitMob = entityDamageEvent(p1, env.nonPlayer())
+        env.listener.onDamage(hitMob)
+        assertTrue(hitMob.isCancelled)
+    }
+
+    @Test
+    fun `opponent damage cancelled during round countdown`() {
+        val (p1, p2) = env.twoPlayerIngame()
+        env.service.defeat(p2.uuid, DefeatCause.FALL)
+        val event = entityDamageEvent(p2, p1)
+        env.listener.onDamage(event)
+        assertTrue(event.isCancelled)
+    }
+
+    @Test
+    fun `outsiders fighting each other unaffected`() {
+        env.twoPlayerIngame()
+        val a = env.player("OutsiderA")
+        val b = env.player("OutsiderB")
+        val event = entityDamageEvent(a, b)
+        env.listener.onDamage(event)
+        assertFalse(event.isCancelled)
     }
 
     @Test

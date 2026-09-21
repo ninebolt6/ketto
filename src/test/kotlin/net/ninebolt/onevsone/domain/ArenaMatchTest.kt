@@ -176,6 +176,7 @@ class ArenaMatchTest {
             ArenaState.ONEMORE to ParticipantRestrictions(
                 horizontalMoveFrozen = false,
                 damageCancelled = false,
+                opponentDamageOnly = false,
                 blockBreakCancelled = false,
                 blockPlaceCancelled = false,
                 itemDropCancelled = false,
@@ -186,6 +187,7 @@ class ArenaMatchTest {
             ArenaState.COUNTDOWN to ParticipantRestrictions(
                 horizontalMoveFrozen = false,
                 damageCancelled = false,
+                opponentDamageOnly = false,
                 blockBreakCancelled = false,
                 blockPlaceCancelled = false,
                 itemDropCancelled = false,
@@ -196,6 +198,7 @@ class ArenaMatchTest {
             ArenaState.ROUNDCOUNTDOWN to ParticipantRestrictions(
                 horizontalMoveFrozen = true,
                 damageCancelled = true,
+                opponentDamageOnly = false,
                 blockBreakCancelled = true,
                 blockPlaceCancelled = true,
                 itemDropCancelled = true,
@@ -206,6 +209,7 @@ class ArenaMatchTest {
             ArenaState.INGAME to ParticipantRestrictions(
                 horizontalMoveFrozen = false,
                 damageCancelled = false,
+                opponentDamageOnly = true,
                 blockBreakCancelled = true,
                 blockPlaceCancelled = true,
                 itemDropCancelled = true,

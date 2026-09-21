@@ -7,6 +7,8 @@ package net.ninebolt.onevsone.domain
 data class ParticipantRestrictions(
     val horizontalMoveFrozen: Boolean,
     val damageCancelled: Boolean,
+    /** エンティティ起因ダメージを「同一マッチの対戦相手または本人」由来に限定する */
+    val opponentDamageOnly: Boolean,
     val blockBreakCancelled: Boolean,
     /** 破壊禁止中は設置物を撤去できないため、アリーナの汚染と籠城を防ぐ */
     val blockPlaceCancelled: Boolean,
@@ -24,6 +26,7 @@ data class ParticipantRestrictions(
             ArenaState.ROUNDCOUNTDOWN -> ParticipantRestrictions(
                 horizontalMoveFrozen = true,
                 damageCancelled = true,
+                opponentDamageOnly = false,
                 blockBreakCancelled = true,
                 blockPlaceCancelled = true,
                 itemDropCancelled = true,
@@ -34,6 +37,7 @@ data class ParticipantRestrictions(
             ArenaState.INGAME -> ParticipantRestrictions(
                 horizontalMoveFrozen = false,
                 damageCancelled = false,
+                opponentDamageOnly = true,
                 blockBreakCancelled = true,
                 blockPlaceCancelled = true,
                 itemDropCancelled = true,
@@ -44,6 +48,7 @@ data class ParticipantRestrictions(
             ArenaState.COUNTDOWN -> ParticipantRestrictions(
                 horizontalMoveFrozen = false,
                 damageCancelled = false,
+                opponentDamageOnly = false,
                 blockBreakCancelled = false,
                 blockPlaceCancelled = false,
                 itemDropCancelled = false,
@@ -56,6 +61,7 @@ data class ParticipantRestrictions(
             ArenaState.ONEMORE -> ParticipantRestrictions(
                 horizontalMoveFrozen = false,
                 damageCancelled = false,
+                opponentDamageOnly = false,
                 blockBreakCancelled = false,
                 blockPlaceCancelled = false,
                 itemDropCancelled = false,
@@ -66,6 +72,7 @@ data class ParticipantRestrictions(
             ArenaState.WAITING -> ParticipantRestrictions(
                 horizontalMoveFrozen = false,
                 damageCancelled = false,
+                opponentDamageOnly = false,
                 blockBreakCancelled = false,
                 blockPlaceCancelled = false,
                 itemDropCancelled = false,

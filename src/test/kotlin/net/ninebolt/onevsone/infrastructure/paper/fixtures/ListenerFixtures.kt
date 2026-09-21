@@ -1,5 +1,6 @@
 package net.ninebolt.onevsone.infrastructure.paper.fixtures
 
+import io.mockk.every
 import io.mockk.mockk
 import net.kyori.adventure.text.Component
 import org.bukkit.Location
@@ -13,6 +14,7 @@ import org.bukkit.event.block.Action
 import org.bukkit.event.block.BlockBreakEvent
 import org.bukkit.block.BlockFace
 import org.bukkit.event.block.BlockPlaceEvent
+import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.player.PlayerInteractEvent
@@ -38,6 +40,27 @@ internal fun joinEvent(player: Player) = PlayerJoinEvent(player, Component.empty
 
 internal fun damageEvent(entity: Entity, damage: Double = 1.0) =
     EntityDamageEvent(entity, EntityDamageEvent.DamageCause.FALL, mockk<DamageSource>(relaxed = true), damage)
+
+/**
+ * エンティティ起因ダメージ。causingEntity は DamageSource からしか取れないため
+ * mockk で帰属者を注入する(MockBukkit 未実装 API の限定用途)。
+ * EntityDamageByEntityEvent は Paper 1.21 で全コンストラクタが非推奨だが、
+ * テストでのイベント生成には代替が無いため抑制する。
+ */
+@Suppress("DEPRECATION")
+internal fun entityDamageEvent(
+    damager: Entity,
+    victim: Entity,
+    causingEntity: Entity? = damager,
+    damage: Double = 1.0
+): EntityDamageByEntityEvent {
+    val source = mockk<DamageSource>()
+    every { source.causingEntity } returns causingEntity
+    every { source.directEntity } returns damager
+    return EntityDamageByEntityEvent(
+        damager, victim, EntityDamageEvent.DamageCause.ENTITY_ATTACK, source, damage
+    )
+}
 
 internal fun moveEvent(player: Player, from: Location, to: Location) = PlayerMoveEvent(player, from, to)
 
