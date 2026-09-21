@@ -21,12 +21,23 @@ Minecraft の 1 対 1 アリーナ PvP プラグイン。
   (`of`/`new`/`restored`)でのみ生成する(操作の結果を表す型など、不変条件を持たない
   型は対象外)。呼び出し側が与える必要のない値(新規 id 等)はファクトリ内部で生成し、
   既存 id の再構築は `restored` か id 引数あり `new` に分離
+- 値からの純粋導出で状態を持たない判定関数(`TeleportRestriction.allows`、
+  `DamageAdmission.allows` 等)はドメインに置いてよい
 - 1 概念 1 ファイル
 
 ## Tests
 
 - domain/application は純粋テスト + fake(`TestApp` 経由)。
   infrastructure は MockBukkit(`TestEnv` で mock + 手動配線)で実状態をアサートする
+- リスナーテストは `env.registerListeners()` で登録し `env.fire(event)` の
+  実ディスパッチ経由で検証する。ハンドラメソッドの直接呼び出しはしない
+  (`@EventHandler` の登録忘れや独自 HandlerList の取りこぼしを検出できないため)
+- イベント生成は実アクション・simulate を優先する: `PlayerSimulation`
+  (`PlayerMock.simulate*` は委譲シムで deprecated)、`simulateDamage` +
+  実 `DamageSource.builder`、`disconnect()`、`teleport()`、`reconnect()`。
+  simulate が無いイベントのみフィクスチャで構築して `fire` する
+- 発火済みイベントの検証は `env.assertFired<T> { }`(MockBukkit の
+  assertEventFired 系は deprecated)
 - MockK は障害注入・MockBukkit 未実装 API 等の限定用途のみ
 - テストヘルパー(fake/fixture/TestApp/TestEnv 等)は各層の `fixtures/` サブパッケージに隔離する
 

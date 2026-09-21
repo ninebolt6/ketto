@@ -2,6 +2,10 @@
 
 アリーナに参加中のプレイヤーへ適用する制約。状態ごとの可否判定は
 `domain/ParticipantRestrictions` に集約し、リスナーはイベント変換のみ行う。
+リスナーは責務別に3分割されている: `ArenaMatchListener`(死亡・ダメージ・
+切断・参加・移動・コマンドの試合進行系)、`ArenaGuardListener`(ブロック・
+インベントリ・エンティティ操作の保護系)、`ArenaTeleportListener`
+(テレポート・乗車の移動制限系)。参加看板は `ArenaSignListener` が担う。
 
 ## 状態別の制約
 
@@ -28,7 +32,7 @@
 
 ### PlayerMoveEvent
 
-- `PlayerTeleportEvent` は除外(テレポートは別ハンドラで制限する)。
+- `PlayerTeleportEvent` は独自の HandlerList を持つためこのハンドラには届かない(テレポートは ArenaTeleportListener で制限する)。
 - X/Z 移動凍結の状態でブロック座標が変わる移動は `setTo(from)` で差し戻す。
 - `INGAME` / `ROUNDCOUNTDOWN` かつ 2 人在籍中に移動先ワールドの最低高度以下へ落下した場合は落下敗北として解決する。
 
@@ -57,7 +61,7 @@
 ### PlayerInteractEvent
 
 - 参加看板の右クリックは ArenaSignListener が処理する(参加動作は signs.md)。
-- ArenaListener 側では、インベントリ移譲禁止の状態で預け入れ可能なブロック(コンテナ類・エンダーチェスト・ベッド・リスポーンアンカー・植木鉢)とのインタラクトを拒否し、ブロック設置禁止の状態ではスポーンエッグの使用を拒否する。
+- ArenaGuardListener 側では、インベントリ移譲禁止の状態で預け入れ可能なブロック(コンテナ類・エンダーチェスト・ベッド・リスポーンアンカー・植木鉢)とのインタラクトを拒否し、ブロック設置禁止の状態ではスポーンエッグの使用を拒否する。
 
 ### PlayerInteractEntityEvent / PlayerInteractAtEntityEvent / PlayerArmorStandManipulateEvent
 
