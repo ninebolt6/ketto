@@ -6,8 +6,10 @@ import net.ninebolt.onevsone.application.ArenaRegistry
 import net.ninebolt.onevsone.application.MatchProgressionService
 import net.ninebolt.onevsone.application.MatchStateSync
 import net.ninebolt.onevsone.application.PlayerRecoveryService
-import net.ninebolt.onevsone.infrastructure.paper.ArenaListener
+import net.ninebolt.onevsone.infrastructure.paper.ArenaGuardListener
+import net.ninebolt.onevsone.infrastructure.paper.ArenaMatchListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaSignListener
+import net.ninebolt.onevsone.infrastructure.paper.ArenaTeleportListener
 import net.ninebolt.onevsone.infrastructure.paper.Messages
 import net.ninebolt.onevsone.infrastructure.paper.command.OneVsOneCommand
 import net.ninebolt.onevsone.infrastructure.paper.PaperEquipmentAdapter
@@ -102,7 +104,9 @@ class OneVsOnePlugin : JavaPlugin() {
         @Suppress("UsePropertyAccessSyntax") // setter が @Nullable 引数のため executor は val 扱い
         command?.setExecutor(executor)
         command?.tabCompleter = executor
-        server.pluginManager.registerEvents(ArenaListener(service, lookup, messages), this)
+        server.pluginManager.registerEvents(ArenaMatchListener(service, lookup, messages), this)
+        server.pluginManager.registerEvents(ArenaGuardListener(service), this)
+        server.pluginManager.registerEvents(ArenaTeleportListener(service, lookup), this)
         server.pluginManager.registerEvents(ArenaSignListener(service, admin, messages), this)
     }
 

@@ -25,7 +25,7 @@ import org.mockbukkit.mockbukkit.entity.LivingEntityMock
 import org.mockbukkit.mockbukkit.entity.PlayerMock
 import org.mockbukkit.mockbukkit.simulate.entity.PlayerSimulation
 
-/** ArenaListener テスト用の実イベント構築と 2 人マッチ開始フィクスチャ。 */
+/** アリーナ系リスナーテスト用の実イベント構築と 2 人マッチ開始フィクスチャ。 */
 
 /** 環境ダメージ(落下相当)。causingEntity なしの実 DamageSource。 */
 internal fun genericDamage(): DamageSource = DamageSource.builder(DamageType.GENERIC).build()

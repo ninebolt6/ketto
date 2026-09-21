@@ -17,8 +17,10 @@ import net.ninebolt.onevsone.application.port.MatchStateRepository
 import net.ninebolt.onevsone.application.port.PlayerStatsRepository
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.WorldPosition
-import net.ninebolt.onevsone.infrastructure.paper.ArenaListener
+import net.ninebolt.onevsone.infrastructure.paper.ArenaGuardListener
+import net.ninebolt.onevsone.infrastructure.paper.ArenaMatchListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaSignListener
+import net.ninebolt.onevsone.infrastructure.paper.ArenaTeleportListener
 import net.ninebolt.onevsone.infrastructure.paper.Messages
 import net.ninebolt.onevsone.infrastructure.paper.command.OneVsOneCommand
 import net.ninebolt.onevsone.infrastructure.paper.PaperEquipmentAdapter
@@ -192,7 +194,9 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
      */
     fun registerListeners() {
         HandlerList.unregisterAll(plugin)
-        server.pluginManager.registerEvents(ArenaListener(service, lookup, messages), plugin)
+        server.pluginManager.registerEvents(ArenaMatchListener(service, lookup, messages), plugin)
+        server.pluginManager.registerEvents(ArenaGuardListener(service), plugin)
+        server.pluginManager.registerEvents(ArenaTeleportListener(service, lookup), plugin)
         server.pluginManager.registerEvents(ArenaSignListener(service, admin, messages), plugin)
     }
 
