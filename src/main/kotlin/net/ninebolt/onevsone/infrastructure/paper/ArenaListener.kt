@@ -4,6 +4,7 @@ import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.domain.ParticipantRestrictions
+import net.ninebolt.onevsone.domain.TeleportRestriction
 import org.bukkit.Material
 import org.bukkit.Tag
 import org.bukkit.block.Block
@@ -44,8 +45,10 @@ import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerJoinEvent
 import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.event.player.PlayerPickupArrowEvent
+import org.bukkit.event.player.PlayerPortalEvent
 import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.event.player.PlayerTeleportEvent
+import org.bukkit.event.vehicle.VehicleEnterEvent
 import org.bukkit.inventory.InventoryHolder
 import kotlin.uuid.toKotlinUuid
 
@@ -333,6 +336,39 @@ class ArenaListener(
     private fun restrictionsOf(player: Player): ParticipantRestrictions? =
         service.matchOf(player.uniqueId.toKotlinUuid())
             ?.let { ParticipantRestrictions.forState(it.state) }
+
+    // ---- テレポート逃走の遮断 ------------------------------------------------
+
+    @EventHandler
+    fun onTeleport(event: PlayerTeleportEvent) {
+        restrictTeleport(event)
+    }
+
+    // PlayerPortalEvent は独自 HandlerList を持ち PlayerTeleportEvent には届かない
+    @EventHandler
+    fun onPortal(event: PlayerPortalEvent) {
+        restrictTeleport(event)
+    }
+
+    private fun restrictTeleport(event: PlayerTeleportEvent) {
+        val restrictions = restrictionsOf(event.player) ?: return
+        val id = event.player.uniqueId.toKotlinUuid()
+        val allowed = when (restrictions.teleportRestriction) {
+            TeleportRestriction.UNRESTRICTED -> true
+            TeleportRestriction.ENDER_PEARL_ONLY ->
+                event.cause == PlayerTeleportEvent.TeleportCause.ENDER_PEARL ||
+                    lookup.isPluginTeleport(id)
+            TeleportRestriction.PLUGIN_ONLY -> lookup.isPluginTeleport(id)
+        }
+        if (!allowed) event.isCancelled = true
+    }
+
+    /** 移動凍結中の乗車は水平移動をバイパスするため遮断する。 */
+    @EventHandler
+    fun onVehicleEnter(event: VehicleEnterEvent) {
+        val player = event.entered as? Player ?: return
+        if (restrictionsOf(player)?.horizontalMoveFrozen == true) event.isCancelled = true
+    }
 
     @EventHandler
     fun onCommand(event: PlayerCommandPreprocessEvent) {

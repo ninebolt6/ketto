@@ -9,6 +9,7 @@ import org.bukkit.Location
 import org.bukkit.Server
 import org.bukkit.attribute.Attribute
 import org.bukkit.entity.Player
+import org.bukkit.event.player.PlayerTeleportEvent
 import org.bukkit.plugin.IllegalPluginAccessException
 import org.bukkit.plugin.java.JavaPlugin
 import kotlin.uuid.Uuid
@@ -21,6 +22,7 @@ import kotlin.uuid.toKotlinUuid
  */
 class PaperPlayerLookup(private val server: Server) {
     private val quitting = HashMap<Uuid, Player>()
+    private val pluginTeleports = HashSet<Uuid>()
 
     /** QuitEvent の Player を同期処理の間だけ UUID で解決可能にする。 */
     fun <R> scopeQuitting(player: Player, block: () -> R): R {
@@ -32,6 +34,21 @@ class PaperPlayerLookup(private val server: Server) {
             quitting.remove(id)
         }
     }
+
+    /**
+     * PlayerTeleportEvent は teleport() 内で同期発火するため、スコープで囲った
+     * 自プラグインの移送を他プラグイン発と区別できるようにする。
+     */
+    fun <R> scopePluginTeleport(playerId: Uuid, block: () -> R): R {
+        pluginTeleports += playerId
+        try {
+            return block()
+        } finally {
+            pluginTeleports -= playerId
+        }
+    }
+
+    fun isPluginTeleport(playerId: Uuid): Boolean = playerId in pluginTeleports
 
     fun resolve(id: Uuid): Player? = quitting[id] ?: server.getPlayer(id.toJavaUuid())
 
@@ -46,7 +63,7 @@ class PaperPlayerAdapter(
     private val failures: FailureReporter
 ) : PlayerPort {
     override fun handle(playerId: Uuid): PlayerHandle? =
-        lookup.resolve(playerId)?.let { PaperPlayerHandle(it, server, failures) }
+        lookup.resolve(playerId)?.let { PaperPlayerHandle(it, server, failures, lookup) }
 
     override fun resolveOfflineId(name: String, callback: (Uuid?) -> Unit) {
         val known = server.getPlayerExact(name) ?: server.getOfflinePlayerIfCached(name)
@@ -70,7 +87,8 @@ class PaperPlayerAdapter(
 private class PaperPlayerHandle(
     private val player: Player,
     private val server: Server,
-    private val failures: FailureReporter
+    private val failures: FailureReporter,
+    private val lookup: PaperPlayerLookup
 ) : PlayerHandle {
     override val id: Uuid get() = player.uniqueId.toKotlinUuid()
     override val name: String get() = player.name
@@ -106,7 +124,14 @@ private class PaperPlayerHandle(
             failures.warn("World '${position.world}' is not loaded; skipping teleport")
             return
         }
-        player.teleport(Location(world, position.x, position.y, position.z, position.yaw, position.pitch))
+        // 参加者のテレポート制限は「プラグイン自身の移送」を除外するため、
+        // 同期発火する PlayerTeleportEvent が識別できるよう cause とマーカーを両方付ける
+        lookup.scopePluginTeleport(id) {
+            player.teleport(
+                Location(world, position.x, position.y, position.z, position.yaw, position.pitch),
+                PlayerTeleportEvent.TeleportCause.PLUGIN
+            )
+        }
     }
 }
 

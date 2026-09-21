@@ -9,6 +9,8 @@ data class ParticipantRestrictions(
     val damageCancelled: Boolean,
     /** エンティティ起因ダメージを「同一マッチの対戦相手または本人」由来に限定する */
     val opponentDamageOnly: Boolean,
+    /** テレポートの可否。エンダーパール以外の逃走経路を塞ぐ */
+    val teleportRestriction: TeleportRestriction,
     val blockBreakCancelled: Boolean,
     /** 破壊禁止中は設置物を撤去できないため、アリーナの汚染と籠城を防ぐ */
     val blockPlaceCancelled: Boolean,
@@ -27,6 +29,7 @@ data class ParticipantRestrictions(
                 horizontalMoveFrozen = true,
                 damageCancelled = true,
                 opponentDamageOnly = false,
+                teleportRestriction = TeleportRestriction.PLUGIN_ONLY,
                 blockBreakCancelled = true,
                 blockPlaceCancelled = true,
                 itemDropCancelled = true,
@@ -38,6 +41,7 @@ data class ParticipantRestrictions(
                 horizontalMoveFrozen = false,
                 damageCancelled = false,
                 opponentDamageOnly = true,
+                teleportRestriction = TeleportRestriction.ENDER_PEARL_ONLY,
                 blockBreakCancelled = true,
                 blockPlaceCancelled = true,
                 itemDropCancelled = true,
@@ -49,6 +53,7 @@ data class ParticipantRestrictions(
                 horizontalMoveFrozen = false,
                 damageCancelled = false,
                 opponentDamageOnly = false,
+                teleportRestriction = TeleportRestriction.ENDER_PEARL_ONLY,
                 blockBreakCancelled = false,
                 blockPlaceCancelled = false,
                 itemDropCancelled = false,
@@ -62,6 +67,7 @@ data class ParticipantRestrictions(
                 horizontalMoveFrozen = false,
                 damageCancelled = false,
                 opponentDamageOnly = false,
+                teleportRestriction = TeleportRestriction.UNRESTRICTED,
                 blockBreakCancelled = false,
                 blockPlaceCancelled = false,
                 itemDropCancelled = false,
@@ -73,6 +79,7 @@ data class ParticipantRestrictions(
                 horizontalMoveFrozen = false,
                 damageCancelled = false,
                 opponentDamageOnly = false,
+                teleportRestriction = TeleportRestriction.UNRESTRICTED,
                 blockBreakCancelled = false,
                 blockPlaceCancelled = false,
                 itemDropCancelled = false,
