@@ -16,6 +16,7 @@ import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.entity.EntityType
 import org.bukkit.event.player.PlayerTeleportEvent
+import org.mockbukkit.mockbukkit.world.WorldMock
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.AfterEach
@@ -228,6 +229,24 @@ class ArenaListenerCombatTest {
         val event = PlayerTeleportEvent(p1, Location(w, 0.0, 64.0, 0.0), to)
         env.listener.onMove(event)
         assertEquals(to, event.to)
+    }
+
+    @Test
+    fun `void fall uses world min height`() {
+        // 最低高度が負の世界では y<0 の移動は敗北にしない
+        // WorldMock は (minHeight, maxHeight, grassHeight) の順
+        val deep = WorldMock(Material.STONE, org.bukkit.block.Biome.PLAINS, -64, 320, 0)
+        env.server.addWorld(deep)
+        val (p1, p2) = env.twoPlayerIngame()
+
+        val shallow = moveEvent(p1, Location(deep, 0.0, -50.0, 0.0), Location(deep, 0.0, -55.0, 0.0))
+        env.listener.onMove(shallow)
+        assertEquals(ArenaState.INGAME, env.state())
+
+        val intoVoid = moveEvent(p1, Location(deep, 0.0, -60.0, 0.0), Location(deep, 0.0, -65.0, 0.0))
+        env.listener.onMove(intoVoid)
+        assertEquals(ArenaState.ROUNDCOUNTDOWN, env.state())
+        assertEquals(1, env.service.matchOf("arena1")!!.winsOf(p2.uuid))
     }
 
     @Test

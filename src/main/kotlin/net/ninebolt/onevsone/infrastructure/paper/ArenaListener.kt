@@ -145,7 +145,8 @@ class ArenaListener(
                 event.setTo(from)
             }
         }
-        if (match.resolvesVoidFall && event.to.y <= 0) {
+        // 1.18+ の世界は負の高さを持つため、奈落判定は移動先ワールドの最低高度を使う
+        if (match.resolvesVoidFall && event.to.y <= (event.to.world?.minHeight ?: 0)) {
             service.defeat(event.player.uniqueId.toKotlinUuid(), DefeatCause.FALL)
         }
     }

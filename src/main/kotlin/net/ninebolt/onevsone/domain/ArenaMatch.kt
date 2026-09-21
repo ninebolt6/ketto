@@ -71,7 +71,7 @@ data class ArenaMatch private constructor(
 
     val full: Boolean get() = participants.size == MAX_PARTICIPANTS
 
-    /** Y<=0 落下を敗北として解決するか(落下を受理する状態かつ 2 人在籍)。 */
+    /** ワールド最低高度以下への落下を敗北として解決するか(落下を受理する状態かつ 2 人在籍)。 */
     val resolvesVoidFall: Boolean
         get() = state.acceptsDefeat(DefeatCause.FALL) && full
 
