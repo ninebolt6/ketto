@@ -1,5 +1,8 @@
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+
 plugins {
     kotlin("jvm") version "2.4.20"
+    kotlin("plugin.power-assert") version "2.4.20"
 }
 
 group = "net.ninebolt"
@@ -32,6 +35,23 @@ kotlin {
     compilerOptions {
         freeCompilerArgs.add("-Xconsistent-data-class-copy-visibility")
     }
+}
+
+@OptIn(ExperimentalKotlinGradlePluginApi::class)
+powerAssert {
+    functions = listOf(
+        "kotlin.assert",
+        "kotlin.test.assertEquals",
+        "kotlin.test.assertNotEquals",
+        "kotlin.test.assertTrue",
+        "kotlin.test.assertFalse",
+        "kotlin.test.assertNull",
+        "kotlin.test.assertNotNull",
+        "kotlin.test.assertSame",
+        "kotlin.test.assertNotSame",
+        "kotlin.test.assertContentEquals",
+        "kotlin.test.assertFailsWith",
+    )
 }
 
 tasks.test {

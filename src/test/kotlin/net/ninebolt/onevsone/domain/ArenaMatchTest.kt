@@ -5,13 +5,13 @@ import net.ninebolt.onevsone.domain.fixtures.bob
 import net.ninebolt.onevsone.domain.fixtures.carol
 import net.ninebolt.onevsone.domain.fixtures.match
 import net.ninebolt.onevsone.domain.fixtures.startedMatch
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertNotEquals
-import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Assertions.assertSame
-import org.junit.jupiter.api.Assertions.assertThrows
-import org.junit.jupiter.api.Assertions.assertTrue
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
+import kotlin.test.assertNull
+import kotlin.test.assertSame
+import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 
 /** 参加・退出・開始・中断・不変性の検証。 */
@@ -66,7 +66,7 @@ class ArenaMatchTest {
         waiting = waiting.join(alice).match
         val step = waiting.leaveWaiting(alice.id)
         assertTrue(step.outcome is LeaveOutcome.Left)
-        assertEquals(alice, (step.outcome as LeaveOutcome.Left).participant)
+        assertEquals(alice, step.outcome.participant)
         assertEquals(ArenaState.WAITING, step.match.state)
         assertEquals(0, step.match.participants.size)
     }
@@ -102,7 +102,7 @@ class ArenaMatchTest {
         countdown = countdown.join(bob).match
         val step = countdown.forfeit(alice.id)
         assertTrue(step.outcome is QuitOutcome.WaitingExit)
-        assertEquals(alice, (step.outcome as QuitOutcome.WaitingExit).participant)
+        assertEquals(alice, step.outcome.participant)
         // 残った 1 人は ONEMORE で待機継続(再参加可能)。進行中のカウントダウンは epoch で無効化
         assertEquals(ArenaState.ONEMORE, step.match.state)
         assertEquals(listOf(bob), step.match.participants)
@@ -114,7 +114,7 @@ class ArenaMatchTest {
         val ingame = startedMatch()
         val finished = ingame.forfeit(alice.id)
         assertTrue(finished.outcome is QuitOutcome.MatchEnded)
-        assertEquals(bob, (finished.outcome as QuitOutcome.MatchEnded).winner)
+        assertEquals(bob, finished.outcome.winner)
         assertEquals(0, finished.match.participants.size)
         assertEquals(ArenaState.WAITING, finished.match.state)
     }
@@ -270,25 +270,25 @@ class ArenaMatchTest {
 
     @Test
     fun `factories reject invalid construction`() {
-        assertThrows(IllegalArgumentException::class.java) {
+        assertFailsWith<IllegalArgumentException> {
             ArenaMatch.new(Arena.Id.new("a1"), 0)
         }
         // 状態と参加人数の不整合
-        assertThrows(IllegalArgumentException::class.java) {
+        assertFailsWith<IllegalArgumentException> {
             ArenaMatch.restored(Arena.Id.new("a1"), 3, ArenaState.WAITING, listOf(alice), emptyMap())
         }
-        assertThrows(IllegalArgumentException::class.java) {
+        assertFailsWith<IllegalArgumentException> {
             ArenaMatch.restored(Arena.Id.new("a1"), 3, ArenaState.INGAME, listOf(alice), emptyMap())
         }
         // 非参加者への加点
-        assertThrows(IllegalArgumentException::class.java) {
+        assertFailsWith<IllegalArgumentException> {
             ArenaMatch.restored(
                 Arena.Id.new("a1"), 3, ArenaState.INGAME, listOf(alice, bob),
                 wins = mapOf(carol.id to 1)
             )
         }
         // resolving は ROUNDCOUNTDOWN のみ
-        assertThrows(IllegalArgumentException::class.java) {
+        assertFailsWith<IllegalArgumentException> {
             ArenaMatch.restored(
                 Arena.Id.new("a1"), 3, ArenaState.INGAME, listOf(alice, bob),
                 wins = emptyMap(), resolving = true

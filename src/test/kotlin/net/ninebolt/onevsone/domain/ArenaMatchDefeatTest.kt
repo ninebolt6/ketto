@@ -5,10 +5,10 @@ import net.ninebolt.onevsone.domain.fixtures.bob
 import net.ninebolt.onevsone.domain.fixtures.carol
 import net.ninebolt.onevsone.domain.fixtures.match
 import net.ninebolt.onevsone.domain.fixtures.startedMatch
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertSame
-import org.junit.jupiter.api.Assertions.assertTrue
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertSame
+import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 
 /** 敗北通知・ラウンド遷移・解決ガード(世代)の検証。 */
@@ -19,7 +19,7 @@ class ArenaMatchDefeatTest {
         val m = startedMatch()
         val step = m.recordDefeat(bob.id, DefeatCause.FALL)
         assertTrue(step.outcome is DefeatOutcome.RoundWon)
-        val outcome = step.outcome as DefeatOutcome.RoundWon
+        val outcome = step.outcome
         assertEquals(1, outcome.round)
         assertEquals(alice, outcome.winner)
         assertEquals(bob, outcome.loser)
@@ -50,7 +50,7 @@ class ArenaMatchDefeatTest {
         val m = startedMatch(requiredWins = 1)
         val step = m.recordDefeat(bob.id, DefeatCause.DEATH)
         assertTrue(step.outcome is DefeatOutcome.MatchFinished)
-        assertEquals(alice, (step.outcome as DefeatOutcome.MatchFinished).winner)
+        assertEquals(alice, step.outcome.winner)
     }
 
     @Test
@@ -72,7 +72,7 @@ class ArenaMatchDefeatTest {
             }
         }
         assertTrue(outcome is DefeatOutcome.MatchFinished)
-        assertEquals(alice, (outcome as DefeatOutcome.MatchFinished).winner)
+        assertEquals(alice, outcome.winner)
     }
 
     @Test
@@ -80,7 +80,7 @@ class ArenaMatchDefeatTest {
         val m = startedMatch()
         val step = m.recordDefeat(bob.id, DefeatCause.DEATH)
         assertTrue(step.outcome is DefeatOutcome.RoundWon)
-        assertEquals(alice, (step.outcome as DefeatOutcome.RoundWon).winner)
+        assertEquals(alice, step.outcome.winner)
     }
 
     @Test
@@ -116,7 +116,7 @@ class ArenaMatchDefeatTest {
         // 世代が進んだ後の解放要求は無効(古い世代)
         val after = ArenaMatch.restored(
             m.arenaId, m.requiredWins, m.state, m.participants, m.wins,
-            resolving = m.resolving, epoch = m.epoch + 1
+            resolving = true, epoch = m.epoch + 1
         )
         assertSame(after, after.releaseResolution(m.epoch))
         assertTrue(after.resolving)

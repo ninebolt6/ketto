@@ -11,9 +11,9 @@ import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import java.util.Locale
 import java.util.logging.Logger
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotEquals
-import org.junit.jupiter.api.Assertions.assertTrue
+import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 
 /** 言語バンドルの網羅性・描画・ロケール解決の単体テスト。 */
 class MessagesTest {

@@ -12,13 +12,12 @@ import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.view
 import org.bukkit.Material
 import org.bukkit.configuration.file.YamlConfiguration
-import org.junit.jupiter.api.Assertions.assertDoesNotThrow
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertNull
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions.assertThrows
-import org.junit.jupiter.api.Assertions.assertTrue
+import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -54,7 +53,7 @@ class PaperArenaFailureTest {
         env = TestEnv(broken)
         val arena = env.newArena()
         val p = env.player("Alice")
-        assertThrows(IllegalStateException::class.java) {
+        assertFailsWith<IllegalStateException> {
             env.service.join(p.uuid, p.name, arena)
         }
         assertNull(env.service.arenaIdOf(p.uuid))
@@ -81,7 +80,7 @@ class PaperArenaFailureTest {
         winnerStats.writeText("win: [broken")
         p2.health = 0.0
 
-        assertDoesNotThrow { env.service.defeat(p2.uuid, DefeatCause.DEATH) }
+        assertTrue(env.service.defeat(p2.uuid, DefeatCause.DEATH))
         assertEquals(ArenaState.WAITING, env.view().state)
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
         env.runOneShots()
@@ -116,7 +115,7 @@ class PaperArenaFailureTest {
         env.tick(6)
         File(folder, "stats/${p2.uuid}.yml").writeText("lose: [broken")
 
-        assertDoesNotThrow { env.service.defeat(p2.uuid, DefeatCause.FALL) }
+        assertTrue(env.service.defeat(p2.uuid, DefeatCause.FALL))
         assertEquals(ArenaState.WAITING, env.view().state)
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
         assertEquals(1, env.statsRepo.find(p1.uuid)!!.wins)
@@ -140,7 +139,7 @@ class PaperArenaFailureTest {
         every { spyStats.recordWin(winnerId) } throws IllegalStateException("write failed", IOException("disk full"))
         env.tick(6)
 
-        assertDoesNotThrow { env.service.defeat(p2.uuid, DefeatCause.FALL) }
+        assertTrue(env.service.defeat(p2.uuid, DefeatCause.FALL))
         assertEquals(ArenaState.WAITING, env.service.matchOf("spy-arena")!!.state)
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
@@ -165,7 +164,7 @@ class PaperArenaFailureTest {
         File(folder, "stats/${p1.uuid}.yml").writeText("lose: [broken")
         env.removePlayer(p1)
 
-        assertDoesNotThrow { env.quit(p1) }
+        env.quit(p1)
         assertEquals(ArenaState.WAITING, env.view().state)
         assertNull(env.service.arenaIdOf(p2.uuid))
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)

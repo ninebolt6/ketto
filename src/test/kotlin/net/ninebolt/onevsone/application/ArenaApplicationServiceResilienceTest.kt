@@ -5,11 +5,11 @@ import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatCause
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Assertions.assertThrows
-import org.junit.jupiter.api.Assertions.assertTrue
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 
 /** 中断・切断・永続化失敗など異常系の復元力を検証する。 */
@@ -129,7 +129,7 @@ class ArenaApplicationServiceResilienceTest {
         val app = TestApp()
         val (p1, p2) = app.startMatch()
         app.matchState.failOnSaveStatus = true
-        assertThrows(PersistenceFailure::class.java) {
+        assertFailsWith<PersistenceFailure> {
             app.service.abort(Arena.Id.new("arena1"))
         }
         // メモリ上の登録解除は済んでいる

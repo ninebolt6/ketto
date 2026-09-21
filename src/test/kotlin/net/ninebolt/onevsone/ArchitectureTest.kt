@@ -3,7 +3,7 @@ package net.ninebolt.onevsone
 import com.tngtech.archunit.core.importer.ClassFileImporter
 import com.tngtech.archunit.core.importer.ImportOption
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
-import org.junit.jupiter.api.Assertions.assertTrue
+import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 import java.io.File
 

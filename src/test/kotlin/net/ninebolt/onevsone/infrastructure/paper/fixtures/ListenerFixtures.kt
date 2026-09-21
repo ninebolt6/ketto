@@ -19,7 +19,7 @@ import org.bukkit.entity.Item
 import org.bukkit.event.Event
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
-import org.junit.jupiter.api.Assertions.assertTrue
+import kotlin.test.assertTrue
 import org.mockbukkit.mockbukkit.entity.LivingEntityMock
 import org.mockbukkit.mockbukkit.entity.PlayerMock
 import org.mockbukkit.mockbukkit.simulate.entity.PlayerSimulation

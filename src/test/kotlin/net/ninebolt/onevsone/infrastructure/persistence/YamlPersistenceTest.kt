@@ -9,13 +9,13 @@ import net.ninebolt.onevsone.domain.Participant
 import net.ninebolt.onevsone.domain.WorldPosition
 import net.ninebolt.onevsone.infrastructure.paper.PaperInventorySnapshot
 import org.bukkit.configuration.file.YamlConfiguration
-import org.junit.jupiter.api.Assertions.assertArrayEquals
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Assertions.assertThrows
-import org.junit.jupiter.api.Assertions.assertTrue
+import kotlin.test.assertContentEquals
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
@@ -236,7 +236,7 @@ class YamlPersistenceTest {
         // 一時ファイルのパスをディレクトリで塞ぎ、書き出しを失敗させる
         val tmp = File(folder, "status/players.yml.tmp")
         tmp.mkdirs()
-        assertThrows(IllegalStateException::class.java) {
+        assertFailsWith<IllegalStateException> {
             s.save(YamlConfiguration(), File(folder, "status/players.yml"))
         }
         assertFalse(tmp.exists())
@@ -248,10 +248,10 @@ class YamlPersistenceTest {
         File(folder, "status").mkdirs()
         file.writeText("players: [unclosed")
         val before = file.readBytes()
-        assertThrows(IllegalStateException::class.java) {
+        assertFailsWith<IllegalStateException> {
             matchState().unregisterParticipant("Alice")
         }
-        assertArrayEquals(before, file.readBytes())
+        assertContentEquals(before, file.readBytes())
     }
 
     @Test
@@ -290,7 +290,7 @@ class YamlPersistenceTest {
         val uuid = Uuid.random()
         File(folder, "stats").mkdirs()
         File(folder, "stats/$uuid.yml").writeText("win: [broken")
-        assertThrows(IllegalStateException::class.java) {
+        assertFailsWith<IllegalStateException> {
             stats().find(uuid)
         }
     }
@@ -299,7 +299,7 @@ class YamlPersistenceTest {
     fun `blank spawn world is rejected as corrupt`() {
         store()
         File(folder, "arena/a1.yml").writeText("enabled: true\nspawn1:\n  world: ''\n  x: 0.0\n  y: 64.0\n  z: 0.0\n")
-        assertThrows(IllegalStateException::class.java) {
+        assertFailsWith<IllegalStateException> {
             arenas().find("a1")
         }
     }
@@ -309,7 +309,7 @@ class YamlPersistenceTest {
         val uuid = Uuid.random()
         File(folder, "stats").mkdirs()
         File(folder, "stats/$uuid.yml").writeText("win: -1\nlose: 0\n")
-        assertThrows(IllegalStateException::class.java) {
+        assertFailsWith<IllegalStateException> {
             stats().find(uuid)
         }
     }
@@ -363,7 +363,7 @@ class YamlPersistenceTest {
 
         lobby().setLobby(WorldPosition.new("lobby", 1.0, 2.0, 3.0))
         signs().setSign("a1", WorldPosition.new("world", 5.0, 64.0, 5.0))
-        assertArrayEquals(before, file.readBytes())
+        assertContentEquals(before, file.readBytes())
     }
 
     @Test

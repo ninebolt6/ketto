@@ -5,11 +5,11 @@ import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.domain.WorldPosition
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Assertions.assertThrows
-import org.junit.jupiter.api.Assertions.assertTrue
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
@@ -82,7 +82,7 @@ class ArenaAdministrationServiceTest {
         assertEquals(pos, app.arenas.find("arena1").spawn2)
         assertFalse(app.admin.setSpawn("missing", 1, pos))
         // コマンド面は 1/2 固定だが、サービス経由の不正スロットは fail-fast
-        assertThrows(IllegalArgumentException::class.java) { app.admin.setSpawn("arena1", 3, pos) }
+        assertFailsWith<IllegalArgumentException> { app.admin.setSpawn("arena1", 3, pos) }
     }
 
     @Test

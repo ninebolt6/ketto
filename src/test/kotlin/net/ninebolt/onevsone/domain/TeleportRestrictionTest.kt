@@ -1,7 +1,7 @@
 package net.ninebolt.onevsone.domain
 
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertTrue
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 
 /** 状態別テレポート許可マトリクス。原因分類は TeleportTrigger で与える。 */

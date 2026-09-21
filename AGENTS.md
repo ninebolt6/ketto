@@ -27,6 +27,7 @@ Minecraft の 1 対 1 アリーナ PvP プラグイン。
 
 ## Tests
 
+- アサーションは `kotlin.test` を使う(`org.junit.jupiter.api.Assertions` は使わない)
 - domain/application は純粋テスト + fake(`TestApp` 経由)。
   infrastructure は MockBukkit(`TestEnv` で mock + 手動配線)で実状態をアサートする
 - リスナーテストは `env.registerListeners()` で登録し `env.fire(event)` の

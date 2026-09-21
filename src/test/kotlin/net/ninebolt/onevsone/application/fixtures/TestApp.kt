@@ -10,7 +10,7 @@ import net.ninebolt.onevsone.application.PlayerRecoveryService
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.WorldPosition
-import org.junit.jupiter.api.Assertions.assertEquals
+import kotlin.test.assertEquals
 
 /** テスト向けにまとめて配線するコンテナ。 */
 class TestApp(val requiredWins: Int = 3, legacyNameRestore: Boolean = true) {
