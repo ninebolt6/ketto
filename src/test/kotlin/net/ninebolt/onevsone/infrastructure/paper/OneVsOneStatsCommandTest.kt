@@ -1,7 +1,6 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
 import io.mockk.every
-import io.mockk.mockk
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.offlineId

@@ -16,7 +16,6 @@ import org.bukkit.entity.AbstractArrow
 import org.bukkit.entity.ArmorStand
 import org.bukkit.entity.EntityType
 import org.bukkit.entity.ItemFrame
-import org.bukkit.entity.Player
 import org.bukkit.event.Event
 import org.bukkit.event.block.BlockDispenseArmorEvent
 import org.bukkit.event.block.BlockFertilizeEvent

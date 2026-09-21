@@ -2,7 +2,6 @@ package net.ninebolt.onevsone.infrastructure.paper
 
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatCause
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.ArenaPlayerMock
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.lastBroadcast
