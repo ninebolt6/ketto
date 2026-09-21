@@ -1,7 +1,7 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
 import net.ninebolt.onevsone.application.ArenaApplicationService
-import net.ninebolt.onevsone.domain.ArenaMatch
+import net.ninebolt.onevsone.domain.DamageAdmission
 import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.domain.ParticipantRestrictions
 import net.ninebolt.onevsone.domain.TeleportTrigger
@@ -94,30 +94,19 @@ class ArenaListener(
 
     /**
      * エンティティ起因ダメージは責任者(causingEntity: 投射物の射手や設置者まで辿れる)を
-     * 解決し、制限状態の参加者が関わる場合は「INGAME で同一マッチの対戦相手または本人」
-     * 由来のみ許可する。MOB・第三者・別マッチからの干渉と、参加者→部外者/MOB への攻撃を
-     * 全て塞ぐ。victim が非プレイヤーでも加害者側を検査するため早期 return はしない。
+     * プレイヤーへ解決し、受理判定は domain の DamageAdmission に委譲する。
+     * victim が非プレイヤーでも加害者側を検査するため早期 return はしない。
      */
     private fun onEntityDamage(event: EntityDamageByEntityEvent) {
         val victim = event.entity as? Player
         val attacker = event.damageSource.causingEntity as? Player
-        val victimMatch = victim?.let { service.matchOf(it.uniqueId.toKotlinUuid()) }
-        val attackerMatch = attacker?.let { service.matchOf(it.uniqueId.toKotlinUuid()) }
-
-        fun limitsDamage(match: ArenaMatch?): Boolean = match?.let {
-            ParticipantRestrictions.forState(it.state).let { r ->
-                r.damageCancelled || r.opponentDamageOnly
-            }
-        } == true
-
-        if (!limitsDamage(victimMatch) && !limitsDamage(attackerMatch)) return
-
-        val opponentOrSelf = victim != null && attacker != null && victimMatch != null &&
-            ParticipantRestrictions.forState(victimMatch.state).opponentDamageOnly &&
-            (attacker === victim || victimMatch.participants.any {
-                it.id == attacker.uniqueId.toKotlinUuid() && it.id != victim.uniqueId.toKotlinUuid()
-            })
-        if (!opponentOrSelf) event.isCancelled = true
+        val allowed = DamageAdmission.allows(
+            victimId = victim?.uniqueId?.toKotlinUuid(),
+            attackerId = attacker?.uniqueId?.toKotlinUuid(),
+            victimMatch = victim?.let { service.matchOf(it.uniqueId.toKotlinUuid()) },
+            attackerMatch = attacker?.let { service.matchOf(it.uniqueId.toKotlinUuid()) }
+        )
+        if (!allowed) event.isCancelled = true
     }
 
     @EventHandler
