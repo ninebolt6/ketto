@@ -1,8 +1,8 @@
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 
 plugins {
-    kotlin("jvm") version "2.4.20"
-    kotlin("plugin.power-assert") version "2.4.20"
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.power.assert)
 }
 
 group = "net.ninebolt"
@@ -14,20 +14,20 @@ repositories {
 }
 
 dependencies {
-    compileOnly("io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT")
+    compileOnly(libs.paper.api)
     // Paper が実行時提供するが、推移依存への暗黙依存を避けるため明示する
-    compileOnly("net.kyori:adventure-text-minimessage:4.17.0")
+    compileOnly(libs.adventure.minimessage)
 
     // MockBukkit は bukkit 提供側(paper-api)より先に置く必要がある
     // manifest の Paper-Version(1.21.11)と組み合わせる
-    testImplementation("org.mockbukkit.mockbukkit:mockbukkit-v1.21:4.103.1")
-    testImplementation("io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT")
-    testImplementation("net.kyori:adventure-text-serializer-plain:4.17.0")
-    testImplementation(kotlin("test-junit5"))
-    testImplementation("org.junit.jupiter:junit-jupiter:6.1.3")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.3")
-    testImplementation("io.mockk:mockk:1.14.11")
-    testImplementation("com.tngtech.archunit:archunit:1.5.0")
+    testImplementation(libs.mockbukkit)
+    testImplementation(libs.paper.api)
+    testImplementation(libs.adventure.serializer.plain)
+    testImplementation(libs.kotlin.test.junit5)
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.platform.launcher)
+    testImplementation(libs.mockk)
+    testImplementation(libs.archunit)
 }
 
 kotlin {
