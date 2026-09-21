@@ -10,6 +10,7 @@ import net.ninebolt.onevsone.infrastructure.paper.fixtures.spawn
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.twoPlayerIngame
 import org.bukkit.Material
 import org.bukkit.block.BlockFace
+import org.bukkit.block.sign.Side
 import org.bukkit.entity.AbstractArrow
 import org.bukkit.entity.ArmorStand
 import org.bukkit.entity.EntityType
@@ -48,7 +49,6 @@ import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
 /** キット品の外界移動・直接獲得の遮断。実イベントの isCancelled / useInteractedBlock を見る。 */
-@Suppress("DEPRECATION")
 class ArenaListenerItemGuardTest {
 
     @TempDir
@@ -179,7 +179,8 @@ class ArenaListenerItemGuardTest {
         val (p1, _) = env.twoPlayerIngame()
         val stand = env.spawn(EntityType.ARMOR_STAND) as ArmorStand
         val event = PlayerArmorStandManipulateEvent(
-            p1, stand, env.item(Material.IRON_CHESTPLATE), ItemStack.empty(), EquipmentSlot.HAND
+            p1, stand, env.item(Material.IRON_CHESTPLATE), ItemStack.empty(),
+            EquipmentSlot.HAND, EquipmentSlot.HAND
         )
         env.listener.onArmorStandManipulate(event)
         assertTrue(event.isCancelled)
@@ -190,7 +191,7 @@ class ArenaListenerItemGuardTest {
         val (p1, _) = env.twoPlayerIngame()
         val block = env.plainBlock()
 
-        val place = EntityPlaceEvent(env.spawn(EntityType.BOAT), p1, block, BlockFace.UP)
+        val place = EntityPlaceEvent(env.spawn(EntityType.BOAT), p1, block, BlockFace.UP, EquipmentSlot.HAND)
         env.listener.onEntityPlace(place)
         assertTrue(place.isCancelled)
 
@@ -202,13 +203,15 @@ class ArenaListenerItemGuardTest {
         assertTrue(hanging.isCancelled)
 
         val bucketEmpty = PlayerBucketEmptyEvent(
-            p1, block, block, BlockFace.UP, Material.WATER_BUCKET, env.item(Material.WATER_BUCKET)
+            p1, block, block, BlockFace.UP, Material.WATER_BUCKET,
+            env.item(Material.WATER_BUCKET), EquipmentSlot.HAND
         )
         env.listener.onBucketEmpty(bucketEmpty)
         assertTrue(bucketEmpty.isCancelled)
 
         val bucketFill = PlayerBucketFillEvent(
-            p1, block, block, BlockFace.UP, Material.BUCKET, env.item(Material.BUCKET)
+            p1, block, block, BlockFace.UP, Material.BUCKET,
+            env.item(Material.BUCKET), EquipmentSlot.HAND
         )
         env.listener.onBucketFill(bucketFill)
         assertTrue(bucketFill.isCancelled)
@@ -230,7 +233,7 @@ class ArenaListenerItemGuardTest {
         env.listener.onEntityPickupItem(pickup)
         assertTrue(pickup.isCancelled)
 
-        val attempt = PlayerAttemptPickupItemEvent(p1, env.itemEntity())
+        val attempt = PlayerAttemptPickupItemEvent(p1, env.itemEntity(), 0)
         env.listener.onAttemptPickupItem(attempt)
         assertTrue(attempt.isCancelled)
 
@@ -240,7 +243,9 @@ class ArenaListenerItemGuardTest {
         env.listener.onPickupArrow(arrowPickup)
         assertTrue(arrowPickup.isCancelled)
 
-        val harvest = PlayerHarvestBlockEvent(p1, env.plainBlock(), mutableListOf(env.item(Material.SWEET_BERRIES)))
+        val harvest = PlayerHarvestBlockEvent(
+            p1, env.plainBlock(), EquipmentSlot.HAND, mutableListOf(env.item(Material.SWEET_BERRIES))
+        )
         env.listener.onHarvest(harvest)
         assertTrue(harvest.isCancelled)
 
@@ -267,7 +272,7 @@ class ArenaListenerItemGuardTest {
         env.listener.onFertilize(fertilize)
         assertTrue(fertilize.isCancelled)
 
-        val sign = SignChangeEvent(env.blockOf(Material.OAK_SIGN), p1, listOf(Component.text("x")))
+        val sign = SignChangeEvent(env.blockOf(Material.OAK_SIGN), p1, listOf(Component.text("x")), Side.FRONT)
         env.listener.onSignChange(sign)
         assertTrue(sign.isCancelled)
     }

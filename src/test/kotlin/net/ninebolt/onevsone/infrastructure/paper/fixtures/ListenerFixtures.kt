@@ -44,8 +44,9 @@ internal fun damageEvent(entity: Entity, damage: Double = 1.0) =
 /**
  * エンティティ起因ダメージ。causingEntity は DamageSource からしか取れないため
  * mockk で帰属者を注入する(MockBukkit 未実装 API の限定用途)。
- * EntityDamageByEntityEvent は Paper 1.21 で全コンストラクタが非推奨だが、
- * テストでのイベント生成には代替が無いため抑制する。
+ * EntityDamageByEntityEvent は Paper 1.21 でコンストラクタが非推奨か
+ * @ApiStatus.Internal のみ。Internal より互換維持される soft-deprecated 版を
+ * 選ぶため警告を抑制する。
  */
 @Suppress("DEPRECATION")
 internal fun entityDamageEvent(
