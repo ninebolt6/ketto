@@ -4,7 +4,7 @@ package net.ninebolt.onevsone.domain
  * 参加者へ適用する制約をアリーナ状態から導出する純粋な規則。
  * リスナー側ではイベント変換だけを行い、状態ごとの可否判定はここに集約する。
  */
-data class ParticipantRestrictions(
+data class ParticipantRestrictions private constructor(
     val horizontalMoveFrozen: Boolean,
     val damageCancelled: Boolean,
     /** エンティティ起因ダメージを「同一マッチの対戦相手または本人」由来に限定する */

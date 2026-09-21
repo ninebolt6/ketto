@@ -164,6 +164,7 @@ class ArenaMatchTest {
         assertEquals(0, m.slotOf(alice.id))
         assertEquals(1, m.slotOf(bob.id))
         assertNull(m.slotOf(carol.id))
+        assertNull(m.participant(carol.id))
         assertEquals(alice, m.participantAt(0))
         assertEquals(bob, m.participantAt(1))
         assertNull(m.participantAt(2))
@@ -171,61 +172,100 @@ class ArenaMatchTest {
 
     @Test
     fun `restrictions matrix matches arena states`() {
-        val m = match()
-        val matrix = mapOf(
-            ArenaState.ONEMORE to ParticipantRestrictions(
-                horizontalMoveFrozen = false,
-                damageCancelled = false,
-                opponentDamageOnly = false,
-                teleportRestriction = TeleportRestriction.UNRESTRICTED,
-                blockBreakCancelled = false,
-                blockPlaceCancelled = false,
-                itemDropCancelled = false,
-                inventoryTransferCancelled = false,
-                itemPickupCancelled = false,
-                commandsBlocked = false
-            ),
-            ArenaState.COUNTDOWN to ParticipantRestrictions(
-                horizontalMoveFrozen = false,
-                damageCancelled = false,
-                opponentDamageOnly = false,
-                teleportRestriction = TeleportRestriction.ENDER_PEARL_ONLY,
-                blockBreakCancelled = false,
-                blockPlaceCancelled = false,
-                itemDropCancelled = false,
-                inventoryTransferCancelled = false,
-                itemPickupCancelled = false,
-                commandsBlocked = true
-            ),
-            ArenaState.ROUNDCOUNTDOWN to ParticipantRestrictions(
-                horizontalMoveFrozen = true,
-                damageCancelled = true,
-                opponentDamageOnly = false,
-                teleportRestriction = TeleportRestriction.PLUGIN_ONLY,
-                blockBreakCancelled = true,
-                blockPlaceCancelled = true,
-                itemDropCancelled = true,
-                inventoryTransferCancelled = true,
-                itemPickupCancelled = true,
-                commandsBlocked = true
-            ),
-            ArenaState.INGAME to ParticipantRestrictions(
-                horizontalMoveFrozen = false,
-                damageCancelled = false,
-                opponentDamageOnly = true,
-                teleportRestriction = TeleportRestriction.ENDER_PEARL_ONLY,
-                blockBreakCancelled = true,
-                blockPlaceCancelled = true,
-                itemDropCancelled = true,
-                inventoryTransferCancelled = true,
-                itemPickupCancelled = true,
-                commandsBlocked = true
+        fun assertRestrictions(
+            state: ArenaState,
+            horizontalMoveFrozen: Boolean,
+            damageCancelled: Boolean,
+            opponentDamageOnly: Boolean,
+            teleportRestriction: TeleportRestriction,
+            blockBreakCancelled: Boolean,
+            blockPlaceCancelled: Boolean,
+            itemDropCancelled: Boolean,
+            inventoryTransferCancelled: Boolean,
+            itemPickupCancelled: Boolean,
+            commandsBlocked: Boolean
+        ) {
+            val r = ParticipantRestrictions.forState(state)
+            assertEquals(horizontalMoveFrozen, r.horizontalMoveFrozen, "$state.horizontalMoveFrozen")
+            assertEquals(damageCancelled, r.damageCancelled, "$state.damageCancelled")
+            assertEquals(opponentDamageOnly, r.opponentDamageOnly, "$state.opponentDamageOnly")
+            assertEquals(teleportRestriction, r.teleportRestriction, "$state.teleportRestriction")
+            assertEquals(blockBreakCancelled, r.blockBreakCancelled, "$state.blockBreakCancelled")
+            assertEquals(blockPlaceCancelled, r.blockPlaceCancelled, "$state.blockPlaceCancelled")
+            assertEquals(itemDropCancelled, r.itemDropCancelled, "$state.itemDropCancelled")
+            assertEquals(
+                inventoryTransferCancelled, r.inventoryTransferCancelled,
+                "$state.inventoryTransferCancelled"
             )
-        )
-        matrix.forEach { (state, expected) ->
-            assertEquals(expected, ParticipantRestrictions.forState(state), "state=$state")
+            assertEquals(itemPickupCancelled, r.itemPickupCancelled, "$state.itemPickupCancelled")
+            assertEquals(commandsBlocked, r.commandsBlocked, "$state.commandsBlocked")
         }
-        assertNull(m.participant(alice.id))
+
+        assertRestrictions(
+            ArenaState.WAITING,
+            horizontalMoveFrozen = false,
+            damageCancelled = false,
+            opponentDamageOnly = false,
+            teleportRestriction = TeleportRestriction.UNRESTRICTED,
+            blockBreakCancelled = false,
+            blockPlaceCancelled = false,
+            itemDropCancelled = false,
+            inventoryTransferCancelled = false,
+            itemPickupCancelled = false,
+            commandsBlocked = true
+        )
+        assertRestrictions(
+            ArenaState.ONEMORE,
+            horizontalMoveFrozen = false,
+            damageCancelled = false,
+            opponentDamageOnly = false,
+            teleportRestriction = TeleportRestriction.UNRESTRICTED,
+            blockBreakCancelled = false,
+            blockPlaceCancelled = false,
+            itemDropCancelled = false,
+            inventoryTransferCancelled = false,
+            itemPickupCancelled = false,
+            commandsBlocked = false
+        )
+        assertRestrictions(
+            ArenaState.COUNTDOWN,
+            horizontalMoveFrozen = false,
+            damageCancelled = false,
+            opponentDamageOnly = false,
+            teleportRestriction = TeleportRestriction.ENDER_PEARL_ONLY,
+            blockBreakCancelled = false,
+            blockPlaceCancelled = false,
+            itemDropCancelled = false,
+            inventoryTransferCancelled = false,
+            itemPickupCancelled = false,
+            commandsBlocked = true
+        )
+        assertRestrictions(
+            ArenaState.ROUNDCOUNTDOWN,
+            horizontalMoveFrozen = true,
+            damageCancelled = true,
+            opponentDamageOnly = false,
+            teleportRestriction = TeleportRestriction.PLUGIN_ONLY,
+            blockBreakCancelled = true,
+            blockPlaceCancelled = true,
+            itemDropCancelled = true,
+            inventoryTransferCancelled = true,
+            itemPickupCancelled = true,
+            commandsBlocked = true
+        )
+        assertRestrictions(
+            ArenaState.INGAME,
+            horizontalMoveFrozen = false,
+            damageCancelled = false,
+            opponentDamageOnly = true,
+            teleportRestriction = TeleportRestriction.ENDER_PEARL_ONLY,
+            blockBreakCancelled = true,
+            blockPlaceCancelled = true,
+            itemDropCancelled = true,
+            inventoryTransferCancelled = true,
+            itemPickupCancelled = true,
+            commandsBlocked = true
+        )
     }
 
     @Test
