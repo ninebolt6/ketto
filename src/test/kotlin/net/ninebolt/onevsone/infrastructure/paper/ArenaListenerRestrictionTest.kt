@@ -2,13 +2,15 @@ package net.ninebolt.onevsone.infrastructure.paper
 
 import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.breakEvent
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.damageEvent
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.breakBlock
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.dropEvent
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.placeEvent
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.genericDamage
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.plainBlock
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.placeBlock
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.simulation
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
+import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.event.player.PlayerCommandPreprocessEvent
@@ -21,7 +23,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
-/** 状態ごとの制約(ブロック破壊・設置・アイテムドロップ・コマンド)の検証。実イベントの isCancelled を見る。 */
+/** 状態ごとの制約(ブロック破壊・設置・アイテムドロップ・コマンド)を実アクション経由で検証する。 */
 class ArenaListenerRestrictionTest {
 
     @TempDir
@@ -40,23 +42,28 @@ class ArenaListenerRestrictionTest {
         env.close()
     }
 
+    /** MockBukkit の performCommand は preprocess イベントを発火しないため、実イベントを dispatch する。 */
+    private fun assertCommandBlocked(player: Player, blocked: Boolean) {
+        val event = PlayerCommandPreprocessEvent(player, "/spawn")
+        env.fire(event)
+        assertEquals(blocked, event.isCancelled)
+    }
+
     @Test
     fun `break cancelled only in ingame and roundcountdown`() {
         val arena = env.newArena()
         val p1 = env.player("Alice")
         env.join(p1, arena)
-        val block = env.plainBlock()
+        val sim = p1.simulation()
 
-        val event = breakEvent(p1, block)
-        env.fire(event)
-        assertEquals(false, event.isCancelled)
+        val allowed = sim.breakBlock(env.plainBlock())
+        assertFalse(allowed.isCancelled)
 
         val p2 = env.player("Bob")
         env.join(p2, arena)
         env.tick(6)
-        val ingame = breakEvent(p1, block)
-        env.fire(ingame)
-        assertEquals(true, ingame.isCancelled)
+        val ingame = sim.breakBlock(env.plainBlock(9, 64, 10))
+        assertTrue(ingame.isCancelled)
     }
 
     @Test
@@ -64,20 +71,14 @@ class ArenaListenerRestrictionTest {
         val arena = env.newArena()
         val p1 = env.player("Alice")
 
-        val free = PlayerCommandPreprocessEvent(p1, "/spawn")
-        env.fire(free)
-        assertEquals(false, free.isCancelled)
+        assertCommandBlocked(p1, blocked = false)
 
         env.join(p1, arena)
-        val onemore = PlayerCommandPreprocessEvent(p1, "/spawn")
-        env.fire(onemore)
-        assertEquals(false, onemore.isCancelled)
+        assertCommandBlocked(p1, blocked = false)
 
         val p2 = env.player("Bob")
         env.join(p2, arena)
-        val countdown = PlayerCommandPreprocessEvent(p1, "/spawn")
-        env.fire(countdown)
-        assertEquals(true, countdown.isCancelled)
+        assertCommandBlocked(p1, blocked = true)
         assertTrue(p1.drainMessages().any { it.contains("コマンドは使用できません！") })
     }
 
@@ -117,30 +118,26 @@ class ArenaListenerRestrictionTest {
         val arena = env.newArena()
         val p1 = env.player("Alice")
         env.join(p1, arena)
-        val onemore = env.placeEvent(p1)
-        env.fire(onemore)
-        assertFalse(onemore.isCancelled)
+        val sim = p1.simulation()
+        var placeZ = 10
+        fun place() = sim.placeBlock(Material.STONE, Location(env.world(), 9.0, 64.0, (placeZ++).toDouble()))
+
+        assertFalse(place().isCancelled) // ONEMORE
 
         val p2 = env.player("Bob")
         env.join(p2, arena)
-        val countdown = env.placeEvent(p1)
-        env.fire(countdown)
-        assertFalse(countdown.isCancelled)
+        assertFalse(place().isCancelled) // COUNTDOWN
 
         env.tick(6)
-        val ingame = env.placeEvent(p1)
-        env.fire(ingame)
-        assertTrue(ingame.isCancelled)
+        assertTrue(place().isCancelled) // INGAME
 
-        // 着火は許可する
-        val flint = env.placeEvent(p1, held = env.item(Material.FLINT_AND_STEEL))
-        env.fire(flint)
-        assertFalse(flint.isCancelled)
+        // 着火は許可する。simulateBlockPlace は実インベントリの手のアイテムを使う
+        p1.inventory.setItemInMainHand(env.item(Material.FLINT_AND_STEEL))
+        assertFalse(place().isCancelled)
+        p1.inventory.setItemInMainHand(null)
 
         env.service.defeat(p2.uuid, DefeatCause.FALL)
-        val roundCountdown = env.placeEvent(p1)
-        env.fire(roundCountdown)
-        assertTrue(roundCountdown.isCancelled)
+        assertTrue(place().isCancelled) // ROUNDCOUNTDOWN
     }
 
     @Test
@@ -148,20 +145,17 @@ class ArenaListenerRestrictionTest {
         val arena = env.newArena()
         val p1 = env.player("Alice")
         env.join(p1, arena)
-        val block = env.plainBlock()
+        val sim = p1.simulation()
+        var breakZ = 20
 
         fun assertState(damageCancelled: Boolean, breakCancelled: Boolean, commandBlocked: Boolean) {
-            val damage = damageEvent(p1)
-            env.fire(damage)
+            val damage = p1.simulateDamage(1.0, genericDamage())
             assertEquals(damageCancelled, damage.isCancelled)
 
-            val breaking = breakEvent(p1, block)
-            env.fire(breaking)
+            val breaking = sim.breakBlock(env.plainBlock(9, 64, breakZ++))
             assertEquals(breakCancelled, breaking.isCancelled)
 
-            val command = PlayerCommandPreprocessEvent(p1, "/spawn")
-            env.fire(command)
-            assertEquals(commandBlocked, command.isCancelled)
+            assertCommandBlocked(p1, commandBlocked)
         }
 
         assertState(damageCancelled = false, breakCancelled = false, commandBlocked = false) // ONEMORE

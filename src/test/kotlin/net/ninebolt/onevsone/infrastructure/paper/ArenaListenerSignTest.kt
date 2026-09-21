@@ -1,15 +1,14 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
-import net.kyori.adventure.text.Component
-import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.WorldPosition
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.breakEvent
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.breakBlock
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.interact
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.nonPlayer
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.plainBlock
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.signBlock
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.simulation
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.twoPlayerIngame
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import org.bukkit.ExplosionResult
@@ -17,7 +16,6 @@ import org.bukkit.event.Event
 import org.bukkit.event.block.Action
 import org.bukkit.event.block.BlockExplodeEvent
 import org.bukkit.event.entity.EntityExplodeEvent
-import org.bukkit.event.player.PlayerJoinEvent
 import org.bukkit.inventory.EquipmentSlot
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
@@ -106,18 +104,16 @@ class ArenaListenerSignTest {
         env.newArena()
         env.signRepo.setSign("arena1", WorldPosition.new("world", 3.0, 64.0, 3.0))
         val p1 = env.player("Alice")
+        val sim = p1.simulation()
 
-        val registered = breakEvent(p1, env.signBlock(3, 64, 3))
-        env.fire(registered)
+        val registered = sim.breakBlock(env.signBlock(3, 64, 3))
         assertTrue(registered.isCancelled)
 
-        val unregistered = breakEvent(p1, env.signBlock(9, 64, 9))
-        env.fire(unregistered)
+        val unregistered = sim.breakBlock(env.signBlock(9, 64, 9))
         assertFalse(unregistered.isCancelled)
 
         env.admin.clearSign("arena1")
-        val freed = breakEvent(p1, env.signBlock(3, 64, 3))
-        env.fire(freed)
+        val freed = sim.breakBlock(env.signBlock(3, 64, 3))
         assertFalse(freed.isCancelled)
     }
 
@@ -145,22 +141,18 @@ class ArenaListenerSignTest {
         env.signRepo.setSign("arena1", WorldPosition.new("world", 3.0, 64.0, 3.0))
         val p1 = env.player("Alice")
 
-        val event = breakEvent(p1, env.plainBlock(3, 64, 3))
-        env.fire(event)
+        val event = p1.simulation().breakBlock(env.plainBlock(3, 64, 3))
         assertFalse(event.isCancelled)
     }
 
     @Test
     fun `join event triggers pending restore`() {
         val (p1, p2) = env.twoPlayerIngame()
-        // 試合中に disconnect すると backup は残る
-        env.removePlayer(p2)
-        env.service.abort(Arena.Id.new("arena1"))
+        // 試合中の切断は実 PlayerQuitEvent を発火し、敗北扱いで試合終了。backup は残る
+        p2.disconnect()
 
         // 再参加時に PlayerJoinEvent 経由で復元(空バックアップ→空インベントリ)
-        p2.inventory.setItem(0, null)
         p2.reconnect()
-        env.fire(PlayerJoinEvent(p2, Component.empty()))
         assertNull(p2.inventory.contents[0])
     }
 }

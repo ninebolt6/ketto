@@ -6,6 +6,7 @@ import net.ninebolt.onevsone.infrastructure.paper.fixtures.blockOf
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.interact
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.itemEntity
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.plainBlock
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.simulation
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.spawn
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.twoPlayerIngame
 import org.bukkit.Material
@@ -23,9 +24,6 @@ import org.bukkit.event.block.SignChangeEvent
 import org.bukkit.event.entity.EntityPickupItemEvent
 import org.bukkit.event.entity.EntityPlaceEvent
 import org.bukkit.event.hanging.HangingPlaceEvent
-import org.bukkit.event.inventory.ClickType
-import org.bukkit.event.inventory.InventoryAction
-import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.inventory.InventoryDragEvent
 import org.bukkit.event.inventory.InventoryType
 import org.bukkit.event.player.PlayerArmorStandManipulateEvent
@@ -132,19 +130,11 @@ class ArenaListenerItemGuardTest {
     fun `foreign inventory clicks cancelled but own inventory allowed`() {
         val (p1, _) = env.twoPlayerIngame()
 
-        val own = InventoryClickEvent(
-            p1.openInventory, InventoryType.SlotType.OUTSIDE, 0,
-            ClickType.LEFT, InventoryAction.PICKUP_ALL
-        )
-        env.fire(own)
+        val own = p1.simulation().simulateInventoryClick(0)
         assertFalse(own.isCancelled)
 
         val chestView = p1.openInventory(env.server.createInventory(null, InventoryType.CHEST))!!
-        val foreign = InventoryClickEvent(
-            chestView, InventoryType.SlotType.CONTAINER, 0,
-            ClickType.LEFT, InventoryAction.PICKUP_ALL
-        )
-        env.fire(foreign)
+        val foreign = p1.simulation().simulateInventoryClick(chestView, 0)
         assertTrue(foreign.isCancelled)
 
         val drag = InventoryDragEvent(

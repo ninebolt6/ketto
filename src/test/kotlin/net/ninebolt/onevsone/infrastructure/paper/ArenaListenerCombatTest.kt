@@ -3,18 +3,23 @@ package net.ninebolt.onevsone.infrastructure.paper
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.assertFired
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.attackDamage
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.damageEvent
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.deathEvent
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.entityDamageEvent
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.moveEvent
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.genericDamage
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.mob
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.nonPlayer
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.quitEvent
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.projectileDamage
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.simulation
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.spawn
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.twoPlayerIngame
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import org.bukkit.Location
 import org.bukkit.Material
+import org.bukkit.block.Biome
+import org.bukkit.damage.DamageType
 import org.bukkit.entity.EntityType
+import org.bukkit.event.entity.PlayerDeathEvent
 import org.mockbukkit.mockbukkit.world.WorldMock
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -25,7 +30,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
-/** 死亡・ダメージ・切断・移動イベントのハンドリング。実イベントオブジェクトで検証する。 */
+/** 死亡・ダメージ・切断・移動を実アクション(simulateDamage/disconnect/移動シミュレーション)経由で検証する。 */
 class ArenaListenerCombatTest {
 
     @TempDir
@@ -47,14 +52,10 @@ class ArenaListenerCombatTest {
     @Test
     fun `death event keeps inventory clears drops and resolves round`() {
         val (p1, p2) = env.twoPlayerIngame()
-        p2.health = 0.0
-        val event = env.deathEvent(p2, droppedExp = 30)
-        env.fire(event)
-        assertTrue(event.keepInventory)
-        assertTrue(event.drops.isEmpty())
-        // 経験値はドロップさせず、リスポーン後もレベル・経験値を保持する
-        assertEquals(0, event.droppedExp)
-        assertTrue(event.keepLevel)
+        p2.simulateDamage(100.0, genericDamage())
+        env.assertFired<PlayerDeathEvent> { event ->
+            event.keepInventory && event.drops.isEmpty() && event.droppedExp == 0 && event.keepLevel
+        }
         assertEquals(ArenaState.ROUNDCOUNTDOWN, env.state())
         assertEquals(1, env.service.matchOf("arena1")!!.winsOf(p1.uuid))
     }
@@ -62,11 +63,8 @@ class ArenaListenerCombatTest {
     @Test
     fun `non participant death ignored`() {
         val outsider = env.player("Outsider")
-        val event = env.deathEvent(outsider, droppedExp = 30)
-        env.fire(event)
-        assertFalse(event.keepInventory)
-        assertEquals(30, event.droppedExp)
-        assertFalse(event.keepLevel)
+        outsider.simulateDamage(100.0, genericDamage())
+        env.assertFired<PlayerDeathEvent> { event -> !event.keepInventory && !event.keepLevel }
     }
 
     @Test
@@ -79,8 +77,7 @@ class ArenaListenerCombatTest {
     @Test
     fun `damage not cancelled in INGAME`() {
         val (p1, _) = env.twoPlayerIngame()
-        val event = damageEvent(p1)
-        env.fire(event)
+        val event = p1.simulateDamage(1.0, genericDamage())
         assertFalse(event.isCancelled)
     }
 
@@ -89,16 +86,15 @@ class ArenaListenerCombatTest {
         val (p1, p2) = env.twoPlayerIngame()
         env.service.defeat(p2.uuid, DefeatCause.FALL)
         assertEquals(ArenaState.ROUNDCOUNTDOWN, env.state())
-        val event = damageEvent(p1)
-        env.fire(event)
+        val event = p1.simulateDamage(1.0, genericDamage())
         assertTrue(event.isCancelled)
+        assertEquals(20.0, p1.health)
     }
 
     @Test
     fun `opponent entity damage allowed in INGAME`() {
         val (p1, p2) = env.twoPlayerIngame()
-        val event = entityDamageEvent(p1, p2)
-        env.fire(event)
+        val event = p1.simulateDamage(1.0, attackDamage(p2))
         assertFalse(event.isCancelled)
     }
 
@@ -107,13 +103,12 @@ class ArenaListenerCombatTest {
         val (p1, _) = env.twoPlayerIngame()
         val outsider = env.player("Outsider")
 
-        val sniped = entityDamageEvent(outsider, p1)
-        env.fire(sniped)
+        val sniped = p1.simulateDamage(1.0, attackDamage(outsider))
         assertTrue(sniped.isCancelled)
 
-        val mob = entityDamageEvent(env.nonPlayer(), p1)
-        env.fire(mob)
-        assertTrue(mob.isCancelled)
+        val mobbed = p1.simulateDamage(1.0, attackDamage(env.mob(), DamageType.MOB_ATTACK))
+        assertTrue(mobbed.isCancelled)
+        assertEquals(20.0, p1.health)
     }
 
     @Test
@@ -121,12 +116,10 @@ class ArenaListenerCombatTest {
         val (p1, p2) = env.twoPlayerIngame()
         val arrow = env.spawn(EntityType.ARROW)
         // 直接の damager は矢でも、causingEntity が対戦相手なら許可
-        val allowed = entityDamageEvent(arrow, p1, causingEntity = p2)
-        env.fire(allowed)
+        val allowed = p1.simulateDamage(1.0, projectileDamage(arrow, p2))
         assertFalse(allowed.isCancelled)
 
-        val smuggled = entityDamageEvent(arrow, p1, causingEntity = env.player("Outsider"))
-        env.fire(smuggled)
+        val smuggled = p1.simulateDamage(1.0, projectileDamage(arrow, env.player("Outsider")))
         assertTrue(smuggled.isCancelled)
     }
 
@@ -135,12 +128,10 @@ class ArenaListenerCombatTest {
         val (p1, _) = env.twoPlayerIngame()
         val outsider = env.player("Outsider")
 
-        val hitPlayer = entityDamageEvent(p1, outsider)
-        env.fire(hitPlayer)
+        val hitPlayer = outsider.simulateDamage(1.0, attackDamage(p1))
         assertTrue(hitPlayer.isCancelled)
 
-        val hitMob = entityDamageEvent(p1, env.nonPlayer())
-        env.fire(hitMob)
+        val hitMob = env.mob().simulateDamage(1.0, attackDamage(p1))
         assertTrue(hitMob.isCancelled)
     }
 
@@ -148,8 +139,7 @@ class ArenaListenerCombatTest {
     fun `opponent damage cancelled during round countdown`() {
         val (p1, p2) = env.twoPlayerIngame()
         env.service.defeat(p2.uuid, DefeatCause.FALL)
-        val event = entityDamageEvent(p2, p1)
-        env.fire(event)
+        val event = p1.simulateDamage(1.0, attackDamage(p2))
         assertTrue(event.isCancelled)
     }
 
@@ -158,8 +148,7 @@ class ArenaListenerCombatTest {
         env.twoPlayerIngame()
         val a = env.player("OutsiderA")
         val b = env.player("OutsiderB")
-        val event = entityDamageEvent(a, b)
-        env.fire(event)
+        val event = a.simulateDamage(1.0, attackDamage(b))
         assertFalse(event.isCancelled)
     }
 
@@ -167,7 +156,7 @@ class ArenaListenerCombatTest {
     fun `quit of outsider does not touch inventory`() {
         val outsider = env.player("Outsider")
         outsider.inventory.setItem(0, env.item(Material.STONE))
-        env.fire(quitEvent(outsider))
+        outsider.disconnect()
         assertEquals(Material.STONE, outsider.inventory.contents[0]?.type)
     }
 
@@ -175,8 +164,7 @@ class ArenaListenerCombatTest {
     fun `quit of participant resolves through quitting scope`() {
         val (p1, p2) = env.twoPlayerIngame()
         p1.inventory.setItem(0, null)
-        env.removePlayer(p1)
-        env.fire(quitEvent(p1))
+        p1.disconnect()
         assertEquals(ArenaState.WAITING, env.state())
         assertEquals(1, env.statsRepo.find(p2.uuid)!!.wins)
     }
@@ -189,16 +177,15 @@ class ArenaListenerCombatTest {
         assertEquals(ArenaState.ONEMORE, env.state())
 
         val w = env.world()
-        val event = moveEvent(p1, Location(w, 0.0, -1.0, 0.0), Location(w, 0.0, -5.0, 0.0))
-        env.fire(event)
+        val sim = p1.simulation()
+        sim.simulatePlayerMove(Location(w, 0.0, -5.0, 0.0))
         assertEquals(ArenaState.ONEMORE, env.state())
 
         val p2 = env.player("Bob")
         env.join(p2, arena)
         env.tick(6)
 
-        val fall = moveEvent(p1, Location(w, 0.0, 1.0, 0.0), Location(w, 0.0, -1.0, 0.0))
-        env.fire(fall)
+        sim.simulatePlayerMove(Location(w, 0.0, -1.0, 0.0))
         assertEquals(ArenaState.ROUNDCOUNTDOWN, env.state())
         assertEquals(1, env.service.matchOf("arena1")!!.winsOf(p2.uuid))
     }
@@ -208,32 +195,31 @@ class ArenaListenerCombatTest {
         val (p1, p2) = env.twoPlayerIngame()
         env.service.defeat(p2.uuid, DefeatCause.FALL)
 
-        val w = env.world()
-        val from = Location(w, 0.0, 64.0, 0.0)
-        val horizontal = moveEvent(p1, from, Location(w, 1.0, 64.0, 0.0))
-        env.fire(horizontal)
+        val sim = p1.simulation()
+        val from = p1.location
+        val horizontal = sim.simulatePlayerMove(from.clone().add(1.0, 0.0, 0.0))
+        // 凍結は setTo(from) の書き換えで通知する。simulatePlayerMove はキャンセル時のみ
+        // 実位置を戻すため実位置は移動先のまま残り、イベントの to で判定結果を見る
         assertEquals(from, horizontal.to)
 
-        val verticalTo = Location(w, 0.0, 65.0, 0.0)
-        val vertical = moveEvent(p1, Location(w, 0.0, 64.0, 0.0), verticalTo)
-        env.fire(vertical)
-        assertEquals(verticalTo, vertical.to)
+        val verticalTarget = p1.location.clone().add(0.0, 1.0, 0.0)
+        val vertical = sim.simulatePlayerMove(verticalTarget)
+        assertEquals(verticalTarget, vertical.to)
     }
 
     @Test
     fun `void fall uses world min height`() {
         // 最低高度が負の世界では y<0 の移動は敗北にしない
         // WorldMock は (minHeight, maxHeight, grassHeight) の順
-        val deep = WorldMock(Material.STONE, org.bukkit.block.Biome.PLAINS, -64, 320, 0)
+        val deep = WorldMock(Material.STONE, Biome.PLAINS, -64, 320, 0)
         env.server.addWorld(deep)
         val (p1, p2) = env.twoPlayerIngame()
+        val sim = p1.simulation()
 
-        val shallow = moveEvent(p1, Location(deep, 0.0, -50.0, 0.0), Location(deep, 0.0, -55.0, 0.0))
-        env.fire(shallow)
+        sim.simulatePlayerMove(Location(deep, 0.0, -55.0, 0.0))
         assertEquals(ArenaState.INGAME, env.state())
 
-        val intoVoid = moveEvent(p1, Location(deep, 0.0, -60.0, 0.0), Location(deep, 0.0, -65.0, 0.0))
-        env.fire(intoVoid)
+        sim.simulatePlayerMove(Location(deep, 0.0, -65.0, 0.0))
         assertEquals(ArenaState.ROUNDCOUNTDOWN, env.state())
         assertEquals(1, env.service.matchOf("arena1")!!.winsOf(p2.uuid))
     }
@@ -245,14 +231,16 @@ class ArenaListenerCombatTest {
         assertEquals(ArenaState.ROUNDCOUNTDOWN, env.state())
 
         env.runOneShots()
-        val w = env.world()
-        env.fire(moveEvent(p2, Location(w, 0.0, 1.0, 0.0), Location(w, 0.0, -1.0, 0.0)))
+        val sim = p2.simulation()
+        // ROUNDCOUNTDOWN は水平移動が凍結されるため、現在地の xz を保って y だけ落とす
+        val base = p2.location
+        sim.simulatePlayerMove(Location(base.world, base.x, -1.0, base.z))
         assertEquals(2, env.service.matchOf("arena1")!!.winsOf(p1.uuid))
         // キャンセル済みの旧タイマーは実スケジューラ上は二度と発火せず、新タイマーだけが進行する
         env.tick(8)
         assertEquals(ArenaState.INGAME, env.state())
 
-        env.fire(moveEvent(p2, Location(w, 0.0, 1.0, 0.0), Location(w, 0.0, -1.0, 0.0)))
+        sim.simulatePlayerMove(Location(base.world, base.x, -1.0, base.z))
         assertEquals(ArenaState.WAITING, env.state())
     }
 }

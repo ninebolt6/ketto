@@ -1,8 +1,5 @@
 package net.ninebolt.onevsone.infrastructure.paper.fixtures
 
-import io.mockk.every
-import io.mockk.mockk
-import net.kyori.adventure.text.Component
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.block.Block
@@ -11,63 +8,57 @@ import org.bukkit.damage.DamageType
 import org.bukkit.entity.Entity
 import org.bukkit.entity.EntityType
 import org.bukkit.entity.Player
+import org.bukkit.entity.Zombie
 import org.bukkit.event.block.Action
 import org.bukkit.event.block.BlockBreakEvent
 import org.bukkit.block.BlockFace
 import org.bukkit.event.block.BlockPlaceEvent
-import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityDamageEvent
-import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerDropItemEvent
-import org.bukkit.event.player.PlayerJoinEvent
-import org.bukkit.event.player.PlayerMoveEvent
-import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.entity.Item
+import org.bukkit.event.Event
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.mockbukkit.mockbukkit.entity.LivingEntityMock
+import org.mockbukkit.mockbukkit.entity.PlayerMock
+import org.mockbukkit.mockbukkit.simulate.entity.PlayerSimulation
 
 /** ArenaListener テスト用の実イベント構築と 2 人マッチ開始フィクスチャ。 */
 
-internal fun TestEnv.deathEvent(player: Player, droppedExp: Int = 0): PlayerDeathEvent {
-    val drops = mutableListOf(item(Material.STONE))
-    return PlayerDeathEvent(
-        player, DamageSource.builder(DamageType.GENERIC).build(),
-        drops, droppedExp, Component.empty(), true
-    )
-}
-
-internal fun quitEvent(player: Player) =
-    PlayerQuitEvent(player, Component.empty(), PlayerQuitEvent.QuitReason.DISCONNECTED)
-
-internal fun joinEvent(player: Player) = PlayerJoinEvent(player, Component.empty())
-
-internal fun damageEvent(entity: Entity, damage: Double = 1.0) =
-    EntityDamageEvent(entity, EntityDamageEvent.DamageCause.FALL, mockk<DamageSource>(relaxed = true), damage)
+/** 環境ダメージ(落下相当)。causingEntity なしの実 DamageSource。 */
+internal fun genericDamage(): DamageSource = DamageSource.builder(DamageType.GENERIC).build()
 
 /**
- * エンティティ起因ダメージ。causingEntity は DamageSource からしか取れないため
- * mockk で帰属者を注入する(MockBukkit 未実装 API の限定用途)。
- * EntityDamageByEntityEvent は Paper 1.21 でコンストラクタが非推奨か
- * @ApiStatus.Internal のみ。Internal より互換維持される soft-deprecated 版を
- * 選ぶため警告を抑制する。
+ * 実 DamageSource の攻撃。directEntity 非 null のため simulateDamage は
+ * EntityDamageByEntityEvent を発火し、causingEntity で帰属判定される。
  */
-@Suppress("DEPRECATION")
-internal fun entityDamageEvent(
-    damager: Entity,
-    victim: Entity,
-    causingEntity: Entity? = damager,
-    damage: Double = 1.0
-): EntityDamageByEntityEvent {
-    val source = mockk<DamageSource>()
-    every { source.causingEntity } returns causingEntity
-    every { source.directEntity } returns damager
-    return EntityDamageByEntityEvent(
-        damager, victim, EntityDamageEvent.DamageCause.ENTITY_ATTACK, source, damage
-    )
+internal fun attackDamage(attacker: Entity, type: DamageType = DamageType.PLAYER_ATTACK): DamageSource =
+    DamageSource.builder(type).withDirectEntity(attacker).withCausingEntity(attacker).build()
+
+/** direct(矢等)と causing(射手)が異なる投射物の実 DamageSource。 */
+internal fun projectileDamage(direct: Entity, causing: Entity): DamageSource =
+    DamageSource.builder(DamageType.GENERIC).withDirectEntity(direct).withCausingEntity(causing).build()
+
+/** PlayerMock.simulate* は委譲シムで @Deprecated のため、非推奨の PlayerSimulation を直接使う。 */
+internal fun PlayerMock.simulation() = PlayerSimulation(this)
+
+/** MockBukkit 4.103 では assertEventFired 系が deprecated のため、発火済みイベントを直接検査する。 */
+internal inline fun <reified T : Event> TestEnv.assertFired(noinline predicate: (T) -> Boolean = { true }) {
+    val fired = server.pluginManager.firedEvents.toList().filterIsInstance<T>()
+    assertTrue(fired.any(predicate), "no fired ${T::class.simpleName} matched; fired=$fired")
 }
 
-internal fun moveEvent(player: Player, from: Location, to: Location) = PlayerMoveEvent(player, from, to)
+/** 前提不成立(空気ブロック等)で null になる戻り値をテスト向けに非 null 化する。 */
+internal fun PlayerSimulation.breakBlock(block: Block): BlockBreakEvent =
+    simulateBlockBreak(block) ?: error("simulateBlockBreak returned null")
+
+internal fun PlayerSimulation.placeBlock(material: Material, location: Location): BlockPlaceEvent =
+    simulateBlockPlace(material, location) ?: error("simulateBlockPlace returned null")
+
+internal fun damageEvent(entity: Entity, damage: Double = 1.0) =
+    EntityDamageEvent(entity, EntityDamageEvent.DamageCause.FALL, genericDamage(), damage)
 
 internal fun TestEnv.twoPlayerIngame(): Pair<ArenaPlayerMock, ArenaPlayerMock> {
     val arena = newArena()
@@ -106,6 +97,10 @@ internal fun TestEnv.itemEntity(): Item =
 
 internal fun TestEnv.spawn(type: EntityType) =
     world().spawnEntity(Location(world(), 0.0, 64.0, 0.0), type)
+
+/** simulateDamage を持つ LivingEntityMock 系のモブ。 */
+internal fun TestEnv.mob(): LivingEntityMock =
+    world().spawn(Location(world(), 0.0, 64.0, 0.0), Zombie::class.java) as LivingEntityMock
 
 /** 設置イベント。held 省略時は石ブロックを持つ想定。 */
 internal fun TestEnv.placeEvent(player: Player, held: ItemStack? = null): BlockPlaceEvent {
