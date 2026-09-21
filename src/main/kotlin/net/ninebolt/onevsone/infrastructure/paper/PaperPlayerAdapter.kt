@@ -108,7 +108,7 @@ private class PaperPlayerHandle(
     override fun resetVitals() {
         if (player.isDead) return
         player.fireTicks = 0
-        player.health = minOf(20.0, player.getAttribute(Attribute.GENERIC_MAX_HEALTH)?.value ?: 20.0)
+        player.health = minOf(20.0, player.getAttribute(Attribute.MAX_HEALTH)?.value ?: 20.0)
         player.foodLevel = 20
     }
 

@@ -54,7 +54,7 @@ class ArenaListenerTeleportTest {
         assertFalse(pearl.isCancelled)
 
         listOf(
-            PlayerTeleportEvent.TeleportCause.CHORUS_FRUIT,
+            PlayerTeleportEvent.TeleportCause.CONSUMABLE_EFFECT,
             PlayerTeleportEvent.TeleportCause.COMMAND,
             PlayerTeleportEvent.TeleportCause.SPECTATE,
             PlayerTeleportEvent.TeleportCause.PLUGIN,
@@ -147,7 +147,7 @@ class ArenaListenerTeleportTest {
     @Test
     fun `vehicle enter cancelled only while frozen`() {
         val (p1, p2) = env.twoPlayerIngame()
-        val boat = env.world().spawnEntity(Location(env.world(), 0.0, 64.0, 0.0), EntityType.BOAT) as Boat
+        val boat = env.world().spawnEntity(Location(env.world(), 0.0, 64.0, 0.0), EntityType.OAK_BOAT) as Boat
 
         val ingame = VehicleEnterEvent(boat, p1)
         env.listener.onVehicleEnter(ingame)

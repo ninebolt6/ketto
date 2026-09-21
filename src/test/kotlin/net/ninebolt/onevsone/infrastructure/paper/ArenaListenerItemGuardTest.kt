@@ -191,7 +191,7 @@ class ArenaListenerItemGuardTest {
         val (p1, _) = env.twoPlayerIngame()
         val block = env.plainBlock()
 
-        val place = EntityPlaceEvent(env.spawn(EntityType.BOAT), p1, block, BlockFace.UP, EquipmentSlot.HAND)
+        val place = EntityPlaceEvent(env.spawn(EntityType.OAK_BOAT), p1, block, BlockFace.UP, EquipmentSlot.HAND)
         env.listener.onEntityPlace(place)
         assertTrue(place.isCancelled)
 

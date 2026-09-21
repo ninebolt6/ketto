@@ -7,6 +7,7 @@ import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.block.Block
 import org.bukkit.damage.DamageSource
+import org.bukkit.damage.DamageType
 import org.bukkit.entity.Entity
 import org.bukkit.entity.EntityType
 import org.bukkit.entity.Player
@@ -30,7 +31,10 @@ import org.bukkit.inventory.ItemStack
 
 internal fun TestEnv.deathEvent(player: Player, droppedExp: Int = 0): PlayerDeathEvent {
     val drops = mutableListOf(item(Material.STONE))
-    return PlayerDeathEvent(player, mockk<DamageSource>(relaxed = true), drops, droppedExp, Component.empty())
+    return PlayerDeathEvent(
+        player, DamageSource.builder(DamageType.GENERIC).build(),
+        drops, droppedExp, Component.empty(), true
+    )
 }
 
 internal fun quitEvent(player: Player) =
