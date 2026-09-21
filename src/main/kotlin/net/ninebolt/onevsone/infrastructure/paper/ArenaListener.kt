@@ -4,7 +4,7 @@ import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.domain.ParticipantRestrictions
-import net.ninebolt.onevsone.domain.TeleportRestriction
+import net.ninebolt.onevsone.domain.TeleportTrigger
 import org.bukkit.Material
 import org.bukkit.Tag
 import org.bukkit.block.Block
@@ -353,15 +353,13 @@ class ArenaListener(
 
     private fun restrictTeleport(event: PlayerTeleportEvent) {
         val restrictions = restrictionsOf(event.player) ?: return
-        val id = event.player.uniqueId.toKotlinUuid()
-        val allowed = when (restrictions.teleportRestriction) {
-            TeleportRestriction.UNRESTRICTED -> true
-            TeleportRestriction.ENDER_PEARL_ONLY ->
-                event.cause == PlayerTeleportEvent.TeleportCause.ENDER_PEARL ||
-                    lookup.isPluginTeleport(id)
-            TeleportRestriction.PLUGIN_ONLY -> lookup.isPluginTeleport(id)
+        // プラグイン自身の移送は cause が PLUGIN とは限らないため、マーカーで先に識別する
+        val trigger = when {
+            lookup.isPluginTeleport(event.player.uniqueId.toKotlinUuid()) -> TeleportTrigger.INTERNAL
+            event.cause == PlayerTeleportEvent.TeleportCause.ENDER_PEARL -> TeleportTrigger.ENDER_PEARL
+            else -> TeleportTrigger.EXTERNAL
         }
-        if (!allowed) event.isCancelled = true
+        if (!restrictions.teleportRestriction.allows(trigger)) event.isCancelled = true
     }
 
     /** 移動凍結中の乗車は水平移動をバイパスするため遮断する。 */

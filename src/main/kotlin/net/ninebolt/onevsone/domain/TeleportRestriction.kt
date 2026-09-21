@@ -9,5 +9,11 @@ enum class TeleportRestriction {
     ENDER_PEARL_ONLY,
 
     /** プラグイン自身の移送のみ許可する(移動凍結中)。 */
-    PLUGIN_ONLY
+    PLUGIN_ONLY;
+
+    fun allows(trigger: TeleportTrigger): Boolean = when (this) {
+        UNRESTRICTED -> true
+        ENDER_PEARL_ONLY -> trigger == TeleportTrigger.INTERNAL || trigger == TeleportTrigger.ENDER_PEARL
+        PLUGIN_ONLY -> trigger == TeleportTrigger.INTERNAL
+    }
 }
