@@ -102,7 +102,7 @@ class ArenaApplicationServiceTest {
     @Test
     fun `round flow never re-backs-up`() {
         val app = TestApp()
-        val (p1, p2) = app.startMatch()
+        val (_, p2) = app.startMatch()
         assertEquals(1, app.equipment.backupCalls)
 
         assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
@@ -218,7 +218,7 @@ class ArenaApplicationServiceTest {
     @Test
     fun `shutdown aborts matches and restores online pendings`() {
         val app = TestApp()
-        val (p1, p2) = app.startMatch()
+        val (p1, _) = app.startMatch()
         app.service.shutdown()
         assertEquals(ArenaState.WAITING, app.state())
         assertNull(app.service.arenaIdOf(p1.id))
@@ -230,7 +230,7 @@ class ArenaApplicationServiceTest {
     @Test
     fun `round countdown restores INGAME and releases resolution at completion`() {
         val app = TestApp()
-        val (p1, p2) = app.startMatch()
+        val (_, p2) = app.startMatch()
         app.service.defeat(p2.id, DefeatCause.FALL)
         // tick7: 再装備 / tick50以降: 5→1 / tick150: 再開
         app.scheduler.tick()   // remaining 7: kit reapply

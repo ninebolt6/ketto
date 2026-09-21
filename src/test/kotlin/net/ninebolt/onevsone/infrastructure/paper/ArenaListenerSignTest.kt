@@ -169,7 +169,7 @@ class ArenaListenerSignTest {
 
     @Test
     fun `join event triggers pending restore`() {
-        val (p1, p2) = env.twoPlayerIngame()
+        val (_, p2) = env.twoPlayerIngame()
         // 試合中の切断は実 PlayerQuitEvent を発火し、敗北扱いで試合終了。backup は残る
         p2.disconnect()
 

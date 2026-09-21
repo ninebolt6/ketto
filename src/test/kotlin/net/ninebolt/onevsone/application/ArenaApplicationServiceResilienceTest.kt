@@ -52,7 +52,7 @@ class ArenaApplicationServiceResilienceTest {
         val app = TestApp()
         // 2 回目の applyKit で失敗させる
         app.equipment.failOnApplyAt = 2
-        val (p1, p2) = app.joinedTwo()
+        val (p1, _) = app.joinedTwo()
         app.scheduler.tick(6)
         assertEquals(ArenaState.WAITING, app.state())
         assertNull(app.service.arenaIdOf(p1.id))
@@ -91,7 +91,7 @@ class ArenaApplicationServiceResilienceTest {
     @Test
     fun `countdown aborts when participant disconnects mid countdown`() {
         val app = TestApp()
-        val (p1, p2) = app.joinedTwo()
+        val (_, p2) = app.joinedTwo()
         app.scheduler.tick(2)
         app.players.disconnect(p2)
         app.scheduler.tick()
@@ -127,7 +127,7 @@ class ArenaApplicationServiceResilienceTest {
     @Test
     fun `status save failure does not prevent registration cleanup`() {
         val app = TestApp()
-        val (p1, p2) = app.startMatch()
+        val (p1, _) = app.startMatch()
         app.matchState.failOnSaveStatus = true
         assertFailsWith<PersistenceFailure> {
             app.service.abort(Arena.Id.new("arena1"))
@@ -165,7 +165,7 @@ class ArenaApplicationServiceResilienceTest {
     @Test
     fun `stale countdown callback after abort does nothing`() {
         val app = TestApp()
-        val (p1, p2) = app.joinedTwo()
+        app.joinedTwo()
         val timer = app.scheduler.timers.last()
         app.service.abort(Arena.Id.new("arena1"))
         // 中断後に古いタイマーが走っても自己キャンセルのみ
@@ -180,7 +180,7 @@ class ArenaApplicationServiceResilienceTest {
     @Test
     fun `dead player keeps countdown waiting without consuming the start tick`() {
         val app = TestApp()
-        val (p1, p2) = app.joinedTwo()
+        val (_, p2) = app.joinedTwo()
         app.scheduler.tick(5)
         p2.dead = true
         app.scheduler.tick()

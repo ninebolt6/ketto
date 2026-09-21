@@ -31,7 +31,7 @@ class PlayerRecoveryServiceTest {
     @Test
     fun `quit right after match end still restores via quitting scope`() {
         val app = TestApp(requiredWins = 1)
-        val (p1, p2) = app.startMatch()
+        val (_, p2) = app.startMatch()
         p2.dead = true
         app.service.defeat(p2.id, DefeatCause.DEATH)
         assertEquals(ArenaState.WAITING, app.state())
@@ -50,7 +50,7 @@ class PlayerRecoveryServiceTest {
     @Test
     fun `deferred restore after final death respawns before restoring`() {
         val app = TestApp(requiredWins = 1)
-        val (p1, p2) = app.startMatch()
+        val (_, p2) = app.startMatch()
         p2.dead = true
         app.service.defeat(p2.id, DefeatCause.DEATH)
         app.scheduler.runOneShots()
@@ -76,7 +76,7 @@ class PlayerRecoveryServiceTest {
     @Test
     fun `offline participant retains pending restore for next login`() {
         val app = TestApp()
-        val (p1, p2) = app.startMatch()
+        val (_, p2) = app.startMatch()
         app.players.disconnect(p2)
         app.service.abort(Arena.Id.new("arena1"))
         // オフラインなので復元は p1 のみ
@@ -176,7 +176,7 @@ class PlayerRecoveryServiceTest {
     @Test
     fun `stale deferred callback after abort cannot reapply`() {
         val app = TestApp()
-        val (p1, p2) = app.startMatch()
+        val (_, p2) = app.startMatch()
         p2.dead = true
         app.service.defeat(p2.id, DefeatCause.DEATH)
         // ROUNDCOUNTDOWN 中の再装備予約を中断で無効化
@@ -192,7 +192,7 @@ class PlayerRecoveryServiceTest {
     @Test
     fun `restore ticket survives abort and completes on rejoin`() {
         val app = TestApp()
-        val (p1, p2) = app.startMatch()
+        val (_, p2) = app.startMatch()
         p2.dead = true
         app.service.defeat(p2.id, DefeatCause.DEATH)
         // 遅延リスポーンコールバックを残したまま disconnect
