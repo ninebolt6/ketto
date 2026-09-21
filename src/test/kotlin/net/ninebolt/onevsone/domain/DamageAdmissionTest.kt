@@ -3,6 +3,7 @@ package net.ninebolt.onevsone.domain
 import net.ninebolt.onevsone.domain.fixtures.alice
 import net.ninebolt.onevsone.domain.fixtures.bob
 import net.ninebolt.onevsone.domain.fixtures.carol
+import net.ninebolt.onevsone.domain.fixtures.dave
 import net.ninebolt.onevsone.domain.fixtures.startedMatch
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -57,5 +58,20 @@ class DamageAdmissionTest {
     fun `non player victim does not bypass attacker restriction`() {
         // victim が非プレイヤー(id なし)でも加害者が参加者なら遮断される
         assertFalse(DamageAdmission.allows(null, alice.id, null, ingame))
+    }
+
+    @Test
+    fun `participants of different matches cannot hurt each other`() {
+        // 2 アリーナが同時 INGAME でも、相手マッチの参加者は対戦相手ではない
+        val joined = ArenaMatch.new(Arena.Id.new("arena2"), 3).join(carol).match.join(dave).match
+        val began = joined.beginMatch()
+        check(began.outcome)
+        val other = began.match
+        assertEquals(ArenaState.INGAME, other.state)
+        // 同一マッチ内なら許可
+        assertTrue(DamageAdmission.allows(carol.id, dave.id, other, other))
+        // 別マッチ間は双方向に遮断
+        assertFalse(DamageAdmission.allows(alice.id, carol.id, ingame, other))
+        assertFalse(DamageAdmission.allows(carol.id, alice.id, other, ingame))
     }
 }

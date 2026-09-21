@@ -97,6 +97,17 @@ class ArenaListenerTeleportTest {
     }
 
     @Test
+    fun `marker takes precedence over non plugin cause`() {
+        // プラグイン移送でも実装上 PLUGIN 以外の cause で届き得るため、マーカーが先に識別する
+        val (p1, _) = env.twoPlayerIngame()
+        val event = teleport(p1, PlayerTeleportEvent.TeleportCause.COMMAND)
+        env.lookup.scopePluginTeleport(p1.uuid) {
+            env.fire(event)
+        }
+        assertFalse(event.isCancelled)
+    }
+
+    @Test
     fun `teleports unrestricted while onemore and for outsiders`() {
         val arena = env.newArena()
         val p1 = env.player("Alice")

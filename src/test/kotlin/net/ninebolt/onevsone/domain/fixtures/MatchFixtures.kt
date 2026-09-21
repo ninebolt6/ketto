@@ -9,6 +9,7 @@ import net.ninebolt.onevsone.domain.Participant
 internal val alice = Participant.new("Alice")
 internal val bob = Participant.new("Bob")
 internal val carol = Participant.new("Carol")
+internal val dave = Participant.new("Dave")
 
 internal fun match(requiredWins: Int = 3) = ArenaMatch.new(Arena.Id.new("arena1"), requiredWins)
 
