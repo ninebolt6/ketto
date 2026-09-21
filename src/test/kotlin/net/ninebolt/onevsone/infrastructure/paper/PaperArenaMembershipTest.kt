@@ -149,7 +149,7 @@ class PaperArenaMembershipTest {
     }
 
     @Test
-    fun `quit during COUNTDOWN forfeits without touching inventories`() {
+    fun `quit during COUNTDOWN unregisters only and keeps opponent waiting`() {
         val arena = env.newArena()
         env.setKit(arena, PaperInventorySnapshot(items = listOf(env.item(Material.IRON_SWORD))))
         val p1 = env.player("Alice")
@@ -160,11 +160,14 @@ class PaperArenaMembershipTest {
         env.join(p2, arena)
         env.removePlayer(p1)
         env.quit(p1)
-        assertEquals(ArenaState.WAITING, env.view().state)
+        // 試合未開始の切断は登録解除のみ: 残った参加者は ONEMORE で待機継続
+        assertEquals(ArenaState.ONEMORE, env.view().state)
+        assertNull(env.service.arenaIdOf(p1.uuid))
+        assertEquals(arena, env.service.arenaIdOf(p2.uuid))
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
-        assertEquals(1, env.statsRepo.find(p2.uuid)!!.wins)
-        assertEquals(1, env.statsRepo.find(p1.uuid)!!.losses)
+        assertNull(env.statsRepo.find(p2.uuid))
+        assertNull(env.statsRepo.find(p1.uuid))
         val yaml = env.playersYaml()
         assertNull(yaml.getConfigurationSection("inv.Alice"))
         assertNull(yaml.getConfigurationSection("inv.Bob"))

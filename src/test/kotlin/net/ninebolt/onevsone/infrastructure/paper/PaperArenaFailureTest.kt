@@ -151,7 +151,7 @@ class PaperArenaFailureTest {
     }
 
     @Test
-    fun `stats failure during COUNTDOWN forfeit still completes cleanup`() {
+    fun `stats failure during INGAME forfeit still completes cleanup`() {
         env.close()
         env = TestEnv(folder)
         val arena = env.newArena()
@@ -161,6 +161,7 @@ class PaperArenaFailureTest {
         p2.inventory.setItem(0, env.item(Material.APPLE))
         env.join(p1, arena)
         env.join(p2, arena)
+        env.tick(6)
         File(folder, "stats/${p1.uuid}.yml").writeText("lose: [broken")
         env.removePlayer(p1)
 
