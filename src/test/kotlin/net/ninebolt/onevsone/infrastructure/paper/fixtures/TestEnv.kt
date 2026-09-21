@@ -41,6 +41,8 @@ import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.block.Block
 import org.bukkit.entity.Player
+import org.bukkit.event.Event
+import org.bukkit.event.HandlerList
 import org.bukkit.inventory.ItemStack
 import org.bukkit.configuration.serialization.ConfigurationSerialization
 import org.bukkit.scoreboard.Criteria
@@ -147,7 +149,6 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         private set
     var admin = ArenaAdministrationService(registry, arenaRepo, signRepo, lobbyRepo, equipment, presentation, progression)
         private set
-    val listener: ArenaListener by lazy { ArenaListener(service, lookup, messages) }
     val signListener: ArenaSignListener by lazy { ArenaSignListener(service, admin, messages) }
     val command: OneVsOneCommand by lazy { OneVsOneCommand(service, admin, playerPort, failures, messages) }
 
@@ -183,6 +184,21 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         progression = buildProgression()
         service = buildService()
         admin = ArenaAdministrationService(registry, arenaRepo, signRepo, lobbyRepo, equipment, presentation, progression)
+    }
+
+    /**
+     * リスナーを実ディスパッチ経路で登録する。rebuildWith 後の再登録で旧 service を
+     * 掴んだままにしないため、登録済みハンドラを剥がしてから現在の依存で再生成する。
+     */
+    fun registerListeners() {
+        HandlerList.unregisterAll(plugin)
+        server.pluginManager.registerEvents(ArenaListener(service, lookup, messages), plugin)
+        server.pluginManager.registerEvents(ArenaSignListener(service, admin, messages), plugin)
+    }
+
+    /** 登録済みリスナーの実ディスパッチ経路でイベントを発火する。 */
+    fun fire(event: Event) {
+        server.pluginManager.callEvent(event)
     }
 
     fun world(name: String = "world"): WorldMock =

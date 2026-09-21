@@ -32,6 +32,7 @@ class ArenaListenerRestrictionTest {
     @BeforeEach
     fun setup() {
         env = TestEnv(folder)
+        env.registerListeners()
     }
 
     @AfterEach
@@ -47,14 +48,14 @@ class ArenaListenerRestrictionTest {
         val block = env.plainBlock()
 
         val event = breakEvent(p1, block)
-        env.listener.onBreak(event)
+        env.fire(event)
         assertEquals(false, event.isCancelled)
 
         val p2 = env.player("Bob")
         env.join(p2, arena)
         env.tick(6)
         val ingame = breakEvent(p1, block)
-        env.listener.onBreak(ingame)
+        env.fire(ingame)
         assertEquals(true, ingame.isCancelled)
     }
 
@@ -64,18 +65,18 @@ class ArenaListenerRestrictionTest {
         val p1 = env.player("Alice")
 
         val free = PlayerCommandPreprocessEvent(p1, "/spawn")
-        env.listener.onCommand(free)
+        env.fire(free)
         assertEquals(false, free.isCancelled)
 
         env.join(p1, arena)
         val onemore = PlayerCommandPreprocessEvent(p1, "/spawn")
-        env.listener.onCommand(onemore)
+        env.fire(onemore)
         assertEquals(false, onemore.isCancelled)
 
         val p2 = env.player("Bob")
         env.join(p2, arena)
         val countdown = PlayerCommandPreprocessEvent(p1, "/spawn")
-        env.listener.onCommand(countdown)
+        env.fire(countdown)
         assertEquals(true, countdown.isCancelled)
         assertTrue(p1.drainMessages().any { it.contains("コマンドは使用できません！") })
     }
@@ -86,28 +87,28 @@ class ArenaListenerRestrictionTest {
         val p1 = env.player("Alice")
         env.join(p1, arena)
         val onemore = env.dropEvent(p1)
-        env.listener.onDrop(onemore)
+        env.fire(onemore)
         assertFalse(onemore.isCancelled)
 
         val p2 = env.player("Bob")
         env.join(p2, arena)
         val countdown = env.dropEvent(p1)
-        env.listener.onDrop(countdown)
+        env.fire(countdown)
         assertFalse(countdown.isCancelled)
 
         env.tick(6)
         val ingame = env.dropEvent(p1)
-        env.listener.onDrop(ingame)
+        env.fire(ingame)
         assertTrue(ingame.isCancelled)
 
         env.service.defeat(p2.uuid, DefeatCause.FALL)
         val roundCountdown = env.dropEvent(p1)
-        env.listener.onDrop(roundCountdown)
+        env.fire(roundCountdown)
         assertTrue(roundCountdown.isCancelled)
 
         val outsider = env.player("Carol")
         val free = env.dropEvent(outsider)
-        env.listener.onDrop(free)
+        env.fire(free)
         assertFalse(free.isCancelled)
     }
 
@@ -117,28 +118,28 @@ class ArenaListenerRestrictionTest {
         val p1 = env.player("Alice")
         env.join(p1, arena)
         val onemore = env.placeEvent(p1)
-        env.listener.onPlace(onemore)
+        env.fire(onemore)
         assertFalse(onemore.isCancelled)
 
         val p2 = env.player("Bob")
         env.join(p2, arena)
         val countdown = env.placeEvent(p1)
-        env.listener.onPlace(countdown)
+        env.fire(countdown)
         assertFalse(countdown.isCancelled)
 
         env.tick(6)
         val ingame = env.placeEvent(p1)
-        env.listener.onPlace(ingame)
+        env.fire(ingame)
         assertTrue(ingame.isCancelled)
 
         // 着火は許可する
         val flint = env.placeEvent(p1, held = env.item(Material.FLINT_AND_STEEL))
-        env.listener.onPlace(flint)
+        env.fire(flint)
         assertFalse(flint.isCancelled)
 
         env.service.defeat(p2.uuid, DefeatCause.FALL)
         val roundCountdown = env.placeEvent(p1)
-        env.listener.onPlace(roundCountdown)
+        env.fire(roundCountdown)
         assertTrue(roundCountdown.isCancelled)
     }
 
@@ -151,15 +152,15 @@ class ArenaListenerRestrictionTest {
 
         fun assertState(damageCancelled: Boolean, breakCancelled: Boolean, commandBlocked: Boolean) {
             val damage = damageEvent(p1)
-            env.listener.onDamage(damage)
+            env.fire(damage)
             assertEquals(damageCancelled, damage.isCancelled)
 
             val breaking = breakEvent(p1, block)
-            env.listener.onBreak(breaking)
+            env.fire(breaking)
             assertEquals(breakCancelled, breaking.isCancelled)
 
             val command = PlayerCommandPreprocessEvent(p1, "/spawn")
-            env.listener.onCommand(command)
+            env.fire(command)
             assertEquals(commandBlocked, command.isCancelled)
         }
 

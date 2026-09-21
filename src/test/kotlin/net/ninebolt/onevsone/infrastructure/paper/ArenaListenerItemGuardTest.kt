@@ -59,6 +59,7 @@ class ArenaListenerItemGuardTest {
     @BeforeEach
     fun setup() {
         env = TestEnv(folder)
+        env.registerListeners()
     }
 
     @AfterEach
@@ -72,7 +73,7 @@ class ArenaListenerItemGuardTest {
         val chest = env.blockOf(Material.CHEST)
 
         val ingame = interact(p1, chest)
-        env.listener.onInteract(ingame)
+        env.fire(ingame)
         assertEquals(Event.Result.DENY, ingame.useInteractedBlock())
         assertEquals(Event.Result.DENY, ingame.useItemInHand())
     }
@@ -85,7 +86,7 @@ class ArenaListenerItemGuardTest {
         val chest = env.blockOf(Material.CHEST)
 
         val event = interact(p1, chest)
-        env.listener.onInteract(event)
+        env.fire(event)
         assertNotEquals(Event.Result.DENY, event.useInteractedBlock())
     }
 
@@ -101,7 +102,7 @@ class ArenaListenerItemGuardTest {
             Material.POTTED_OAK_SAPLING
         ).forEachIndexed { i, type ->
             val event = interact(p1, env.blockOf(type, x = 8, z = 20 + i))
-            env.listener.onInteract(event)
+            env.fire(event)
             assertEquals(Event.Result.DENY, event.useInteractedBlock(), "type=$type")
         }
     }
@@ -110,12 +111,12 @@ class ArenaListenerItemGuardTest {
     fun `plain block interact and non participant unaffected`() {
         val (p1, _) = env.twoPlayerIngame()
         val plain = interact(p1, env.plainBlock())
-        env.listener.onInteract(plain)
+        env.fire(plain)
         assertNotEquals(Event.Result.DENY, plain.useInteractedBlock())
 
         val outsider = env.player("Outsider")
         val foreign = interact(outsider, env.blockOf(Material.CHEST))
-        env.listener.onInteract(foreign)
+        env.fire(foreign)
         assertNotEquals(Event.Result.DENY, foreign.useInteractedBlock())
     }
 
@@ -123,7 +124,7 @@ class ArenaListenerItemGuardTest {
     fun `spawn egg use denied while restricted`() {
         val (p1, _) = env.twoPlayerIngame()
         val egg = interact(p1, env.plainBlock(), item = env.item(Material.ZOMBIE_SPAWN_EGG))
-        env.listener.onInteract(egg)
+        env.fire(egg)
         assertEquals(Event.Result.DENY, egg.useItemInHand())
     }
 
@@ -135,7 +136,7 @@ class ArenaListenerItemGuardTest {
             p1.openInventory, InventoryType.SlotType.OUTSIDE, 0,
             ClickType.LEFT, InventoryAction.PICKUP_ALL
         )
-        env.listener.onInventoryClick(own)
+        env.fire(own)
         assertFalse(own.isCancelled)
 
         val chestView = p1.openInventory(env.server.createInventory(null, InventoryType.CHEST))!!
@@ -143,14 +144,14 @@ class ArenaListenerItemGuardTest {
             chestView, InventoryType.SlotType.CONTAINER, 0,
             ClickType.LEFT, InventoryAction.PICKUP_ALL
         )
-        env.listener.onInventoryClick(foreign)
+        env.fire(foreign)
         assertTrue(foreign.isCancelled)
 
         val drag = InventoryDragEvent(
             chestView, null, env.item(Material.STONE), false,
             mapOf(0 to env.item(Material.STONE))
         )
-        env.listener.onInventoryDrag(drag)
+        env.fire(drag)
         assertTrue(drag.isCancelled)
     }
 
@@ -165,12 +166,12 @@ class ArenaListenerItemGuardTest {
         ).forEach { type ->
             val entity = env.spawn(type)
             val event = PlayerInteractEntityEvent(p1, entity)
-            env.listener.onInteractEntity(event)
+            env.fire(event)
             assertTrue(event.isCancelled, "type=$type")
         }
 
         val pig = PlayerInteractEntityEvent(p1, env.spawn(EntityType.PIG))
-        env.listener.onInteractEntity(pig)
+        env.fire(pig)
         assertFalse(pig.isCancelled)
     }
 
@@ -182,7 +183,7 @@ class ArenaListenerItemGuardTest {
             p1, stand, env.item(Material.IRON_CHESTPLATE), ItemStack.empty(),
             EquipmentSlot.HAND, EquipmentSlot.HAND
         )
-        env.listener.onArmorStandManipulate(event)
+        env.fire(event)
         assertTrue(event.isCancelled)
     }
 
@@ -192,35 +193,35 @@ class ArenaListenerItemGuardTest {
         val block = env.plainBlock()
 
         val place = EntityPlaceEvent(env.spawn(EntityType.OAK_BOAT), p1, block, BlockFace.UP, EquipmentSlot.HAND)
-        env.listener.onEntityPlace(place)
+        env.fire(place)
         assertTrue(place.isCancelled)
 
         val hanging = HangingPlaceEvent(
             env.spawn(EntityType.ITEM_FRAME) as ItemFrame, p1, block,
             BlockFace.EAST, EquipmentSlot.HAND, env.item(Material.ITEM_FRAME)
         )
-        env.listener.onHangingPlace(hanging)
+        env.fire(hanging)
         assertTrue(hanging.isCancelled)
 
         val bucketEmpty = PlayerBucketEmptyEvent(
             p1, block, block, BlockFace.UP, Material.WATER_BUCKET,
             env.item(Material.WATER_BUCKET), EquipmentSlot.HAND
         )
-        env.listener.onBucketEmpty(bucketEmpty)
+        env.fire(bucketEmpty)
         assertTrue(bucketEmpty.isCancelled)
 
         val bucketFill = PlayerBucketFillEvent(
             p1, block, block, BlockFace.UP, Material.BUCKET,
             env.item(Material.BUCKET), EquipmentSlot.HAND
         )
-        env.listener.onBucketFill(bucketFill)
+        env.fire(bucketFill)
         assertTrue(bucketFill.isCancelled)
 
         val bucketEntity = PlayerBucketEntityEvent(
             p1, env.spawn(EntityType.COD), env.item(Material.WATER_BUCKET),
             env.item(Material.COD_BUCKET), EquipmentSlot.HAND
         )
-        env.listener.onBucketEntity(bucketEntity)
+        env.fire(bucketEntity)
         assertTrue(bucketEntity.isCancelled)
     }
 
@@ -230,27 +231,27 @@ class ArenaListenerItemGuardTest {
         val item = env.itemEntity()
 
         val pickup = EntityPickupItemEvent(p1, item, 0)
-        env.listener.onEntityPickupItem(pickup)
+        env.fire(pickup)
         assertTrue(pickup.isCancelled)
 
         val attempt = PlayerAttemptPickupItemEvent(p1, env.itemEntity(), 0)
-        env.listener.onAttemptPickupItem(attempt)
+        env.fire(attempt)
         assertTrue(attempt.isCancelled)
 
         val arrowPickup = PlayerPickupArrowEvent(
             p1, env.itemEntity(), env.spawn(EntityType.ARROW) as AbstractArrow
         )
-        env.listener.onPickupArrow(arrowPickup)
+        env.fire(arrowPickup)
         assertTrue(arrowPickup.isCancelled)
 
         val harvest = PlayerHarvestBlockEvent(
             p1, env.plainBlock(), EquipmentSlot.HAND, mutableListOf(env.item(Material.SWEET_BERRIES))
         )
-        env.listener.onHarvest(harvest)
+        env.fire(harvest)
         assertTrue(harvest.isCancelled)
 
         val dispense = BlockDispenseArmorEvent(env.plainBlock(), env.item(Material.IRON_HELMET), p1)
-        env.listener.onDispenseArmor(dispense)
+        env.fire(dispense)
         assertTrue(dispense.isCancelled)
     }
 
@@ -260,7 +261,7 @@ class ArenaListenerItemGuardTest {
         val p1 = env.player("Alice")
         env.join(p1, arena)
         val pickup = EntityPickupItemEvent(p1, env.itemEntity(), 0)
-        env.listener.onEntityPickupItem(pickup)
+        env.fire(pickup)
         assertFalse(pickup.isCancelled)
     }
 
@@ -269,11 +270,11 @@ class ArenaListenerItemGuardTest {
         val (p1, _) = env.twoPlayerIngame()
 
         val fertilize = BlockFertilizeEvent(env.plainBlock(), p1, listOf(env.plainBlock().state))
-        env.listener.onFertilize(fertilize)
+        env.fire(fertilize)
         assertTrue(fertilize.isCancelled)
 
         val sign = SignChangeEvent(env.blockOf(Material.OAK_SIGN), p1, listOf(Component.text("x")), Side.FRONT)
-        env.listener.onSignChange(sign)
+        env.fire(sign)
         assertTrue(sign.isCancelled)
     }
 }

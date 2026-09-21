@@ -41,6 +41,7 @@ class ArenaListenerSignTest {
     @BeforeEach
     fun setup() {
         env = TestEnv(folder)
+        env.registerListeners()
     }
 
     @AfterEach
@@ -55,11 +56,11 @@ class ArenaListenerSignTest {
         val p1 = env.player("Alice")
 
         val unregistered = interact(p1, env.signBlock(9, 64, 9))
-        env.signListener.onInteract(unregistered)
+        env.fire(unregistered)
         assertNull(env.service.arenaIdOf(p1.uuid))
 
         val registered = interact(p1, env.signBlock(3, 64, 3))
-        env.signListener.onInteract(registered)
+        env.fire(registered)
         assertEquals(arena, env.service.arenaIdOf(p1.uuid))
         // バニラの看板編集画面を開かせない
         assertEquals(Event.Result.DENY, registered.useInteractedBlock())
@@ -68,7 +69,7 @@ class ArenaListenerSignTest {
 
         val bob = env.player("Bob")
         val offhand = interact(bob, env.signBlock(3, 64, 3), EquipmentSlot.OFF_HAND)
-        env.signListener.onInteract(offhand)
+        env.fire(offhand)
         assertNull(env.service.arenaIdOf(bob.uuid))
     }
 
@@ -83,7 +84,7 @@ class ArenaListenerSignTest {
         env.join(p2, arena)
 
         val p3 = env.player("Carol")
-        env.signListener.onInteract(interact(p3, block))
+        env.fire(interact(p3, block))
         assertTrue(p3.drainMessages().any { it.contains("このアリーナは現在ゲーム中です") })
     }
 
@@ -93,10 +94,10 @@ class ArenaListenerSignTest {
         env.newArena()
         val p1 = env.player("Alice")
 
-        env.signListener.onInteract(interact(p1, env.plainBlock(3, 64, 3)))
+        env.fire(interact(p1, env.plainBlock(3, 64, 3)))
 
         val leftClick = interact(p1, env.signBlock(3, 64, 3), action = Action.LEFT_CLICK_BLOCK)
-        env.signListener.onInteract(leftClick)
+        env.fire(leftClick)
         assertNull(env.service.arenaIdOf(p1.uuid))
     }
 
@@ -107,16 +108,16 @@ class ArenaListenerSignTest {
         val p1 = env.player("Alice")
 
         val registered = breakEvent(p1, env.signBlock(3, 64, 3))
-        env.signListener.onBreak(registered)
+        env.fire(registered)
         assertTrue(registered.isCancelled)
 
         val unregistered = breakEvent(p1, env.signBlock(9, 64, 9))
-        env.signListener.onBreak(unregistered)
+        env.fire(unregistered)
         assertFalse(unregistered.isCancelled)
 
         env.admin.clearSign("arena1")
         val freed = breakEvent(p1, env.signBlock(3, 64, 3))
-        env.signListener.onBreak(freed)
+        env.fire(freed)
         assertFalse(freed.isCancelled)
     }
 
@@ -130,11 +131,11 @@ class ArenaListenerSignTest {
         val explode = EntityExplodeEvent(
             env.nonPlayer(), sign.location, mutableListOf(sign, plain), 0f, ExplosionResult.DESTROY
         )
-        env.signListener.onEntityExplode(explode)
+        env.fire(explode)
         assertEquals(listOf(plain), explode.blockList())
 
         val blockExplode = BlockExplodeEvent(sign, sign.state, mutableListOf(sign, plain), 0f, ExplosionResult.DESTROY)
-        env.signListener.onBlockExplode(blockExplode)
+        env.fire(blockExplode)
         assertEquals(listOf(plain), blockExplode.blockList())
     }
 
@@ -145,7 +146,7 @@ class ArenaListenerSignTest {
         val p1 = env.player("Alice")
 
         val event = breakEvent(p1, env.plainBlock(3, 64, 3))
-        env.signListener.onBreak(event)
+        env.fire(event)
         assertFalse(event.isCancelled)
     }
 
@@ -159,7 +160,7 @@ class ArenaListenerSignTest {
         // 再参加時に PlayerJoinEvent 経由で復元(空バックアップ→空インベントリ)
         p2.inventory.setItem(0, null)
         p2.reconnect()
-        env.listener.onJoin(PlayerJoinEvent(p2, Component.empty()))
+        env.fire(PlayerJoinEvent(p2, Component.empty()))
         assertNull(p2.inventory.contents[0])
     }
 }

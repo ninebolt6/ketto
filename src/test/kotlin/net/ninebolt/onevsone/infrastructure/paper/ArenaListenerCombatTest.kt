@@ -15,7 +15,6 @@ import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.entity.EntityType
-import org.bukkit.event.player.PlayerTeleportEvent
 import org.mockbukkit.mockbukkit.world.WorldMock
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -37,6 +36,7 @@ class ArenaListenerCombatTest {
     @BeforeEach
     fun setup() {
         env = TestEnv(folder)
+        env.registerListeners()
     }
 
     @AfterEach
@@ -49,7 +49,7 @@ class ArenaListenerCombatTest {
         val (p1, p2) = env.twoPlayerIngame()
         p2.health = 0.0
         val event = env.deathEvent(p2, droppedExp = 30)
-        env.listener.onDeath(event)
+        env.fire(event)
         assertTrue(event.keepInventory)
         assertTrue(event.drops.isEmpty())
         // 経験値はドロップさせず、リスポーン後もレベル・経験値を保持する
@@ -63,7 +63,7 @@ class ArenaListenerCombatTest {
     fun `non participant death ignored`() {
         val outsider = env.player("Outsider")
         val event = env.deathEvent(outsider, droppedExp = 30)
-        env.listener.onDeath(event)
+        env.fire(event)
         assertFalse(event.keepInventory)
         assertEquals(30, event.droppedExp)
         assertFalse(event.keepLevel)
@@ -72,7 +72,7 @@ class ArenaListenerCombatTest {
     @Test
     fun `non player damage ignored`() {
         val event = damageEvent(env.nonPlayer())
-        env.listener.onDamage(event)
+        env.fire(event)
         assertFalse(event.isCancelled)
     }
 
@@ -80,7 +80,7 @@ class ArenaListenerCombatTest {
     fun `damage not cancelled in INGAME`() {
         val (p1, _) = env.twoPlayerIngame()
         val event = damageEvent(p1)
-        env.listener.onDamage(event)
+        env.fire(event)
         assertFalse(event.isCancelled)
     }
 
@@ -90,7 +90,7 @@ class ArenaListenerCombatTest {
         env.service.defeat(p2.uuid, DefeatCause.FALL)
         assertEquals(ArenaState.ROUNDCOUNTDOWN, env.state())
         val event = damageEvent(p1)
-        env.listener.onDamage(event)
+        env.fire(event)
         assertTrue(event.isCancelled)
     }
 
@@ -98,7 +98,7 @@ class ArenaListenerCombatTest {
     fun `opponent entity damage allowed in INGAME`() {
         val (p1, p2) = env.twoPlayerIngame()
         val event = entityDamageEvent(p1, p2)
-        env.listener.onDamage(event)
+        env.fire(event)
         assertFalse(event.isCancelled)
     }
 
@@ -108,11 +108,11 @@ class ArenaListenerCombatTest {
         val outsider = env.player("Outsider")
 
         val sniped = entityDamageEvent(outsider, p1)
-        env.listener.onDamage(sniped)
+        env.fire(sniped)
         assertTrue(sniped.isCancelled)
 
         val mob = entityDamageEvent(env.nonPlayer(), p1)
-        env.listener.onDamage(mob)
+        env.fire(mob)
         assertTrue(mob.isCancelled)
     }
 
@@ -122,11 +122,11 @@ class ArenaListenerCombatTest {
         val arrow = env.spawn(EntityType.ARROW)
         // 直接の damager は矢でも、causingEntity が対戦相手なら許可
         val allowed = entityDamageEvent(arrow, p1, causingEntity = p2)
-        env.listener.onDamage(allowed)
+        env.fire(allowed)
         assertFalse(allowed.isCancelled)
 
         val smuggled = entityDamageEvent(arrow, p1, causingEntity = env.player("Outsider"))
-        env.listener.onDamage(smuggled)
+        env.fire(smuggled)
         assertTrue(smuggled.isCancelled)
     }
 
@@ -136,11 +136,11 @@ class ArenaListenerCombatTest {
         val outsider = env.player("Outsider")
 
         val hitPlayer = entityDamageEvent(p1, outsider)
-        env.listener.onDamage(hitPlayer)
+        env.fire(hitPlayer)
         assertTrue(hitPlayer.isCancelled)
 
         val hitMob = entityDamageEvent(p1, env.nonPlayer())
-        env.listener.onDamage(hitMob)
+        env.fire(hitMob)
         assertTrue(hitMob.isCancelled)
     }
 
@@ -149,7 +149,7 @@ class ArenaListenerCombatTest {
         val (p1, p2) = env.twoPlayerIngame()
         env.service.defeat(p2.uuid, DefeatCause.FALL)
         val event = entityDamageEvent(p2, p1)
-        env.listener.onDamage(event)
+        env.fire(event)
         assertTrue(event.isCancelled)
     }
 
@@ -159,7 +159,7 @@ class ArenaListenerCombatTest {
         val a = env.player("OutsiderA")
         val b = env.player("OutsiderB")
         val event = entityDamageEvent(a, b)
-        env.listener.onDamage(event)
+        env.fire(event)
         assertFalse(event.isCancelled)
     }
 
@@ -167,7 +167,7 @@ class ArenaListenerCombatTest {
     fun `quit of outsider does not touch inventory`() {
         val outsider = env.player("Outsider")
         outsider.inventory.setItem(0, env.item(Material.STONE))
-        env.listener.onQuit(quitEvent(outsider))
+        env.fire(quitEvent(outsider))
         assertEquals(Material.STONE, outsider.inventory.contents[0]?.type)
     }
 
@@ -176,7 +176,7 @@ class ArenaListenerCombatTest {
         val (p1, p2) = env.twoPlayerIngame()
         p1.inventory.setItem(0, null)
         env.removePlayer(p1)
-        env.listener.onQuit(quitEvent(p1))
+        env.fire(quitEvent(p1))
         assertEquals(ArenaState.WAITING, env.state())
         assertEquals(1, env.statsRepo.find(p2.uuid)!!.wins)
     }
@@ -190,7 +190,7 @@ class ArenaListenerCombatTest {
 
         val w = env.world()
         val event = moveEvent(p1, Location(w, 0.0, -1.0, 0.0), Location(w, 0.0, -5.0, 0.0))
-        env.listener.onMove(event)
+        env.fire(event)
         assertEquals(ArenaState.ONEMORE, env.state())
 
         val p2 = env.player("Bob")
@@ -198,7 +198,7 @@ class ArenaListenerCombatTest {
         env.tick(6)
 
         val fall = moveEvent(p1, Location(w, 0.0, 1.0, 0.0), Location(w, 0.0, -1.0, 0.0))
-        env.listener.onMove(fall)
+        env.fire(fall)
         assertEquals(ArenaState.ROUNDCOUNTDOWN, env.state())
         assertEquals(1, env.service.matchOf("arena1")!!.winsOf(p2.uuid))
     }
@@ -211,24 +211,13 @@ class ArenaListenerCombatTest {
         val w = env.world()
         val from = Location(w, 0.0, 64.0, 0.0)
         val horizontal = moveEvent(p1, from, Location(w, 1.0, 64.0, 0.0))
-        env.listener.onMove(horizontal)
+        env.fire(horizontal)
         assertEquals(from, horizontal.to)
 
         val verticalTo = Location(w, 0.0, 65.0, 0.0)
         val vertical = moveEvent(p1, Location(w, 0.0, 64.0, 0.0), verticalTo)
-        env.listener.onMove(vertical)
+        env.fire(vertical)
         assertEquals(verticalTo, vertical.to)
-    }
-
-    @Test
-    fun `teleport events are excluded from move handling`() {
-        val (p1, p2) = env.twoPlayerIngame()
-        env.service.defeat(p2.uuid, DefeatCause.FALL)
-        val w = env.world()
-        val to = Location(w, 5.0, -3.0, 0.0)
-        val event = PlayerTeleportEvent(p1, Location(w, 0.0, 64.0, 0.0), to)
-        env.listener.onMove(event)
-        assertEquals(to, event.to)
     }
 
     @Test
@@ -240,11 +229,11 @@ class ArenaListenerCombatTest {
         val (p1, p2) = env.twoPlayerIngame()
 
         val shallow = moveEvent(p1, Location(deep, 0.0, -50.0, 0.0), Location(deep, 0.0, -55.0, 0.0))
-        env.listener.onMove(shallow)
+        env.fire(shallow)
         assertEquals(ArenaState.INGAME, env.state())
 
         val intoVoid = moveEvent(p1, Location(deep, 0.0, -60.0, 0.0), Location(deep, 0.0, -65.0, 0.0))
-        env.listener.onMove(intoVoid)
+        env.fire(intoVoid)
         assertEquals(ArenaState.ROUNDCOUNTDOWN, env.state())
         assertEquals(1, env.service.matchOf("arena1")!!.winsOf(p2.uuid))
     }
@@ -257,13 +246,13 @@ class ArenaListenerCombatTest {
 
         env.runOneShots()
         val w = env.world()
-        env.listener.onMove(moveEvent(p2, Location(w, 0.0, 1.0, 0.0), Location(w, 0.0, -1.0, 0.0)))
+        env.fire(moveEvent(p2, Location(w, 0.0, 1.0, 0.0), Location(w, 0.0, -1.0, 0.0)))
         assertEquals(2, env.service.matchOf("arena1")!!.winsOf(p1.uuid))
         // キャンセル済みの旧タイマーは実スケジューラ上は二度と発火せず、新タイマーだけが進行する
         env.tick(8)
         assertEquals(ArenaState.INGAME, env.state())
 
-        env.listener.onMove(moveEvent(p2, Location(w, 0.0, 1.0, 0.0), Location(w, 0.0, -1.0, 0.0)))
+        env.fire(moveEvent(p2, Location(w, 0.0, 1.0, 0.0), Location(w, 0.0, -1.0, 0.0)))
         assertEquals(ArenaState.WAITING, env.state())
     }
 }

@@ -33,6 +33,7 @@ class ArenaListenerTeleportTest {
     @BeforeEach
     fun setup() {
         env = TestEnv(folder)
+        env.registerListeners()
     }
 
     @AfterEach
@@ -50,7 +51,7 @@ class ArenaListenerTeleportTest {
         val (p1, _) = env.twoPlayerIngame()
 
         val pearl = teleport(p1, PlayerTeleportEvent.TeleportCause.ENDER_PEARL)
-        env.listener.onTeleport(pearl)
+        env.fire(pearl)
         assertFalse(pearl.isCancelled)
 
         listOf(
@@ -61,7 +62,7 @@ class ArenaListenerTeleportTest {
             PlayerTeleportEvent.TeleportCause.NETHER_PORTAL
         ).forEach { cause ->
             val event = teleport(p1, cause)
-            env.listener.onTeleport(event)
+            env.fire(event)
             assertTrue(event.isCancelled, "cause=$cause")
         }
     }
@@ -74,7 +75,7 @@ class ArenaListenerTeleportTest {
             p1, Location(w, 0.0, 64.0, 0.0), Location(w, 10.0, 64.0, 10.0),
             PlayerTeleportEvent.TeleportCause.NETHER_PORTAL
         )
-        env.listener.onPortal(portal)
+        env.fire(portal)
         assertTrue(portal.isCancelled)
     }
 
@@ -85,12 +86,12 @@ class ArenaListenerTeleportTest {
         assertEquals(ArenaState.ROUNDCOUNTDOWN, env.state())
 
         val pearl = teleport(p1, PlayerTeleportEvent.TeleportCause.ENDER_PEARL)
-        env.listener.onTeleport(pearl)
+        env.fire(pearl)
         assertTrue(pearl.isCancelled)
 
         val plugin = teleport(p1, PlayerTeleportEvent.TeleportCause.PLUGIN)
         env.lookup.scopePluginTeleport(p1.uuid) {
-            env.listener.onTeleport(plugin)
+            env.fire(plugin)
         }
         assertFalse(plugin.isCancelled)
     }
@@ -102,18 +103,16 @@ class ArenaListenerTeleportTest {
         env.join(p1, arena)
 
         val onemore = teleport(p1, PlayerTeleportEvent.TeleportCause.COMMAND)
-        env.listener.onTeleport(onemore)
+        env.fire(onemore)
         assertFalse(onemore.isCancelled)
 
         val outsider = teleport(env.player("Outsider"), PlayerTeleportEvent.TeleportCause.NETHER_PORTAL)
-        env.listener.onTeleport(outsider)
+        env.fire(outsider)
         assertFalse(outsider.isCancelled)
     }
 
     @Test
     fun `plugin teleports pass marker and external teleports are blocked end to end`() {
-        // 実スケジューラの開始移送・ハンドル移送もイベント経路で通るよう登録する
-        env.server.pluginManager.registerEvents(env.listener, env.plugin)
         val arena = env.newArena()
         val p1 = env.player("Alice")
         val p2 = env.player("Bob")
@@ -150,13 +149,13 @@ class ArenaListenerTeleportTest {
         val boat = env.world().spawnEntity(Location(env.world(), 0.0, 64.0, 0.0), EntityType.OAK_BOAT) as Boat
 
         val ingame = VehicleEnterEvent(boat, p1)
-        env.listener.onVehicleEnter(ingame)
+        env.fire(ingame)
         assertFalse(ingame.isCancelled)
 
         env.service.defeat(p2.uuid, DefeatCause.FALL)
         assertEquals(ArenaState.ROUNDCOUNTDOWN, env.state())
         val frozen = VehicleEnterEvent(boat, p1)
-        env.listener.onVehicleEnter(frozen)
+        env.fire(frozen)
         assertTrue(frozen.isCancelled)
     }
 }

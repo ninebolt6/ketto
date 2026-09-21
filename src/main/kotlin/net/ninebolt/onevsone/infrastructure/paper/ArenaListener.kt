@@ -125,7 +125,7 @@ class ArenaListener(
 
     @EventHandler
     fun onMove(event: PlayerMoveEvent) {
-        if (event is PlayerTeleportEvent) return
+        // PlayerTeleportEvent は別 HandlerList を持つためここには届かない
         val match = service.matchOf(event.player.uniqueId.toKotlinUuid()) ?: return
         if (ParticipantRestrictions.forState(match.state).horizontalMoveFrozen) {
             val from = event.from
