@@ -32,10 +32,12 @@ import org.bukkit.event.player.PlayerBucketEmptyEvent
 import org.bukkit.event.player.PlayerBucketEntityEvent
 import org.bukkit.event.player.PlayerBucketFillEvent
 import org.bukkit.event.player.PlayerHarvestBlockEvent
+import org.bukkit.event.player.PlayerInteractAtEntityEvent
 import org.bukkit.event.player.PlayerInteractEntityEvent
 import org.bukkit.event.player.PlayerPickupArrowEvent
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
+import org.bukkit.util.Vector
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -163,6 +165,19 @@ class ArenaListenerItemGuardTest {
         val pig = PlayerInteractEntityEvent(p1, env.spawn(EntityType.PIG))
         env.fire(pig)
         assertFalse(pig.isCancelled)
+    }
+
+    @Test
+    fun `precise entity interact needs own handler`() {
+        // PlayerInteractAtEntityEvent は独自 HandlerList を持つため、
+        // PlayerInteractEntityEvent への登録だけでは発火しない
+        val (p1, _) = env.twoPlayerIngame()
+        val frame = env.spawn(EntityType.ITEM_FRAME)
+        val event = PlayerInteractAtEntityEvent(
+            p1, frame, Vector(0.5, 1.0, 0.5), EquipmentSlot.HAND
+        )
+        env.fire(event)
+        assertTrue(event.isCancelled)
     }
 
     @Test
