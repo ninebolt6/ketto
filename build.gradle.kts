@@ -34,8 +34,11 @@ kotlin {
     jvmToolchain(21)
     compilerOptions {
         allWarningsAsErrors = true
-        freeCompilerArgs.add("-Wextra")
-        freeCompilerArgs.add("-Xconsistent-data-class-copy-visibility")
+        freeCompilerArgs.addAll(
+            "-Wextra",
+            "-Xjspecify-annotations=strict",
+            "-Xconsistent-data-class-copy-visibility",
+        )
     }
 }
 
