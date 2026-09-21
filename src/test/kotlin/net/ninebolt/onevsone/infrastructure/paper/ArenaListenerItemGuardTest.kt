@@ -48,6 +48,7 @@ import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
 /** キット品の外界移動・直接獲得の遮断。実イベントの isCancelled / useInteractedBlock を見る。 */
+@Suppress("DEPRECATION")
 class ArenaListenerItemGuardTest {
 
     @TempDir
@@ -131,7 +132,7 @@ class ArenaListenerItemGuardTest {
         val (p1, _) = env.twoPlayerIngame()
 
         val own = InventoryClickEvent(
-            p1.openInventory!!, InventoryType.SlotType.OUTSIDE, 0,
+            p1.openInventory, InventoryType.SlotType.OUTSIDE, 0,
             ClickType.LEFT, InventoryAction.PICKUP_ALL
         )
         env.listener.onInventoryClick(own)
