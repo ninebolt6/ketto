@@ -123,77 +123,89 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     val playerPort = PaperPlayerAdapter(lookup, server, plugin, failures)
     val schedulerPort = PaperScheduler(plugin)
 
-    var store = YamlStore(folder, Logger.getLogger("1vs1-test"))
-        private set
-    var arenaRepo: YamlArenaRepository = YamlArenaRepository(store)
-        private set
-    var lobbyRepo: YamlLobbyRepository = YamlLobbyRepository(store)
-        private set
-    var signRepo: YamlSignRepository = YamlSignRepository(store)
-        private set
-    var matchStateRepo: MatchStateRepository = YamlMatchStateRepository(store)
-        private set
-    var statsRepo: PlayerStatsRepository = YamlPlayerStatsRepository(store)
-        private set
-    var backupStore: YamlBackupStore = YamlBackupStore(store)
-        private set
-    var kitStore: YamlKitStore = YamlKitStore(store)
-        private set
-    var equipment = PaperEquipmentAdapter(backupStore, kitStore, lookup)
-        private set
-    var presentation = PaperMatchPresentation(server, messages, signRepo, failures)
-        private set
-    var registry = ArenaRegistry(requiredWins)
-        private set
-    var recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepo, presentation, failures, server.onlineMode)
-        private set
-    var progression = buildProgression()
-        private set
-    var service = buildService()
-        private set
-    var admin = ArenaAdministrationService(registry, arenaRepo, signRepo, lobbyRepo, equipment, presentation, progression)
-        private set
-    // These are eager vars reassigned on rebuild so they always reference the current dependencies.
-    // command keeps its instance within an environment because it holds the stats rate-limit state
-    var signListener = ArenaSignListener(service, admin, messages)
-        private set
-    var command = OneVsOneCommand(service, admin, playerPort, failures, messages)
-        private set
-
-    private fun buildProgression() = MatchProgressionService(
-        registry, MatchStateSync(matchStateRepo, presentation), statsRepo,
-        equipment, equipment, playerPort, schedulerPort, presentation, recovery, failures
+    /** Dependencies torn down and rebuilt together by rebuildWith. Access always resolves the current generation. */
+    private class Deps(
+        val store: YamlStore,
+        val backupStore: YamlBackupStore,
+        val kitStore: YamlKitStore,
+        val arenaRepo: YamlArenaRepository,
+        val lobbyRepo: YamlLobbyRepository,
+        val signRepo: YamlSignRepository,
+        val matchStateRepo: MatchStateRepository,
+        val statsRepo: PlayerStatsRepository,
+        val equipment: PaperEquipmentAdapter,
+        val presentation: PaperMatchPresentation,
+        val registry: ArenaRegistry,
+        val recovery: PlayerRecoveryService,
+        val progression: MatchProgressionService,
+        val service: ArenaApplicationService,
+        val admin: ArenaAdministrationService,
+        val signListener: ArenaSignListener,
+        val command: OneVsOneCommand
     )
 
-    private fun buildService() = ArenaApplicationService(
-        registry, arenaRepo, matchStateRepo, statsRepo, playerPort,
-        presentation, recovery, failures, progression, MatchStateSync(matchStateRepo, presentation)
-    )
+    private var deps = run {
+        val store = YamlStore(folder, Logger.getLogger("1vs1-test"))
+        makeDeps(store, YamlBackupStore(store), YamlMatchStateRepository(store), YamlPlayerStatsRepository(store))
+    }
+
+    val store get() = deps.store
+    val backupStore get() = deps.backupStore
+    val kitStore get() = deps.kitStore
+    val arenaRepo get() = deps.arenaRepo
+    val lobbyRepo get() = deps.lobbyRepo
+    val signRepo get() = deps.signRepo
+    val matchStateRepo get() = deps.matchStateRepo
+    val statsRepo get() = deps.statsRepo
+    val equipment get() = deps.equipment
+    val presentation get() = deps.presentation
+    val registry get() = deps.registry
+    val recovery get() = deps.recovery
+    val progression get() = deps.progression
+    val service get() = deps.service
+    val admin get() = deps.admin
+    val signListener get() = deps.signListener
+    val command get() = deps.command
+
+    private fun makeDeps(
+        store: YamlStore,
+        backupStore: YamlBackupStore,
+        matchStateRepo: MatchStateRepository,
+        statsRepo: PlayerStatsRepository
+    ): Deps {
+        val kitStore = YamlKitStore(store)
+        val arenaRepo = YamlArenaRepository(store)
+        val lobbyRepo = YamlLobbyRepository(store)
+        val signRepo = YamlSignRepository(store)
+        val equipment = PaperEquipmentAdapter(backupStore, kitStore, lookup)
+        val presentation = PaperMatchPresentation(server, messages, signRepo, failures)
+        val registry = ArenaRegistry(requiredWins)
+        val recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepo, presentation, failures, server.onlineMode)
+        val progression = MatchProgressionService(
+            registry, MatchStateSync(matchStateRepo, presentation), statsRepo,
+            equipment, equipment, playerPort, schedulerPort, presentation, recovery, failures
+        )
+        val service = ArenaApplicationService(
+            registry, arenaRepo, matchStateRepo, statsRepo, playerPort,
+            presentation, recovery, failures, progression, MatchStateSync(matchStateRepo, presentation)
+        )
+        val admin = ArenaAdministrationService(registry, arenaRepo, signRepo, lobbyRepo, equipment, presentation, progression)
+        return Deps(
+            store, backupStore, kitStore, arenaRepo, lobbyRepo, signRepo, matchStateRepo, statsRepo,
+            equipment, presentation, registry, recovery, progression, service, admin,
+            ArenaSignListener(service, admin, messages),
+            OneVsOneCommand(service, admin, playerPort, failures, messages)
+        )
+    }
 
     /** Rebuilds all dependencies with the store or individual ports swapped out (for fault injection). */
     fun rebuildWith(
-        newStore: YamlStore = store,
+        newStore: YamlStore = deps.store,
         backupStore: YamlBackupStore = YamlBackupStore(newStore),
         matchState: MatchStateRepository = YamlMatchStateRepository(newStore),
         statsRepo: PlayerStatsRepository = YamlPlayerStatsRepository(newStore)
     ) {
-        store = newStore
-        this.backupStore = backupStore
-        kitStore = YamlKitStore(newStore)
-        arenaRepo = YamlArenaRepository(store)
-        lobbyRepo = YamlLobbyRepository(store)
-        signRepo = YamlSignRepository(store)
-        matchStateRepo = matchState
-        this.statsRepo = statsRepo
-        equipment = PaperEquipmentAdapter(backupStore, kitStore, lookup)
-        presentation = PaperMatchPresentation(server, messages, signRepo, failures)
-        registry = ArenaRegistry(requiredWins)
-        recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepo, presentation, failures, server.onlineMode)
-        progression = buildProgression()
-        service = buildService()
-        admin = ArenaAdministrationService(registry, arenaRepo, signRepo, lobbyRepo, equipment, presentation, progression)
-        signListener = ArenaSignListener(service, admin, messages)
-        command = OneVsOneCommand(service, admin, playerPort, failures, messages)
+        deps = makeDeps(newStore, backupStore, matchState, statsRepo)
     }
 
     /**
