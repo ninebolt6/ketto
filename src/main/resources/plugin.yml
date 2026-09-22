@@ -1,7 +1,8 @@
+# yaml-language-server: \$schema=https://www.schemastore.org/bukkit-plugin.json
 name: 1vs1
-version: '${version}'
+version: "${version}"
 main: net.ninebolt.onevsone.OneVsOnePlugin
-api-version: '1.21'
+api-version: "${apiVersion}"
 
 commands:
   1vs1:

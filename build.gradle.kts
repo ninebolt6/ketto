@@ -8,6 +8,8 @@ plugins {
 group = "net.ninebolt"
 version = "1.0.0"
 
+val mcApiVersion = "1.21.3"
+
 repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/")
@@ -65,9 +67,11 @@ tasks.test {
 
 tasks.processResources {
     val projectVersion = project.version.toString()
+    val apiVersion = mcApiVersion
     inputs.property("version", projectVersion)
+    inputs.property("apiVersion", apiVersion)
     filesMatching("plugin.yml") {
-        expand("version" to projectVersion)
+        expand("version" to projectVersion, "apiVersion" to apiVersion)
     }
 }
 
