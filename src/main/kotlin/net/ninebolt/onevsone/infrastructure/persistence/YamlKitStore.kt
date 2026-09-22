@@ -13,9 +13,8 @@ class YamlKitStore(private val store: YamlStore) {
         store.readSnapshot(store.load(store.arenaFile(arenaName)), "inventory")
 
     fun saveArenaKit(arenaName: String, kit: PaperInventorySnapshot) {
-        val file = store.arenaFile(arenaName)
-        val yaml = store.load(file)
-        store.writeSnapshot(yaml, "inventory", kit)
-        store.save(yaml, file)
+        store.update(store.arenaFile(arenaName)) { yaml ->
+            store.writeSnapshot(yaml, "inventory", kit)
+        }
     }
 }

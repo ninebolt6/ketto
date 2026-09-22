@@ -10,8 +10,8 @@ class YamlLobbyRepository(private val store: YamlStore) : LobbyRepository {
         store.readLocation(store.load(store.lobbyFile), "lobby")
 
     override fun setLobby(position: WorldPosition) {
-        val yaml = store.load(store.lobbyFile)
-        store.writeLocation(yaml, "lobby", position)
-        store.save(yaml, store.lobbyFile)
+        store.rewrite(store.lobbyFile) { yaml ->
+            store.writeLocation(yaml, "lobby", position)
+        }
     }
 }

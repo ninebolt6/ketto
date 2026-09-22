@@ -42,14 +42,14 @@ class YamlArenaRepository(private val store: YamlStore) : ArenaRepository {
         )
     }
 
-    /** Saves only enabled and spawns. The inventory (kit) and sign sections are owned by their respective stores and must be preserved. */
+    /** Saves only enabled and spawns; the kit and sign sections belong to YamlKitStore / YamlSignRepository. */
     override fun save(arena: Arena) {
         val file = store.arenaFile(arena.name)
-        val yaml = store.load(file)
-        yaml.set("enabled", arena.enabled)
-        arena.spawn1?.let { store.writeLocation(yaml, "spawn1", it) }
-        arena.spawn2?.let { store.writeLocation(yaml, "spawn2", it) }
-        store.save(yaml, file)
+        store.update(file) { yaml ->
+            yaml.set("enabled", arena.enabled)
+            arena.spawn1?.let { store.writeLocation(yaml, "spawn1", it) }
+            arena.spawn2?.let { store.writeLocation(yaml, "spawn2", it) }
+        }
         registerName(arena.name)
     }
 
@@ -60,19 +60,27 @@ class YamlArenaRepository(private val store: YamlStore) : ArenaRepository {
     }
 
     private fun registerName(name: String) {
-        val yaml = store.load(store.arenaListFile)
-        val names = yaml.getStringList("arenas")
-        if (names.any { it.equals(name, ignoreCase = true) }) return
-        yaml.set("arenas", names + name)
-        store.save(yaml, store.arenaListFile)
+        store.updateIf(store.arenaListFile) { yaml ->
+            val names = yaml.getStringList("arenas")
+            if (names.any { it.equals(name, ignoreCase = true) }) {
+                false
+            } else {
+                yaml.set("arenas", names + name)
+                true
+            }
+        }
     }
 
     private fun unregisterName(name: String) {
-        val yaml = store.load(store.arenaListFile)
-        val names = yaml.getStringList("arenas")
-        val remaining = names.filterNot { it.equals(name, ignoreCase = true) }
-        if (remaining.size == names.size) return
-        yaml.set("arenas", remaining)
-        store.save(yaml, store.arenaListFile)
+        store.updateIf(store.arenaListFile) { yaml ->
+            val names = yaml.getStringList("arenas")
+            val remaining = names.filterNot { it.equals(name, ignoreCase = true) }
+            if (remaining.size == names.size) {
+                false
+            } else {
+                yaml.set("arenas", remaining)
+                true
+            }
+        }
     }
 }

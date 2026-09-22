@@ -17,6 +17,8 @@ import kotlin.uuid.Uuid
 /**
  * Shared YAML I/O, file layout, and codecs. Saves stay atomic via temp+replace.
  * Corruption and I/O failures are converted to PersistenceFailure.
+ * update/updateIf merge into the existing file (the write path for files shared
+ * by multiple stores); rewrite replaces the whole file for single-owner files.
  * Per-section reads/writes are handled by Yaml*Repository / Yaml*Store.
  */
 class YamlStore(folder: File, private val logger: Logger) {
@@ -56,7 +58,25 @@ class YamlStore(folder: File, private val logger: Logger) {
 
     internal fun warn(message: String) = logger.warning(message)
 
-    internal fun save(yaml: YamlConfiguration, file: File) {
+    internal fun update(file: File, mutate: (YamlConfiguration) -> Unit) {
+        val yaml = load(file)
+        mutate(yaml)
+        save(yaml, file)
+    }
+
+    /** Same as update, but skips the write when mutate returns false. */
+    internal fun updateIf(file: File, mutate: (YamlConfiguration) -> Boolean) {
+        val yaml = load(file)
+        if (mutate(yaml)) save(yaml, file)
+    }
+
+    internal fun rewrite(file: File, write: (YamlConfiguration) -> Unit) {
+        val yaml = YamlConfiguration()
+        write(yaml)
+        save(yaml, file)
+    }
+
+    private fun save(yaml: YamlConfiguration, file: File) {
         file.parentFile?.mkdirs()
         val tmp = File(file.parentFile, file.name + ".tmp")
         try {

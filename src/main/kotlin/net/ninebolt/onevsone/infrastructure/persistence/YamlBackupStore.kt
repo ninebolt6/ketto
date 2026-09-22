@@ -18,16 +18,16 @@ class YamlBackupStore(private val store: YamlStore) {
 
     /** Bulk save at match start. On failure, nobody's record is changed. */
     fun saveBackups(backups: List<PersistedBackup>) {
-        val yaml = store.load(store.playersFile)
-        backups.forEach { backup ->
-            val path = "inv.${backup.ref.playerName}"
-            evacuateForeignOwner(yaml, path, backup.ref)
-            store.writeSnapshot(yaml, path, backup.snapshot)
-            backup.ref.playerId?.let { yaml.set("$path.uuid", it.toString()) }
-            yaml.set("$path.id", backup.ref.backupId.toString())
-            yaml.set("$path.match", backup.ref.matchId.value.toString())
+        store.update(store.playersFile) { yaml ->
+            backups.forEach { backup ->
+                val path = "inv.${backup.ref.playerName}"
+                evacuateForeignOwner(yaml, path, backup.ref)
+                store.writeSnapshot(yaml, path, backup.snapshot)
+                backup.ref.playerId?.let { yaml.set("$path.uuid", it.toString()) }
+                yaml.set("$path.id", backup.ref.backupId.toString())
+                yaml.set("$path.match", backup.ref.matchId.value.toString())
+            }
         }
-        store.save(yaml, store.playersFile)
     }
 
     /**
@@ -51,22 +51,24 @@ class YamlBackupStore(private val store: YamlStore) {
      * assigned one and written back, unifying future identity checks on id.
      */
     fun persistedBackups(): List<PersistedBackup> {
-        val yaml = store.load(store.playersFile)
-        val inv = yaml.getConfigurationSection("inv") ?: return emptyList()
-        var stamped = false
-        val records = inv.getKeys(false).map { key ->
-            val path = "inv.$key"
-            val name = yaml.getString("$path.name") ?: key
-            val id = yaml.getString("$path.id")?.let(::parseUuid) ?: Uuid.random().also {
-                yaml.set("$path.id", it.toString())
-                stamped = true
+        val records = mutableListOf<PersistedBackup>()
+        store.updateIf(store.playersFile) { yaml ->
+            val inv = yaml.getConfigurationSection("inv") ?: return@updateIf false
+            var stamped = false
+            inv.getKeys(false).mapTo(records) { key ->
+                val path = "inv.$key"
+                val name = yaml.getString("$path.name") ?: key
+                val id = yaml.getString("$path.id")?.let(::parseUuid) ?: Uuid.random().also {
+                    yaml.set("$path.id", it.toString())
+                    stamped = true
+                }
+                val uuid = yaml.getString("$path.uuid")?.let(::parseUuid)
+                val matchId = yaml.getString("$path.match")?.let(::parseUuid)?.let { MatchId.new(it) }
+                    ?: MatchId.new()
+                PersistedBackup(BackupRef.restored(id, matchId, uuid, name), store.readSnapshot(yaml, path))
             }
-            val uuid = yaml.getString("$path.uuid")?.let(::parseUuid)
-            val matchId = yaml.getString("$path.match")?.let(::parseUuid)?.let { MatchId.new(it) }
-                ?: MatchId.new()
-            PersistedBackup(BackupRef.restored(id, matchId, uuid, name), store.readSnapshot(yaml, path))
+            stamped
         }
-        if (stamped) store.save(yaml, store.playersFile)
         return records
     }
 
@@ -76,10 +78,9 @@ class YamlBackupStore(private val store: YamlStore) {
      * else's data. Evacuated records are found by the same rule.
      */
     fun deleteBackup(ref: BackupRef) {
-        val yaml = store.load(store.playersFile)
-        val path = findRecordPath(yaml, ref) ?: return
-        yaml.set(path, null)
-        store.save(yaml, store.playersFile)
+        store.updateIf(store.playersFile) { yaml ->
+            findRecordPath(yaml, ref)?.let { yaml.set(it, null); true } ?: false
+        }
     }
 
     /** Fallback read for restore (when no in-memory snapshot exists). */

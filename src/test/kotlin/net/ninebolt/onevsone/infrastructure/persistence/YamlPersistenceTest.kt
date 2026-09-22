@@ -237,7 +237,7 @@ class YamlPersistenceTest {
         val tmp = File(folder, "status/players.yml.tmp")
         tmp.mkdirs()
         assertFailsWith<IllegalStateException> {
-            s.save(YamlConfiguration(), File(folder, "status/players.yml"))
+            s.rewrite(File(folder, "status/players.yml")) {}
         }
         assertFalse(tmp.exists())
     }

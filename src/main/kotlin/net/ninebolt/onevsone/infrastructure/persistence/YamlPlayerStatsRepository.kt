@@ -25,10 +25,9 @@ class YamlPlayerStatsRepository(private val store: YamlStore) : PlayerStatsRepos
     override fun recordLoss(playerId: Uuid) = write(playerId, winDelta = 0, loseDelta = 1)
 
     private fun write(playerId: Uuid, winDelta: Int, loseDelta: Int) {
-        val file = store.statsFile(playerId)
-        val yaml = store.load(file)
-        yaml.set("win", yaml.getInt("win") + winDelta)
-        yaml.set("lose", yaml.getInt("lose") + loseDelta)
-        store.save(yaml, file)
+        store.update(store.statsFile(playerId)) { yaml ->
+            yaml.set("win", yaml.getInt("win") + winDelta)
+            yaml.set("lose", yaml.getInt("lose") + loseDelta)
+        }
     }
 }

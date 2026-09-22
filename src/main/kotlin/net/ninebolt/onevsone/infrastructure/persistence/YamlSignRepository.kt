@@ -47,22 +47,16 @@ class YamlSignRepository(private val store: YamlStore) : ArenaSignRepository {
             ?.let { WorldPosition.new(it.world, it.x.toDouble(), it.y.toDouble(), it.z.toDouble()) }
 
     override fun setSign(arenaName: String, position: WorldPosition) {
-        val file = store.arenaFile(arenaName)
-        val yaml = store.load(file)
-        store.writeLocation(yaml, "sign", position)
-        store.save(yaml, file)
+        store.update(store.arenaFile(arenaName)) { yaml ->
+            store.writeLocation(yaml, "sign", position)
+        }
         index.values.remove(arenaName)
         index[SignPos(position.world, position.x.toInt(), position.y.toInt(), position.z.toInt())] = arenaName
     }
 
     override fun clearSign(arenaName: String) {
-        val file = store.arenaFile(arenaName)
-        if (file.exists()) {
-            val yaml = store.load(file)
-            if (yaml.isConfigurationSection("sign")) {
-                yaml.set("sign", null)
-                store.save(yaml, file)
-            }
+        store.updateIf(store.arenaFile(arenaName)) { yaml ->
+            yaml.isConfigurationSection("sign").also { if (it) yaml.set("sign", null) }
         }
         index.entries.removeAll { it.value == arenaName }
     }
