@@ -5,7 +5,10 @@ Minecraft の 1 対 1 アリーナ PvP プラグイン。
 ## Commands
 
 ```sh
-./gradlew clean build --warning-mode all   # コンパイル + JUnit テスト + jar
+./gradlew clean build --warning-mode all        # コンパイル + JUnit テスト + jar
+nix develop                                     # JDK 21 + actrun のシェル
+actrun workflow run .github/workflows/ci.yml    # CI をローカル実行
+actrun lint                                     # workflow の静的チェック
 ```
 
 ## Architecture

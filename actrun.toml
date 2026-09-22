@@ -1,0 +1,4 @@
+workspace_mode = "worktree"
+include_dirty = true
+local_skip_actions = ["actions/checkout", "actions/setup-java"]
+trust_actions = true

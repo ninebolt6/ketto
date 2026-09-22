@@ -9,3 +9,8 @@ build
 
 # Ignore IDE (Eclipse) output directory
 bin
+
+# nix / direnv / actrun
+.direnv
+result
+_build
