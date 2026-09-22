@@ -13,13 +13,15 @@ internal class ArenaInfoCommand(
     messages: Messages
 ) : ArenaSubcommand(admin, messages) {
 
+    override val usage: Msg = messages.usageArena
+    override fun denied(sender: CommandSender): Boolean = false
+
     override fun visibleTo(sender: CommandSender): Boolean = true
 
-    override fun execute(sender: CommandSender, args: List<String>): Msg? {
-        if (args.isEmpty()) return messages.usageArena
-        val match = service.matchOf(args[0]) ?: run {
+    override fun executeFor(sender: CommandSender, arenaName: String, rest: List<String>) {
+        val match = service.matchOf(arenaName) ?: run {
             messages.send(sender, messages.noArena)
-            return null
+            return
         }
         messages.send(sender, messages.arenaHeader(match.arenaId.name))
         messages.send(sender, messages.arenaState(match.state))
@@ -29,6 +31,5 @@ internal class ArenaInfoCommand(
             messages.send(sender, messages.versus(p1.name, p2.name))
             messages.send(sender, messages.winCount(match.winsOf(p1.id), match.winsOf(p2.id)))
         }
-        return null
     }
 }

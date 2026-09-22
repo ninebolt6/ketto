@@ -12,22 +12,26 @@ internal class ArenaSetSignCommand(
     messages: Messages
 ) : ArenaSubcommand(admin, messages) {
 
-    override fun execute(sender: CommandSender, args: List<String>): Msg? {
-        if (sender.denyUnlessOp()) return null
-        val player = sender.requirePlayer() ?: return null
-        if (args.size != 1) return messages.usageSetSign
-        val arena = arenaOrWarn(sender, args[0]) ?: return null
+    override val requiresPlayer: Boolean = true
+    override val usage: Msg = messages.usageSetSign
+
+    override fun executeFor(sender: CommandSender, arenaName: String, rest: List<String>) {
+        val player = sender.requirePlayer() ?: return
+        if (rest.isNotEmpty()) {
+            messages.send(sender, usage)
+            return
+        }
+        val arena = arenaOrWarn(sender, arenaName) ?: return
         val target = player.getTargetBlockExact(10)
         if (target == null || target.state !is Sign) {
             messages.send(sender, messages.lookAtSign)
-            return null
+            return
         }
         val existing = admin.signOwner(target.world.name, target.x, target.y, target.z)
         if (existing != null && existing != arena.name) {
             messages.send(sender, messages.signTaken)
-            return null
+            return
         }
         target.location.toWorldPosition()?.let { admin.setSign(arena.name, it) }
-        return null
     }
 }

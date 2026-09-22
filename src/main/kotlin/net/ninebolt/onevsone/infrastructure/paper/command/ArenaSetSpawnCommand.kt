@@ -13,14 +13,18 @@ internal class ArenaSetSpawnCommand(
     messages: Messages
 ) : ArenaSubcommand(admin, messages) {
 
-    override fun execute(sender: CommandSender, args: List<String>): Msg? {
-        if (sender.denyUnlessOp()) return null
-        val player = sender.requirePlayer() ?: return null
-        if (args.size != 1) return messages.usageSetSpawn(number)
-        val arena = arenaOrWarn(sender, args[0]) ?: return null
+    override val requiresPlayer: Boolean = true
+    override val usage: Msg get() = messages.usageSetSpawn(number)
+
+    override fun executeFor(sender: CommandSender, arenaName: String, rest: List<String>) {
+        val player = sender.requirePlayer() ?: return
+        if (rest.isNotEmpty()) {
+            messages.send(sender, usage)
+            return
+        }
+        val arena = arenaOrWarn(sender, arenaName) ?: return
         // Positions without a world skip saving, but the reply stays the success message as before
         player.location.toWorldPosition()?.let { admin.setSpawn(arena.name, number, it) }
         messages.send(sender, messages.spawnSet(arena.name, number))
-        return null
     }
 }

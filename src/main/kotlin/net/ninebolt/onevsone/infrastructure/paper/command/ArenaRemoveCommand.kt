@@ -10,14 +10,17 @@ internal class ArenaRemoveCommand(
     messages: Messages
 ) : ArenaSubcommand(admin, messages) {
 
-    override fun execute(sender: CommandSender, args: List<String>): Msg? {
-        if (sender.denyUnlessOp()) return null
-        if (args.size != 1) return messages.usageRemove
-        if (!admin.remove(args[0])) {
-            messages.send(sender, messages.noArena)
-            return null
+    override val usage: Msg = messages.usageRemove
+
+    override fun executeFor(sender: CommandSender, arenaName: String, rest: List<String>) {
+        if (rest.isNotEmpty()) {
+            messages.send(sender, usage)
+            return
         }
-        messages.send(sender, messages.removed(args[0]))
-        return null
+        if (!admin.remove(arenaName)) {
+            messages.send(sender, messages.noArena)
+            return
+        }
+        messages.send(sender, messages.removed(arenaName))
     }
 }

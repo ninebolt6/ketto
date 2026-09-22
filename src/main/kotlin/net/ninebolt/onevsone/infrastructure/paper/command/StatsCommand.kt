@@ -5,7 +5,6 @@ import net.ninebolt.onevsone.application.port.FailureReporter
 import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.application.port.PlayerPort
 import net.ninebolt.onevsone.infrastructure.paper.Messages
-import net.ninebolt.onevsone.infrastructure.paper.Msg
 import org.bukkit.command.CommandSender
 import kotlin.uuid.Uuid
 import kotlin.uuid.toKotlinUuid
@@ -23,19 +22,19 @@ internal class StatsCommand(
 
     override fun visibleTo(sender: CommandSender): Boolean = true
 
-    override fun execute(sender: CommandSender, args: List<String>): Msg? {
-        val player = sender.requirePlayer() ?: return null
+    override fun execute(sender: CommandSender, args: List<String>) {
+        val player = sender.requirePlayer() ?: return
         val playerId = player.uniqueId.toKotlinUuid()
         if (args.isEmpty()) {
             showStats(player, playerId)
-            return null
+            return
         }
         // UUID resolution of uncached names hits an external lookup, so rate-limit it
         val now = System.nanoTime()
         lastLookup.entries.removeAll { now - it.value >= LOOKUP_COOLDOWN_NANOS }
         if (playerId in lastLookup) {
             messages.send(player, messages.statsCooldown)
-            return null
+            return
         }
         lastLookup[playerId] = now
         players.resolveOfflineId(args[0]) { uuid ->
@@ -43,7 +42,6 @@ internal class StatsCommand(
                 if (uuid == null) messages.send(player, messages.noStats) else showStats(player, uuid)
             }
         }
-        return null
     }
 
     private fun showStats(sender: CommandSender, uuid: Uuid) {

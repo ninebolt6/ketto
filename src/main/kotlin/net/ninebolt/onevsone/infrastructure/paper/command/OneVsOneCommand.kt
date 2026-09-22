@@ -40,7 +40,7 @@ class OneVsOneCommand(
     ))
 
     override fun onCommand(sender: CommandSender, command: Command, label: String, args: Array<String>): Boolean {
-        root.execute(sender, args.toList())?.let { messages.send(sender, it) }
+        root.execute(sender, args.toList())
         return true
     }
 

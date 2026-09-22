@@ -11,14 +11,17 @@ internal class ArenaCreateCommand(
     messages: Messages
 ) : ArenaSubcommand(admin, messages) {
 
-    override fun execute(sender: CommandSender, args: List<String>): Msg? {
-        if (sender.denyUnlessOp()) return null
-        if (args.size != 1 || Arena.Id.of(args[0]) == null) return messages.usageCreate
-        if (!admin.create(args[0])) {
-            messages.send(sender, messages.arenaExists)
-            return null
+    override val usage: Msg = messages.usageCreate
+
+    override fun executeFor(sender: CommandSender, arenaName: String, rest: List<String>) {
+        if (rest.isNotEmpty() || Arena.Id.of(arenaName) == null) {
+            messages.send(sender, usage)
+            return
         }
-        messages.send(sender, messages.created(args[0]))
-        return null
+        if (!admin.create(arenaName)) {
+            messages.send(sender, messages.arenaExists)
+            return
+        }
+        messages.send(sender, messages.created(arenaName))
     }
 }

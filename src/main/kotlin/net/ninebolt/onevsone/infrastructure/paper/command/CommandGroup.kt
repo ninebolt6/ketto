@@ -21,9 +21,13 @@ internal class CommandGroup(
     // The namespace itself is always visible; visibility of children is up to each child's visibleTo
     override fun visibleTo(sender: CommandSender): Boolean = true
 
-    override fun execute(sender: CommandSender, args: List<String>): Msg? {
-        val sub = args.firstOrNull()?.let { byName[it.lowercase(Locale.ROOT)] }?.second ?: return usage
-        return sub.execute(sender, args.drop(1))
+    override fun execute(sender: CommandSender, args: List<String>) {
+        val sub = args.firstOrNull()?.let { byName[it.lowercase(Locale.ROOT)] }?.second
+        if (sub == null) {
+            messages.send(sender, usage)
+            return
+        }
+        sub.execute(sender, args.drop(1))
     }
 
     override fun tabComplete(sender: CommandSender, args: List<String>): List<String> {

@@ -13,17 +13,18 @@ internal class ArenaSetEnabledCommand(
     messages: Messages
 ) : ArenaSubcommand(admin, messages) {
 
-    override fun execute(sender: CommandSender, args: List<String>): Msg? {
-        if (sender.denyUnlessOp()) return null
-        if (args.size != 1) {
-            return if (enabled) messages.usageEnable else messages.usageDisable
+    override val usage: Msg get() = if (enabled) messages.usageEnable else messages.usageDisable
+
+    override fun executeFor(sender: CommandSender, arenaName: String, rest: List<String>) {
+        if (rest.isNotEmpty()) {
+            messages.send(sender, usage)
+            return
         }
-        when (admin.setEnabled(args[0], enabled)) {
+        when (admin.setEnabled(arenaName, enabled)) {
             ToggleReply.NotFound -> messages.send(sender, messages.noArena)
             ToggleReply.AlreadyEnabled -> messages.send(sender, messages.alreadyEnabled)
             ToggleReply.AlreadyDisabled -> messages.send(sender, messages.alreadyDisabled)
-            ToggleReply.Changed -> messages.send(sender, if (enabled) messages.enabled(args[0]) else messages.disabled(args[0]))
+            ToggleReply.Changed -> messages.send(sender, if (enabled) messages.enabled(arenaName) else messages.disabled(arenaName))
         }
-        return null
     }
 }
