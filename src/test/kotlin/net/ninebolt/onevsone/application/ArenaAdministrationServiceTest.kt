@@ -13,7 +13,7 @@ import kotlin.test.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
-/** 管理操作(作成/削除/有効化/スポーン/キット/看板)の単体テスト。 */
+/** Unit tests for admin operations (create/remove/enable/spawn/kit/sign). */
 class ArenaAdministrationServiceTest {
 
     private lateinit var app: TestApp
@@ -47,7 +47,7 @@ class ArenaAdministrationServiceTest {
         assertNull(app.admin.signLocation("arena1"))
         assertNull(app.arenas.signs["arena1"])
         assertFalse(app.arenas.names.contains("arena1"))
-        // 同名で作り直しても古い装備を適用しないようキャッシュを破棄する
+        // The kit cache is dropped so recreating under the same name cannot apply the old kit
         assertEquals(listOf(arena), app.equipment.forgottenKits)
 
         assertFalse(app.admin.remove("arena1"))
@@ -81,7 +81,7 @@ class ArenaAdministrationServiceTest {
         assertTrue(app.admin.setSpawn("arena1", 2, pos))
         assertEquals(pos, app.arenas.find("arena1").spawn2)
         assertFalse(app.admin.setSpawn("missing", 1, pos))
-        // コマンド面は 1/2 固定だが、サービス経由の不正スロットは fail-fast
+        // The command surface is fixed to 1/2, but an invalid slot via the service must fail fast
         assertFailsWith<IllegalArgumentException> { app.admin.setSpawn("arena1", 3, pos) }
     }
 
@@ -99,7 +99,7 @@ class ArenaAdministrationServiceTest {
         assertEquals(Arena.Id.new("arena1") to ArenaState.WAITING, app.presentation.signUpdates.last())
 
         assertFalse(app.admin.setSign("missing", sign))
-        // clearSign は「arena が存在するなら解除成功」な冪等操作。未登録 arena だけが失敗
+        // clearSign is idempotent: it succeeds whenever the arena exists; only an unregistered arena fails
         assertTrue(app.admin.clearSign("arena1"))
         assertNull(app.admin.signLocation("arena1"))
         assertFalse(app.admin.clearSign("missing"))
@@ -142,7 +142,7 @@ class ArenaAdministrationServiceTest {
         assertTrue(app.admin.remove("arena1"))
         assertNull(app.service.arenaIdOf(p1.id))
         assertNull(app.service.arenaIdOf(p2.id))
-        // 敗者の戦績は確定済みだが、remove で中断された場合の残留登録がないこと
+        // The loser's stats are already settled; the point is that no registrations remain after remove aborts
         assertNull(app.matchState.registrations[p1.name])
         assertNull(app.matchState.registrations[p2.name])
     }

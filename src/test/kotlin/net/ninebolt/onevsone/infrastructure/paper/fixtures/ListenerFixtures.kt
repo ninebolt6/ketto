@@ -24,32 +24,32 @@ import org.mockbukkit.mockbukkit.entity.LivingEntityMock
 import org.mockbukkit.mockbukkit.entity.PlayerMock
 import org.mockbukkit.mockbukkit.simulate.entity.PlayerSimulation
 
-/** アリーナ系リスナーテスト用の実イベント構築と 2 人マッチ開始フィクスチャ。 */
+/** Real-event construction and two-player match start fixtures for arena listener tests. */
 
-/** 環境ダメージ(落下相当)。causingEntity なしの実 DamageSource。 */
+/** Environmental damage (fall equivalent). A real DamageSource with no causingEntity. */
 internal fun genericDamage(): DamageSource = DamageSource.builder(DamageType.GENERIC).build()
 
 /**
- * 実 DamageSource の攻撃。directEntity 非 null のため simulateDamage は
- * EntityDamageByEntityEvent を発火し、causingEntity で帰属判定される。
+ * An attack via a real DamageSource. With directEntity non-null, simulateDamage
+ * fires EntityDamageByEntityEvent and attribution is judged by causingEntity.
  */
 internal fun attackDamage(attacker: Entity, type: DamageType = DamageType.PLAYER_ATTACK): DamageSource =
     DamageSource.builder(type).withDirectEntity(attacker).withCausingEntity(attacker).build()
 
-/** direct(矢等)と causing(射手)が異なる投射物の実 DamageSource。 */
+/** Real DamageSource for projectiles where direct (arrow) and causing (shooter) differ. */
 internal fun projectileDamage(direct: Entity, causing: Entity): DamageSource =
     DamageSource.builder(DamageType.GENERIC).withDirectEntity(direct).withCausingEntity(causing).build()
 
-/** PlayerMock.simulate* は委譲シムで @Deprecated のため、非推奨の PlayerSimulation を直接使う。 */
+/** PlayerMock.simulate* is a delegating shim marked @Deprecated, so use the supported PlayerSimulation directly. */
 internal fun PlayerMock.simulation() = PlayerSimulation(this)
 
-/** MockBukkit 4.103 では assertEventFired 系が deprecated のため、発火済みイベントを直接検査する。 */
+/** MockBukkit 4.103 deprecates the assertEventFired family, so inspect fired events directly. */
 internal inline fun <reified T : Event> TestEnv.assertFired(noinline predicate: (T) -> Boolean = { true }) {
     val fired = server.pluginManager.firedEvents.toList().filterIsInstance<T>()
     assertTrue(fired.any(predicate), "no fired ${T::class.simpleName} matched; fired=$fired")
 }
 
-/** 前提不成立(空気ブロック等)で null になる戻り値をテスト向けに非 null 化する。 */
+/** Turns the null-on-unmet-precondition return (air blocks etc.) into a non-null one for tests. */
 internal fun PlayerSimulation.breakBlock(block: Block): BlockBreakEvent =
     simulateBlockBreak(block) ?: error("simulateBlockBreak returned null")
 
@@ -66,7 +66,7 @@ internal fun TestEnv.twoPlayerIngame(): Pair<ArenaPlayerMock, ArenaPlayerMock> {
     return p1 to p2
 }
 
-/** 実ブロックを看板に変えて返す。以後の getBlockAt は同じ状態を返す。 */
+/** Turns a real block into a sign and returns it. Later getBlockAt calls return the same state. */
 internal fun TestEnv.signBlock(x: Int, y: Int, z: Int): Block =
     world().getBlockAt(x, y, z).also { it.type = Material.OAK_SIGN }
 
@@ -78,11 +78,11 @@ internal fun interact(
     item: ItemStack? = null
 ) = PlayerInteractEvent(player, action, item, block, BlockFace.SELF, hand)
 
-/** 実アイテムエンティティを落としてドロップイベントを作る。 */
+/** Drops a real item entity to build a drop event. */
 internal fun TestEnv.dropEvent(player: Player): PlayerDropItemEvent =
     PlayerDropItemEvent(player, world().dropItem(player.location, item(Material.STONE)))
 
-/** 指定 type の実ブロック。コンテナ等の BlockState 判定を MockBukkit 上で再現する。 */
+/** A real block of the given type. Reproduces BlockState checks like containers on MockBukkit. */
 internal fun TestEnv.blockOf(type: Material, x: Int = 8, y: Int = 64, z: Int = 8): Block =
     world().getBlockAt(x, y, z).also { it.type = type }
 
@@ -92,11 +92,10 @@ internal fun TestEnv.itemEntity(): Item =
 internal fun TestEnv.spawn(type: EntityType) =
     world().spawnEntity(Location(world(), 0.0, 64.0, 0.0), type)
 
-/** simulateDamage を持つ LivingEntityMock 系のモブ。 */
+/** A LivingEntityMock mob, which supports simulateDamage. */
 internal fun TestEnv.mob(): LivingEntityMock =
     world().spawn(Location(world(), 0.0, 64.0, 0.0), Zombie::class.java) as LivingEntityMock
 
-/** 看板ではない実ブロック。 */
 internal fun TestEnv.plainBlock(x: Int = 9, y: Int = 64, z: Int = 9): Block =
     world().getBlockAt(x, y, z).also { it.type = Material.STONE }
 

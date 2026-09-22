@@ -6,14 +6,14 @@ import org.bukkit.configuration.file.YamlConfiguration
 import org.mockbukkit.mockbukkit.command.MessageTarget
 import java.io.File
 
-/** TestEnv の観測系ヘルパー。送信済みメッセージの読み出しのみを集める。 */
+/** Observation helpers for TestEnv. Only collects reads of already-sent messages. */
 
 private val plain = PlainTextComponentSerializer.plainText()
 
-/** 文字列引数(Logger 等、障害注入モック向け)を検証するマッチャ。 */
+/** Matcher for verifying String arguments (Logger etc., for fault-injection mocks). */
 internal fun MockKMatcherScope.containsText(part: String): String = match { it.contains(part) }
 
-/** 送信済みメッセージを全て読み出す。キューは消費されるので以後の呼出は新規分のみ見える。 */
+/** Reads out all sent messages. The queue is consumed, so later calls see only new ones. */
 internal fun MessageTarget.drainMessages(): List<String> =
     generateSequence { nextComponentMessage() }.map(plain::serialize).toList()
 

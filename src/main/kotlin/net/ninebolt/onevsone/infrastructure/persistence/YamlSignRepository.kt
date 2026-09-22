@@ -6,10 +6,11 @@ import net.ninebolt.onevsone.domain.WorldPosition
 import org.bukkit.configuration.file.YamlConfiguration
 
 /**
- * arena/<name>.yml の sign セクションの永続化。
- * 座標→アリーナ名の逆引きは初回アクセス時に arena ディレクトリから構築する
- * メモリ index で行い、看板クリック毎のディスク走査を避ける。
- * index は setSign/clearSign で同期する。稼働中の手編集は反映されない。
+ * Persistence for the sign section of arena/<name>.yml.
+ * The position -> arena-name reverse lookup uses an in-memory index built from
+ * the arena directory on first access, avoiding a disk scan per sign click.
+ * The index is kept in sync by setSign/clearSign. Manual edits made while
+ * running are not reflected.
  */
 class YamlSignRepository(private val store: YamlStore) : ArenaSignRepository {
 

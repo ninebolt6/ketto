@@ -1,14 +1,14 @@
 package net.ninebolt.onevsone.domain
 
-/** 参加者のテレポート可否を状態から導出する規則。 */
+/** Rule deriving a participant's teleport permission from the state. */
 enum class TeleportRestriction {
-    /** 制約なし。 */
+    /** No restriction. */
     UNRESTRICTED,
 
-    /** エンダーパールとプラグイン自身の移送のみ許可する。 */
+    /** Only ender pearls and the plugin's own teleports are allowed. */
     ENDER_PEARL_ONLY,
 
-    /** プラグイン自身の移送のみ許可する(移動凍結中)。 */
+    /** Only the plugin's own teleports are allowed (movement frozen). */
     PLUGIN_ONLY;
 
     fun allows(trigger: TeleportTrigger): Boolean = when (this) {

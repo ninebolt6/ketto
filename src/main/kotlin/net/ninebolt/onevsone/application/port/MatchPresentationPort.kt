@@ -7,30 +7,31 @@ import net.ninebolt.onevsone.domain.WorldPosition
 import kotlin.uuid.Uuid
 
 /**
- * 試合進行の表示・演出。文字列整形や Adventure は Paper 側。
- * ユーザーへの直接応答(参加可否等)はユースケース結果として返し、ここには含めない。
+ * Match-progression display and effects. String formatting and Adventure live
+ * on the Paper side. Direct replies to users (join results etc.) are returned
+ * as use-case results and not included here.
  */
 interface MatchPresentationPort {
-    /** 初回カウントダウン: 「テレポートまで: N秒」+ 音(ピッチ1)。 */
+    /** Initial countdown: "Teleport in: Ns" + sound (pitch 1). */
     fun countdownTick(participantIds: List<Uuid>, secondsLeft: Int)
-    /** ラウンド間カウントダウン: 「開始まで: N秒」+ 音(ピッチ1)。 */
+    /** Inter-round countdown: "Starting in: Ns" + sound (pitch 1). */
     fun roundCountdownTick(participantIds: List<Uuid>, secondsLeft: Int)
-    /** マッチ開始: 「ゲームスタート！」+ 音(ピッチ2)。 */
+    /** Match start: "Game Start!" + sound (pitch 2). */
     fun matchStart(participantIds: List<Uuid>)
-    /** ラウンド再開: 「スタート！」+ 音(ピッチ2)。 */
+    /** Round resume: "Start!" + sound (pitch 2). */
     fun roundStart(participantIds: List<Uuid>)
-    /** ラウンド決着: 「ラウンド[N] 勝者: name」を両者へ。 */
+    /** Round decided: "Round [N] Winner: name" to both players. */
     fun roundWon(participantIds: List<Uuid>, round: Int, winnerName: String)
-    /** ラウンド決着の爆発音(敗北地点)。 */
+    /** Explosion sound for the round decision (at the loser's position). */
     fun roundEndSound(position: WorldPosition)
-    /** 優勝ブロードキャスト。 */
+    /** Victory broadcast. */
     fun champion(arena: Arena.Id, winnerName: String)
-    /** 勝者位置の花火。 */
+    /** Firework at the winner's position. */
     fun championFirework(playerId: Uuid)
-    /** サイドバースコアボードを最新の試合状態で更新。 */
+    /** Updates the sidebar scoreboard with the latest match state. */
     fun updateScoreboard(match: ArenaMatch)
-    /** スコアボードをクリア。 */
+    /** Clears the scoreboard. */
     fun clearScoreboard(playerId: Uuid)
-    /** 看板の表示更新(Join 可否 + 状態行)。 */
+    /** Updates the sign display (joinability + state line). */
     fun updateSign(arena: Arena.Id, state: ArenaState)
 }

@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
-/** /1vs1 arena * ・setlobby の管理コマンドの検証。 */
+/** Verifies the /1vs1 arena * and setlobby admin commands. */
 class OneVsOneAdminCommandTest {
 
     @TempDir
@@ -131,7 +131,7 @@ class OneVsOneAdminCommandTest {
     fun `arena setsign requires looking at sign`() {
         val op = env.opPlayer("Op")
         env.newArena()
-        // targetBlock 未設定 = 何も指していない
+        // targetBlock unset = looking at nothing
         env.run(op, "arena", "setsign", "arena1")
         assertTrue(op.drainMessages().any { it.contains("看板を見て実行してください") })
     }

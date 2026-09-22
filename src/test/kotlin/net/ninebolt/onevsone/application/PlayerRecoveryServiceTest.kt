@@ -35,7 +35,7 @@ class PlayerRecoveryServiceTest {
         app.service.defeat(p2.id, DefeatCause.DEATH)
         assertEquals(ArenaState.WAITING, app.state())
 
-        // 復元前に切断: ticket は残っているので quit 時に同期復元される
+        // Disconnect before restore: the ticket remains, so quit restores synchronously
         val ticket = app.recovery.ticketFor(p2.id, p2.name) ?: app.recovery.pending(p2.id)
         assertNotNull(ticket)
         app.players.disconnect(p2)
@@ -63,7 +63,7 @@ class PlayerRecoveryServiceTest {
         app.newArena()
         val p1 = app.players.add("Alice")
         app.service.join(p1.id, p1.name, Arena.Id.new("arena1"))
-        // 未開始の退出/切断/停止では持ち物に触れない
+        // Leave/disconnect/shutdown before start never touches the inventory
         app.players.disconnect(p1)
         app.players.quittingScope(p1) {
             app.service.quit(p1.id, p1.name)
@@ -78,11 +78,11 @@ class PlayerRecoveryServiceTest {
         val (_, p2) = app.startMatch()
         app.players.disconnect(p2)
         app.service.abort(Arena.Id.new("arena1"))
-        // オフラインなので復元は p1 のみ
+        // Offline, so only p1 is restored
         assertEquals(1, app.equipment.restored.size)
         assertEquals(1, app.equipment.storedBackups.size)
 
-        // 再ログインで復元される
+        // Restored on re-login
         p2.online = true
         app.service.restorePending(p2.id, p2.name)
         assertEquals(2, app.equipment.restored.size)
@@ -98,12 +98,12 @@ class PlayerRecoveryServiceTest {
         app.equipment.seedBackup(ref)
         app.recovery.loadPersisted()
 
-        // 別 UUID の同名は復元対象にならない
+        // Same name under a different UUID is not a restore target
         val squatter = app.players.add("Alice")
         app.service.restorePending(squatter.id, squatter.name)
         assertTrue(app.equipment.restored.isEmpty())
 
-        // 改名した同一 UUID は復元される
+        // The same UUID under a renamed account is restored
         val renamed = app.players.add("Alice2", original.id)
         app.service.restorePending(renamed.id, renamed.name)
         assertEquals(1, app.equipment.restored.size)
@@ -121,7 +121,7 @@ class PlayerRecoveryServiceTest {
 
         app.service.restorePending(p.id, p.name)
         assertTrue(app.equipment.restored.isEmpty())
-        // 管理者が uuid を補うか削除するまで記録は残る
+        // The record stays until an admin fills in the uuid or deletes it
         assertTrue(app.equipment.storedBackups.containsKey(ref.backupId))
     }
 
@@ -149,7 +149,7 @@ class PlayerRecoveryServiceTest {
 
         app.service.restorePending(p.id, p.name)
         assertEquals(1, app.equipment.restored.size)
-        // ディスク側の記録は残る(次回起動で再復元=安全側)
+        // The disk record remains (restored again next startup = fail-safe)
         assertTrue(app.equipment.storedBackups.containsKey(ref.backupId))
         assertTrue(app.failures.reports.any { it.first.contains("Could not discard") })
     }
@@ -165,7 +165,7 @@ class PlayerRecoveryServiceTest {
 
         app.service.restorePending(p.id, p.name)
         assertTrue(app.equipment.restored.isEmpty())
-        // ticket が保持されるので再試行できる
+        // The ticket is retained, so retry works
         assertNotNull(app.service.pendingRestore(p.id))
         app.equipment.failOnRestore = false
         app.service.restorePending(p.id, p.name)
@@ -178,10 +178,10 @@ class PlayerRecoveryServiceTest {
         val (_, p2) = app.startMatch()
         p2.dead = true
         app.service.defeat(p2.id, DefeatCause.DEATH)
-        // ROUNDCOUNTDOWN 中の再装備予約を中断で無効化
+        // Abort invalidates the re-equip reservation made during ROUNDCOUNTDOWN
         app.service.abort(Arena.Id.new("arena1"))
         app.scheduler.runOneShots()
-        // abort 側の遅延復元が走り、古い再装備コールバックは世代不一致で無効
+        // The abort's deferred restore runs; the stale re-equip callback is generation-mismatched and inert
         val p2Restores = app.equipment.restored.count { it.playerId == p2.id }
         assertEquals(1, p2Restores)
         assertTrue(app.equipment.kitApplies.count { it.second == p2.id } <= 2)
@@ -194,19 +194,19 @@ class PlayerRecoveryServiceTest {
         val (_, p2) = app.startMatch()
         p2.dead = true
         app.service.defeat(p2.id, DefeatCause.DEATH)
-        // 遅延リスポーンコールバックを残したまま disconnect
+        // Disconnect while a deferred respawn callback is still pending
         app.players.disconnect(p2)
         app.scheduler.runOneShots()
-        // オフラインのため未復元のまま
+        // Still unrestored because the player is offline
         assertNotNull(app.service.pendingRestore(p2.id))
 
-        // ラウンドカウントダウンが不在を検出して中断しても ticket は保持される
+        // Even when the round countdown detects the absence and aborts, the ticket is retained
         app.scheduler.tick()
         assertEquals(ArenaState.WAITING, app.state())
         assertNotNull(app.service.pendingRestore(p2.id))
         assertNull(app.service.arenaIdOf(p2.id))
 
-        // 再ログインで ticket の復元が完了する
+        // Re-login completes the ticket's restore
         p2.online = true
         p2.dead = false
         app.service.restorePending(p2.id, p2.name)
@@ -220,7 +220,7 @@ class PlayerRecoveryServiceTest {
         val (p1, p2) = app.startMatch()
         p2.dead = true
         app.service.shutdown()
-        // 生存者は復元+acknowledge、死者は復元のみで記録残存
+        // The survivor is restored + acknowledged; the dead player is restored but the record remains
         assertTrue(app.equipment.restored.any { it.playerId == p1.id })
         assertTrue(app.equipment.restored.any { it.playerId == p2.id })
         assertEquals(1, app.equipment.storedBackups.size)
@@ -241,7 +241,7 @@ class PlayerRecoveryServiceTest {
         assertNull(app.service.arenaIdOf(p.id))
         p.dead = false
         assertEquals(JoinReply.JoinedWaiting, app.service.join(p.id, p.name, Arena.Id.new("arena1")))
-        // 復元済み(参加前に完了)なので記録は消える
+        // Already restored (completed before join), so the record is gone
         assertTrue(app.equipment.restored.any { it.playerId == p.id })
         assertTrue(app.equipment.storedBackups.isEmpty())
     }

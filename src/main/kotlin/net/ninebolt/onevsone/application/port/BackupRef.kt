@@ -4,11 +4,11 @@ import net.ninebolt.onevsone.domain.MatchId
 import kotlin.uuid.Uuid
 
 /**
- * 開始直前に取得したインベントリバックアップの識別子。
- * 実データ(ItemStack 由来)は port の外側(infrastructure)に閉じ込め、
- * 内部層はこのメタデータだけを受け渡す。
+ * Identifier of an inventory backup taken just before a match starts.
+ * The payload (ItemStack-derived) is confined outside the port (in
+ * infrastructure); inner layers only pass this metadata around.
  *
- * playerId は uuid 未記録のバックアップでは null になり得る。
+ * playerId can be null for backups without a recorded uuid.
  */
 data class BackupRef private constructor(
     val backupId: Uuid,
@@ -17,11 +17,11 @@ data class BackupRef private constructor(
     val playerName: String
 ) {
     companion object {
-        /** 新規バックアップ。backupId は内部で発番する。 */
+        /** A new backup. backupId is generated internally. */
         fun new(matchId: MatchId, playerId: Uuid?, playerName: String): BackupRef =
             BackupRef(Uuid.random(), matchId, playerId, playerName)
 
-        /** players.yml 等からの再構築。 */
+        /** Reconstruction from players.yml etc. */
         fun restored(backupId: Uuid, matchId: MatchId, playerId: Uuid?, playerName: String): BackupRef =
             BackupRef(backupId, matchId, playerId, playerName)
     }

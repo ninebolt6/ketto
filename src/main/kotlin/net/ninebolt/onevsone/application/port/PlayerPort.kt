@@ -4,22 +4,25 @@ import net.ninebolt.onevsone.domain.WorldPosition
 import kotlin.uuid.Uuid
 
 /**
- * オンライン(または切断処理中)のプレイヤーへの限定操作。
- * 装備と表示は含めない。実体参照は返さず、UUID で引いて生存/位置を確認し、
- * 試合状態への変更・テレポート・リスポーンを要求する。
+ * Limited operations on online (or disconnecting) players.
+ * Equipment and display are not included. No entity references are returned;
+ * callers resolve by UUID to check liveness/position and request match-state
+ * changes, teleports, and respawns.
  */
 interface PlayerPort {
     /**
-     * プレイヤーの操作ハンドル。オンラインのプレイヤー、およびアダプターが
-     * QuitEvent 処理中として登録した切断中プレイヤーを返す。それ以外は null。
+     * Operation handle for a player. Returns online players and disconnecting
+     * players the adapter registered while processing QuitEvent. null
+     * otherwise.
      */
     fun handle(playerId: Uuid): PlayerHandle?
 
     /**
-     * 名前から UUID を解決する。オンライン・キャッシュ済みなら即時、
-     * 未キャッシュならブロッキング解決をアダプター側の非同期へ逃がす。
-     * callback はメインスレッドで呼ばれ、プラグイン無効化後は呼ばれない。
-     * 応答先プレイヤーの存亡は callback 側で確認すること。
+     * Resolves a UUID from a name. Immediate for online/cached players;
+     * uncached names go through blocking resolution offloaded to the adapter's
+     * async path. callback is invoked on the main thread and is not invoked
+     * after the plugin is disabled. The callback must check whether the target
+     * player is still around.
      */
     fun resolveOfflineId(name: String, callback: (Uuid?) -> Unit)
 }
@@ -30,12 +33,12 @@ interface PlayerHandle {
     val online: Boolean
     val dead: Boolean
     fun position(): WorldPosition?
-    /** 死亡中なら即時リスポーン。 */
+    /** Respawns immediately if dead. */
     fun respawn()
-    /** 燃焼 0・体力全快・満腹度 20。死亡中は何もしない。 */
+    /** Fire ticks 0, full health, food level 20. Does nothing while dead. */
     fun resetVitals()
-    /** SURVIVAL・飛行不可 + resetVitals。 */
+    /** SURVIVAL, no flight, plus resetVitals. */
     fun prepareForMatch()
-    /** ワールド未ロード等で失敗した場合はアダプター側が警告する。 */
+    /** The adapter warns on failure such as an unloaded world. */
     fun teleport(position: WorldPosition)
 }

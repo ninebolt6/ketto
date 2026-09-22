@@ -1,97 +1,97 @@
-# ゲームフロー仕様
+# Game Flow Specification
 
-## 状態遷移
+## State Transitions
 
-アリーナごとに 1 つの `ArenaMatch` が状態を所有する。
+Each arena owns exactly one `ArenaMatch` holding its state.
 
 ```
-WAITING ──join(1人目)──▶ ONEMORE ──join(2人目)──▶ COUNTDOWN ──▶ INGAME
+WAITING ──join(1st)──▶ ONEMORE ──join(2nd)──▶ COUNTDOWN ──▶ INGAME
    ▲                      │                                     ▲  │
-   │                      │ leaveWaiting(任意退出)              │  │ recordDefeat
+   │                      │ leaveWaiting(voluntary leave)       │  │ recordDefeat
    │                      ▼                                     │  ▼
    │                    WAITING                            ROUNDCOUNTDOWN
-   │                                                           (ラウンド決着)
+   │                                                        (round decided)
    └────────── abort / finishMatch / forfeit ◀───────────────────┘
 ```
 
-| 状態             | 意味                                   |
-| ---------------- | -------------------------------------- |
-| `WAITING`        | 参加者 0 人。参加受付可                |
-| `ONEMORE`        | 参加者 1 人。あと 1 人待ち。参加受付可 |
-| `COUNTDOWN`      | 2 人揃った。初回カウントダウン中       |
-| `INGAME`         | 対戦中                                 |
-| `ROUNDCOUNTDOWN` | ラウンド決着後の次ラウンド準備中       |
+| State            | Meaning                                              |
+| ---------------- | ---------------------------------------------------- |
+| `WAITING`        | 0 participants. Accepting joins                      |
+| `ONEMORE`        | 1 participant. Waiting for one more. Accepting joins |
+| `COUNTDOWN`      | Both players present. Initial countdown running      |
+| `INGAME`         | Match in progress                                    |
+| `ROUNDCOUNTDOWN` | Preparing next round after a round was decided       |
 
-参加を受け付けられるのは `WAITING` / `ONEMORE` のみ。
+Joins are accepted only in `WAITING` / `ONEMORE`.
 
-## 参加
+## Joining
 
-- 参加は Join 看板の右クリック(signs.md 参照)。
-- 1 人目: `ONEMORE` へ遷移し「あと一人参加するのを待っています。」を表示。
-- 2 人目: `COUNTDOWN` へ遷移し初回カウントダウン開始。
-- 参加条件: アリーナが `enabled`、参加受付可能な状態、他アリーナに未参加、満員でない、同一プレイヤーの重複参加でない。
-- 参加時に未復元の持ち物バックアップがあれば、先に復元を完了させてから登録する(復元対象が死亡中なら参加を拒否)。
+- Players join by right-clicking a Join sign (see signs.md).
+- 1st player: transitions to `ONEMORE` and shows "Waiting for one more player."
+- 2nd player: transitions to `COUNTDOWN` and starts the initial countdown.
+- Join conditions: arena is `enabled`, state accepts joins, not in another arena, not full, not a duplicate join by the same player.
+- If the player has an unrestored inventory backup, restore completes before registration (join is refused while the restore target is dead).
 
-## 初回カウントダウン(COUNTDOWN)
+## Initial Countdown (COUNTDOWN)
 
-- 0.5 秒後に開始し、1 秒間隔で `remaining = 5 → 0` をカウント。
-- `remaining > 0`: 両者に「開始まで: N秒」を通知。
-- `remaining == 0`: 開始処理を実行。
-  - どちらかが死亡中なら開始を保留(次の tick で再判定)。
-  - 両者の持ち物を一括バックアップ(`players.yml` の `inv.<name>`)。
-  - アリーナ装備を適用し、スポーン 1 / 2 へテレポート、`prepareForMatch`(体力・空腹度・演出リセット)を実行。
-  - 「ゲームスタート！」を通知し `INGAME` へ遷移、スコアボードを提示。
-- カウントダウン中にプレイヤーハンドルが取得不能になった場合はマッチを中断する。
+- Starts after 0.5s, then counts `remaining = 5 → 0` at 1s intervals.
+- `remaining > 0`: notify both with "Starting in: Ns".
+- `remaining == 0`: run start processing.
+  - If either player is dead, postpone the start (re-evaluated next tick).
+  - Bulk-backup both players' inventories (`inv.<name>` in `players.yml`).
+  - Apply the arena kit, teleport to spawn 1 / 2, run `prepareForMatch` (health, hunger, effect reset).
+  - Notify "Game Start!", transition to `INGAME`, show the scoreboard.
+- If a player handle becomes unavailable during the countdown, the match aborts.
 
-## ラウンド決着(recordDefeat)
+## Round Resolution (recordDefeat)
 
-- 敗北原因: `DEATH`(死亡)・`FALL`(移動先ワールドの最低高度以下への落下)。
-- 受理条件: `INGAME` 中の死亡/落下、または `ROUNDCOUNTDOWN` 中の落下のみ。死亡は `INGAME` のみ受理。
-- 2 人在籍中かつ敗北解決中でないこと(重複決着ガード `resolving`)。
-- 勝者の累計勝数が `required-wins - 1` 以上なら最終キルとみなしマッチ終了(最終キルは勝数に加算しない)。すなわち `required-wins` キル先取。
-- それ以外: 勝者に +1 勝、`ROUNDCOUNTDOWN` へ遷移しラウンド数(合計勝数)と勝者名を通知、ラウンド終了音を敗者位置で再生。
+- Defeat causes: `DEATH` (death) and `FALL` (falling at or below the destination world's minimum height).
+- Acceptance: death/fall during `INGAME`, or a fall during `ROUNDCOUNTDOWN`. Death is accepted only in `INGAME`.
+- Both players must be present and no defeat resolution may be in progress (duplicate-resolution guard `resolving`).
+- If the winner's total wins reach `required-wins - 1`, treat it as the final kill and end the match (the final kill is not added to the win count). In other words, first to `required-wins` kills.
+- Otherwise: winner gets +1 win, transition to `ROUNDCOUNTDOWN`, notify the round count (total wins) and winner name, play the round-end sound at the loser's position.
 
-### ラウンド間処理(ROUNDCOUNTDOWN)
+### Inter-Round Processing (ROUNDCOUNTDOWN)
 
-- 勝者: 即座に `prepareForMatch` + 装備再適用 + スポーンへテレポート。
-- 敗者(死亡): 次 tick でリスポーン → `prepareForMatch` + 装備適用 + スポーンへテレポート → 解決ガード解放。
-- 敗者(落下等非死亡): 即座に同処理し、次 tick で解決ガード解放。
-- ラウンドカウントダウン: `remaining = 7` から 1 秒間隔。
-  - `7`: 両者へ装備再適用 + `prepareForMatch`。
-  - `1..5`: 「開始まで: N秒」を通知。
-  - `0`: 「スタート！」を通知し `INGAME` へ復帰。
+- Winner: immediately `prepareForMatch` + re-apply kit + teleport to spawn.
+- Loser (dead): respawn next tick → `prepareForMatch` + apply kit + teleport to spawn → release the resolution guard.
+- Loser (non-death e.g. fall): same processing immediately, release the resolution guard next tick.
+- Round countdown: `remaining = 7` at 1s intervals.
+  - `7`: re-apply kit + `prepareForMatch` for both.
+  - `1..5`: notify "Starting in: Ns".
+  - `0`: notify "Start!" and return to `INGAME`.
 
-## マッチ終了(finishMatch)
+## Match End (finishMatch)
 
-- 優勝通知「アリーナ: XでYが優勝しました！」をブロードキャスト。
-- 勝者: 生存なら即座に体力リセット + 持ち物復元 + ロビー転送 + 優勝花火。死亡中なら次 tick でリスポーン後に同処理。不戦敗(forfeit)の場合は花火なし。
-- 敗者(死亡): 次 tick でリスポーン → 体力リセット → 持ち物復元 → ロビー転送。
-- 敗者(非死亡): 体力リセット(不戦敗時を除く) + 持ち物復元 + ロビー転送(不戦敗時は転送なし)。
-- 戦績: 勝者 `win + 1`、敗者 `lose + 1` を `stats/<uuid>.yml` へ記録。記録失敗は警告ログのみで終了処理は継続。
-- 状態は `WAITING` に戻り、参加者・勝数をクリア。看板を `Waiting` 表示に更新。
+- Broadcast the victory notice "Player Y won in arena X!".
+- Winner: if alive, immediately reset health + restore inventory + send to lobby + victory fireworks. If dead, respawn next tick then same processing. No fireworks on a forfeit.
+- Loser (dead): respawn next tick → reset health → restore inventory → send to lobby.
+- Loser (alive): reset health (except on forfeit) + restore inventory + send to lobby (no teleport on forfeit).
+- Stats: record winner `win + 1`, loser `lose + 1` to `stats/<uuid>.yml`. A recording failure only logs a warning; teardown continues.
+- State returns to `WAITING`; participants and win counts are cleared. The sign is updated to `Waiting`.
 
-## 退出・切断・中断
+## Leaving, Disconnecting, Aborting
 
-- `/1vs1 leave`: `ONEMORE` 中のみ任意退出可能(持ち物は不変更)。それ以外は「カウントダウン中はアリーナから退出できません！」。
-- ログアウト: 未開始(`ONEMORE`・初回 `COUNTDOWN`)なら登録解除のみ。`COUNTDOWN` 中の切断では残った参加者が `ONEMORE` で待機を継続し、走行中のカウントダウンは世代トークン不一致で無効化される。進行中(`ROUNDCOUNTDOWN`/`INGAME`)なら相手を勝者とする不戦敗でマッチ終了。
-- 中断(abort): アリーナ無効化・削除・シャットダウン・開始失敗時。カウントダウン等の遅延タスクは世代トークン不一致で無効化。参加者全員の持ち物を復元する(死者は次 tick でリスポーン後に復元)。
-- シャットダウン: 全マッチを abort し、オンライン参加者の未復元バックアップを同期復元。死亡中のプレイヤーは持ち物復元 + スコアボードクリアのみ行い記録は残す(次回ログイン時に再復元)。
+- `/1vs1 leave`: voluntary leave is allowed only during `ONEMORE` (inventory untouched). Otherwise "You cannot leave the arena during the countdown!".
+- Logout: before the match starts (`ONEMORE`, initial `COUNTDOWN`), unregister only. On disconnect during `COUNTDOWN`, the remaining participant keeps waiting in `ONEMORE` and the running countdown is invalidated by generation-token mismatch. If the match is in progress (`ROUNDCOUNTDOWN`/`INGAME`), the match ends as a forfeit with the opponent as winner.
+- Abort: on arena disable/remove, shutdown, or start failure. Deferred tasks such as countdowns are invalidated by generation-token mismatch. Every participant's inventory is restored (dead players respawn next tick, then restore).
+- Shutdown: abort all matches and synchronously restore unrestored backups of online participants. Dead players only get inventory restore + scoreboard clear; their records remain (restored again on next login).
 
-## 持ち物バックアップ/復元
+## Inventory Backup/Restore
 
-- 開始直前に両者のインベントリを `players.yml` へ一括保存(1 件でも失敗すれば誰のレコードも変更せずマッチ中断)。
-- 復元は `RestoreTicket` で管理。UUID 優先、名前はバックアップの uuid が一致する(または未記録の)場合のみ採用し、名前再利用での誤復元を防ぐ。
-- 復元完了後はバックアップを削除。削除失敗時は記録が残り、次回起動で再復元される(安全側)。
-- 再ログイン時・再参加時に未復元バックアップがあれば復元する。
+- Just before the match starts, both players' inventories are bulk-saved to `players.yml` (if any save fails, no record is changed and the match aborts).
+- Restore is managed via `RestoreTicket`. UUID takes precedence; a name is only used when the backup's uuid matches (or is unrecorded), preventing mis-restoration through name reuse.
+- After restore completes, the backup is deleted. If deletion fails the record remains and is restored again on next startup (fail-safe).
+- Unrestored backups are restored on relogin and on rejoin.
 
-## スコアボード
+## Scoreboard
 
-- タイトル: アリーナ名(緑・太字)。エントリ: 参加者名(金色)+ 勝数。
-- マッチ開始時とラウンド決着時に更新。復元完了時にクリア。
+- Title: arena name (green, bold). Entries: participant names (gold) + win counts.
+- Updated at match start and on each round resolution. Cleared when restore completes.
 
-## 設定
+## Configuration
 
-| config.yml キー | 既定            | 意味                         |
-| --------------- | --------------- | ---------------------------- |
-| `prefix`        | `&8[&61vs1&8] ` | 全メッセージの接頭辞(& 形式) |
-| `required-wins` | `3`             | マッチ勝利に必要なキル数     |
+| config.yml key  | Default         | Meaning                            |
+| --------------- | --------------- | ---------------------------------- |
+| `prefix`        | `&8[&61vs1&8] ` | Prefix for all messages (& format) |
+| `required-wins` | `3`             | Kills required to win a match      |

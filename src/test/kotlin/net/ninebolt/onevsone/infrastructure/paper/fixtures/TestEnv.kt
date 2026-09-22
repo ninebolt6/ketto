@@ -71,24 +71,25 @@ import kotlin.uuid.toJavaUuid
 import kotlin.uuid.toKotlinUuid
 
 /**
- * MockBukkit 上に実アダプター・実サービスを配線する統合テスト環境。
- * モック呼出ではなく実状態(実インベントリ・実スケジューラ・実イベント)で検証する。
- * Paper 依存は infrastructure テストに限定する。
+ * Integration test environment wiring real adapters and real services on
+ * MockBukkit. Verifies real state (real inventories, real scheduler, real
+ * events) rather than mock calls. Paper dependencies are confined to
+ * infrastructure tests.
  */
 class TestEnv(val folder: File, val requiredWins: Int = 3) {
-    // spyk はオフライン解決・isEnabled・asyncScheduler の障害注入/同期化のみに使い、
-    // 未スタブ呼出は全て実動作へ委譲する
+    // spyk is used only for fault injection/synchronization of offline
+    // resolution, isEnabled, and asyncScheduler; unstubbed calls delegate to real behavior
     val server: ServerMock = spyk(MockBukkit.mock())
     val plugin: PluginMock = spyk(MockBukkit.createMockPlugin())
     val asyncScheduler: AsyncScheduler = mockk(relaxed = true)
-    // ScoreMock.customName が MockBukkit 4.15 未実装のため、スコアボード境界だけは narrow なスタブに留める
+    // ScoreMock.customName is unimplemented in MockBukkit 4.15, so only the scoreboard boundary is a narrow stub
     val scoreboardManager: ScoreboardManagerMock = mockk(relaxed = true)
     val boards = mutableListOf<Scoreboard>()
 
     init {
-        // ItemStack.of が ItemStackMock を返すため、YamlConfiguration 経由の往復に登録が必要
+        // ItemStack.of returns ItemStackMock, so registration is needed for round-trips through YamlConfiguration
         ConfigurationSerialization.registerClass(ItemStackMock::class.java)
-        // async 解決は即時実行に潰し、応答側の runTask は実スケジューラ経由で runOneShots が消化する
+        // Async resolution collapses to immediate execution; the reply side's runTask is drained via the real scheduler by runOneShots
         every { server.asyncScheduler } returns asyncScheduler
         every { asyncScheduler.runNow(any(), any<Consumer<ScheduledTask>>()) } answers {
             arg<Consumer<ScheduledTask>>(1).accept(mockk(relaxed = true))
@@ -96,8 +97,9 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         }
         every { server.scoreboardManager } returns scoreboardManager
         every { scoreboardManager.newScoreboard } answers {
-            // Scoreboard は実物のまま使う。ScoreMock.customName 未実装なので
-            // validate を呼ばない匿名サブクラスの objective/score に差し替える
+            // The Scoreboard itself stays real. Since ScoreMock.customName is
+            // unimplemented, objective/score are swapped for anonymous
+            // subclasses that never call validate
             val board = spyk(ScoreboardMock())
             every { board.registerNewObjective(any<String>(), any<Criteria>(), any<Component>()) } answers {
                 object : ObjectiveMock(board, arg(0), arg(2), arg(1), RenderType.INTEGER) {
@@ -151,8 +153,8 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         private set
     var admin = ArenaAdministrationService(registry, arenaRepo, signRepo, lobbyRepo, equipment, presentation, progression)
         private set
-    // rebuildWith 後も現在の依存を参照するため eager var とし、再構築時に再代入する。
-    // command は stats レート制限の内部状態を持つため、同一環境内ではインスタンスを維持する
+    // These are eager vars reassigned on rebuild so they always reference the current dependencies.
+    // command keeps its instance within an environment because it holds the stats rate-limit state
     var signListener = ArenaSignListener(service, admin, messages)
         private set
     var command = OneVsOneCommand(service, admin, playerPort, failures, messages)
@@ -168,7 +170,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         presentation, recovery, failures, progression, MatchStateSync(matchStateRepo, presentation)
     )
 
-    /** store または各ポートを差し替えて全依存を再構築(障害注入用)。 */
+    /** Rebuilds all dependencies with the store or individual ports swapped out (for fault injection). */
     fun rebuildWith(
         newStore: YamlStore = store,
         backupStore: YamlBackupStore = YamlBackupStore(newStore),
@@ -195,8 +197,10 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     }
 
     /**
-     * リスナーを実ディスパッチ経路で登録する。rebuildWith 後の再登録で旧 service を
-     * 掴んだままにしないため、登録済みハンドラを剥がしてから現在の依存で再生成する。
+     * Registers listeners through the real dispatch path. To prevent
+     * re-registration after rebuildWith from leaving handlers holding the old
+     * service, registered handlers are unregistered first and recreated from
+     * the current dependencies.
      */
     fun registerListeners() {
         HandlerList.unregisterAll(plugin)
@@ -206,7 +210,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         server.pluginManager.registerEvents(ArenaSignListener(service, admin, messages), plugin)
     }
 
-    /** 登録済みリスナーの実ディスパッチ経路でイベントを発火する。 */
+    /** Fires an event through the real dispatch path of the registered listeners. */
     fun fire(event: Event) {
         server.pluginManager.callEvent(event)
     }
@@ -225,17 +229,17 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
 
     fun item(type: Material): ItemStack = ItemStack.of(type)
 
-    /** 切断。オンライン一覧から外れ isOnline=false になる。quit 処理は quit() で駆動する。 */
+    /** Disconnects: removed from the online list, isOnline=false. Quit handling is driven by quit(). */
     fun removePlayer(p: Player) {
         (p as? PlayerMock)?.disconnect()
     }
 
-    /** カウントダウンタイマー(period=20tick)を n 回発火させる分だけ時間を進める。 */
+    /** Advances time enough to fire the countdown timer (period=20 ticks) n times. */
     fun tick(times: Int = 1) {
         server.scheduler.performTicks(20L * times)
     }
 
-    /** 遅延 0 のワンショット(延期コールバック)を消化する。周期タイマーは発火させない。 */
+    /** Drains delay-0 one-shots (deferred callbacks) without firing periodic timers. */
     fun runOneShots() {
         server.scheduler.waitAsyncTasksFinished()
         server.scheduler.performTicks(1)
@@ -256,7 +260,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
 
     fun setKit(arena: Arena.Id, snapshot: PaperInventorySnapshot) = equipment.putKit(arena, snapshot)
 
-    /** 看板参加と同じ経路で join し、応答メッセージも配送する。 */
+    /** Joins via the same path as sign-join and also delivers the reply messages. */
     fun join(player: Player, arena: Arena.Id = Arena.Id.new("arena1")): JoinReply {
         val reply = service.join(player.uuid, player.name, arena)
         signListener.renderJoin(player, arena.name, reply)
@@ -264,9 +268,10 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     }
 
     /**
-     * QuitEvent と同じく切断スコープ内で quit を呼ぶ。
-     * リスナー登録済みの環境で disconnect() 済みなら quit は実イベント経路で駆動済みのため、
-     * これを併用すると二重呼出になる(現状は冪等だが意図が曖昧になる)。
+     * Calls quit inside a disconnect scope, same as QuitEvent.
+     * In an environment with listeners registered, a disconnect()ed player's
+     * quit is already driven through the real event path, so calling this too
+     * double-invokes it (currently idempotent, but muddies intent).
      */
     fun quit(player: Player) {
         lookup.scopeQuitting(player) {
@@ -274,7 +279,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         }
     }
 
-    /** /1vs1 leave と同じく応答メッセージを配送する。 */
+    /** Delivers reply messages, same as /1vs1 leave. */
     fun leave(player: Player): LeaveReply {
         val reply = service.leave(player.uuid)
         when (reply) {
@@ -293,18 +298,20 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
 }
 
 /**
- * `Player.Spigot.respawn()` は paper-api の既定実装が UnsupportedOperationException を投げ、
- * MockBukkit の PlayerSpigotMock も未実装のため、PlayerMock.respawn() へ委譲する実装を噛ませる。
+ * `Player.Spigot.respawn()` throws UnsupportedOperationException from the
+ * paper-api default implementation, and MockBukkit's PlayerSpigotMock is also
+ * unimplemented, so this inserts an implementation delegating to
+ * PlayerMock.respawn().
  */
 class ArenaPlayerMock(server: ServerMock, name: String, uuid: UUID) : PlayerMock(server, name, uuid) {
-    /** 視線先のブロック。getTargetBlockExact は MockBukkit 未実装のためスタブで返す。 */
+    /** The looked-at block. getTargetBlockExact is unimplemented in MockBukkit, so this stub returns it. */
     var targetBlock: Block? = null
 
     override fun getTargetBlockExact(maxDistance: Int): Block? = targetBlock
 
     private val testSpigot = object : Player.Spigot() {
         var respawnCount = 0
-        /** respawn 実行時点の先頭スロット。リスポーン→装備復元の順序検証用。 */
+        /** The first slot at the moment respawn runs. For verifying the respawn -> restore ordering. */
         var slotAtRespawn: ItemStack? = null
 
         override fun respawn() {
@@ -320,5 +327,4 @@ class ArenaPlayerMock(server: ServerMock, name: String, uuid: UUID) : PlayerMock
     val slotAtRespawn get() = testSpigot.slotAtRespawn
 }
 
-/** モック Player の Bukkit 側 ID(java.util.UUID)をドメインの Uuid へ変換する。 */
 internal val Player.uuid: Uuid get() = uniqueId.toKotlinUuid()

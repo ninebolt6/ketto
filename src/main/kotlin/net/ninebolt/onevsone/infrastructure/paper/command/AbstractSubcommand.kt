@@ -4,7 +4,7 @@ import net.ninebolt.onevsone.infrastructure.paper.Messages
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 
-/** 定型の拒否応答を集約する基底。判定自体は各ハンドラが行う。 */
+/** Base collecting canned denial replies. The checks themselves are up to each handler. */
 internal abstract class AbstractSubcommand(
     protected val messages: Messages
 ) : Subcommand {

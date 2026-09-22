@@ -4,14 +4,14 @@ import net.ninebolt.onevsone.infrastructure.paper.Msg
 import org.bukkit.command.CommandSender
 
 /**
- * /1vs1 のサブコマンド単位。CommandGroup が先頭引数でルーティングし、
- * 権限・引数・存在チェック等の判断は各実装が行う。
+ * A single /1vs1 subcommand. CommandGroup routes on the first argument;
+ * permission, argument, and existence checks are each implementation's job.
  */
 internal interface Subcommand {
-    /** タブ補完で名前を提案してよいか。実行可否の判定は execute 側の責務。 */
+    /** Whether the name may be suggested in tab completion. Whether it can actually run is execute's responsibility. */
     fun visibleTo(sender: CommandSender): Boolean = sender.isOp
 
-    /** @return 構文エラー時に表示すべき usage。応答送信済みなら null */
+    /** @return usage to display on syntax error; null if a reply was already sent */
     fun execute(sender: CommandSender, args: List<String>): Msg?
 
     fun tabComplete(sender: CommandSender, args: List<String>): List<String> = emptyList()

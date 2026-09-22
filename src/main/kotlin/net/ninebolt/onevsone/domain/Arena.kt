@@ -1,11 +1,12 @@
 package net.ninebolt.onevsone.domain
 
 /**
- * アリーナ。静的設定(有効化・スポーン)を担う永続エンティティ。
- * 進行中の試合状態は別集約の ArenaMatch が持ち、両者の 1:1 ペアリングは
- * ArenaRegistry が構造で保証する。装備中身は infrastructure が保持する。
- * immutable: 変更は enable()/disable()/withSpawn() で新インスタンスを作り、
- * レジストリと永続化へ置き換える。
+ * An arena. A persistent entity holding static configuration (enabled, spawns).
+ * In-progress match state lives in the separate ArenaMatch aggregate; the 1:1
+ * pairing of the two is structurally guaranteed by ArenaRegistry. Kit contents
+ * are held by infrastructure.
+ * Immutable: changes produce a new instance via enable()/disable()/withSpawn()
+ * and are replaced in the registry and persistence.
  */
 data class Arena private constructor(
     val id: Id,
@@ -14,9 +15,9 @@ data class Arena private constructor(
     val spawn2: WorldPosition? = null
 ) {
     /**
-     * アリーナ識別子。永続化・看板・ファイル名と一致する名前を包む。
-     * 生成は companion のファクトリ経由のみで、受理規則を満たさない
-     * インスタンスは作れない。
+     * Arena identifier. Wraps the name that matches persistence, signs, and
+     * file names. Instances can only be created through companion factories,
+     * so no instance can violate the acceptance rules.
      */
     @JvmInline
     value class Id private constructor(val name: String) {
@@ -24,8 +25,9 @@ data class Arena private constructor(
 
         companion object {
             /**
-             * アリーナ名の受理規則。永続化ファイル名に直結するため、パスに使えない
-             * 文字・前後の空白・予約名(players)を拒否する。
+             * Arena-name acceptance rules. The name maps directly to a
+             * persistence file name, so path-unsafe characters, surrounding
+             * whitespace, and the reserved name (players) are rejected.
              */
             private fun isValidName(name: String): Boolean =
                 name.isNotBlank() &&
@@ -34,10 +36,10 @@ data class Arena private constructor(
                     name.none { it == '/' || it == '\\' || it == '.' || it == ':' || it.isISOControl() } &&
                     !name.equals("players", ignoreCase = true)
 
-            /** コマンド引数・永続化データなどの外部入力からの変換。不正名は null。 */
+            /** Conversion from external input such as command args or persisted data. Invalid names yield null. */
             fun of(name: String): Id? = if (isValidName(name)) Id(name) else null
 
-            /** 妥当性が分かっている名前向け。不正名は IllegalArgumentException。 */
+            /** For names known to be valid. Invalid names throw IllegalArgumentException. */
             fun new(name: String): Id =
                 of(name) ?: throw IllegalArgumentException("invalid arena name: '$name'")
         }
@@ -49,7 +51,7 @@ data class Arena private constructor(
 
     fun disable(): Arena = copy(enabled = false)
 
-    /** slot は spawn(slot) と同じ 0 始まり。 */
+    /** slot is 0-based, same as spawn(slot). */
     fun withSpawn(slot: Int, position: WorldPosition): Arena {
         require(slot in 0..1) { "spawn slot must be 0 or 1 (was $slot)" }
         return if (slot == 0) copy(spawn1 = position) else copy(spawn2 = position)

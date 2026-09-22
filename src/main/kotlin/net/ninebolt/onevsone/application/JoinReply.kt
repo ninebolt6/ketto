@@ -1,16 +1,17 @@
 package net.ninebolt.onevsone.application
 
 /**
- * ユースケースの結果。文言への変換は呼び出し側(infrastructure)が行う。
+ * Use-case result. Conversion to message text happens on the caller's side
+ * (infrastructure).
  */
 sealed interface JoinReply {
-    /** 1 人目として登録。ONEMORE 待機へ。 */
+    /** Registered as the first player; now waiting in ONEMORE. */
     data object JoinedWaiting : JoinReply
-    /** 2 人目として登録。初回カウントダウンを開始済み。 */
+    /** Registered as the second player; the initial countdown has started. */
     data object JoinedStarting : JoinReply
     data object AlreadyJoined : JoinReply
     data object NotEnabled : JoinReply
-    /** 試合中/満員/未復元バックアップ保持者の死亡中等、参加不能。 */
+    /** Cannot join: match in progress / full / holder of an unrestored backup is dead, etc. */
     data object InMatch : JoinReply
     data object NotFound : JoinReply
 }

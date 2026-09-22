@@ -22,7 +22,7 @@ import java.io.File
 import java.util.logging.Logger
 import kotlin.uuid.Uuid
 
-/** YamlPersistence のシナリオを repository 経由の API で検証する。 */
+/** Verifies the YamlPersistence scenarios through the repository APIs. */
 class YamlPersistenceTest {
 
     @TempDir
@@ -198,7 +198,7 @@ class YamlPersistenceTest {
         val old = BackupRef.new(MatchId.new(), original.id, original.name)
         s.saveBackups(listOf(PersistedBackup(old, PaperInventorySnapshot(items = listOf(null)))))
 
-        // 同名の別人が参加してバックアップを保存する
+        // A different person with the same name joins and saves a backup
         val other = Participant.new("Alice")
         val fresh = BackupRef.new(MatchId.new(), other.id, other.name)
         s.saveBackups(listOf(PersistedBackup(fresh, PaperInventorySnapshot())))
@@ -209,7 +209,7 @@ class YamlPersistenceTest {
         assertEquals(original.id.toString(), yaml.getString("$moved.uuid"))
         assertEquals("Alice", yaml.getString("$moved.name"))
 
-        // 両方が読み出せ、旧レコードは id 一致で削除できる
+        // Both are readable, and the old record is deletable by id match
         assertEquals(2, backups().persistedBackups().size)
         backups().deleteBackup(old)
         val after = YamlConfiguration.loadConfiguration(File(folder, "status/players.yml"))
@@ -233,7 +233,7 @@ class YamlPersistenceTest {
     @Test
     fun `failed save leaves no temp file`() {
         val s = store()
-        // 一時ファイルのパスをディレクトリで塞ぎ、書き出しを失敗させる
+        // Block the temp file's path with a directory to make the write fail
         val tmp = File(folder, "status/players.yml.tmp")
         tmp.mkdirs()
         assertFailsWith<IllegalStateException> {
@@ -326,7 +326,7 @@ class YamlPersistenceTest {
         assertEquals(1, pending.size)
         assertEquals("Legacy", pending[0].ref.playerName)
         assertNull(pending[0].ref.playerId)
-        // 識別子が無い旧レコードは採番して書き戻す(以後は id で同一性判定できる)
+        // Old records without an identifier get one assigned and written back (id is the identity check from then on)
         assertEquals(
             pending[0].ref.backupId.toString(),
             YamlConfiguration.loadConfiguration(file).getString("inv.Legacy.id")
@@ -369,7 +369,7 @@ class YamlPersistenceTest {
     @Test
     fun `sign index is rebuilt from arena files by a new instance`() {
         signs().setSign("a1", WorldPosition.new("world", 5.0, 64.0, 5.0))
-        // 別インスタンスは index を持たないので arena/<name>.yml から構築する
+        // A separate instance has no index, so it builds one from arena/<name>.yml
         assertEquals("a1", signs().signOwner("world", 5, 64, 5))
         assertEquals(5.0, signs().signLocation("a1")!!.x)
     }

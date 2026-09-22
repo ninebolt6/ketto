@@ -4,22 +4,24 @@ import net.ninebolt.onevsone.domain.MatchId
 import net.ninebolt.onevsone.domain.Participant
 
 /**
- * マッチ開始時に取得するインベントリバックアップの永続化・復元。
- * ItemStack 実データは infrastructure 内に閉じ込め、内部層には BackupRef のみを返す。
+ * Persistence and restore of inventory backups taken at match start.
+ * ItemStack payloads stay inside infrastructure; inner layers only get
+ * BackupRef back.
  */
 interface InventoryBackupPort {
     /**
-     * 開始直前に両者の持ち物を複製して一括永続化する。
-     * 失敗時は誰の持ち物も変更せず PersistenceFailure を投げる。
+     * Duplicates and bulk-persists both players' inventories just before the
+     * match starts. On failure, throws PersistenceFailure without changing
+     * anyone's inventory.
      */
     fun backupBeforeMatch(match: MatchId, participants: List<Participant>): List<BackupRef>
 
-    /** バックアップへ復元。復元失敗時はバックアップを残したまま例外を投げる。 */
+    /** Restores a backup. On failure, throws with the backup kept. */
     fun restore(backup: BackupRef)
 
-    /** 復元完了後に永続レコードを削除。backupId が一致する記録だけを消す。 */
+    /** Deletes the persisted record after restore completes. Only records with a matching backupId are removed. */
     fun acknowledge(backup: BackupRef)
 
-    /** 前回プロセス等で残った未復元バックアップの識別子一覧。 */
+    /** Identifiers of unrestored backups left by a previous process etc. */
     fun pendingBackups(): List<BackupRef>
 }

@@ -14,8 +14,8 @@ import org.bukkit.entity.Player
 import kotlin.uuid.Uuid
 
 /**
- * インベントリ実データのアダプター。バックアップ/キットの ItemStack は
- * PaperInventorySnapshot としてこの層に閉じ込める。
+ * Adapter for inventory payloads. Backup/kit ItemStacks are confined to this
+ * layer as PaperInventorySnapshot.
  */
 class PaperEquipmentAdapter(
     private val backups: YamlBackupStore,
@@ -23,18 +23,18 @@ class PaperEquipmentAdapter(
     private val lookup: PaperPlayerLookup
 ) : KitPort, InventoryBackupPort {
 
-    /** アリーナ装備のメモリキャッシュ(arena/<name>.yml の inventory)。 */
+    /** In-memory cache of arena kits (the inventory of arena/<name>.yml). */
     private val kits = mutableMapOf<Arena.Id, PaperInventorySnapshot>()
 
-    /** 稼働中に取得/読み込みしたバックアップ実データ(backupId → snapshot)。 */
+    /** Backup payloads captured/loaded while running (backupId -> snapshot). */
     private val pendingSnapshots = mutableMapOf<Uuid, PaperInventorySnapshot>()
 
-    /** テスト・起動時プリロード用。 */
+    /** For tests and startup preloading. */
     internal fun putKit(arena: Arena.Id, kit: PaperInventorySnapshot) {
         kits[arena] = kit
     }
 
-    /** キャッシュ済みのアリーナ装備(テスト検証用。未設定時は null)。 */
+    /** The cached arena kit (for test verification. null when unset). */
     internal fun kitOf(arena: Arena.Id): PaperInventorySnapshot? = kits[arena]
 
     override fun forgetKit(arena: Arena.Id) {
@@ -42,8 +42,9 @@ class PaperEquipmentAdapter(
     }
 
     /**
-     * 両者の持ち物を複製して一括永続化。複製は持ち物を変更しない。
-     * 保存に失敗したら PersistenceFailure を投げ、誰の持ち物も変更しない。
+     * Duplicates and bulk-persists both players' inventories. Duplication does
+     * not modify the inventories. If saving fails, throws PersistenceFailure
+     * without changing anyone's inventory.
      */
     override fun backupBeforeMatch(match: MatchId, participants: List<Participant>): List<BackupRef> {
         val captured = participants.map { participant ->
@@ -63,7 +64,7 @@ class PaperEquipmentAdapter(
         return captured.map { it.ref }
     }
 
-    /** バックアップへ復元。空スナップショットは空インベントリへ戻すだけ。 */
+    /** Restores a backup. An empty snapshot simply returns the player to an empty inventory. */
     override fun restore(backup: BackupRef) {
         val snapshot = pendingSnapshots[backup.backupId]
             ?: backups.backupFor(backup)?.snapshot
@@ -76,7 +77,7 @@ class PaperEquipmentAdapter(
     private fun resolve(backup: BackupRef): Player? =
         backup.playerId?.let { lookup.resolve(it) } ?: lookup.resolveByName(backup.playerName)
 
-    /** backupId が一致する記録だけを消す。 */
+    /** Deletes only records with a matching backupId. */
     override fun acknowledge(backup: BackupRef) {
         backups.deleteBackup(backup)
         pendingSnapshots.remove(backup.backupId)

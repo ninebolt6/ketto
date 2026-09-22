@@ -3,7 +3,8 @@ package net.ninebolt.onevsone.application.port
 import net.ninebolt.onevsone.domain.WorldPosition
 
 /**
- * サーバー共通のロビー座標の永続化。アリーナ単位ではなく 1 つだけ存在する。
+ * Persistence of the server-wide lobby coordinates. A single one exists, not
+ * per arena.
  */
 interface LobbyRepository {
     fun lobby(): WorldPosition?

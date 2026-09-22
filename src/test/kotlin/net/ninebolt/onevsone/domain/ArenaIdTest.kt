@@ -5,7 +5,6 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import org.junit.jupiter.api.Test
 
-/** Arena.Id の名前検証。 */
 class ArenaIdTest {
 
     @Test

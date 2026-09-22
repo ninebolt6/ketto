@@ -15,9 +15,9 @@ import java.util.logging.Logger
 import kotlin.uuid.Uuid
 
 /**
- * 共通 YAML I/O・ファイル配置・コーデック。temp+replace の原子的保存を維持する。
- * 破損・I/O 失敗は PersistenceFailure に変換する。
- * 各セクションの読み書きは Yaml*Repository / Yaml*Store が担う。
+ * Shared YAML I/O, file layout, and codecs. Saves stay atomic via temp+replace.
+ * Corruption and I/O failures are converted to PersistenceFailure.
+ * Per-section reads/writes are handled by Yaml*Repository / Yaml*Store.
  */
 class YamlStore(folder: File, private val logger: Logger) {
 
@@ -73,7 +73,7 @@ class YamlStore(folder: File, private val logger: Logger) {
         }
     }
 
-    // ---- コーデック --------------------------------------------------------
+    // ---- codecs ------------------------------------------------------------
 
     internal fun readLocation(yaml: YamlConfiguration, path: String): WorldPosition? {
         val world = yaml.getString("$path.world") ?: return null

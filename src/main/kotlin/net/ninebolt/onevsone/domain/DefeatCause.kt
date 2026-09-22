@@ -1,4 +1,4 @@
 package net.ninebolt.onevsone.domain
 
-/** 敗北の通知経路。落下(非死亡)は ROUNDCOUNTDOWN 中も受理される。 */
+/** How a defeat was reported. A fall (non-death) is also accepted during ROUNDCOUNTDOWN. */
 enum class DefeatCause { DEATH, FALL }

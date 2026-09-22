@@ -2,7 +2,7 @@ package net.ninebolt.onevsone.domain
 
 import kotlin.uuid.Uuid
 
-/** 1 回の試合(バックアップ〜終了復元まで)を識別するトークン的 ID。 */
+/** Token-like ID identifying one match (from backup through end-of-match restore). */
 @JvmInline
 value class MatchId private constructor(val value: Uuid) {
     companion object {

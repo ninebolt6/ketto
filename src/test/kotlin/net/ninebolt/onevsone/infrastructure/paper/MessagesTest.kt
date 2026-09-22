@@ -15,7 +15,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
-/** 言語バンドルの網羅性・描画・ロケール解決の単体テスト。 */
+/** Unit tests for language-bundle completeness, rendering, and locale resolution. */
 class MessagesTest {
 
     @TempDir
@@ -27,7 +27,7 @@ class MessagesTest {
     private fun load(language: String = "auto", logger: Logger = this.logger) =
         Messages.load(File(folder, "lang"), "ja", language, logger)
 
-    /** 同梱リソースの葉キー集合を取り出す。 */
+    /** Extracts the set of leaf keys from a bundled resource. */
     private fun bundledKeys(lang: String): Set<String> {
         val config = javaClass.getResourceAsStream("/lang/messages_$lang.yml")!!
             .reader().use(YamlConfiguration::loadConfiguration)
@@ -50,7 +50,7 @@ class MessagesTest {
     @Test
     fun `render substitutes unparsed placeholder literally`() {
         val messages = load()
-        // <name> は unparsed なのでタグ風文字列もそのまま出る
+        // <name> is unparsed, so tag-like strings pass through literally
         val text = plain.serialize(messages.render(messages.joined("<b>x</b>"), "ja"))
         assertTrue(text.contains("アリーナ: <b>x</b> に参加しました"))
     }

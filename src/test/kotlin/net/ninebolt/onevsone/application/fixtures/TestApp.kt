@@ -12,7 +12,6 @@ import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.WorldPosition
 import kotlin.test.assertEquals
 
-/** テスト向けにまとめて配線するコンテナ。 */
 class TestApp(val requiredWins: Int = 3, legacyNameRestore: Boolean = true) {
     val registry = ArenaRegistry(requiredWins)
     val arenas = InMemoryArenaRepository()
@@ -46,7 +45,7 @@ class TestApp(val requiredWins: Int = 3, legacyNameRestore: Boolean = true) {
         return id
     }
 
-    /** arena1 へ Alice/Bob を参加させ COUNTDOWN まで進める。 */
+    /** Joins Alice/Bob into arena1 and advances to COUNTDOWN. */
     fun joinedTwo(arenaName: String = "arena1"): Pair<FakePlayers.FakeHandle, FakePlayers.FakeHandle> {
         newArena(arenaName)
         val p1 = players.add("Alice")
@@ -56,7 +55,7 @@ class TestApp(val requiredWins: Int = 3, legacyNameRestore: Boolean = true) {
         return p1 to p2
     }
 
-    /** joinedTwo のうえ初回カウントダウンを消化して INGAME にする。 */
+    /** joinedTwo plus draining the initial countdown to reach INGAME. */
     fun startMatch(arenaName: String = "arena1"): Pair<FakePlayers.FakeHandle, FakePlayers.FakeHandle> {
         val pair = joinedTwo(arenaName)
         scheduler.tick(6)

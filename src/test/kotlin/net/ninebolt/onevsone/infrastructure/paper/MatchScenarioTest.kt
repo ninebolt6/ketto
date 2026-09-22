@@ -19,8 +19,10 @@ import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
 /**
- * ユーザージャーニーの通し検証(看板参加→終了、切断→復帰)を実アクションで行う E2E。
- * requiredWins=1 で1ラウンド完結に短縮する。単一機構の網羅は各リスナーテストが担う。
+ * End-to-end verification of user journeys (sign join -> finish,
+ * disconnect -> rejoin) through real actions. requiredWins=1 shortens matches
+ * to a single round; exhaustive coverage of each mechanism lives in the
+ * listener tests.
  */
 class MatchScenarioTest {
 
@@ -62,7 +64,7 @@ class MatchScenarioTest {
         assertEquals(ArenaState.WAITING, env.state())
         assertEquals(1, env.statsRepo.find(p1.uuid)!!.wins)
         assertEquals(1, env.statsRepo.find(p2.uuid)!!.losses)
-        // 試合終了で参加前の空インベントリへ復元される
+        // Match end restores the pre-join empty inventory
         assertNull(p1.inventory.contents[0])
     }
 
@@ -76,7 +78,7 @@ class MatchScenarioTest {
         assertEquals(ArenaState.COUNTDOWN, env.state())
 
         p2.disconnect()
-        // 開始前の切断は敗北ではなく登録解除。残った参加者は待機に戻り、戦績は付かない
+        // A pre-start disconnect unregisters rather than defeats; the other participant returns to waiting, no stats recorded
         assertEquals(ArenaState.ONEMORE, env.state())
         assertNull(env.service.arenaIdOf(p2.uuid))
         assertNull(env.statsRepo.find(p1.uuid))

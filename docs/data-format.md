@@ -1,33 +1,36 @@
-# データフォーマット仕様
+# Data Format Specification
 
-すべてプラグインデータフォルダ(`plugins/1vs1/`)配下の YAML。アリーナ状態はメモリ管理で、YAML は永続化専用。
+Everything is YAML under the plugin data folder (`plugins/1vs1/`). Arena state
+is managed in memory; YAML is only for persistence.
 
 ```
 plugins/1vs1/
-├── config.yml            # 全体設定(管理者編集のみ。プラグインは書き込まない)
-├── lobby.yml             # ロビー座標
-├── arenalist.yml         # アリーナ名一覧
-├── arena/<name>.yml      # アリーナ定義(有効化・スポーン・装備・看板)
-├── status/<name>.yml     # アリーナ状態スナップショット
-├── status/players.yml    # 参加登録・未復元バックアップ
-└── stats/<uuid>.yml      # 戦績
+├── config.yml            # global config (admin-edited only; the plugin never writes it)
+├── lobby.yml             # lobby coordinates
+├── arenalist.yml         # list of arena names
+├── arena/<name>.yml      # arena definition (enabled, spawns, kit, sign)
+├── status/<name>.yml     # arena state snapshot
+├── status/players.yml    # join registrations + unrestored backups
+└── stats/<uuid>.yml      # stats
 ```
 
-保存は常に `*.tmp` へ書き出してから原子的に置き換える(ATOMIC_MOVE 非対応 FS では通常 move)。YAML パース失敗・I/O 失敗は `PersistenceFailure` に変換する。
+Saves always write to `*.tmp` first, then atomically replace (plain move on
+filesystems without ATOMIC_MOVE). YAML parse failures and I/O failures are
+converted to `PersistenceFailure`.
 
 ## config.yml
 
-管理者が編集する設定のみ。プラグインはこのファイルを書き込まない。
+Only settings edited by an admin. The plugin never writes this file.
 
 ```yaml
-prefix: "&8[&61vs1&8] " # メッセージ接頭辞(& 形式)
-required-wins: 3 # マッチ勝利に必要なキル数
+prefix: "&8[&61vs1&8] " # message prefix (& format)
+required-wins: 3 # kills required to win a match
 ```
 
 ## lobby.yml
 
 ```yaml
-# ロビー(/1vs1 setlobby で設定)
+# Lobby (set via /1vs1 setlobby)
 lobby:
   world: world
   x: 0.0
@@ -44,7 +47,7 @@ arenas:
   - <name>
 ```
 
-- 起動時はこの一覧の順に読み込む。無効名・重複名(大小区別なし)は警告してスキップ。
+- On startup, arenas load in this order. Invalid or duplicate names (case-insensitive) are warned and skipped.
 
 ## arena/<name>.yml
 
@@ -52,51 +55,51 @@ arenas:
 enabled: true
 spawn1: { world: world, x: 0.0, y: 0.0, z: 0.0, yaw: 0.0, pitch: 0.0 }
 inventory:
-  armor: [ItemStack, ...] # Bukkit YAML シリアライズ形式
+  armor: [ItemStack, ...] # Bukkit YAML serialization format
   item: [ItemStack, ...]
-sign: # 参加看板(/1vs1 arena setsign で設定)
+sign: # join sign (set via /1vs1 arena setsign)
   world: world
   x: 0.0
   y: 0.0
   z: 0.0
 ```
 
-- `enabled` / `spawnN` の保存時に `inventory`・`sign` セクションは保持する(それぞれ `setInv`・`setsign` の責務)。
-- yaw/pitch は float 精度で保持・読み出す。
+- Saving `enabled` / `spawnN` preserves the `inventory` and `sign` sections (owned by `setInv` / `setsign` respectively).
+- yaw/pitch are stored and read at float precision.
 
 ## status/<name>.yml
 
 ```yaml
-status: WAITING # ArenaState 名
-players: [<name>, ...] # 参加者名
-win: { <name>: <wins> } # 勝数(名前キー)
+status: WAITING # ArenaState name
+players: [<name>, ...] # participant names
+win: { <name>: <wins> } # win counts (name-keyed)
 ```
 
-- 状態遷移のたびに上書きする参照用スナップショット。復元には使わない。
+- A reference snapshot overwritten on every state transition. Never used for restore.
 
 ## status/players.yml
 
 ```yaml
-players: [<name>, ...] # 参加登録中のプレイヤー名
+players: [<name>, ...] # names of registered participants
 arena:
-  <name>: <arena> # プレイヤー名 → アリーナ名
+  <name>: <arena> # player name -> arena name
 inv:
-  <name>: # 未復元バックアップ(プレイヤー名キー)
+  <name>: # unrestored backup (player-name key)
     armor: [ItemStack, ...]
     item: [ItemStack, ...]
-    uuid: <uuid> # 所有者 UUID
-    id: <uuid> # バックアップ識別子
-    match: <uuid> # マッチ識別子
-  <name>__<id>: # 同名別人レコードの退避先
-    name: <name> # 退避元のプレイヤー名
-    # 他は <name> と同じ構成
+    uuid: <uuid> # owner UUID
+    id: <uuid> # backup identifier
+    match: <uuid> # match identifier
+  <name>__<id>: # evacuation target for a same-named record owned by someone else
+    name: <name> # original player name
+    # other fields same as <name>
 ```
 
-- `players` / `arena.*`: 参加登録。退出・終了・中断時に解除する(バックアップ `inv.*` には触れない)。起動時に登録はクリアする。
-- `inv.*`: 試合開始時の一括保存。復元完了後に削除する。削除時は `id`(無い場合は `uuid`)が一致する記録だけを消し、名前の再利用で別人のデータを消さない。
-- 同じ名前キーに別人(uuid 不一致)のレコードが残っている場合、保存側は旧レコードを `inv.<name>__<id>` へ退避してから書き込む。両者は `id` で区別され、それぞれ独立に復元・削除される。
-- `uuid` 未記録のバックアップでは `playerId` は null として扱う。`id` 未記録の旧レコードは読み込み時に採番して書き戻す。
-- uuid 未記録のレコードは名前一致でしか所有者を確認できないため、オフラインモード(`online-mode=false`)では復元せず、起動時に警告する。管理者が `uuid` を補うか記録を削除するまで保持される。
+- `players` / `arena.*`: join registration. Cleared on leave, match end, or abort (backup `inv.*` is untouched). Registrations are cleared on startup.
+- `inv.*`: bulk-saved at match start; deleted once restore completes. Deletion only removes records whose `id` (or `uuid` when absent) matches, so name reuse never deletes another player's data.
+- If a record owned by someone else (uuid mismatch) remains under the same name key, the save side first evacuates the old record to `inv.<name>__<id>` before writing. The two are distinguished by `id` and restored/deleted independently.
+- For backups without `uuid`, `playerId` is treated as null. Legacy records without `id` are assigned one and written back on load.
+- Records without `uuid` can only be matched to an owner by name, so in offline mode (`online-mode=false`) they are not restored and a warning is logged on startup. They are kept until an admin fills in `uuid` or deletes the record.
 
 ## stats/<uuid>.yml
 
@@ -105,4 +108,4 @@ win: 0
 lose: 0
 ```
 
-- ファイル不存在は「戦績なし」(null)。破損は `PersistenceFailure`。
+- Missing file means "no stats" (null). Corruption is `PersistenceFailure`.

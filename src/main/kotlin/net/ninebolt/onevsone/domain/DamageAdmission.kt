@@ -3,10 +3,12 @@ package net.ninebolt.onevsone.domain
 import kotlin.uuid.Uuid
 
 /**
- * エンティティ起因ダメージの受理判定。被害者・加害者どちらかの参加状態が
- * ダメージを制限する場合、「被害者のマッチが INGAME 相当(opponentDamageOnly)で
- * 加害者が同一マッチの対戦相手または本人」のときのみ許可する。
- * 環境ダメージは対象外(エンティティ起因でないためここに来ない)。
+ * Admission check for entity-caused damage. When either the victim's or the
+ * attacker's participation state restricts damage, the damage is allowed only
+ * if "the victim's match is INGAME-equivalent (opponentDamageOnly) and the
+ * attacker is the same-match opponent or the victim themself".
+ * Environmental damage is out of scope (it is not entity-caused, so it never
+ * reaches here).
  */
 object DamageAdmission {
 

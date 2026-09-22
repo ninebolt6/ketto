@@ -8,10 +8,10 @@ import org.junit.jupiter.api.Test
 import java.io.File
 
 /**
- * 依存方向の静的検査。コンパイル済みバイトコードを ArchUnit で解析し、
- * domain/application が許可パッケージ以外に依存しないことを強制する。
- * ブラックリストではなくホワイトリストなので、Bukkit・YAML・infrastructure
- * 以外の新たな外部依存の混入も検出できる。
+ * Static check of the dependency direction. Parses compiled bytecode with
+ * ArchUnit and enforces that domain/application depend on nothing outside the
+ * allowed packages. Whitelist rather than blacklist, so new external
+ * dependencies other than Bukkit/YAML/infrastructure are also caught.
  */
 class ArchitectureTest {
 
@@ -21,7 +21,7 @@ class ArchitectureTest {
             .importPackages("net.ninebolt.onevsone")
     }
 
-    // java.lang や kotlin.jvm.internal、@NotNull 等のコンパイラ生成参照を許容する
+    // Allow compiler-generated references such as java.lang, kotlin.jvm.internal, @NotNull
     private val jdkPackages = arrayOf("java..", "kotlin..", "org.jetbrains..")
 
     @Test

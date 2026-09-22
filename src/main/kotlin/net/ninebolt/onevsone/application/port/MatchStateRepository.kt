@@ -5,15 +5,16 @@ import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.Participant
 
 /**
- * 外部参照用の試合状態・参加者台帳。immutable な集約スナップショットを保存する。
+ * Externally referenced match state and participant ledger. Persists immutable
+ * aggregate snapshots.
  */
 interface MatchStateRepository {
-    /** status/<arena>.yml へ状態・参加者名・勝数を書き出す。 */
+    /** Writes state, participant names, and win counts to status/<arena>.yml. */
     fun saveStatus(match: ArenaMatch)
-    /** players.yml へ参加登録(メンバーシップのみ。持ち物は含めない)。 */
+    /** Registers participation in players.yml (membership only; no inventory). */
     fun registerParticipant(participant: Participant, arena: Arena.Id)
-    /** players.yml から参加登録を解除。バックアップ(inv.*)は消さない。 */
+    /** Removes the participation record from players.yml. Backups (inv.*) are not deleted. */
     fun unregisterParticipant(playerName: String)
-    /** 起動時に前回の中途登録をリセット(バックアップ inv.* は保持)。 */
+    /** Resets leftover registrations on startup (inv.* backups are kept). */
     fun clearRegistrations()
 }

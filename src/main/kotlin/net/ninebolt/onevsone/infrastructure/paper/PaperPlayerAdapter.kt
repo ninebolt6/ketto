@@ -17,14 +17,15 @@ import kotlin.uuid.toJavaUuid
 import kotlin.uuid.toKotlinUuid
 
 /**
- * オンラインプレイヤーの解決。QuitEvent 中は Server から取得できなくなる
- * 切断者を、イベントの Player を短時間参照できるスコープとして提供する。
+ * Resolution of online players. Disconnecting players can no longer be fetched
+ * from Server during QuitEvent, so this provides a scope in which the event's
+ * Player can be referenced briefly.
  */
 class PaperPlayerLookup(private val server: Server) {
     private val quitting = HashMap<Uuid, Player>()
     private val pluginTeleports = HashSet<Uuid>()
 
-    /** QuitEvent の Player を同期処理の間だけ UUID で解決可能にする。 */
+    /** Makes the QuitEvent's Player resolvable by UUID for the duration of synchronous handling. */
     fun <R> scopeQuitting(player: Player, block: () -> R): R {
         val id = player.uniqueId.toKotlinUuid()
         quitting[id] = player
@@ -36,8 +37,9 @@ class PaperPlayerLookup(private val server: Server) {
     }
 
     /**
-     * PlayerTeleportEvent は teleport() 内で同期発火するため、スコープで囲った
-     * 自プラグインの移送を他プラグイン発と区別できるようにする。
+     * PlayerTeleportEvent fires synchronously inside teleport(), so wrapping
+     * the call in a scope lets us distinguish our own teleports from other
+     * plugins'.
      */
     fun <R> scopePluginTeleport(playerId: Uuid, block: () -> R): R {
         pluginTeleports += playerId
@@ -71,7 +73,7 @@ class PaperPlayerAdapter(
             callback(known.uniqueId.toKotlinUuid())
             return
         }
-        // オフライン名解決はブロッキングなので asyncScheduler で実行し、応答はメインスレッドへ戻す
+        // Offline name resolution blocks, so run it on asyncScheduler and bounce the reply back to the main thread
         server.asyncScheduler.runNow(plugin) {
             val uuid = runCatching { server.getOfflinePlayer(name).uniqueId.toKotlinUuid() }.getOrNull()
             try {
@@ -124,8 +126,8 @@ private class PaperPlayerHandle(
             failures.warn("World '${position.world}' is not loaded; skipping teleport")
             return
         }
-        // 参加者のテレポート制限は「プラグイン自身の移送」を除外するため、
-        // 同期発火する PlayerTeleportEvent が識別できるよう cause とマーカーを両方付ける
+        // Participant teleport restriction exempts "the plugin's own teleports", so
+        // both the cause and a marker are attached to identify the synchronously fired PlayerTeleportEvent
         lookup.scopePluginTeleport(id) {
             player.teleport(
                 Location(world, position.x, position.y, position.z, position.yaw, position.pitch),
@@ -135,7 +137,7 @@ private class PaperPlayerHandle(
     }
 }
 
-/** コマンド側での Location → 純粋座標への変換。world 無しは null。 */
+/** Location -> pure coordinates conversion for the command side. null when world is absent. */
 fun Location.toWorldPosition(): WorldPosition? {
     val world = world ?: return null
     return WorldPosition.new(world.name, x, y, z, yaw, pitch)

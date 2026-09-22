@@ -1,48 +1,49 @@
-# 1vs1 プラグイン仕様書
+# 1vs1 Plugin Specification
 
-## 概要
+## Overview
 
-Minecraft サーバー向け 1 対 1 アリーナ PvP プラグイン「**1vs1**」の仕様書。
-看板から参加した 2 人のプレイヤーがアリーナへテレポートされ、ラウンド制で対戦する。
-勝敗はラウンド勝数としてスコアボードに表示され、マッチ結果は戦績(Win/Lose)として記録される。
+Specification for **1vs1**, a 1-on-1 arena PvP plugin for Minecraft servers.
+Two players who join via a sign are teleported into the arena and fight in
+rounds. Results are shown on the scoreboard as round wins, and the match
+outcome is recorded as stats (Win/Lose).
 
-## 技術要件
+## Technical Requirements
 
-| 項目 | 値 |
-|---|---|
-| 言語 | Kotlin 2.4.20 |
-| JVM | Java 21 |
-| ビルド | Gradle(Kotlin DSL) |
-| プラットフォーム | Paper 1.21.x (Paper API) |
-| プラグイン名 | `1vs1` |
-| メインコマンド | `/1vs1` |
-| 外部依存 | なし |
+| Item                  | Value                    |
+| --------------------- | ------------------------ |
+| Language              | Kotlin 2.4.20            |
+| JVM                   | Java 21                  |
+| Build                 | Gradle (Kotlin DSL)      |
+| Platform              | Paper 1.21.x (Paper API) |
+| Plugin name           | `1vs1`                   |
+| Main command          | `/1vs1`                  |
+| External dependencies | None                     |
 
-## ドキュメント構成
+## Document Layout
 
-| ファイル | 内容 |
-|---|---|
-| [game-flow.md](game-flow.md) | ゲーム状態遷移・試合進行・勝敗判定・終了処理・スコアボード |
-| [commands.md](commands.md) | `/1vs1` コマンド全サブコマンドの仕様 |
-| [signs.md](signs.md) | 参加/状態表示看板の仕様 |
-| [restrictions.md](restrictions.md) | 参加プレイヤーへの制約(イベント処理) |
-| [stats.md](stats.md) | 戦績(Stats)の記録・表示仕様 |
-| [data-format.md](data-format.md) | YAML 永続化データの構造 |
-| [messages.md](messages.md) | 全メッセージ・表示文言一覧 |
+| File                               | Contents                                                                           |
+| ---------------------------------- | ---------------------------------------------------------------------------------- |
+| [game-flow.md](game-flow.md)       | Game state transitions, match progression, win/loss handling, teardown, scoreboard |
+| [commands.md](commands.md)         | Spec of every `/1vs1` subcommand                                                   |
+| [signs.md](signs.md)               | Join/status sign spec                                                              |
+| [restrictions.md](restrictions.md) | Restrictions on participating players (event handling)                             |
+| [stats.md](stats.md)               | Stats recording/display spec                                                       |
+| [data-format.md](data-format.md)   | YAML persistence data structure                                                    |
+| [messages.md](messages.md)         | All messages and display text                                                      |
 
-## 用語
+## Terminology
 
-| 用語 | 意味 |
-|---|---|
-| アリーナ | 対戦を行う場所の管理単位。スポーン地点 2 箇所・装備セット・看板を持つ |
-| 参加者 | 看板からアリーナにエントリーしたプレイヤー(テレポート前も含む) |
-| ラウンド | 1 回のキルまでを 1 単位とする試合区切り |
-| マッチ | ラウンドの集合。一方が規定キル数に達すると終了 |
-| ロビー | 試合後・退出後の復帰地点。OP がコマンドで設定する |
+| Term        | Meaning                                                                                |
+| ----------- | -------------------------------------------------------------------------------------- |
+| Arena       | Unit of management for a battleground. Has 2 spawn points, an equipment set, and signs |
+| Participant | A player who entered an arena via a sign (including before teleport)                   |
+| Round       | A unit of match play ending with one kill                                              |
+| Match       | A set of rounds; ends when one side reaches the required kill count                    |
+| Lobby       | Return point after a match or after leaving. Set by an OP command                      |
 
-## 設計方針
+## Design Principles
 
-1. **状態はメモリ管理**: アリーナ状態・参加者情報はメモリ上で管理し、YAML は永続化用途に限定する。
-2. **内部識別は UUID**: プレイヤー管理は内部的に UUID を使用する。永続化ファイルは名前ベースの形式を維持する(詳細は data-format.md)。
-3. **層分離**: 依存方向は `infrastructure → application → domain`(内向きのみ)。`OneVsOnePlugin` が composition root として全依存を手動で配線する(DI フレームワーク不使用)。
-4. **世代トークンによる無効化**: カウントダウンや遅延コールバックは `MatchToken`(世代番号)で照合し、中断・再参加後に起動した古いタスクは自動的に無効化される。
+1. **In-memory state**: Arena state and participant info live in memory; YAML is only for persistence.
+2. **UUID internally**: Players are managed by UUID internally. Persistence files keep their name-based format (see data-format.md).
+3. **Layer separation**: Dependency direction is `infrastructure → application → domain` (inward only). `OneVsOnePlugin` is the composition root and wires all dependencies manually (no DI framework).
+4. **Invalidation via generation tokens**: Countdowns and deferred callbacks are validated against a `MatchToken` (generation number); stale tasks started before an abort or rejoin are automatically invalidated.

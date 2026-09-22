@@ -18,8 +18,9 @@ import org.bukkit.event.player.PlayerQuitEvent
 import kotlin.uuid.toKotlinUuid
 
 /**
- * 試合の進行に関わるイベントの入力アダプター。イベント/位置/引数の変換に限定し、
- * 状態別の制約判定は domain の ParticipantRestrictions に委譲する。
+ * Input adapter for events that drive match progression. Limited to converting
+ * events/positions/arguments; per-state restriction decisions are delegated to
+ * domain's ParticipantRestrictions.
  */
 class ArenaMatchListener(
     private val service: ArenaApplicationService,
@@ -34,7 +35,7 @@ class ArenaMatchListener(
         if (service.matchOf(id) == null) return
         event.keepInventory = true
         event.drops.clear()
-        // keepInventory はアイテムのみを守るため、経験値もドロップさせず保持する
+        // keepInventory only protects items, so keep experience from dropping as well
         event.droppedExp = 0
         event.keepLevel = true
         if (!service.defeat(id, DefeatCause.DEATH)) {
@@ -48,7 +49,7 @@ class ArenaMatchListener(
             onEntityDamage(event)
             return
         }
-        // 落下・火・溶岩などの環境ダメージは帰属できないため従来通り敗北として受理する
+        // Environmental damage (fall, fire, lava, etc.) cannot be attributed, so it is accepted as a defeat as before
         val player = event.entity as? Player ?: return
         if (service.restrictionsOf(player)?.damageCancelled == true) {
             event.isCancelled = true
@@ -56,9 +57,11 @@ class ArenaMatchListener(
     }
 
     /**
-     * エンティティ起因ダメージは責任者(causingEntity: 投射物の射手や設置者まで辿れる)を
-     * プレイヤーへ解決し、受理判定は domain の DamageAdmission に委譲する。
-     * victim が非プレイヤーでも加害者側を検査するため早期 return はしない。
+     * For entity-caused damage, the responsible party (causingEntity — traces
+     * back to projectile shooters, block placers, etc.) is resolved to a
+     * player; the admission decision is delegated to domain's DamageAdmission.
+     * No early return: even when the victim is not a player, the attacker side
+     * must still be checked.
      */
     private fun onEntityDamage(event: EntityDamageByEntityEvent) {
         val victim = event.entity as? Player
@@ -74,8 +77,8 @@ class ArenaMatchListener(
 
     @EventHandler
     fun onQuit(event: PlayerQuitEvent) {
-        // 切断中プレイヤーは Server から取得できなくなるため、
-        // イベントの Player を同期処理中だけ解決できるスコープで呼ぶ。
+        // A disconnecting player can no longer be fetched from Server, so this is
+        // called inside a scope that can resolve the event's Player only during synchronous handling.
         lookup.scopeQuitting(event.player) {
             service.quit(event.player.uniqueId.toKotlinUuid(), event.player.name)
         }
@@ -88,7 +91,7 @@ class ArenaMatchListener(
 
     @EventHandler
     fun onMove(event: PlayerMoveEvent) {
-        // PlayerTeleportEvent は別 HandlerList を持つためここには届かない
+        // PlayerTeleportEvent has its own HandlerList and never reaches this handler
         val match = service.matchOf(event.player.uniqueId.toKotlinUuid()) ?: return
         if (ParticipantRestrictions.forState(match.state).horizontalMoveFrozen) {
             val from = event.from
@@ -97,7 +100,7 @@ class ArenaMatchListener(
                 event.setTo(from)
             }
         }
-        // 1.18+ の世界は負の高さを持つため、奈落判定は移動先ワールドの最低高度を使う
+        // 1.18+ worlds can have negative heights, so the void check uses the destination world's min height
         if (match.resolvesVoidFall && event.to.y <= (event.to.world?.minHeight ?: 0)) {
             service.defeat(event.player.uniqueId.toKotlinUuid(), DefeatCause.FALL)
         }

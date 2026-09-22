@@ -3,21 +3,22 @@ package net.ninebolt.onevsone.application.port
 import net.ninebolt.onevsone.domain.Arena
 
 /**
- * アリーナ定義の永続化。
- * 装備(キット)の中身は扱わず、アリーナ ID 経由で KitPort が触れる。
- * ロビーは LobbyRepository、看板座標は ArenaSignRepository が担う。
- * 永続化形式(index ファイルや個別ファイルの配置)は実装の内部事情とする。
+ * Persistence of arena definitions.
+ * Does not handle kit contents — KitPort touches them via the arena ID.
+ * The lobby is LobbyRepository's job; sign coordinates are ArenaSignRepository's.
+ * The persistence format (index file vs per-file layout) is an internal detail
+ * of the implementation.
  */
 interface ArenaRepository {
-    /** 登録順の全アリーナ。無効名・重複・読み取り不能な項目はスキップされる。 */
+    /** All arenas in registration order. Entries with invalid names, duplicates, or unreadable data are skipped. */
     fun loadAll(): List<Arena>
 
-    /** 無効名は null。ファイル欠損は PersistenceFailure。未作成ファイルは既定値のアリーナを返す。 */
+    /** Invalid names yield null. Corrupt files throw PersistenceFailure. A file not yet created returns a default arena. */
     fun find(name: String): Arena?
 
-    /** アリーナを保存し、未登録なら登録順の末尾に追加する。 */
+    /** Saves an arena, appending it to the end of the registration list if unregistered. */
     fun save(arena: Arena)
 
-    /** 定義と関連する永続データを削除し、登録一覧から除外する。 */
+    /** Deletes the definition and its related persistent data, and removes it from the registration list. */
     fun delete(name: String)
 }

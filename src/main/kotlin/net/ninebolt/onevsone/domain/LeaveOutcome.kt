@@ -1,8 +1,8 @@
 package net.ninebolt.onevsone.domain
 
 sealed interface LeaveOutcome {
-    /** participant は退出者。 */
+    /** participant is the player who left. */
     data class Left(val participant: Participant) : LeaveOutcome
-    /** ONEMORE 以外(または非参加者)では退出できない */
+    /** Cannot leave outside ONEMORE (or when not participating) */
     data object NotWaiting : LeaveOutcome
 }

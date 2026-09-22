@@ -1,15 +1,16 @@
 package net.ninebolt.onevsone.application.port
 
 /**
- * 保存・復元等の障害通知。ログ出力の実装は外側(infrastructure)が持つ。
- * 通常のユーザー拒否はここではなくユースケース結果で扱う。
+ * Failure notification for saves, restores, etc. The logging implementation
+ * lives outside (infrastructure). Ordinary user-facing rejections are
+ * expressed as use-case results, not here.
  */
 interface FailureReporter {
     fun warn(message: String)
     fun report(context: String, error: Throwable)
 }
 
-/** PersistenceFailure を warn に潰す共通の失敗経路。 */
+/** Shared failure path that swallows PersistenceFailure into a warn. */
 internal inline fun FailureReporter.warnOnFailure(message: String, block: () -> Unit) {
     try {
         block()

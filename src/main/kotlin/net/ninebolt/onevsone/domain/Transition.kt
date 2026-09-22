@@ -1,7 +1,8 @@
 package net.ninebolt.onevsone.domain
 
 /**
- * ArenaMatch の操作結果。match は遷移後の新しい状態(拒否時は変化なしの同一インスタンス)。
- * 呼び出し側は outcome を見てから match をレジストリへ書き戻す。
+ * Result of an ArenaMatch operation. match is the new post-transition state
+ * (the same unchanged instance on rejection). The caller inspects outcome
+ * first, then writes match back to the registry.
  */
 data class Transition<out O>(val match: ArenaMatch, val outcome: O)

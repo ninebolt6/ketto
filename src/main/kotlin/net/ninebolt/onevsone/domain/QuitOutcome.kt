@@ -2,8 +2,8 @@ package net.ninebolt.onevsone.domain
 
 sealed interface QuitOutcome {
     data object NotParticipant : QuitOutcome
-    /** 未開始(ONEMORE/WAITING/COUNTDOWN/人数不足)の退出: 登録解除のみ */
+    /** Pre-match exit (ONEMORE/WAITING/COUNTDOWN/not full): unregister only */
     data class WaitingExit(val participant: Participant) : QuitOutcome
-    /** 試合進行中の切断: 不戦敗としてマッチ終了 */
+    /** Disconnect while a match is in progress: ends the match as a forfeit */
     data class MatchEnded(val winner: Participant, val loser: Participant) : QuitOutcome
 }

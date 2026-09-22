@@ -10,8 +10,8 @@ import net.ninebolt.onevsone.domain.WorldPosition
 import kotlin.uuid.Uuid
 
 /**
- * create/remove/enable/disable、スポーン・装備・看板・ロビー設定の管理操作。
- * 必要な中断は MatchProgressionService へ依頼する。
+ * Admin operations: create/remove/enable/disable and spawn/kit/sign/lobby
+ * settings. Any needed abort is requested to MatchProgressionService.
  */
 class ArenaAdministrationService(
     private val registry: ArenaRegistry,
@@ -22,7 +22,7 @@ class ArenaAdministrationService(
     private val presentation: MatchPresentationPort,
     private val progression: MatchProgressionService
 ) {
-    /** 登録順の arena 名一覧(タブ補完用)。 */
+    /** Arena names in registration order (for tab completion). */
     fun arenaNames(): List<String> = registry.arenaIds().map { it.name }
 
     fun arena(name: String): Arena? = registry.resolveArenaId(name)?.let { registry.arena(it) }
@@ -40,7 +40,7 @@ class ArenaAdministrationService(
         val arena = arena(name) ?: return false
         progression.abort(arena.id)
         registry.removeArena(arena.id)
-        // 解決後の正規名で消す(大小文字違いの入力でもファイルと看板登録を残さない)
+        // Delete by the resolved canonical name (so case-differing input leaves neither the file nor the sign registration)
         arenas.delete(arena.name)
         signs.clearSign(arena.name)
         kit.forgetKit(arena.id)
@@ -67,7 +67,7 @@ class ArenaAdministrationService(
         return true
     }
 
-    /** 実行者の現在装備をアリーナ装備として保存する。 */
+    /** Saves the executor's current equipment as the arena kit. */
     fun setKit(name: String, playerId: Uuid): Boolean {
         val arena = arena(name) ?: return false
         kit.saveKit(arena.id, playerId)
@@ -91,7 +91,7 @@ class ArenaAdministrationService(
         return true
     }
 
-    /** 看板登録だけを解除する。看板ブロック自体は残り、破壊可能になる。 */
+    /** Unregisters only the sign. The sign block itself remains and becomes breakable. */
     fun clearSign(name: String): Boolean {
         val arena = arena(name) ?: return false
         signs.clearSign(arena.name)

@@ -6,20 +6,21 @@ import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.Participant
 
 /**
- * コミット済み試合の外部反映。status 永続化・看板更新・players.yml 台帳解除をまとめる。
- * 失敗は PersistenceFailure として呼び出し側へ伝播する(潰すかどうかは文脈依存)。
+ * Reflects committed matches externally: status persistence, sign updates, and
+ * players.yml ledger unregistration. Failures propagate to the caller as
+ * PersistenceFailure (whether to swallow them is context-dependent).
  */
 class MatchStateSync(
     private val matchState: MatchStateRepository,
     private val presentation: MatchPresentationPort
 ) {
-    /** 試合状態を status ファイルへ保存し、参加看板を最新状態にする。 */
+    /** Saves the match state to the status file and refreshes the join sign. */
     fun publish(match: ArenaMatch) {
         matchState.saveStatus(match)
         presentation.updateSign(match.arenaId, match.state)
     }
 
-    /** players.yml の参加登録を解除する。 */
+    /** Unregisters the participation record in players.yml. */
     fun unregister(participant: Participant) {
         matchState.unregisterParticipant(participant.name)
     }

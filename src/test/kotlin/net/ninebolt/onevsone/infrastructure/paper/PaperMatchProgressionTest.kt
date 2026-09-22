@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
-/** 参加・カウントダウン・ラウンド進行・終了の正常系シナリオ。 */
+/** Happy-path scenarios: join, countdown, round progression, and finish. */
 class PaperMatchProgressionTest {
 
     @TempDir
@@ -127,7 +127,7 @@ class PaperMatchProgressionTest {
         }
         env.tick()
         assertEquals(ArenaState.INGAME, env.view().state)
-        // ラウンド開始「スタート！」はゲーム開始「ゲームスタート！」の部分文字列なので prefix 境界で区別する
+        // The round-start message is a substring of the game-start message, so distinguish by the prefix boundary
         assertTrue(p1.drainMessages().any { it.contains("] スタート！") })
     }
 
@@ -167,14 +167,14 @@ class PaperMatchProgressionTest {
         env.join(p1, arena)
         env.join(p2, arena)
         env.tick(6)
-        // 再装備の有無をスロット記録で識別できるよう、敗北者の先頭スロットを空にする
+        // Clear the loser's first slot so re-equip is observable in the slot record
         p2.inventory.setItem(0, null)
 
         p2.health = 0.0
         env.service.defeat(p2.uuid, DefeatCause.DEATH)
         env.runOneShots()
         assertEquals(1, p2.respawnCount)
-        // リスポーン時点ではまだキット未適用(= null)。再装備は respawn の後に走る
+        // At respawn time the kit is not yet applied (= null); re-equip runs after respawn
         assertNull(p2.slotAtRespawn)
         assertEquals(Material.IRON_SWORD, p2.inventory.contents[0]?.type)
     }
@@ -196,7 +196,7 @@ class PaperMatchProgressionTest {
         assertEquals(20, p1.foodLevel)
         assertEquals(0, p1.fireTicks)
         assertEquals(20.0, p2.health)
-        // 終了時に空ボードが新たに割り当てられる
+        // A fresh empty board is assigned at match end
         assertNotSame(ingameBoard, p1.scoreboard)
         assertNotSame(ingameBoard, p2.scoreboard)
     }
@@ -213,7 +213,7 @@ class PaperMatchProgressionTest {
         env.join(p2, arena)
         env.tick(5)
 
-        // 開始直前にプレイヤーが消える → バックアップも装備交換も行わず中断
+        // Player vanishes right before start -> abort without backup or equipment swap
         env.removePlayer(p2)
         env.tick()
         assertEquals(ArenaState.WAITING, env.view().state)

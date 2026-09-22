@@ -8,7 +8,7 @@ archunit = "1.5.0"
 
 [libraries]
 paper-api = { module = "io.papermc.paper:paper-api", version.ref = "paper" }
-# バージョンは paper-api の adventure-bom から解決される (サーバー提供物のため従属)
+# Version resolves from paper-api's adventure-bom (server-provided, so it stays aligned)
 adventure-minimessage = { module = "net.kyori:adventure-text-minimessage" }
 adventure-serializer-plain = { module = "net.kyori:adventure-text-serializer-plain" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }

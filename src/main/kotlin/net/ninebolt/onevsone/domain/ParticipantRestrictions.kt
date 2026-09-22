@@ -1,26 +1,26 @@
 package net.ninebolt.onevsone.domain
 
 /**
- * 参加者へ適用する制約をアリーナ状態から導出する純粋な規則。
- * リスナー側ではイベント変換だけを行い、状態ごとの可否判定はここに集約する。
+ * Pure rules deriving participant restrictions from the arena state.
+ * Listeners only convert events; per-state decisions are centralized here.
  */
 data class ParticipantRestrictions private constructor(
     val horizontalMoveFrozen: Boolean,
     val damageCancelled: Boolean,
-    /** エンティティ起因ダメージを「同一マッチの対戦相手または本人」由来に限定する */
+    /** Limits entity-caused damage to the same-match opponent or self */
     val opponentDamageOnly: Boolean,
-    /** テレポートの可否。エンダーパール以外の逃走経路を塞ぐ */
+    /** Whether teleports are allowed. Blocks escape routes other than ender pearls */
     val teleportRestriction: TeleportRestriction,
     val blockBreakCancelled: Boolean,
-    /** 破壊禁止中は設置物を撤去できないため、アリーナの汚染と籠城を防ぐ */
+    /** Placed blocks cannot be removed while breaking is denied; prevents arena pollution and camping */
     val blockPlaceCancelled: Boolean,
-    /** 装備交換後はインベントリが開始時バックアップで上書きされるため、持ち出しを防ぐ */
+    /** After the kit swap the inventory is overwritten by the start-of-match backup; prevents carrying items out */
     val itemDropCancelled: Boolean,
-    /** コンテナ・額縁・防具立て・取引など、インベントリ⇄外界の移動を遮断する */
+    /** Blocks inventory<->world transfers: containers, item frames, armor stands, trading, etc. */
     val inventoryTransferCancelled: Boolean,
-    /** 拾得・収穫・矢回収・ディスペンサー装備などの直接獲得を遮断する */
+    /** Blocks direct acquisition: pickups, harvests, arrow retrieval, dispenser equipment, etc. */
     val itemPickupCancelled: Boolean,
-    /** ONEMORE 待機中のみコマンドを許可する */
+    /** Commands are allowed only while waiting in ONEMORE */
     val commandsBlocked: Boolean
 ) {
     companion object {
@@ -61,8 +61,8 @@ data class ParticipantRestrictions private constructor(
                 itemPickupCancelled = false,
                 commandsBlocked = true
             )
-            // WAITING / ONEMORE: 制約なし。WAITING で参加者が存在する経路は無いが、
-            // 「ONEMORE 以外はコマンド禁止」のため ONEMORE のみ許可。
+            // WAITING / ONEMORE: unrestricted. No path leaves participants in WAITING,
+            // but commands are denied everywhere except ONEMORE, so only ONEMORE allows them.
             ArenaState.ONEMORE -> ParticipantRestrictions(
                 horizontalMoveFrozen = false,
                 damageCancelled = false,

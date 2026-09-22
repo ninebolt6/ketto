@@ -5,10 +5,10 @@ import net.ninebolt.onevsone.application.port.PlayerStatsRepository
 import net.ninebolt.onevsone.domain.PlayerStats
 import kotlin.uuid.Uuid
 
-/** stats/<uuid>.yml の永続化。 */
+/** Persistence for stats/<uuid>.yml. */
 class YamlPlayerStatsRepository(private val store: YamlStore) : PlayerStatsRepository {
 
-    /** ファイル不存在は null。破損は PersistenceFailure。 */
+    /** A missing file is null; corruption is PersistenceFailure. */
     override fun find(playerId: Uuid): PlayerStats? {
         val file = store.statsFile(playerId)
         if (!file.exists()) return null

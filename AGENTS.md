@@ -1,51 +1,60 @@
 # 1vs1
 
-Minecraft の 1 対 1 アリーナ PvP プラグイン。
+A 1-on-1 arena PvP plugin for Minecraft.
 
 ## Commands
 
 ```sh
-./gradlew clean build --warning-mode all        # コンパイル + JUnit テスト + jar
-nix develop                                     # JDK 21 + actrun のシェル
-actrun workflow run .github/workflows/ci.yml    # CI をローカル実行
-actrun lint                                     # workflow の静的チェック
+./gradlew clean build --warning-mode all        # compile + JUnit tests + jar
+nix develop                                     # shell with JDK 21 + actrun
+actrun workflow run .github/workflows/ci.yml    # run CI locally
+actrun lint                                     # static check of workflows
 ```
 
 ## Architecture
 
-- 依存方向は `infrastructure → application → domain`(内向きのみ。`ArchitectureTest` で強制)。
-  `OneVsOnePlugin` が composition root として手動で全依存を配線する
-- application は `port/` の interface 経由で外部と接続する。詳細仕様は docs/ を参照
+- Dependency direction is `infrastructure → application → domain` (inward only,
+  enforced by `ArchitectureTest`). `OneVsOnePlugin` is the composition root and
+  wires all dependencies manually
+- application connects to the outside through interfaces in `port/`. See docs/
+  for detailed specs
 
 ## Domain
 
-- immutable な値のみ置く
-- 不変条件を持つドメイン値はコンストラクタを private にし、companion のファクトリ関数
-  (`of`/`new`/`restored`)でのみ生成する(操作の結果を表す型など、不変条件を持たない
-  型は対象外)。呼び出し側が与える必要のない値(新規 id 等)はファクトリ内部で生成し、
-  既存 id の再構築は `restored` か id 引数あり `new` に分離
-- 値からの純粋導出で状態を持たない判定関数(`TeleportRestriction.allows`、
-  `DamageAdmission.allows` 等)はドメインに置いてよい
-- 1 概念 1 ファイル
+- Only immutable values
+- Domain values with invariants keep their constructor private and are created
+  only through companion factory functions (`of`/`new`/`restored`) — types
+  without invariants, such as operation results, are exempt. Values the caller
+  should not supply (e.g. new ids) are generated inside the factory; rebuilding
+  an existing id goes through `restored` or a `new` overload that takes the id
+- Stateless predicates purely derived from values (`TeleportRestriction.allows`,
+  `DamageAdmission.allows`, etc.) may live in domain
+- One concept per file
 
 ## Tests
 
-- アサーションは `kotlin.test` を使う(`org.junit.jupiter.api.Assertions` は使わない)
-- domain/application は純粋テスト + fake(`TestApp` 経由)。
-  infrastructure は MockBukkit(`TestEnv` で mock + 手動配線)で実状態をアサートする
-- リスナーテストは `env.registerListeners()` で登録し `env.fire(event)` の
-  実ディスパッチ経由で検証する。ハンドラメソッドの直接呼び出しはしない
-  (`@EventHandler` の登録忘れや独自 HandlerList の取りこぼしを検出できないため)
-- イベント生成は実アクション・simulate を優先する: `PlayerSimulation`
-  (`PlayerMock.simulate*` は委譲シムで deprecated)、`simulateDamage` +
-  実 `DamageSource.builder`、`disconnect()`、`teleport()`、`reconnect()`。
-  simulate が無いイベントのみフィクスチャで構築して `fire` する
-- 発火済みイベントの検証は `env.assertFired<T> { }`(MockBukkit の
-  assertEventFired 系は deprecated)
-- MockK は障害注入・MockBukkit 未実装 API 等の限定用途のみ
-- テストヘルパー(fake/fixture/TestApp/TestEnv 等)は各層の `fixtures/` サブパッケージに隔離する
+- Use `kotlin.test` assertions (not `org.junit.jupiter.api.Assertions`)
+- domain/application use pure tests + fakes (via `TestApp`).
+  infrastructure uses MockBukkit (mock + manual wiring via `TestEnv`) and
+  asserts on real state
+- Listener tests register via `env.registerListeners()` and verify through the
+  real dispatch of `env.fire(event)`. Never call handler methods directly
+  (that would miss forgotten `@EventHandler` registration or events lost to
+  custom HandlerLists)
+- Prefer real actions and simulate for event creation: `PlayerSimulation`
+  (`PlayerMock.simulate*` is a delegating shim and deprecated),
+  `simulateDamage` + a real `DamageSource.builder`, `disconnect()`,
+  `teleport()`, `reconnect()`. Build a fixture and `fire` it only for events
+  that have no simulate
+- Verify fired events with `env.assertFired<T> { }` (MockBukkit's
+  assertEventFired family is deprecated)
+- MockK only for limited use: fault injection, APIs MockBukkit does not
+  implement, etc.
+- Test helpers (fakes/fixtures/TestApp/TestEnv, etc.) go in the `fixtures/`
+  subpackage of each layer
 
 ## Style
 
-- コメントは命名・シグネチャから読み取れる内容を繰り返さない。意図・制約・非自明な経緯のみ書く
-- 完全修飾名を書かず、import で解決する
+- Comments must not repeat what names and signatures already convey. Write only
+  intent, constraints, and non-obvious rationale
+- Do not write fully qualified names; resolve them with imports

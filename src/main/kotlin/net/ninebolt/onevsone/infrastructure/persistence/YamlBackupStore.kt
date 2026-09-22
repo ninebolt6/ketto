@@ -7,14 +7,16 @@ import org.bukkit.configuration.file.YamlConfiguration
 import kotlin.uuid.Uuid
 
 /**
- * players.yml の inv.<name> セクション(未復元インベントリバックアップ)の永続化。
- * 同一ファイルの players/arena セクション(参加登録)は YamlMatchStateRepository が担う。
- * レコードの同一性は id(無い場合は uuid)で判定し、名前の再利用で別人のデータを
- * 上書き・削除しない。衝突した旧レコードは inv.<name>__<id> へ退避して保持する。
+ * Persistence for the inv.<name> section of players.yml (unrestored inventory
+ * backups). The players/arena sections (participation registration) in the
+ * same file are handled by YamlMatchStateRepository.
+ * Record identity is decided by id (uuid when absent), so a reused name never
+ * overwrites or deletes someone else's data. Conflicting old records are kept
+ * by evacuating them to inv.<name>__<id>.
  */
 class YamlBackupStore(private val store: YamlStore) {
 
-    /** 試合開始時の一括保存。失敗時は誰のレコードも変更しない。 */
+    /** Bulk save at match start. On failure, nobody's record is changed. */
     fun saveBackups(backups: List<PersistedBackup>) {
         val yaml = store.load(store.playersFile)
         backups.forEach { backup ->
@@ -29,8 +31,9 @@ class YamlBackupStore(private val store: YamlStore) {
     }
 
     /**
-     * 同じ名前キーに別人のレコードがあれば退避キーへ移してから書き込む。
-     * 所有者を確認できない(uuid 未記録の)レコードも失わないよう退避対象にする。
+     * If a record under the same name key belongs to someone else, move it to an
+     * evacuation key before writing. Records whose owner cannot be confirmed
+     * (no uuid recorded) are also evacuated so they are not lost.
      */
     private fun evacuateForeignOwner(yaml: YamlConfiguration, path: String, ref: BackupRef) {
         if (!yaml.isConfigurationSection(path)) return
@@ -38,14 +41,14 @@ class YamlBackupStore(private val store: YamlStore) {
         if (storedUuid != null && storedUuid == ref.playerId?.toString()) return
         val moved = "${path}__${yaml.getString("$path.id") ?: storedUuid ?: Uuid.random()}"
         RECORD_FIELDS.forEach { field -> yaml.set("$moved.$field", yaml.get("$path.$field")) }
-        // 退避キーからは名前を復元できないため、レコード自身に名前を持たせる
+        // The name cannot be recovered from the evacuation key, so the record carries it itself
         yaml.set("$moved.name", ref.playerName)
         yaml.set(path, null)
     }
 
     /**
-     * 未復元バックアップ一覧。識別子の無い旧レコードは採番して書き戻し、
-     * 以後の同一性判定を id に一本化する。
+     * List of unrestored backups. Old records without an identifier are
+     * assigned one and written back, unifying future identity checks on id.
      */
     fun persistedBackups(): List<PersistedBackup> {
         val yaml = store.load(store.playersFile)
@@ -68,8 +71,9 @@ class YamlBackupStore(private val store: YamlStore) {
     }
 
     /**
-     * 復元完了後の削除。id(未設定時は uuid)が一致する記録だけを消し、
-     * 名前の再利用で別人のデータを消さない。退避レコードも同じ規則で探す。
+     * Deletion after a successful restore. Only records with a matching id
+     * (uuid when unset) are deleted, so a reused name never deletes someone
+     * else's data. Evacuated records are found by the same rule.
      */
     fun deleteBackup(ref: BackupRef) {
         val yaml = store.load(store.playersFile)
@@ -78,14 +82,14 @@ class YamlBackupStore(private val store: YamlStore) {
         store.save(yaml, store.playersFile)
     }
 
-    /** restore のフォールバック読み出し(メモリ上のスナップショットが無い場合)。 */
+    /** Fallback read for restore (when no in-memory snapshot exists). */
     fun backupFor(ref: BackupRef): PersistedBackup? {
         val yaml = store.load(store.playersFile)
         val path = findRecordPath(yaml, ref) ?: return null
         return PersistedBackup(ref, store.readSnapshot(yaml, path))
     }
 
-    /** ref が指すレコードのパス。名前キーに限らず inv 配下を id/uuid 一致で探す。 */
+    /** Path of the record ref points to. Searches all of inv for an id/uuid match, not just the name key. */
     private fun findRecordPath(yaml: YamlConfiguration, ref: BackupRef): String? =
         yaml.getConfigurationSection("inv")?.getKeys(false)
             ?.map { "inv.$it" }
@@ -103,10 +107,10 @@ class YamlBackupStore(private val store: YamlStore) {
     private fun parseUuid(raw: String): Uuid? = Uuid.parseOrNull(raw)
 
     private companion object {
-        /** inv レコードの構成キー。退避時のコピー対象。 */
+        /** Keys making up an inv record. Copied during evacuation. */
         val RECORD_FIELDS = listOf("armor", "item", "uuid", "id", "match")
     }
 }
 
-/** 永続化層が返すバックアップ一式。実データはアプリケーションへ出さない。 */
+/** A complete backup as returned by the persistence layer. The payload is never exposed to application. */
 data class PersistedBackup(val ref: BackupRef, val snapshot: PaperInventorySnapshot)

@@ -18,8 +18,9 @@ import org.bukkit.inventory.EquipmentSlot
 import kotlin.uuid.toKotlinUuid
 
 /**
- * 参加看板のイベント面。クリックによる参加と、登録中の看板の破壊防止を担う。
- * 登録・座標の永続化は ArenaSignRepository、表示更新は MatchPresentationPort の責務。
+ * Event side of join signs: joining via clicks and protecting registered signs
+ * from destruction. Registration/coordinate persistence is
+ * ArenaSignRepository's job; display updates are MatchPresentationPort's.
  */
 class ArenaSignListener(
     private val service: ArenaApplicationService,
@@ -34,17 +35,17 @@ class ArenaSignListener(
         val block = event.clickedBlock ?: return
         if (block.state !is Sign) return
         val name = admin.signOwner(block.world.name, block.x, block.y, block.z) ?: return
-        // 未waxの看板はバニラの右クリックで誰でも編集画面を開けるため、処理済みのクリックは
-        // ブロック操作とアイテム使用の両方を拒否する
+        // A handled click denies both block interaction and item use, because anyone can
+        // open the edit screen by right-clicking an unwaxed sign in vanilla
         event.denyUse()
-        // joinable の事前判定は行わず、join の拒否結果(InMatch 等)の描画に委ねる
+        // No joinable pre-check; leave the outcome to join's rejection result rendering (InMatch etc.)
         val reply = Arena.Id.of(name)
             ?.let { service.join(event.player.uniqueId.toKotlinUuid(), event.player.name, it) }
             ?: JoinReply.NotFound
         renderJoin(event.player, name, reply)
     }
 
-    /** 登録中の看板は誰も壊せない。解除は /1vs1 arena removesign か arena remove のみ。 */
+    /** Nobody can break a registered sign. Removal is only via /1vs1 arena removesign or arena remove. */
     @EventHandler
     fun onBreak(event: BlockBreakEvent) {
         if (isRegisteredSign(event.block)) {
@@ -62,11 +63,11 @@ class ArenaSignListener(
         event.blockList().removeIf(::isRegisteredSign)
     }
 
-    /** 登録済みアリーナの参加看板か。 */
+    /** Whether the block is a join sign of a registered arena. */
     private fun isRegisteredSign(block: Block): Boolean =
         block.state is Sign && admin.signOwner(block.world.name, block.x, block.y, block.z) != null
 
-    /** join ユースケース結果の文言変換。看板参加の経路で共有する。 */
+    /** Maps the join use-case result to message text. Shared by the sign-join path. */
     fun renderJoin(player: Player, arenaName: String, reply: JoinReply) {
         when (reply) {
             JoinReply.JoinedWaiting -> {

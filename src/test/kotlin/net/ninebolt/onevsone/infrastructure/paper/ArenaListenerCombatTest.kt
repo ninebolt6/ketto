@@ -29,7 +29,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
-/** 死亡・ダメージ・切断・移動を実アクション(simulateDamage/disconnect/移動シミュレーション)経由で検証する。 */
+/** Verifies death, damage, disconnect, and movement through real actions (simulateDamage/disconnect/move simulation). */
 class ArenaListenerCombatTest {
 
     @TempDir
@@ -74,8 +74,8 @@ class ArenaListenerCombatTest {
         assertEquals(ArenaState.ONEMORE, env.state())
 
         p1.simulateDamage(100.0, genericDamage())
-        // 試合未開始の参加者死亡は敗北にせず、次 tick でリスポーンさせる
-        // (keepInventory の実効は MockBukkit がエミュレートしないためフラグ設定までを検証)
+        // Death of a participant before match start is not a defeat; they respawn next tick
+        // (MockBukkit does not emulate keepInventory's effects, so only the flag is verified)
         env.assertFired<PlayerDeathEvent> { event -> event.keepInventory && event.keepLevel }
         assertEquals(ArenaState.ONEMORE, env.state())
         assertEquals(arena, env.service.arenaIdOf(p1.uuid))
@@ -132,7 +132,7 @@ class ArenaListenerCombatTest {
     fun `opponent projectile damage attributed via causing entity`() {
         val (p1, p2) = env.twoPlayerIngame()
         val arrow = env.spawn(EntityType.ARROW)
-        // 直接の damager は矢でも、causingEntity が対戦相手なら許可
+        // The direct damager is the arrow, but the opponent as causingEntity makes it allowed
         val allowed = p1.simulateDamage(1.0, projectileDamage(arrow, p2))
         assertFalse(allowed.isCancelled)
 
@@ -215,8 +215,9 @@ class ArenaListenerCombatTest {
         val sim = p1.simulation()
         val from = p1.location
         val horizontal = sim.simulatePlayerMove(from.clone().add(1.0, 0.0, 0.0))
-        // 凍結は setTo(from) の書き換えで通知する。simulatePlayerMove はキャンセル時のみ
-        // 実位置を戻すため実位置は移動先のまま残り、イベントの to で判定結果を見る
+        // Freezing is signalled by rewriting setTo(from). simulatePlayerMove restores the
+        // real position only when cancelled, so the real position stays at the destination
+        // and the event's `to` carries the verdict
         assertEquals(from, horizontal.to)
 
         val verticalTarget = p1.location.clone().add(0.0, 1.0, 0.0)
@@ -226,8 +227,8 @@ class ArenaListenerCombatTest {
 
     @Test
     fun `void fall uses world min height`() {
-        // 最低高度が負の世界では y<0 の移動は敗北にしない
-        // WorldMock は (minHeight, maxHeight, grassHeight) の順
+        // In a world with negative min height, moving to y<0 is not a defeat
+        // WorldMock takes (minHeight, maxHeight, grassHeight) in that order
         val deep = WorldMock(Material.STONE, Biome.PLAINS, -64, 320, 0)
         env.server.addWorld(deep)
         val (p1, p2) = env.twoPlayerIngame()
@@ -249,11 +250,11 @@ class ArenaListenerCombatTest {
 
         env.runOneShots()
         val sim = p2.simulation()
-        // ROUNDCOUNTDOWN は水平移動が凍結されるため、現在地の xz を保って y だけ落とす
+        // ROUNDCOUNTDOWN freezes horizontal movement, so keep the current xz and drop only y
         val base = p2.location
         sim.simulatePlayerMove(Location(base.world, base.x, -1.0, base.z))
         assertEquals(2, env.service.matchOf("arena1")!!.winsOf(p1.uuid))
-        // キャンセル済みの旧タイマーは実スケジューラ上は二度と発火せず、新タイマーだけが進行する
+        // The cancelled old timer never fires again on the real scheduler; only the new timer advances
         env.tick(8)
         assertEquals(ArenaState.INGAME, env.state())
 

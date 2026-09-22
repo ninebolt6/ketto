@@ -5,7 +5,7 @@ import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.domain.Arena
 import java.util.Locale
 
-/** arenalist.yml・arena/<name>.yml の永続化。arenalist は登録順の index として内部管理する。 */
+/** Persistence for arenalist.yml and arena/<name>.yml. arenalist is managed internally as a registration-order index. */
 class YamlArenaRepository(private val store: YamlStore) : ArenaRepository {
 
     override fun loadAll(): List<Arena> {
@@ -42,7 +42,7 @@ class YamlArenaRepository(private val store: YamlStore) : ArenaRepository {
         )
     }
 
-    /** enabled とスポーンのみを保存。inventory(装備)・sign(看板) セクションは各責務側が持つので保持する。 */
+    /** Saves only enabled and spawns. The inventory (kit) and sign sections are owned by their respective stores and must be preserved. */
     override fun save(arena: Arena) {
         val file = store.arenaFile(arena.name)
         val yaml = store.load(file)

@@ -3,8 +3,9 @@ package net.ninebolt.onevsone.infrastructure.persistence
 import net.ninebolt.onevsone.infrastructure.paper.PaperInventorySnapshot
 
 /**
- * arena/<name>.yml の inventory セクション(アリーナ装備)の永続化。
- * 同一ファイルの enabled/spawn は YamlArenaRepository、sign は YamlSignRepository が担う。
+ * Persistence for the inventory section (arena kit) of arena/<name>.yml.
+ * enabled/spawn in the same file are handled by YamlArenaRepository, sign by
+ * YamlSignRepository.
  */
 class YamlKitStore(private val store: YamlStore) {
 

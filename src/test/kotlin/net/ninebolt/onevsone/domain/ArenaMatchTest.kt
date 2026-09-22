@@ -14,7 +14,7 @@ import kotlin.test.assertSame
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 
-/** 参加・退出・開始・中断・不変性の検証。 */
+/** Verifies join, leave, start, abort, and immutability. */
 class ArenaMatchTest {
 
     @Test
@@ -58,7 +58,7 @@ class ArenaMatchTest {
         var m = match()
         m = m.join(alice).match
         m = m.join(bob).match
-        // COUNTDOWN では退出不可
+        // Leaving is not allowed during COUNTDOWN
         assertEquals(LeaveOutcome.NotWaiting, m.leaveWaiting(alice.id).outcome)
         assertEquals(2, m.participants.size)
 
@@ -103,7 +103,7 @@ class ArenaMatchTest {
         val step = countdown.forfeit(alice.id)
         assertTrue(step.outcome is QuitOutcome.WaitingExit)
         assertEquals(alice, step.outcome.participant)
-        // 残った 1 人は ONEMORE で待機継続(再参加可能)。進行中のカウントダウンは epoch で無効化
+        // The remaining player keeps waiting at ONEMORE (rejoinable). The in-flight countdown is invalidated by epoch
         assertEquals(ArenaState.ONEMORE, step.match.state)
         assertEquals(listOf(bob), step.match.participants)
         assertTrue(step.match.epoch > countdown.epoch)
@@ -148,7 +148,7 @@ class ArenaMatchTest {
     fun `held snapshot is not mutated by later transitions`() {
         val snapshot = startedMatch()
         val after = snapshot.recordDefeat(bob.id, DefeatCause.FALL).match
-        // 取得済みスナップショットは後続遷移の影響を受けない
+        // An already-taken snapshot is unaffected by later transitions
         assertEquals(ArenaState.INGAME, snapshot.state)
         assertEquals(0, snapshot.winsOf(alice.id))
         assertEquals(2, snapshot.participants.size)
@@ -273,21 +273,21 @@ class ArenaMatchTest {
         assertFailsWith<IllegalArgumentException> {
             ArenaMatch.new(Arena.Id.new("a1"), 0)
         }
-        // 状態と参加人数の不整合
+        // Mismatch between state and participant count
         assertFailsWith<IllegalArgumentException> {
             ArenaMatch.restored(Arena.Id.new("a1"), 3, ArenaState.WAITING, listOf(alice), emptyMap())
         }
         assertFailsWith<IllegalArgumentException> {
             ArenaMatch.restored(Arena.Id.new("a1"), 3, ArenaState.INGAME, listOf(alice), emptyMap())
         }
-        // 非参加者への加点
+        // Awarding points to a non-participant
         assertFailsWith<IllegalArgumentException> {
             ArenaMatch.restored(
                 Arena.Id.new("a1"), 3, ArenaState.INGAME, listOf(alice, bob),
                 wins = mapOf(carol.id to 1)
             )
         }
-        // resolving は ROUNDCOUNTDOWN のみ
+        // resolving is only valid in ROUNDCOUNTDOWN
         assertFailsWith<IllegalArgumentException> {
             ArenaMatch.restored(
                 Arena.Id.new("a1"), 3, ArenaState.INGAME, listOf(alice, bob),

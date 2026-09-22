@@ -18,8 +18,9 @@ import org.mockbukkit.mockbukkit.MockBukkit
 import org.mockbukkit.mockbukkit.ServerMock
 
 /**
- * composition root を実ロードして配線を検証するスモークテスト。
- * TestEnv の手動ミラーでは検出できない onEnable の登録忘れを塞ぐ。
+ * Smoke test that loads the real composition root and verifies wiring.
+ * Catches onEnable registration mistakes that TestEnv's manual mirroring
+ * cannot detect.
  */
 class OneVsOnePluginTest {
 
@@ -32,7 +33,7 @@ class OneVsOnePluginTest {
 
     @AfterEach
     fun tearDown() {
-        // onDisable → service.shutdown() の実経路も通す
+        // Also exercises the real onDisable -> service.shutdown() path
         MockBukkit.unmock()
     }
 
@@ -44,7 +45,7 @@ class OneVsOnePluginTest {
         assertNotNull(plugin.service)
         assertTrue(plugin.getCommand("1vs1")?.executor is OneVsOneCommand)
 
-        // 各リスナー固有のイベントの HandlerList で登録を確認する
+        // Verify registration via the HandlerList of each listener's own event
         assertTrue(PlayerDeathEvent.getHandlerList().registeredListeners.any { it.listener is ArenaMatchListener && it.plugin === plugin })
         assertTrue(InventoryClickEvent.getHandlerList().registeredListeners.any { it.listener is ArenaGuardListener && it.plugin === plugin })
         assertTrue(VehicleEnterEvent.getHandlerList().registeredListeners.any { it.listener is ArenaTeleportListener && it.plugin === plugin })

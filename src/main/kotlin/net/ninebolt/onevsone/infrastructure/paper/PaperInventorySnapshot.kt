@@ -4,9 +4,9 @@ import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.PlayerInventory
 
 /**
- * ItemStack ベースのインベントリスナップショット。
- * 複製・防具 4 slot・offhand(41 slot 目)・AIR 判定を維持する。
- * この型は infrastructure 内に閉じ込め、内部層には出さない。
+ * ItemStack-based inventory snapshot.
+ * Maintains cloning, the 4 armor slots, offhand (slot 41), and AIR checks.
+ * This type is confined to infrastructure and never exposed to inner layers.
  */
 data class PaperInventorySnapshot(
     val armor: List<ItemStack?> = emptyList(),

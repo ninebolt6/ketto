@@ -10,8 +10,8 @@ import org.bukkit.command.CommandSender
 import org.bukkit.command.TabExecutor
 
 /**
- * /1vs1 の TabExecutor。plugin.yml からの登録点はここだけで、
- * 実処理は CommandGroup 経由で各サブコマンドへルーティングする。
+ * TabExecutor for /1vs1. This is the only registration point from plugin.yml;
+ * actual work routes to each subcommand via CommandGroup.
  */
 class OneVsOneCommand(
     service: ArenaApplicationService,

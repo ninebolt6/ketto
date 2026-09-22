@@ -9,7 +9,7 @@ import net.ninebolt.onevsone.domain.MatchId
 import net.ninebolt.onevsone.domain.Participant
 import kotlin.uuid.Uuid
 
-/** インベントリ操作の記録・障害注入用フェイク。実データは持たず BackupRef のみ。 */
+/** Fake for recording inventory operations and injecting failures. Holds no payload, only BackupRefs. */
 class FakeEquipment(var players: FakePlayers? = null) : KitPort, InventoryBackupPort {
     val storedBackups = linkedMapOf<Uuid, BackupRef>()
     val restored = mutableListOf<BackupRef>()

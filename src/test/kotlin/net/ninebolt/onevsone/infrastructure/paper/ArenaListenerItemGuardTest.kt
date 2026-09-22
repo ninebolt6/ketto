@@ -47,7 +47,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
-/** キット品の外界移動・直接獲得の遮断。実イベントの isCancelled / useInteractedBlock を見る。 */
+/** Blocks kit items from leaving to the world or being acquired directly. Reads isCancelled / useInteractedBlock on real events. */
 class ArenaListenerItemGuardTest {
 
     @TempDir
@@ -92,7 +92,7 @@ class ArenaListenerItemGuardTest {
     @Test
     fun `ender chest and spawn setting blocks denied`() {
         val (p1, _) = env.twoPlayerIngame()
-        // InventoryHolder を持たない預け入れ経路を個別に塞ぐ
+        // Deposit paths that have no InventoryHolder are plugged individually
         listOf(
             Material.ENDER_CHEST,
             Material.WHITE_BED,
@@ -168,8 +168,8 @@ class ArenaListenerItemGuardTest {
 
     @Test
     fun `precise entity interact needs own handler`() {
-        // PlayerInteractAtEntityEvent は独自 HandlerList を持つため、
-        // PlayerInteractEntityEvent への登録だけでは発火しない
+        // PlayerInteractAtEntityEvent has its own HandlerList, so registering
+        // only PlayerInteractEntityEvent never fires it
         val (p1, _) = env.twoPlayerIngame()
         val frame = env.spawn(EntityType.ITEM_FRAME)
         val event = PlayerInteractAtEntityEvent(

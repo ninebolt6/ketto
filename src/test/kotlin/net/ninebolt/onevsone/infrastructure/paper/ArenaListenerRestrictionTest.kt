@@ -23,7 +23,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
-/** 状態ごとの制約(ブロック破壊・設置・アイテムドロップ・コマンド)を実アクション経由で検証する。 */
+/** Verifies per-state restrictions (block break/place, item drop, commands) through real actions. */
 class ArenaListenerRestrictionTest {
 
     @TempDir
@@ -42,7 +42,7 @@ class ArenaListenerRestrictionTest {
         env.close()
     }
 
-    /** MockBukkit の performCommand は preprocess イベントを発火しないため、実イベントを dispatch する。 */
+    /** MockBukkit's performCommand never fires the preprocess event, so dispatch a real one. */
     private fun assertCommandBlocked(player: Player, blocked: Boolean) {
         val event = PlayerCommandPreprocessEvent(player, "/spawn")
         env.fire(event)
@@ -114,7 +114,7 @@ class ArenaListenerRestrictionTest {
         env.tick(6)
         assertTrue(place().isCancelled) // INGAME
 
-        // 着火は許可する。simulateBlockPlace は実インベントリの手のアイテムを使う
+        // Ignition stays allowed. simulateBlockPlace uses the item in hand from the real inventory
         p1.inventory.setItem(p1.inventory.heldItemSlot, env.item(Material.FLINT_AND_STEEL))
         assertFalse(place().isCancelled)
         p1.inventory.clear(p1.inventory.heldItemSlot)

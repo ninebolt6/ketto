@@ -6,19 +6,19 @@ import org.bukkit.command.CommandSender
 import org.bukkit.util.StringUtil
 import java.util.Locale
 
-/** サブコマンド名でルーティングする名前空間。root と arena 配下で共用する。 */
+/** Namespace that routes by subcommand name. Shared by the root and arena groups. */
 internal class CommandGroup(
     private val usage: Msg,
     private val messages: Messages,
     subs: Map<String, Subcommand>
 ) : Subcommand {
-    /** 小文字名 → (登録名, サブコマンド)。補完では登録どおりの大小文字を返す。 */
+    /** lowercase name -> (registered name, subcommand). Completion returns names with their registered case. */
     private val byName: Map<String, Pair<String, Subcommand>> = subs.entries.associateBy(
         { it.key.lowercase(Locale.ROOT) },
         { it.key to it.value }
     )
 
-    // 名前空間自体は常に表示する。配下の可視性は子の visibleTo が判断する
+    // The namespace itself is always visible; visibility of children is up to each child's visibleTo
     override fun visibleTo(sender: CommandSender): Boolean = true
 
     override fun execute(sender: CommandSender, args: List<String>): Msg? {

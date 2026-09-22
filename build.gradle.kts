@@ -17,11 +17,11 @@ repositories {
 
 dependencies {
     compileOnly(libs.paper.api)
-    // Paper が実行時提供するが、推移依存への暗黙依存を避けるため明示する
+    // Provided by Paper at runtime; declared explicitly to avoid implicit reliance on transitive deps
     compileOnly(libs.adventure.minimessage)
 
-    // MockBukkit は bukkit 提供側(paper-api)より先に置く必要がある
-    // manifest の Paper-Version(1.21.11)と組み合わせる
+    // MockBukkit must come before the bukkit provider (paper-api)
+    // pairs with the Paper-Version (1.21.11) in the manifest
     testImplementation(libs.mockbukkit)
     testImplementation(libs.paper.api)
     testImplementation(libs.adventure.serializer.plain)

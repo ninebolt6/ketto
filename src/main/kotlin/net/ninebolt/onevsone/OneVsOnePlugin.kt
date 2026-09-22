@@ -30,10 +30,10 @@ import org.bukkit.plugin.java.JavaPlugin
 import java.io.File
 
 /**
- * composition root。設定値を読み、実装を手動で生成・注入し、
- * イベントとコマンドを登録する。main FQCN は維持。
+ * Composition root. Reads config values, manually instantiates and injects the
+ * implementations, and registers events and commands. The main FQCN is kept.
  */
-// MockBukkit がロード時にプロキシサブクラスを生成するため open が必要
+// open is required because MockBukkit generates a proxy subclass at load time
 open class OneVsOnePlugin : JavaPlugin() {
 
     var service: ArenaApplicationService? = null
@@ -102,7 +102,7 @@ open class OneVsOnePlugin : JavaPlugin() {
 
         val executor = OneVsOneCommand(service, admin, playerPort, failures, messages)
         val command = getCommand("1vs1")
-        @Suppress("UsePropertyAccessSyntax") // setter が @Nullable 引数のため executor は val 扱い
+        @Suppress("UsePropertyAccessSyntax") // the setter takes @Nullable, so executor stays a val-style property access
         command?.setExecutor(executor)
         command?.tabCompleter = executor
         server.pluginManager.registerEvents(ArenaMatchListener(service, lookup, messages), this)

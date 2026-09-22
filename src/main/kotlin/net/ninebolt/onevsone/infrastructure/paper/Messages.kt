@@ -15,9 +15,10 @@ import java.util.Locale
 import java.util.logging.Logger
 
 /**
- * lang/messages_<lang>.yml 上の MiniMessage テンプレートを描画するメッセージ基盤。
- * send/broadcast は宛先ロケール(language=auto 時はクライアント設定)で描画し、
- * 看板・アイテム名・スコアボード等の共有面は render(サーバー言語)を使う。
+ * Message infrastructure rendering MiniMessage templates from
+ * lang/messages_<lang>.yml. send/broadcast render in the recipient's locale
+ * (the client setting when language=auto); shared surfaces such as signs, item
+ * names, and the scoreboard use render (the server language).
  */
 class Messages private constructor(
     private val bundles: Map<String, Map<String, String>>,
@@ -28,7 +29,7 @@ class Messages private constructor(
     private val mini = MiniMessage.miniMessage()
     private val warnedMissing = mutableSetOf<String>()
 
-    /** 共有面・コンソール向けの言語。固定モードではその言語、auto では既定言語。 */
+    /** Language for shared surfaces and console. The fixed language in fixed mode, the default language in auto. */
     private val serverLang = chatLang ?: defaultLang
 
     private fun localeOf(sender: CommandSender): String {
@@ -50,7 +51,7 @@ class Messages private constructor(
             key
         }
 
-    /** msg を描画する。lang 省略時はサーバー言語(看板・アイテム等の共有面用)。 */
+    /** Renders msg. When lang is omitted, uses the server language (for shared surfaces like signs and items). */
     fun render(msg: Msg, lang: String = serverLang): Component =
         mini.deserialize(template(lang, msg.key), *msg.args.map { arg ->
             when (arg) {
@@ -64,13 +65,13 @@ class Messages private constructor(
         sender.sendMessage(render(Msg(MessageKeys.PREFIX), lang).append(render(msg, lang)))
     }
 
-    /** プレイヤーは各自のロケール、コンソールはサーバー言語で送る。 */
+    /** Players get their own locale; the console gets the server language. */
     fun broadcast(server: Server, msg: Msg) {
         server.onlinePlayers.forEach { send(it, msg) }
         server.consoleSender.sendMessage(render(Msg(MessageKeys.PREFIX)).append(render(msg)))
     }
 
-    // ---- Msg ファクトリ(描画は行わずキーと引数だけを持つ) ----
+    // ---- Msg factories (hold only keys and args; no rendering) ----
 
     val usageRoot = Msg(MessageKeys.USAGE_ROOT)
     val usageArena = Msg(MessageKeys.USAGE_ARENA)
@@ -147,12 +148,13 @@ class Messages private constructor(
     })
 
     companion object {
-        /** jar に同梱する既定言語。ユーザー追加言語は dataFolder/lang/messages_<lang>.yml で読む。 */
+        /** Default languages bundled in the jar. User-added languages load from dataFolder/lang/messages_<lang>.yml. */
         private val BUNDLED_LANGS = listOf("ja", "en")
 
         /**
-         * 同梱言語を基底に、langDir/messages_*.yml を言語別に上書きマージして読み込む。
-         * language が "auto" なら宛先ロケール描画、それ以外なら全宛先をその言語に固定する。
+         * Loads langDir/messages_*.yml merged per language over the bundled
+         * languages. "auto" renders per recipient locale; anything else pins
+         * all recipients to that language.
          */
         fun load(langDir: File, defaultLang: String, language: String, logger: Logger): Messages {
             val bundled = BUNDLED_LANGS.mapNotNull { lang ->
@@ -176,7 +178,7 @@ class Messages private constructor(
             return Messages(bundles, defaultLang, if (language.equals("auto", ignoreCase = true)) null else language, logger)
         }
 
-        /** ネストした YAML を a.b.c キーのテンプレートマップへ平坦化する。 */
+        /** Flattens nested YAML into a map of a.b.c keys to templates. */
         private fun flatten(config: YamlConfiguration): Map<String, String> =
             config.getKeys(true).mapNotNull { key -> config.getString(key)?.let { key to it } }.toMap()
     }

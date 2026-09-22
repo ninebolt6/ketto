@@ -1,10 +1,11 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
 /**
- * 遅延描画メッセージ。言語ファイル(lang/messages_<lang>.yml)のキーと
- * プレースホルダ引数を保持し、Messages.render で宛先ロケールに描画される。
- * 引数は Str(プレーンテキスト。`<` 等はタグ化しない)か Nested(同ロケールで
- * 描画される別 Msg)のいずれか。
+ * Lazily rendered message. Holds a key from a language file
+ * (lang/messages_<lang>.yml) plus placeholder arguments, rendered into the
+ * recipient's locale by Messages.render. Arguments are either Str (plain text;
+ * `<` etc. are never parsed as tags) or Nested (another Msg rendered in the
+ * same locale).
  */
 class Msg internal constructor(val key: String, vararg val args: Arg) {
 
@@ -17,7 +18,7 @@ class Msg internal constructor(val key: String, vararg val args: Arg) {
     data class Nested(override val name: String, val msg: Msg) : Arg
 }
 
-/** 言語ファイルのキー一覧。グループの共通プレフィックスは private const で共有する。 */
+/** All keys in the language files. Each group's shared prefix is a private const. */
 object MessageKeys {
     const val PREFIX = "prefix"
 

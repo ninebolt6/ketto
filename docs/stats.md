@@ -1,20 +1,20 @@
-# 戦績(Stats)仕様
+# Stats Specification
 
-## 記録
+## Recording
 
-- マッチ終了時に勝者 `win + 1`、敗者 `lose + 1` を `stats/<uuid>.yml` へ記録。
-- 記録キーはプレイヤー UUID。ファイル形式は `win` / `lose` の整数(data-format.md 参照)。
-- 記録の失敗は警告ログとして報告するのみで、終了処理(復元・ロビー転送)は継続する。
+- On match end, record winner `win + 1` and loser `lose + 1` to `stats/<uuid>.yml`.
+- The record key is the player UUID. File format is `win` / `lose` integers (see data-format.md).
+- A recording failure is only reported as a warning log; teardown (restore, lobby transfer) continues.
 
-## 表示(`/1vs1 stats`)
+## Display (`/1vs1 stats`)
 
 ```
 Win: <wins>
 Lose: <losses>
-W/L(勝率): <ratio>
+W/L (win rate): <ratio>
 ```
 
-- `ratio` = `win / lose` を小数第 2 位 `HALF_UP` で丸めた文字列。
-- `lose == 0` のときは `win / 1` として計算する。
-- 戦績ファイルが存在しないプレイヤーは「Statsが存在しません」。
-- 引数付きの検索は実行者ごとに 3 秒の間隔を空ける(未キャッシュ名の UUID 解決が外部参照を伴うため)。引数なしの自分の戦績表示は対象外。
+- `ratio` is `win / lose` rounded to 2 decimals with `HALF_UP`.
+- When `lose == 0`, it is computed as `win / 1`.
+- A player without a stats file gets "No stats found".
+- Lookups with an argument are rate-limited to one per 3 seconds per executor (UUID resolution of uncached names involves an external lookup). Viewing your own stats without an argument is exempt.

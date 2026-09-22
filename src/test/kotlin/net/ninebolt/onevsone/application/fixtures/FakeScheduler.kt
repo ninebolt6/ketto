@@ -3,7 +3,7 @@ package net.ninebolt.onevsone.application.fixtures
 import net.ninebolt.onevsone.application.port.Cancellation
 import net.ninebolt.onevsone.application.port.SchedulerPort
 
-/** 手動 tick 駆動のスケジューラ。cancelled な timer も run() で本体を起動する(自己ガード検証のため)。 */
+/** Scheduler driven by manual ticks. run() still invokes a cancelled timer's body (to verify self-guarding). */
 class FakeScheduler : SchedulerPort {
     class Timer(
         val id: Int,

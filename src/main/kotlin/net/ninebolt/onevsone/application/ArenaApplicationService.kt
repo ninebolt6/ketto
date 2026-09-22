@@ -21,11 +21,12 @@ import net.ninebolt.onevsone.domain.QuitOutcome
 import kotlin.uuid.Uuid
 
 /**
- * 参加・退出・切断・勝敗入口・ライフサイクルのオーケストレーション。
- * 開始カウントダウン・ラウンド遷移・決着・中断の進行機構は
- * MatchProgressionService へ委譲する(依存は一方向)。
- * 入力は UUID 等、出力は結果または集約スナップショット。JavaPlugin や Messages は受け取らない。
- * すべての操作はメインスレッドで直列化されている前提。
+ * Orchestration of join/leave/quit, the defeat entry point, and the lifecycle.
+ * The progression engine (initial countdown, round transitions, resolution,
+ * aborts) is delegated to MatchProgressionService (one-way dependency).
+ * Inputs are UUIDs etc.; outputs are results or aggregate snapshots. It takes
+ * neither JavaPlugin nor Messages.
+ * All operations are assumed to be serialized on the main thread.
  */
 class ArenaApplicationService(
     private val registry: ArenaRegistry,
@@ -40,7 +41,7 @@ class ArenaApplicationService(
     private val sync: MatchStateSync
 ) {
 
-    // ---- 起動・停止 -------------------------------------------------------
+    // ---- Startup & shutdown -------------------------------------------------------
 
     fun load() {
         val loaded = try {
@@ -79,7 +80,7 @@ class ArenaApplicationService(
         recovery.restoreAllOnline()
     }
 
-    // ---- 問い合わせ -------------------------------------------------------
+    // ---- Queries -------------------------------------------------------
 
     fun arenaIdOf(playerId: Uuid): Arena.Id? = registry.arenaOf(playerId)
 
@@ -90,12 +91,12 @@ class ArenaApplicationService(
 
     fun matchOf(name: String): ArenaMatch? = registry.resolveArenaId(name)?.let { registry.match(it) }
 
-    /** 破損時は PersistenceFailure を投げる(呼び出し側で扱う)。 */
+    /** Throws PersistenceFailure on corruption (handled by the caller). */
     fun statsFor(playerId: Uuid): PlayerStats? = stats.find(playerId)
 
     fun pendingRestore(playerId: Uuid) = recovery.pending(playerId)
 
-    // ---- 参加・退出・切断 ---------------------------------------------------
+    // ---- Join, leave, quit ---------------------------------------------------
 
     fun join(playerId: Uuid, playerName: String, arenaId: Arena.Id): JoinReply {
         if (registry.isJoined(playerId)) return JoinReply.AlreadyJoined
@@ -104,19 +105,19 @@ class ArenaApplicationService(
         if (!arena.enabled) return JoinReply.NotEnabled
         val participant = Participant.new(playerId, playerName)
 
-        // join は純粋関数: コミット前に拒否を確定させる
+        // join is a pure function: rejection is decided before committing
         val step = match.join(participant)
         if (step.outcome == JoinOutcome.Rejected) return JoinReply.InMatch
 
-        // 前回の未復元バックアップがあれば再参加前に完了させる(持ち物は読まない)
+        // Complete any unrestored backup from a previous match before rejoining (does not read the inventory)
         val handle = players.handle(playerId)
         recovery.ticketFor(playerId, playerName)?.let { ticket ->
             if (handle == null || handle.dead) return JoinReply.InMatch
             recovery.restoreNow(handle, ticket, respawn = true, lobby = false)
         }
 
-        // メンバーシップ登録。失敗時はまだコミット前なので、
-        // 何も変わっていない状態で例外を投げる。
+        // Membership registration. On failure we are still pre-commit,
+        // so the exception propagates with nothing changed.
         matchState.registerParticipant(participant, arenaId)
         registry.putMatch(step.match)
         if (step.outcome == JoinOutcome.MatchReady) progression.startInitialCountdown(arenaId)
@@ -136,7 +137,7 @@ class ArenaApplicationService(
             LeaveOutcome.NotWaiting -> return LeaveReply.NotWaiting
             is LeaveOutcome.Left -> {
                 unregister(outcome.participant)
-                // 未開始の退出では持ち物を変更しない(バックアップ無し・復元無し)
+                // Leaving before the match starts does not touch the inventory (no backup, no restore)
                 sync.publish(step.match)
                 return LeaveReply.Left
             }
@@ -144,13 +145,13 @@ class ArenaApplicationService(
     }
 
     /**
-     * QuitEvent 中はアダプターが切断中プレイヤーの操作ハンドルを
-     * 提供するので、ここでは UUID だけで処理する。
+     * During QuitEvent the adapter provides an operation handle for the
+     * disconnecting player, so processing here needs only the UUID.
      */
     fun quit(playerId: Uuid, playerName: String) {
         val arenaId = registry.arenaOf(playerId)
         if (arenaId == null) {
-            // 参加していなくても未復元バックアップがあれば復元して切断に備える
+            // Even when not participating, restore any unrestored backup so the disconnect is safe
             recovery.ticketFor(playerId, playerName)?.let { ticket ->
                 players.handle(playerId)?.let { handle ->
                     recovery.restoreNow(handle, ticket, respawn = false, lobby = false)
@@ -171,7 +172,7 @@ class ArenaApplicationService(
         }
     }
 
-    /** PlayerJoinEvent 相当。 */
+    /** Equivalent of PlayerJoinEvent. */
     fun restorePending(playerId: Uuid, playerName: String) {
         if (registry.isJoined(playerId)) return
         val ticket = recovery.ticketFor(playerId, playerName) ?: return
@@ -179,9 +180,9 @@ class ArenaApplicationService(
         recovery.restoreNow(handle, ticket, respawn = true, lobby = false)
     }
 
-    // ---- 勝敗 --------------------------------------------------------------
+    // ---- Win/loss --------------------------------------------------------------
 
-    /** 受理されれば true。 */
+    /** true when the defeat was accepted. */
     fun defeat(playerId: Uuid, cause: DefeatCause): Boolean {
         val arenaId = registry.arenaOf(playerId) ?: return false
         val step = registry.transact(arenaId) { it.recordDefeat(playerId, cause) } ?: return false
@@ -198,14 +199,14 @@ class ArenaApplicationService(
         }
     }
 
-    /** 死亡したが敗北として受理されなかった場合のリスポーン予約。 */
+    /** Respawn reservation for a player who died but was not accepted as a defeat. */
     fun requestRespawn(playerId: Uuid) = progression.requestRespawn(playerId)
 
-    // ---- 中断 ---------------------------------------------------------------
+    // ---- Abort ---------------------------------------------------------------
 
     fun abort(arenaId: Arena.Id) = progression.abort(arenaId)
 
-    /** 台帳解除の失敗は warn に潰し後続処理を止めない。 */
+    /** Ledger-unregister failures are swallowed into a warn so later processing continues. */
     private fun unregister(participant: Participant) =
         failures.warnOnFailure("Could not unregister ${participant.name} from players.yml; membership record may be stale") {
             sync.unregister(participant)

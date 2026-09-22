@@ -36,9 +36,10 @@ import org.bukkit.event.player.PlayerPickupArrowEvent
 import org.bukkit.inventory.InventoryHolder
 
 /**
- * 試合中のアリーナ改変とキット品の外界移動を遮断する入力アダプター。
- * itemDropCancelled が守る不変条件「開始時バックアップ以外のアイテムを残さない」
- * を、ドロップ以外の経路(コンテナ・額縁・取引・拾得)にも拡張する。
+ * Input adapter that blocks arena modification and kit items leaking into the
+ * world while a match is running. Extends the invariant guarded by
+ * itemDropCancelled — "no items other than the start-of-match backup remain" —
+ * to non-drop routes (containers, item frames, trading, pickups).
  */
 class ArenaGuardListener(
     private val service: ArenaApplicationService
@@ -55,8 +56,8 @@ class ArenaGuardListener(
     fun onPlace(event: BlockPlaceEvent) {
         val restrictions = service.restrictionsOf(event.player) ?: return
         if (!restrictions.blockPlaceCancelled) return
-        // 火打ち石は設置ではなく着火なので許可する(通常は BlockPlaceEvent を発火しないが、
-        // 発火する実装でも着火の許可を維持する)
+        // Flint and steel is allowed as ignition rather than placement (it normally
+        // does not fire BlockPlaceEvent, but keep ignition allowed on implementations that do)
         if (event.itemInHand.type == Material.FLINT_AND_STEEL) return
         event.isCancelled = true
     }
@@ -79,8 +80,10 @@ class ArenaGuardListener(
     }
 
     /**
-     * 自前の持ち物画面(CRAFTING/PLAYER)以外が開いている間の操作を全て遮断する。
-     * 外来インベントリはインタラクト側でも塞ぐが、プラグイン等で開かれた場合の二番手防衛。
+     * Blocks all operations while anything other than the player's own
+     * inventory screen (CRAFTING/PLAYER) is open. Foreign inventories are also
+     * blocked on the interact side; this is a second-line defense for ones
+     * opened by plugins etc.
      */
     private fun foreignInventoryRestricted(event: InventoryInteractEvent): Boolean {
         val top = event.view.topInventory.type
@@ -105,9 +108,10 @@ class ArenaGuardListener(
     }
 
     /**
-     * 預け入れ可能なブロック。BlockState の InventoryHolder でコンテナ類を一括で拾い、
-     * InventoryHolder を持たないエンダーチェスト・リスポーン地点を変更する
-     * ベッド/リスポーンアンカー・植木鉢を明示する。
+     * Blocks that can hold deposited items. Containers are caught wholesale via
+     * the BlockState's InventoryHolder; blocks without one — ender chests and
+     * the respawn-point-changing beds/respawn anchors, plus flower pots — are
+     * listed explicitly.
      */
     private fun storesItems(block: Block): Boolean {
         if (block.state is InventoryHolder) return true
@@ -120,13 +124,13 @@ class ArenaGuardListener(
     fun onInteractEntity(event: PlayerInteractEntityEvent) {
         if (service.restrictionsOf(event.player)?.inventoryTransferCancelled != true) return
         val entity = event.rightClicked
-        // InventoryHolder: チェスト付きトロッコ/ボート・村人(取引画面自体を開かせない)・Allay 等
+        // InventoryHolder: chest minecarts/boats, villagers (never open the trading UI), Allays, etc.
         if (entity is InventoryHolder || entity is ItemFrame || entity is ArmorStand) {
             event.isCancelled = true
         }
     }
 
-    // PlayerInteractEntityEvent のサブクラスだが HandlerList はイベントクラス毎に分かれる
+    // A subclass of PlayerInteractEntityEvent, but HandlerLists are split per event class
     @EventHandler
     fun onInteractAtEntity(event: PlayerInteractAtEntityEvent) {
         onInteractEntity(event)
@@ -166,7 +170,7 @@ class ArenaGuardListener(
         if (service.restrictionsOf(event.player)?.blockBreakCancelled == true) event.isCancelled = true
     }
 
-    // PlayerBucketEntityEvent に置き換えられた非推奨イベント。発火する実装に備えて残す
+    // Deprecated event superseded by PlayerBucketEntityEvent. Kept for implementations that still fire it
     @Suppress("DEPRECATION")
     @EventHandler
     fun onBucketFish(event: PlayerBucketFishEvent) {
@@ -186,13 +190,13 @@ class ArenaGuardListener(
 
     @EventHandler
     fun onPickupArrow(event: PlayerPickupArrowEvent) {
-        // 観戦者が射込んだ矢/トライデントを参加者が回収する密輸経路も塞ぐ
+        // Also blocks the smuggling route where a participant retrieves arrows/tridents shot in by spectators
         if (service.restrictionsOf(event.player)?.itemPickupCancelled == true) event.isCancelled = true
     }
 
     @EventHandler
     fun onHarvest(event: PlayerHarvestBlockEvent) {
-        // ベリー系の収穫は拾得イベントを介さず直接インベントリへ入る
+        // Berry-type harvests go straight into the inventory without a pickup event
         if (service.restrictionsOf(event.player)?.itemPickupCancelled == true) event.isCancelled = true
     }
 
@@ -204,14 +208,14 @@ class ArenaGuardListener(
 
     @EventHandler
     fun onFertilize(event: BlockFertilizeEvent) {
-        // 骨粉による樹木・作物の成長はブロック設置と同じアリーナ改変
+        // Bone-meal growth of trees/crops is the same kind of arena modification as placing blocks
         val player = event.player ?: return
         if (service.restrictionsOf(player)?.blockPlaceCancelled == true) event.isCancelled = true
     }
 
     @EventHandler
     fun onSignChange(event: SignChangeEvent) {
-        // 未ワックス看板は誰でも文字を書き換えられるため、設置禁止と同じ制約で守る
+        // Anyone can rewrite an unwaxed sign, so it is guarded by the same restriction as block placement
         if (service.restrictionsOf(event.player)?.blockPlaceCancelled == true) event.isCancelled = true
     }
 

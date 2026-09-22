@@ -6,41 +6,42 @@ import net.ninebolt.onevsone.domain.Transition
 import kotlin.uuid.Uuid
 
 /**
- * アリーナ・試合集約・UUID→アリーナ索引の共有レジストリ。
- * ArenaApplicationService と ArenaAdministrationService が共有し、
- * アリーナをまたぐ二重参加禁止は playerArena 索引が担う。
+ * Shared registry of arenas, match aggregates, and the UUID->arena index.
+ * Shared by ArenaApplicationService and ArenaAdministrationService; the
+ * playerArena index enforces the ban on joining two arenas at once.
  *
- * Arena と ArenaMatch は必ず 1:1 で存在し、match.arenaId == arena.id は
- * installArena での構築により保証される(Slot)。map は公開しない。
- * playerArena 索引は match 書き戻し(putMatch/transact/updateMatch)のたびに
- * 参加者差分から追従させ、playerArena[uuid]=id ⟺ uuid ∈ matches[id].participants
- * の不変条件を構造で維持する。ArenaMatch は immutable なので変更は必ず
- * これらのメソッドで置き換える。
+ * Arena and ArenaMatch always exist 1:1, and match.arenaId == arena.id is
+ * guaranteed by construction in installArena (Slot). The map is not exposed.
+ * The playerArena index is kept in sync from participant diffs on every match
+ * write-back (putMatch/transact/updateMatch), structurally maintaining
+ * playerArena[uuid]=id ⟺ uuid ∈ matches[id].participants.
+ * ArenaMatch is immutable, so every change must go through these methods.
  */
 class ArenaRegistry(private val requiredWins: Int) {
 
-    /** アリーナとその現在の試合集約のペア。 */
+    /** A pair of an arena and its current match aggregate. */
     private data class Slot(val arena: Arena, val match: ArenaMatch)
 
     private val slots = linkedMapOf<Arena.Id, Slot>()
     private val playerArena = mutableMapOf<Uuid, Arena.Id>()
 
-    // ---- アリーナ ---------------------------------------------------------
+    // ---- Arenas ---------------------------------------------------------
 
     fun arena(id: Arena.Id): Arena? = slots[id]?.arena
 
     /**
-     * 名前から登録済みアリーナを解決する。完全一致を優先し、無ければ大小文字を
-     * 無視して探す(create の重複拒否が大小文字を無視するため参照側も揃える)。
+     * Resolves a registered arena by name. Prefers an exact match, falling back
+     * to case-insensitive lookup (the read side mirrors create's
+     * case-insensitive duplicate rejection).
      */
     fun resolveArenaId(name: String): Arena.Id? =
         Arena.Id.of(name)?.takeIf { slots.containsKey(it) }
             ?: slots.keys.firstOrNull { it.name.equals(name, ignoreCase = true) }
 
-    /** 登録順のアリーナ ID 一覧。 */
+    /** Arena IDs in registration order. */
     fun arenaIds(): List<Arena.Id> = slots.keys.toList()
 
-    /** アリーナを登録し、新規の試合集約を紐付ける。 */
+    /** Registers an arena and attaches a fresh match aggregate. */
     fun installArena(arena: Arena) {
         val match = ArenaMatch.new(arena.id, requiredWins)
         val previous = slots.put(arena.id, Slot(arena, match))
@@ -53,7 +54,8 @@ class ArenaRegistry(private val requiredWins: Int) {
     }
 
     /**
-     * アリーナ定義を変換して書き戻す。未登録なら何もせず null。
+     * Transforms and writes back an arena definition. Does nothing and returns
+     * null when unregistered.
      */
     fun updateArena(id: Arena.Id, transform: (Arena) -> Arena): Arena? {
         val slot = slots[id] ?: return null
@@ -62,16 +64,17 @@ class ArenaRegistry(private val requiredWins: Int) {
         return next
     }
 
-    // ---- 試合集約 ---------------------------------------------------------
+    // ---- Match aggregates ---------------------------------------------------------
 
     fun match(id: Arena.Id): ArenaMatch? = slots[id]?.match
 
-    /** 登録順の全試合(シャットダウン処理用)。 */
+    /** All matches in registration order (for shutdown processing). */
     fun matches(): List<ArenaMatch> = slots.values.map { it.match }
 
     /**
-     * 事前に計算した遷移結果を書き戻す。join のように
-     * 「計算→副作用→コミット」の順序が必要な経路用。未登録なら何もしない。
+     * Writes back a transition result computed beforehand. For paths like join
+     * that need "compute -> side effects -> commit" ordering. Does nothing
+     * when unregistered.
      */
     fun putMatch(match: ArenaMatch) {
         val slot = slots[match.arenaId] ?: return
@@ -80,7 +83,8 @@ class ArenaRegistry(private val requiredWins: Int) {
     }
 
     /**
-     * match を変換して書き戻す。アリーナが無ければ何もせず null。
+     * Transforms and writes back a match. Does nothing and returns null when
+     * the arena is absent.
      */
     fun updateMatch(id: Arena.Id, transform: (ArenaMatch) -> ArenaMatch): ArenaMatch? {
         val slot = slots[id] ?: return null
@@ -91,8 +95,9 @@ class ArenaRegistry(private val requiredWins: Int) {
     }
 
     /**
-     * match の操作を適用して書き戻し、outcome を返す。アリーナが無ければ null。
-     * 「計算→コミット→結果に応じたオーケストレーション」のコミットを一元化する。
+     * Applies an operation to the match, writes it back, and returns the
+     * outcome. null when the arena is absent. Centralizes the commit step of
+     * "compute -> commit -> orchestrate based on the outcome".
      */
     fun <O> transact(id: Arena.Id, operation: (ArenaMatch) -> Transition<O>): Transition<O>? {
         val slot = slots[id] ?: return null
@@ -102,16 +107,17 @@ class ArenaRegistry(private val requiredWins: Int) {
         return transition
     }
 
-    // ---- 参加索引 ----------------------------------------------------------
+    // ---- Participation index ----------------------------------------------------------
 
     fun arenaOf(playerId: Uuid): Arena.Id? = playerArena[playerId]
 
     fun isJoined(playerId: Uuid): Boolean = playerId in playerArena
 
     /**
-     * 書き戻し前後の参加者差分を索引へ反映する。
-     * 参加側の上書きは試合在籍をそのまま写すだけでよく、退出側は
-     * このアリーナを指しているエントリのみ外す(他アリーナ参加と混ざらないよう)。
+     * Reflects the participant diff between before and after a write-back into
+     * the index. Entries added on the join side simply mirror match membership;
+     * on the leave side only entries still pointing at this arena are removed
+     * (so they never mix with participation in another arena).
      */
     private fun reconcileIndex(id: Arena.Id, before: ArenaMatch?, after: ArenaMatch?) {
         val beforeIds = before?.participants?.map { it.id }?.toSet() ?: emptySet()

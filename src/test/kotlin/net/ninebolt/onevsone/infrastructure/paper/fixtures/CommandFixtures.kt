@@ -7,8 +7,6 @@ import org.bukkit.command.CommandSender
 import kotlin.uuid.Uuid
 import kotlin.uuid.toKotlinUuid
 
-/** OneVsOneCommand テスト用のコマンド実行・stats 投入・OP プレイヤーフィクスチャ。 */
-
 internal fun TestEnv.run(sender: CommandSender, vararg args: String) =
     command.onCommand(sender, mockk<Command>(relaxed = true), "1vs1", arrayOf(*args))
 
@@ -22,7 +20,7 @@ internal fun TestEnv.writeStats(uuid: Uuid, win: Int, lose: Int) {
 
 internal fun TestEnv.opPlayer(name: String): ArenaPlayerMock = player(name).also { it.isOp = true }
 
-// getOfflinePlayer(name) の @Deprecated は Bukkit 上流由来で Paper では除去済み。
-// ServerMock は上流の注釈を残しているため Server 型経由で呼ぶ
+// The @Deprecated on getOfflinePlayer(name) comes from upstream Bukkit; Paper has removed it.
+// ServerMock still carries the upstream annotation, so call it through the Server type
 internal fun TestEnv.offlineId(name: String): Uuid =
     (server as Server).getOfflinePlayer(name).uniqueId.toKotlinUuid()

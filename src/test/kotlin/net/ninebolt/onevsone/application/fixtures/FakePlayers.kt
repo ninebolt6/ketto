@@ -56,7 +56,7 @@ class FakePlayers : PlayerPort {
         handle.online = false
     }
 
-    /** QuitEvent 中の切断者解決を再現するスコープ。 */
+    /** Scope reproducing how a disconnecting player resolves during QuitEvent. */
     fun <R> quittingScope(handle: FakeHandle, block: () -> R): R {
         handle.quitting = true
         try {

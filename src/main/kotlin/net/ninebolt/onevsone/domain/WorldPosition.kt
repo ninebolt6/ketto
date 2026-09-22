@@ -1,6 +1,6 @@
 package net.ninebolt.onevsone.domain
 
-/** Paper の Location を含まない純粋な座標値。 */
+/** A pure coordinate value that does not include Paper's Location. */
 data class WorldPosition private constructor(
     val world: String,
     val x: Double,

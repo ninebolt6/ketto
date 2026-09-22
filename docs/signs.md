@@ -1,39 +1,39 @@
-# 看板仕様
+# Sign Specification
 
-## 登録
+## Registration
 
-- `/1vs1 arena setsign [arena]` で視線先の看板を登録。座標は `arena/<name>.yml` の `sign` セクションへ保存。
-- 1 つの看板は 1 アリーナのみ。別アリーナに登録済みの看板は登録拒否。
-- 登録中の看板は誰も破壊できない(OP 含む)。解除は `/1vs1 arena removesign` かアリーナ削除で行う。
-- 爆発ではブロックリストから除外して消失を防ぐ。看板が載った支持ブロックの破壊、サーバーコマンド(`/setblock` 等)や他プラグインによる変更は対象外。
-- アリーナ削除時は `arena/<name>.yml` ごと削除され、看板登録も消える。
+- `/1vs1 arena setsign [arena]` registers the sign being looked at. Coordinates are saved to the `sign` section of `arena/<name>.yml`.
+- One sign belongs to one arena. A sign already registered to another arena is refused.
+- A registered sign cannot be destroyed by anyone (including OPs). It is unregistered via `/1vs1 arena removesign` or by removing the arena.
+- Explosions exclude it from the block list to prevent its loss. Destruction of the supporting block under the sign, and changes by server commands (`/setblock` etc.) or other plugins, are out of scope.
+- When an arena is removed, `arena/<name>.yml` is deleted with it and the sign registration disappears.
 
-## 表示
+## Display
 
-看板の各行:
+Sign lines:
 
-| 行  | 内容             |
-| --- | ---------------- |
-| 1   | `§4[§6§l1vs1§4]` |
-| 2   | アリーナ名(水色) |
-| 3   | 状態表示(下表)   |
-| 4   | (空)             |
+| Line | Contents          |
+| ---- | ----------------- |
+| 1    | `§4[§6§l1vs1§4]`  |
+| 2    | Arena name (aqua) |
+| 3    | State (see below) |
+| 4    | (empty)           |
 
-| 状態                      | 3 行目          |
-| ------------------------- | --------------- |
-| 参加可能(WAITING/ONEMORE) | `§9Join`        |
-| 参加不可(それ以外)        | `§4Cannot join` |
+| State                        | Line 3          |
+| ---------------------------- | --------------- |
+| Joinable (WAITING/ONEMORE)   | `§9Join`        |
+| Not joinable (anything else) | `§4Cannot join` |
 
-状態遷移のたびに看板表示を更新する(起動時は全アリーナ `Waiting` で初期化)。
+The sign display is updated on every state transition (on startup all arenas initialize to `Waiting`).
 
-## 参加動作
+## Join Behavior
 
-- 看板を右クリック(メインハンド)すると、登録アリーナが参加受付中なら参加処理を実行。
-- 処理したクリックはキャンセルする。未waxの看板は右クリックで編集画面が開くため、バニラの看板編集とアイテム使用を行わせない。
-- 参加受付中でない状態の看板を右クリックすると「このアリーナは現在ゲーム中です」。
-- 参加結果のメッセージ:
-  - 1 人目: 「アリーナ: X に参加しました」+「あと一人参加するのを待っています。」
-  - 2 人目: 「アリーナ: X に参加しました」(カウントダウン開始)
-  - 他アリーナ参加中: 「すでに他のアリーナに参加しています」
-  - 未有効化: 「アリーナが有効になっていません！」
-  - 満員/進行中: 「このアリーナは現在ゲーム中です」
+- Right-clicking a sign (main hand) runs join processing if the registered arena is accepting joins.
+- Handled clicks are cancelled. An unwaxed sign opens the edit screen on right-click, so vanilla sign editing and item use are both denied.
+- Right-clicking a sign whose arena is not accepting joins shows "This arena is currently in a game".
+- Join result messages:
+  - 1st player: "Joined arena: X" + "Waiting for one more player."
+  - 2nd player: "Joined arena: X" (countdown starts)
+  - Already in another arena: "You are already in another arena"
+  - Not enabled: "The arena is not enabled!"
+  - Full/in progress: "This arena is currently in a game"

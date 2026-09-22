@@ -6,7 +6,7 @@ import org.bukkit.Bukkit
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitTask
 
-/** BukkitTask をこのクラスに限定する。 */
+/** BukkitTask is confined to this class. */
 class PaperScheduler(private val plugin: JavaPlugin) : SchedulerPort {
 
     override fun schedule(delayTicks: Long, action: () -> Unit): Cancellation {

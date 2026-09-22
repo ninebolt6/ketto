@@ -6,7 +6,7 @@ import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.Participant
 import org.bukkit.configuration.file.YamlConfiguration
 
-/** status/<name>.yml と players.yml の参加登録(players/arena セクション)の永続化。 */
+/** Persistence for status/<name>.yml and the participation registration (players/arena sections) in players.yml. */
 class YamlMatchStateRepository(private val store: YamlStore) : MatchStateRepository {
 
     override fun saveStatus(match: ArenaMatch) {
@@ -29,7 +29,7 @@ class YamlMatchStateRepository(private val store: YamlStore) : MatchStateReposit
         store.save(yaml, store.playersFile)
     }
 
-    /** 参加登録だけを解除する。バックアップ(inv.*)には触れない。 */
+    /** Removes only the participation registration. Backups (inv.*) are untouched. */
     override fun unregisterParticipant(playerName: String) {
         val yaml = store.load(store.playersFile)
         val players = yaml.getStringList("players")

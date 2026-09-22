@@ -10,7 +10,7 @@ import org.bukkit.command.CommandSender
 import kotlin.uuid.Uuid
 import kotlin.uuid.toKotlinUuid
 
-/** /1vs1 stats。offline プレイヤーの UUID 解決は PlayerPort の非同期経路に委譲する。 */
+/** /1vs1 stats. UUID resolution of offline players is delegated to the PlayerPort async path. */
 internal class StatsCommand(
     private val service: ArenaApplicationService,
     private val players: PlayerPort,
@@ -18,7 +18,7 @@ internal class StatsCommand(
     messages: Messages
 ) : AbstractSubcommand(messages) {
 
-    /** 引数付き検索の実行時刻。間隔が空いた分は毎回捨てるので直近の要求だけを保持する。 */
+    /** Execution time of argument lookups. Entries past the cooldown are discarded each run, so only the latest request matters. */
     private val lastLookup = mutableMapOf<Uuid, Long>()
 
     override fun visibleTo(sender: CommandSender): Boolean = true
@@ -30,7 +30,7 @@ internal class StatsCommand(
             showStats(player, playerId)
             return null
         }
-        // 未キャッシュ名の UUID 解決は外部参照を伴うため、連投を抑える
+        // UUID resolution of uncached names hits an external lookup, so rate-limit it
         val now = System.nanoTime()
         lastLookup.entries.removeAll { now - it.value >= LOOKUP_COOLDOWN_NANOS }
         if (playerId in lastLookup) {
@@ -47,7 +47,7 @@ internal class StatsCommand(
     }
 
     private fun showStats(sender: CommandSender, uuid: Uuid) {
-        // 破損した stats は警告のうえ「なし」として扱う
+        // Treat corrupt stats as "none" after warning
         val stats = try {
             service.statsFor(uuid)
         } catch (e: PersistenceFailure) {
@@ -64,7 +64,7 @@ internal class StatsCommand(
     }
 
     private companion object {
-        /** 引数付き stats の連投を抑える間隔。 */
+        /** Cooldown interval limiting repeated argument-lookup stats calls. */
         const val LOOKUP_COOLDOWN_NANOS = 3_000_000_000L
     }
 }

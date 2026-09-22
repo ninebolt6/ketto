@@ -2,7 +2,7 @@ package net.ninebolt.onevsone.application
 
 sealed interface LeaveReply {
     data object Left : LeaveReply
-    /** ONEMORE 以外では退出不可。 */
+    /** Leaving is not allowed outside ONEMORE. */
     data object NotWaiting : LeaveReply
     data object NotJoined : LeaveReply
 }

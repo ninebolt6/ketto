@@ -2,13 +2,13 @@ package net.ninebolt.onevsone.domain
 
 import kotlin.uuid.Uuid
 
-/** Bukkit の Player もインベントリも持たず、識別子と表示名だけを持つ。 */
+/** Holds neither a Bukkit Player nor an inventory — only an identifier and a display name. */
 data class Participant private constructor(val id: Uuid, val name: String) {
     companion object {
-        /** 新規参加者。識別子は内部で発番する。 */
+        /** A new participant. The identifier is generated internally. */
         fun new(name: String): Participant = new(Uuid.random(), name)
 
-        /** 既存プレイヤーの識別子が分かっている場合向け。 */
+        /** For when the existing player's identifier is known. */
         fun new(id: Uuid, name: String): Participant {
             require(name.isNotBlank()) { "participant name must not be blank" }
             return Participant(id, name)

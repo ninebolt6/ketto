@@ -4,7 +4,8 @@ import net.ninebolt.onevsone.domain.PlayerStats
 import kotlin.uuid.Uuid
 
 /**
- * 戦績の永続化。ファイル不存在は null、破損・I/O は PersistenceFailure。
+ * Stats persistence. A missing file yields null; corruption and I/O errors are
+ * PersistenceFailure.
  */
 interface PlayerStatsRepository {
     fun find(playerId: Uuid): PlayerStats?

@@ -1,7 +1,8 @@
 package net.ninebolt.onevsone.application.port
 
 /**
- * 永続化・外部参照処理の失敗。破損ファイルや I/O エラーを示す。
- * 通常のユーザー向け拒否(参加不可等)はこれではなくユースケース結果で表す。
+ * Failure of persistence or external-reference processing. Indicates corrupt
+ * files or I/O errors. Ordinary user-facing rejections (cannot join, etc.) are
+ * expressed as use-case results, not this.
  */
 class PersistenceFailure(message: String, cause: Throwable? = null) : IllegalStateException(message, cause)

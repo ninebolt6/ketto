@@ -11,11 +11,12 @@ import net.ninebolt.onevsone.application.port.PlayerPort
 import kotlin.uuid.Uuid
 
 /**
- * 未復元バックアップと復元トークン(RestoreTicket)を管理する。
- * 参加中かどうかと独立して、終了直後の死亡→切断・停止・次回ログインを扱う。
+ * Manages unrestored backups and restore tokens (RestoreTicket).
+ * Handles death-right-after-finish -> disconnect, shutdown, and the next
+ * login, independently of whether the player is participating.
  *
- * 遅延コールバックは「ticket の同一性」で有効性を判断し、
- * 試合の世代(ArenaMatch の epoch)とは分離する。
+ * Deferred callbacks are validated by ticket identity, kept separate from the
+ * match generation (ArenaMatch epoch).
  */
 class PlayerRecoveryService(
     private val backups: InventoryBackupPort,
@@ -24,23 +25,24 @@ class PlayerRecoveryService(
     private val presentation: MatchPresentationPort,
     private val failures: FailureReporter,
     /**
-     * uuid 未記録の旧バックアップを名前一致で復元してよいか。
-     * オフラインモードでは同名の別人がログインし得るため、オンラインモードのみ許可する。
+     * Whether a legacy backup without a recorded uuid may be restored by name
+     * match. In offline mode a different person can log in under the same name,
+     * so this is allowed only in online mode.
      */
     private val allowLegacyNameRestore: Boolean
 ) {
-    /** 復元対象 1 件のトークン。遅延コールバックは参照同一性で照合する。 */
+    /** Token for one restore target. Deferred callbacks match it by reference identity. */
     class RestoreTicket(val ref: BackupRef)
 
     private val ticketsByUuid = mutableMapOf<Uuid, RestoreTicket>()
     private val ticketsByName = mutableMapOf<String, RestoreTicket>()
 
-    /** 起動時に呼ばれる。 */
+    /** Called at startup. */
     fun loadPersisted() {
         backups.pendingBackups().forEach(::registerTicket)
     }
 
-    /** backupBeforeMatch 成功後に呼ぶ。 */
+    /** Called after backupBeforeMatch succeeds. */
     fun register(refs: List<BackupRef>) {
         refs.forEach(::registerTicket)
     }
@@ -57,14 +59,14 @@ class PlayerRecoveryService(
         ticketsByName[ref.playerName] = ticket
     }
 
-    /** UUID 優先、名前は uuid 一致(または未記録で許可されている)場合のみ採用。 */
+    /** UUID takes precedence; a name is used only when the backup's uuid matches (or is unrecorded and allowed). */
     fun ticketFor(playerId: Uuid, playerName: String): RestoreTicket? =
         ticketsByUuid[playerId]
             ?: ticketsByName[playerName]?.takeIf { it.matchesId(playerId) }
 
     fun pending(playerId: Uuid): RestoreTicket? = ticketsByUuid[playerId]
 
-    /** 名前索引経由で採用してよいか。uuid 未記録の旧バックアップは許可時のみ許容する。 */
+    /** Whether the name index may vouch for ownership. Legacy backups without uuid are allowed only when permitted. */
     private fun RestoreTicket.matchesId(playerId: Uuid): Boolean =
         if (ref.playerId == null) allowLegacyNameRestore else ref.playerId == playerId
 
@@ -73,8 +75,8 @@ class PlayerRecoveryService(
             (ticketsByName[handle.name] === ticket && ticket.matchesId(handle.id))
 
     /**
-     * バックアップの復元を完結する。
-     * ticket が null ならロビー転送だけを行い、持ち物には触れない。
+     * Completes a backup restore.
+     * When ticket is null only the lobby transfer runs; the inventory is untouched.
      */
     fun restoreNow(handle: PlayerHandle, ticket: RestoreTicket?, respawn: Boolean, lobby: Boolean) {
         if (ticket == null) {
@@ -95,7 +97,7 @@ class PlayerRecoveryService(
         try {
             backups.acknowledge(ticket.ref)
         } catch (e: PersistenceFailure) {
-            // 削除失敗時はディスク上の記録が残る(次回起動で再復元=安全側)
+            // On delete failure the on-disk record remains (restored again next startup = safe side)
             failures.report("Could not discard restored backup for ${handle.name} (${handle.id}); record retained", e)
         }
     }
@@ -115,9 +117,10 @@ class PlayerRecoveryService(
     }
 
     /**
-     * 停止処理。将来の scheduler 実行に依存せずオンライン分を同期復元する。
-     * 死者は復元+スコアボードクリアのみ(記録は残し、次回ログインで再度復元)。
-     * オフライン等の未完了データは残す。
+     * Shutdown processing. Synchronously restores online players without
+     * relying on future scheduler runs. Dead players get restore + scoreboard
+     * clear only (the record is kept and restored again on next login).
+     * Incomplete data such as offline players is left in place.
      */
     fun restoreAllOnline() {
         ticketsByUuid.toList().forEach { (id, ticket) ->

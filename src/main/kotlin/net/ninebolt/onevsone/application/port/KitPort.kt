@@ -4,14 +4,15 @@ import net.ninebolt.onevsone.domain.Arena
 import kotlin.uuid.Uuid
 
 /**
- * アリーナ装備(キット)の適用・保存。ItemStack 実データは infrastructure 内に閉じ込める。
+ * Applying and saving the arena equipment (kit). ItemStack payloads stay
+ * inside infrastructure.
  */
 interface KitPort {
     fun applyKit(arena: Arena.Id, playerId: Uuid)
 
-    /** プレイヤーの現在装備をアリーナ装備として保存(setInv)。 */
+    /** Saves the player's current equipment as the arena kit (setInv). */
     fun saveKit(arena: Arena.Id, playerId: Uuid)
 
-    /** アリーナ削除時に保持中の装備を破棄する。同名で作り直しても古い装備を適用しない。 */
+    /** Discards the held kit when the arena is removed, so recreating it under the same name does not apply the old kit. */
     fun forgetKit(arena: Arena.Id)
 }

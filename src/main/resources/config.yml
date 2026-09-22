@@ -1,5 +1,5 @@
-# チャット言語。auto=各プレイヤーのクライアントロケール、ja/en 等のコードでサーバー固定
+# Chat language. auto = each player's client locale; a code such as ja/en fixes it server-wide
 language: auto
-# フォールバック + 看板・スコアボードなど共有面の言語
+# Fallback + language for shared surfaces (signs, scoreboard, etc.)
 default-language: ja
 required-wins: 3

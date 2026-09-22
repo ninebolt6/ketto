@@ -11,8 +11,8 @@ import org.bukkit.event.vehicle.VehicleEnterEvent
 import kotlin.uuid.toKotlinUuid
 
 /**
- * テレポート逃走と乗車バイパスを遮断する入力アダプター。
- * 状態別の許可判定は domain の TeleportRestriction に委譲する。
+ * Input adapter that blocks teleport escapes and vehicle-mount bypasses.
+ * Per-state permission decisions are delegated to domain's TeleportRestriction.
  */
 class ArenaTeleportListener(
     private val service: ArenaApplicationService,
@@ -24,7 +24,7 @@ class ArenaTeleportListener(
         restrictTeleport(event)
     }
 
-    // PlayerPortalEvent は独自 HandlerList を持ち PlayerTeleportEvent には届かない
+    // PlayerPortalEvent has its own HandlerList and never reaches PlayerTeleportEvent
     @EventHandler
     fun onPortal(event: PlayerPortalEvent) {
         restrictTeleport(event)
@@ -32,7 +32,7 @@ class ArenaTeleportListener(
 
     private fun restrictTeleport(event: PlayerTeleportEvent) {
         val restrictions = service.restrictionsOf(event.player) ?: return
-        // プラグイン自身の移送は cause が PLUGIN とは限らないため、マーカーで先に識別する
+        // The plugin's own teleports do not always arrive with cause PLUGIN, so the marker is checked first
         val trigger = when {
             lookup.isPluginTeleport(event.player.uniqueId.toKotlinUuid()) -> TeleportTrigger.INTERNAL
             event.cause == PlayerTeleportEvent.TeleportCause.ENDER_PEARL -> TeleportTrigger.ENDER_PEARL
@@ -41,7 +41,7 @@ class ArenaTeleportListener(
         if (!restrictions.teleportRestriction.allows(trigger)) event.isCancelled = true
     }
 
-    /** 移動凍結中の乗車は水平移動をバイパスするため遮断する。 */
+    /** Mounting a vehicle bypasses horizontal movement, so it is blocked while movement is frozen. */
     @EventHandler
     fun onVehicleEnter(event: VehicleEnterEvent) {
         val player = event.entered as? Player ?: return

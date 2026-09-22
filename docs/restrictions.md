@@ -1,106 +1,107 @@
-# 参加者への制約(イベント処理)
+# Restrictions on Participants (Event Handling)
 
-アリーナに参加中のプレイヤーへ適用する制約。状態ごとの可否判定は
-`domain/ParticipantRestrictions` に集約し、リスナーはイベント変換のみ行う。
-リスナーは責務別に3分割されている: `ArenaMatchListener`(死亡・ダメージ・
-切断・参加・移動・コマンドの試合進行系)、`ArenaGuardListener`(ブロック・
-インベントリ・エンティティ操作の保護系)、`ArenaTeleportListener`
-(テレポート・乗車の移動制限系)。参加看板は `ArenaSignListener` が担う。
+Restrictions applied to players participating in an arena. Per-state decisions
+are centralized in `domain/ParticipantRestrictions`; listeners only convert
+events. Listeners are split into three by responsibility: `ArenaMatchListener`
+(match-progression events: death, damage, quit, join, move, commands),
+`ArenaGuardListener` (protection of blocks, inventories, entity interactions),
+and `ArenaTeleportListener` (movement restriction for teleport/vehicle).
+`ArenaSignListener` handles join signs.
 
-## 状態別の制約
+## Restrictions by State
 
-| 状態             | X/Z 移動凍結 | ダメージ         | ブロック破壊 | ブロック設置 | アイテム持ち出し         | 拾得・獲得 | テレポート          | コマンド |
-| ---------------- | ------------ | ---------------- | ------------ | ------------ | ------------------------ | ---------- | ------------------- | -------- |
-| `WAITING`        | -            | -                | -            | -            | -                        | -          | -                   | 禁止     |
-| `ONEMORE`        | -            | -                | -            | -            | -                        | -          | -                   | 許可     |
-| `COUNTDOWN`      | -            | -                | -            | -            | -                        | -          | パール+内部移送のみ | 禁止     |
-| `ROUNDCOUNTDOWN` | 凍結         | 全て無効         | 禁止         | 禁止         | 禁止(ドロップ・預け入れ) | 禁止       | 内部移送のみ        | 禁止     |
-| `INGAME`         | -            | 対戦相手のみ有効 | 禁止         | 禁止         | 禁止(ドロップ・預け入れ) | 禁止       | パール+内部移送のみ | 禁止     |
+| State            | X/Z move freeze | Damage           | Block break | Block place | Item removal        | Pickup/acquire | Teleport            | Commands |
+| ---------------- | --------------- | ---------------- | ----------- | ----------- | ------------------- | -------------- | ------------------- | -------- |
+| `WAITING`        | -               | -                | -           | -           | -                   | -              | -                   | denied   |
+| `ONEMORE`        | -               | -                | -           | -           | -                   | -              | -                   | allowed  |
+| `COUNTDOWN`      | -               | -                | -           | -           | -                   | -              | pearl+internal only | denied   |
+| `ROUNDCOUNTDOWN` | frozen          | all nullified    | denied      | denied      | denied (drop/store) | denied         | internal only       | denied   |
+| `INGAME`         | -               | only vs opponent | denied      | denied      | denied (drop/store) | denied         | pearl+internal only | denied   |
 
-## イベント別の挙動
+## Behavior by Event
 
-### PlayerDeathEvent(HIGH)
+### PlayerDeathEvent (HIGH)
 
-- 参加者の死亡時: `keepInventory = true` でドロップを空にする。
-- 経験値も失わせない: `droppedExp = 0` でドロップさせず、`keepLevel = true` でリスポーン後もレベル・経験値を保持する。
-- 敗北として受理されればラウンド/マッチ決着処理へ。受理されない場合(状態不適・解決中)は次 tick でリスポーンのみ予約。
+- On participant death: `keepInventory = true` empties drops.
+- Experience is also preserved: `droppedExp = 0` prevents the drop and `keepLevel = true` keeps level/xp after respawn.
+- If accepted as a defeat, round/match resolution runs. If not accepted (wrong state, resolution in progress), only a respawn is scheduled for the next tick.
 
-### EntityDamageEvent(HIGH)
+### EntityDamageEvent (HIGH)
 
-- `EntityDamageByEntityEvent`(エンティティ起因)の場合: `damageSource.causingEntity` で責任者(投射物の射手や設置者)を解決し、被害者・加害者のどちらかが制限状態の参加者なら「INGAME で同一マッチの対戦相手または本人」由来のみ許可し、それ以外はキャンセル。MOB・第三者・別マッチからの干渉と、参加者→部外者/MOB への攻撃を塞ぐ。
-- 非エンティティダメージ(落下・火・溶岩・窒息など)は帰属できないため、ダメージ無効の状態でのみキャンセルし、INGAME では従来通り敗北として受理する。
+- For `EntityDamageByEntityEvent` (entity-caused): resolve the responsible party via `damageSource.causingEntity` (traces projectile shooters, placers, etc.). If victim or attacker is a restricted participant, allow only "INGAME, same-match opponent or self" damage and cancel everything else. Blocks interference from mobs, third parties, and other matches, plus participant → outsider/mob attacks.
+- Non-entity damage (fall, fire, lava, suffocation, etc.) cannot be attributed, so it is cancelled only in damage-immune states; in INGAME it is accepted as a defeat as before.
 
 ### PlayerMoveEvent
 
-- `PlayerTeleportEvent` は独自の HandlerList を持つためこのハンドラには届かない(テレポートは ArenaTeleportListener で制限する)。
-- X/Z 移動凍結の状態でブロック座標が変わる移動は `setTo(from)` で差し戻す。
-- `INGAME` / `ROUNDCOUNTDOWN` かつ 2 人在籍中に移動先ワールドの最低高度以下へ落下した場合は落下敗北として解決する。
+- `PlayerTeleportEvent` has its own HandlerList and never reaches this handler (teleports are restricted by ArenaTeleportListener).
+- In an X/Z-frozen state, a move that changes the block position is reverted with `setTo(from)`.
+- During `INGAME` / `ROUNDCOUNTDOWN` with 2 participants, falling at or below the destination world's minimum height resolves as a fall defeat.
 
 ### PlayerTeleportEvent / PlayerPortalEvent
 
-- 参加者のテレポートを状態別の原因制限で判定する(パール+内部移送のみ / 内部移送のみ / 制約なし)。
-- プラグイン自身の移送は同期発火するイベントを識別するマーカーで区別する。
-- `PlayerPortalEvent` は独自の HandlerList を持つため個別にハンドリングする。
-- 移動凍結中は `VehicleEnterEvent` で乗車も遮断する。
+- Participant teleports are judged by per-state cause restriction (pearl+internal only / internal only / unrestricted).
+- The plugin's own teleports are distinguished by a marker that identifies the synchronously fired event.
+- `PlayerPortalEvent` has its own HandlerList and is handled separately.
+- While movement is frozen, `VehicleEnterEvent` also blocks mounting.
 
 ### BlockBreakEvent
 
-- ブロック破壊禁止の状態ではキャンセル。
+- Cancelled while block breaking is denied.
 
 ### BlockPlaceEvent
 
-- ブロック設置禁止の状態ではキャンセル。破壊禁止中は撤去できないため、アリーナの汚染と籠城を防ぐ。
-- 火打ち石は設置ではなく着火として許可する。
-- `EntityPlaceEvent` / `HangingPlaceEvent`(ボート・トロッコ・防具立て・額縁・絵画の設置)、`PlayerBucketEmptyEvent`(液体設置)、`BlockFertilizeEvent`(骨粉による成長)、`SignChangeEvent`(未ワックス看板の書き換え)も同じ制約でキャンセル。
-- `PlayerBucketFillEvent` / `PlayerBucketEntityEvent`(バケツ回収・捕獲)はブロック破壊と同じ制約でキャンセル。
+- Cancelled while block placing is denied. Since placed blocks cannot be removed while breaking is denied, this prevents arena pollution and camping.
+- Flint and steel is allowed as ignition rather than placement.
+- `EntityPlaceEvent` / `HangingPlaceEvent` (placing boats, minecarts, armor stands, item frames, paintings), `PlayerBucketEmptyEvent` (placing liquids), `BlockFertilizeEvent` (bone-meal growth), and `SignChangeEvent` (rewriting unwaxed signs) are cancelled under the same restriction.
+- `PlayerBucketFillEvent` / `PlayerBucketEntityEvent` (bucket pickup, mob capture) are cancelled under the same restriction as block breaking.
 
 ### PlayerDropItemEvent
 
-- ドロップ禁止の状態ではキャンセル。装備交換後はインベントリが開始時バックアップで上書きされるため、落とした装備を持ち出されるのを防ぐ。
+- Cancelled while dropping is denied. After the kit swap the inventory is overwritten by the start-of-match backup, so this prevents kit items from being carried out.
 
 ### PlayerInteractEvent
 
-- 参加看板の右クリックは ArenaSignListener が処理する(参加動作は signs.md)。
-- ArenaGuardListener 側では、インベントリ移譲禁止の状態で預け入れ可能なブロック(コンテナ類・エンダーチェスト・ベッド・リスポーンアンカー・植木鉢)とのインタラクトを拒否し、ブロック設置禁止の状態ではスポーンエッグの使用を拒否する。
+- Right-clicks on join signs are handled by ArenaSignListener (join behavior in signs.md).
+- On the ArenaGuardListener side, interacting with storable blocks (containers, ender chests, beds, respawn anchors, flower pots) is denied while inventory transfer is denied, and spawn-egg use is denied while block placing is denied.
 
 ### PlayerInteractEntityEvent / PlayerInteractAtEntityEvent / PlayerArmorStandManipulateEvent
 
-- インベントリ移譲禁止の状態で、インベントリを持つエンティティ(村人・チェスト付きトロッコ等)・額縁・防具立てとのインタラクトをキャンセル。
-- Bukkit はイベントクラス毎に HandlerList が分かれるため、サブクラスは個別にハンドリングする。
+- While inventory transfer is denied, interaction with inventory-holding entities (villagers, chest minecarts, etc.), item frames, and armor stands is cancelled.
+- Bukkit gives each event class its own HandlerList, so subclasses are handled separately.
 
 ### InventoryClickEvent / InventoryDragEvent
 
-- インベントリ移譲禁止の状態で、外来インベントリ(持ち物画面以外の `CRAFTING`/`PLAYER` 以外)が開いている間の操作を全てキャンセルする(インタラクト側を抜けた二番手防衛)。
+- While inventory transfer is denied, all operations are cancelled whenever a foreign inventory (anything other than `CRAFTING`/`PLAYER`) is open (second-line defense in case the interact side is bypassed).
 
 ### EntityPickupItemEvent / PlayerAttemptPickupItemEvent / PlayerPickupArrowEvent
 
-- 拾得禁止の状態ではキャンセル。矢・トライデントの回収も含む(観戦者が射込んだ物資の受け取りを塞ぐ)。
+- Cancelled while pickup is denied. Includes arrow/trident retrieval (blocks supplies shot in by spectators from being collected).
 
 ### PlayerHarvestBlockEvent
 
-- 拾得禁止の状態ではキャンセル(ベリー系収穫は拾得イベントを介さず直接インベントリへ入る)。
+- Cancelled while pickup is denied (berry-type harvests go straight to the inventory without a pickup event).
 
 ### BlockDispenseArmorEvent
 
-- ディスペンサーが制限状態の参加者へ防具を装着するのをキャンセルする。
+- Cancels a dispenser equipping armor onto a restricted participant.
 
 ### PlayerCommandPreprocessEvent
 
-- コマンド禁止の状態ではキャンセルし「コマンドは使用できません！」を返す。
-- `ONEMORE` 待機中のみコマンドを許可する。
+- Cancelled while commands are denied; returns "Commands cannot be used!".
+- Commands are allowed only while waiting in `ONEMORE`.
 
 ### PlayerQuitEvent
 
-- 切断中プレイヤーは `Server` から取得できなくなるため、イベントの `Player` を同期処理中だけ解決できるスコープで参加/復元処理を実行する。
-- 未参加でも未復元バックアップがあれば復元してから切断させる。
+- A disconnecting player can no longer be fetched from `Server`, so join/restore processing runs in a scope that can resolve the event's `Player` only during synchronous handling.
+- Even without participating, an unrestored backup is restored before the disconnect completes.
 
 ### PlayerJoinEvent
 
-- 未参加で未復元バックアップがあれば復元する。
+- If the player is not participating and has an unrestored backup, restore it.
 
-## 既知の残存リスク
+## Known Residual Risks
 
-- 第三者のスプラッシュ/残留ポーションによるバフ・デバフ付与(ダメージイベントではなく帰属判定が複雑なため対象外)。
-- ウィンドチャージ等のノックバック(ダメージは遮断されるが吹き飛ばしが残る可能性)。
-- 開放アリーナへの第三者の溶岩流入など、環境経由の妨害は帰属不能のためアリーナの物理的囲いや領域保護に委ねる。
-- 既存の TNT への着火(火打ち石は許可)によるアリーナブロックの爆発破壊はアリーナ設計依存。
+- Buffs/debuffs from third-party splash/lingering potions (out of scope: not a damage event and attribution is complex).
+- Knockback from wind charges etc. (damage is blocked but knockback may remain).
+- Environmental interference that cannot be attributed, e.g. third-party lava flowing into an open arena, is left to physical arena enclosure or region protection.
+- Explosive destruction of arena blocks via igniting pre-existing TNT (flint and steel is allowed) depends on arena design.

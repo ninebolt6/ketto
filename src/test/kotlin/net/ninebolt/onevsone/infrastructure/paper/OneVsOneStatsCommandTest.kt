@@ -15,7 +15,7 @@ import org.bukkit.Server
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
-/** /1vs1 stats と引数なし/権限/未知サブコマンドの検証。 */
+/** Verifies /1vs1 stats plus no-args, permission, and unknown-subcommand paths. */
 class OneVsOneStatsCommandTest {
 
     @TempDir
@@ -88,7 +88,7 @@ class OneVsOneStatsCommandTest {
     @Test
     fun `stats of offline cached player resolves uuid`() {
         val viewer = env.player("Viewer")
-        // オンライン/切断済みプレイヤーはキャッシュヒット経路を通る
+        // Online and disconnected players go through the cache-hit path
         val ghost = env.player("Ghost")
         env.writeStats(ghost.uuid, 5, 5)
         env.run(viewer, "stats", "Ghost")
@@ -98,7 +98,7 @@ class OneVsOneStatsCommandTest {
     @Test
     fun `stats offline uncached resolves through async scheduler on main thread`() {
         val viewer = env.player("Viewer")
-        // 未キャッシュ名は getOfflinePlayer が決定論的な OfflinePlayerMock を生成する
+        // For uncached names, getOfflinePlayer produces a deterministic OfflinePlayerMock
         val uuid = env.offlineId("Ghost")
         env.writeStats(uuid, 2, 1)
         env.run(viewer, "stats", "Ghost")
@@ -136,7 +136,7 @@ class OneVsOneStatsCommandTest {
         env.run(viewer, "stats", "Target")
         assertTrue(viewer.drainMessages().any { it.contains("連続で実行できません") })
 
-        // 自分自身の表示は解決を伴わないため対象外
+        // Viewing oneself involves no resolution, so it is not rate-limited
         env.run(viewer, "stats")
         assertTrue(viewer.drainMessages().any { it.contains("Statsが存在しません") })
     }

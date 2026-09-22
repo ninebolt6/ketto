@@ -31,7 +31,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
-/** Join 看板クリックと参加イベント経由の復元。 */
+/** Join-sign clicks and restore via the join event. */
 class ArenaListenerSignTest {
 
     @TempDir
@@ -63,7 +63,7 @@ class ArenaListenerSignTest {
         val registered = interact(p1, env.signBlock(3, 64, 3))
         env.fire(registered)
         assertEquals(arena, env.service.arenaIdOf(p1.uuid))
-        // バニラの看板編集画面を開かせない
+        // The vanilla sign edit screen must not open
         assertEquals(Event.Result.DENY, registered.useInteractedBlock())
         assertEquals(Event.Result.DENY, registered.useItemInHand())
         assertNotEquals(Event.Result.DENY, unregistered.useInteractedBlock())
@@ -170,10 +170,10 @@ class ArenaListenerSignTest {
     @Test
     fun `join event triggers pending restore`() {
         val (_, p2) = env.twoPlayerIngame()
-        // 試合中の切断は実 PlayerQuitEvent を発火し、敗北扱いで試合終了。backup は残る
+        // A mid-match disconnect fires a real PlayerQuitEvent and ends the match as a defeat; the backup remains
         p2.disconnect()
 
-        // 再参加時に PlayerJoinEvent 経由で復元(空バックアップ→空インベントリ)
+        // On rejoin, the PlayerJoinEvent path restores (empty backup -> empty inventory)
         p2.reconnect()
         assertNull(p2.inventory.contents[0])
     }

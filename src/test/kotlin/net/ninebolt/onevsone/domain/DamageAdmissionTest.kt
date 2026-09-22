@@ -11,17 +11,17 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 
-/** エンティティ起因ダメージの受理行列。マッチ状態×帰属の組合せを検証する。 */
+/** Admission matrix for entity-caused damage. Verifies match-state x attribution combinations. */
 class DamageAdmissionTest {
 
-    private val ingame = startedMatch()          // alice vs bob、INGAME
-    private val waiting = match().join(alice).match // alice のみ、ONEMORE
+    private val ingame = startedMatch()          // alice vs bob, INGAME
+    private val waiting = match().join(alice).match // alice alone, ONEMORE
 
     @Test
     fun `both unrestricted passes through`() {
-        // 参加者同士だが待機中(制限なし)
+        // Both participants but still waiting (unrestricted)
         assertTrue(DamageAdmission.allows(alice.id, bob.id, waiting, null))
-        // 部外者同士
+        // Two outsiders
         assertTrue(DamageAdmission.allows(carol.id, carol.id, null, null))
     }
 
@@ -33,7 +33,7 @@ class DamageAdmissionTest {
 
     @Test
     fun `third party and mob damage denied while ingame`() {
-        // 第三者のプレイヤー・MOB(加害側がマッチ外)は遮断
+        // Third-party players and mobs (attacker outside the match) are blocked
         assertFalse(DamageAdmission.allows(alice.id, carol.id, ingame, null))
         assertFalse(DamageAdmission.allows(alice.id, null, ingame, null))
     }
@@ -46,7 +46,7 @@ class DamageAdmissionTest {
 
     @Test
     fun `everything denied while damage cancelled`() {
-        // ラウンドカウントダウン中は対戦相手・自傷も遮断
+        // Even opponent damage and self-damage are blocked during round countdown
         val roundCountdown = ingame.recordDefeat(bob.id, DefeatCause.FALL).match
         assertEquals(ArenaState.ROUNDCOUNTDOWN, roundCountdown.state)
         assertFalse(DamageAdmission.allows(alice.id, bob.id, roundCountdown, roundCountdown))
@@ -55,21 +55,21 @@ class DamageAdmissionTest {
 
     @Test
     fun `non player victim does not bypass attacker restriction`() {
-        // victim が非プレイヤー(id なし)でも加害者が参加者なら遮断される
+        // Even when the victim is a non-player (no id), a participant attacker is blocked
         assertFalse(DamageAdmission.allows(null, alice.id, null, ingame))
     }
 
     @Test
     fun `participants of different matches cannot hurt each other`() {
-        // 2 アリーナが同時 INGAME でも、相手マッチの参加者は対戦相手ではない
+        // Even with two arenas INGAME at once, the other match's participants are not opponents
         val joined = ArenaMatch.new(Arena.Id.new("arena2"), 3).join(carol).match.join(dave).match
         val began = joined.beginMatch()
         check(began.outcome)
         val other = began.match
         assertEquals(ArenaState.INGAME, other.state)
-        // 同一マッチ内なら許可
+        // Allowed within the same match
         assertTrue(DamageAdmission.allows(carol.id, dave.id, other, other))
-        // 別マッチ間は双方向に遮断
+        // Blocked in both directions across matches
         assertFalse(DamageAdmission.allows(alice.id, carol.id, ingame, other))
         assertFalse(DamageAdmission.allows(carol.id, alice.id, other, ingame))
     }

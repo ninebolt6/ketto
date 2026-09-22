@@ -3,10 +3,11 @@ package net.ninebolt.onevsone.domain
 import kotlin.uuid.Uuid
 
 /**
- * 1 アリーナの参加者と進行状態を所有する集約。immutable: 各操作は
- * 新しい状態を持つ Transition を返し、このインスタンス自身は変化しない。
- * Bukkit・スケジューラ・永続化は持たず、タイミング制御のために世代(epoch)を
- * 進める。participants の並び順 = 参加順 = スポーンスロット番号。
+ * Aggregate owning the participants and progression state of one arena.
+ * Immutable: every operation returns a Transition carrying the new state; this
+ * instance never changes. Holds no Bukkit, scheduler, or persistence — it only
+ * advances a generation (epoch) for timing control.
+ * participants order = join order = spawn slot number.
  */
 data class ArenaMatch private constructor(
     val arenaId: Arena.Id,
@@ -15,8 +16,9 @@ data class ArenaMatch private constructor(
     val participants: List<Participant> = emptyList(),
     val wins: Map<Uuid, Int> = emptyMap(),
     /**
-     * 敗北の解決(リスポーン・再装備)が完了するまでの重複決着ガード。
-     * 同じ解決区間での二重加点を防ぐ。
+     * Duplicate-resolution guard held until the defeat resolution
+     * (respawn/re-equip) completes. Prevents double scoring within the same
+     * resolution window.
      */
     val resolving: Boolean = false,
     val epoch: Long = 0L
@@ -24,16 +26,17 @@ data class ArenaMatch private constructor(
     companion object {
         const val MAX_PARTICIPANTS = 2
 
-        /** 新規(WAITING・0 人)の集約。 */
+        /** A fresh aggregate (WAITING, 0 participants). */
         fun new(arenaId: Arena.Id, requiredWins: Int): ArenaMatch {
             require(requiredWins >= 1) { "requiredWins must be >= 1 (was $requiredWins)" }
             return ArenaMatch(arenaId, requiredWins)
         }
 
         /**
-         * スナップショット等からの全状態再構築。遷移関数が維持する不変条件
-         * (状態↔参加人数・参加者一意・wins は参加者のみ・resolving は
-         * ROUNDCOUNTDOWN のみ)をここで検証する。
+         * Full-state reconstruction from a snapshot etc. The invariants the
+         * transition functions maintain (state<->participant count, unique
+         * participants, wins only for participants, resolving only in
+         * ROUNDCOUNTDOWN) are validated here.
          */
         fun restored(
             arenaId: Arena.Id,
@@ -71,7 +74,7 @@ data class ArenaMatch private constructor(
 
     val full: Boolean get() = participants.size == MAX_PARTICIPANTS
 
-    /** ワールド最低高度以下への落下を敗北として解決するか(落下を受理する状態かつ 2 人在籍)。 */
+    /** Whether a fall at/below the world minimum height resolves as a defeat (a fall-accepting state with 2 participants). */
     val resolvesVoidFall: Boolean
         get() = state.acceptsDefeat(DefeatCause.FALL) && full
 
@@ -79,13 +82,13 @@ data class ArenaMatch private constructor(
 
     val canResumeRound: Boolean get() = state == ArenaState.ROUNDCOUNTDOWN && full
 
-    /** 対戦が進行中(ROUNDCOUNTDOWN/INGAME で両者在籍)。対戦カード表示等の判定用。 */
+    /** A match is in progress (ROUNDCOUNTDOWN/INGAME with both participants). Used for matchup display etc. */
     val inProgress: Boolean get() =
         (state == ArenaState.INGAME || state == ArenaState.ROUNDCOUNTDOWN) && full
 
     fun participant(id: Uuid): Participant? = participants.firstOrNull { it.id == id }
 
-    /** 参加者のスポーンスロット(0 始まり = spawn1/spawn2)。非参加なら null。 */
+    /** A participant's spawn slot (0-based = spawn1/spawn2). null if not participating. */
     fun slotOf(id: Uuid): Int? =
         participants.indexOfFirst { it.id == id }.takeIf { it >= 0 }
 
@@ -105,7 +108,7 @@ data class ArenaMatch private constructor(
         }
     }
 
-    /** 退出しても持ち物には関知しない(未開始のため)。 */
+    /** Leaving does not touch the inventory (the match has not started). */
     fun leaveWaiting(id: Uuid): Transition<LeaveOutcome> {
         if (state != ArenaState.ONEMORE) return Transition(this, LeaveOutcome.NotWaiting)
         val participant = participant(id) ?: return Transition(this, LeaveOutcome.NotWaiting)
@@ -120,9 +123,10 @@ data class ArenaMatch private constructor(
     }
 
     /**
-     * 未開始なら登録解除のみ、進行中なら相手を勝者とする不戦敗でマッチ終了。
-     * 初期 COUNTDOWN は試合未開始(テレポート・バックアップ・加点なし)なので
-     * 不戦敗にはせず、残った 1 人は ONEMORE で待機を継続する。
+     * Before the match starts this only unregisters; in progress it ends the
+     * match as a forfeit with the opponent as winner. The initial COUNTDOWN is
+     * pre-match (no teleport, backup, or scoring), so it does not become a
+     * forfeit — the remaining player keeps waiting in ONEMORE.
      */
     fun forfeit(id: Uuid): Transition<QuitOutcome> {
         val participant = participant(id) ?: return Transition(this, QuitOutcome.NotParticipant)
@@ -142,15 +146,16 @@ data class ArenaMatch private constructor(
     }
 
     /**
-     * 死亡/落下の敗北通知。受理されれば RoundWon か MatchFinished。
-     * 死亡は INGAME のみ、落下は INGAME/ROUNDCOUNTDOWN で受理する現挙動を維持。
+     * Defeat notification for death/fall. If accepted, yields RoundWon or
+     * MatchFinished. Keeps the current behavior: death is accepted only in
+     * INGAME; falls are accepted in INGAME/ROUNDCOUNTDOWN.
      */
     fun recordDefeat(id: Uuid, cause: DefeatCause): Transition<DefeatOutcome> {
         if (!state.acceptsDefeat(cause)) return Transition(this, DefeatOutcome.Rejected)
         if (!full || resolving) return Transition(this, DefeatOutcome.Rejected)
         val loser = participant(id) ?: return Transition(this, DefeatOutcome.Rejected)
         val winner = participants.first { it.id != id }
-        // 加算前の累計勝数で終了判定。最終キルは勝数に加算しない。
+        // End is judged on the win count before adding; the final kill is not added to the count.
         if (winsOf(winner.id) >= requiredWins - 1) {
             return Transition(finished(), DefeatOutcome.MatchFinished(winner, loser))
         }
@@ -170,7 +175,7 @@ data class ArenaMatch private constructor(
         )
     }
 
-    /** 受理されたら outcome=true。 */
+    /** outcome is true when accepted. */
     fun beginMatch(): Transition<Boolean> =
         if (canBeginMatch) {
             Transition(copy(state = ArenaState.INGAME), true)
@@ -178,7 +183,7 @@ data class ArenaMatch private constructor(
             Transition(this, false)
         }
 
-    /** ROUNDCOUNTDOWN 完了で INGAME へ復帰。解決ガードもここで解放する。 */
+    /** Returns to INGAME when ROUNDCOUNTDOWN completes. The resolution guard is also released here. */
     fun resumeRound(): Transition<Boolean> =
         if (state == ArenaState.ROUNDCOUNTDOWN) {
             Transition(copy(state = ArenaState.INGAME, resolving = false), true)
@@ -187,14 +192,15 @@ data class ArenaMatch private constructor(
         }
 
     /**
-     * 敗北解決区間の終了(リスポーン後の再装備完了、または非死亡ラウンドの次 tick)。
-     * RoundWon 発行時の世代と一致する場合のみガードを解放する。
-     * 世代不一致(中断・次ラウンド進行済み等)は no-op。
+     * End of the defeat-resolution window (post-respawn re-equip complete, or
+     * the next tick of a non-death round). The guard is released only when the
+     * epoch matches the one at RoundWon issuance. A generation mismatch
+     * (aborted, next round already progressed, etc.) is a no-op.
      */
     fun releaseResolution(epoch: Long): ArenaMatch =
         if (this.epoch == epoch) copy(resolving = false) else this
 
-    /** 進行中のカウントダウンや解決待ちコールバックは世代進行で無効化される。 */
+    /** Running countdowns and pending resolution callbacks are invalidated by the generation advance. */
     fun abort(): Transition<List<Participant>> =
         Transition(
             copy(

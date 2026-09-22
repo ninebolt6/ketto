@@ -1,78 +1,79 @@
-# コマンド仕様
+# Command Specification
 
-メインコマンドは `/1vs1`。引数なし・不明なサブコマンドでは usage を返す。
-アリーナ名の指定は大小文字を無視して解決する(作成時の重複拒否と揃える)。
+The main command is `/1vs1`. With no arguments or an unknown subcommand it
+returns usage. Arena names resolve case-insensitively (matching the
+case-insensitive duplicate rejection at creation).
 
-## 一般コマンド
+## General Commands
 
 ### `/1vs1 stats [player]`
 
-- プレイヤーのみ実行可能(コンソール不可)。
-- 引数なし: 実行者自身の戦績を表示。
-- 引数あり: `getPlayerExact` 相当の完全一致でオンライン検索 → 見つからなければキャッシュ済みオフラインプレイヤー → それでも駄目なら非同期で UUID を解決し `stats/<uuid>.yml` を参照。
-- 表示: `Win: N`、`Lose: N`、`W/L(勝率): N.NN`(stats.md 参照)。
-- 戦績ファイルが存在しなければ「Statsが存在しません」。
+- Player only (not console).
+- No argument: shows the executor's own stats.
+- With argument: exact-match online lookup (equivalent to `getPlayerExact`) → cached offline players → otherwise resolve the UUID asynchronously and read `stats/<uuid>.yml`.
+- Display: `Win: N`, `Lose: N`, `W/L (win rate): N.NN` (see stats.md).
+- If no stats file exists: "No stats found".
 
 ### `/1vs1 leave`
 
-- プレイヤーのみ実行可能。
-- `ONEMORE` 待機中のみ退出成立(「アリーナから退出しました」)。
-- それ以外の状態では「カウントダウン中はアリーナから退出できません！」。
-- 未参加なら「あなたはアリーナに参加していません！」。
+- Player only.
+- Leaving succeeds only while waiting in `ONEMORE` ("You left the arena").
+- In any other state: "You cannot leave the arena during the countdown!".
+- If not participating: "You are not in an arena!".
 
-## 管理コマンド(OP 専用)
+## Admin Commands (OP only)
 
-権限がない場合は「権限がありません！」を返す。
+Returns "You don't have permission!" when the sender lacks permission.
 
 ### `/1vs1 setlobby`
 
-- プレイヤーのみ。実行者の位置をロビー(試合後の復帰地点)として `lobby.yml` に保存。
+- Player only. Saves the executor's position as the lobby (post-match return point) in `lobby.yml`.
 
 ### `/1vs1 arena info [arena]`
 
-- OP 不要。アリーナの状態を表示。
-- 表示: `=== Arena[name] ===`、状態(`Waiting` / `1 More` / `Countdown` / `Ingame`)。
-- `INGAME` / `ROUNDCOUNTDOWN` かつ 2 人在籍時は対戦カード(`[A] vs [B]`)と勝数(`a-b`)も表示。
-- 存在しないアリーナは「そのアリーナは存在しません」。
+- No OP required. Shows the arena's state.
+- Display: `=== Arena[name] ===`, state (`Waiting` / `1 More` / `Countdown` / `Ingame`).
+- During `INGAME` / `ROUNDCOUNTDOWN` with 2 participants, also shows the matchup (`[A] vs [B]`) and wins (`a-b`).
+- Unknown arena: "That arena does not exist".
 
 ### `/1vs1 arena create [arena]`
 
-- アリーナを作成。名前は 64 文字以内、前後に空白なし、`/` `\` `.` `:`・制御文字・予約名 `players` は不可(大小区別なし)。
-- 同名(大小区別なし)が既にあれば「そのアリーナはすでに存在しています」。
+- Creates an arena. Name must be ≤64 chars, no leading/trailing whitespace, and must not contain `/` `\` `.` `:` control characters, or the reserved name `players` (case-insensitive).
+- If the name already exists (case-insensitive): "That arena already exists".
 
 ### `/1vs1 arena remove [arena]`
 
-- アリーナを削除。進行中なら試合を中断し参加者を復元。
-- `arena/<name>.yml`(看板登録を含む)と `status/<name>.yml` も削除する。
-- 存在しなければ「そのアリーナは存在しません」。
+- Removes an arena. If a match is in progress it is aborted and participants are restored.
+- Also deletes `arena/<name>.yml` (including sign registration) and `status/<name>.yml`.
+- If it does not exist: "That arena does not exist".
 
 ### `/1vs1 arena setspawn1|setspawn2 [arena]`
 
-- プレイヤーのみ。実行者の位置をスポーン 1 / 2 として保存。
+- Player only. Saves the executor's position as spawn 1 / 2.
 
 ### `/1vs1 arena enable|disable [arena]`
 
-- 有効化/無効化。既に同じ状態なら「すでに有効/無効です」系メッセージ。
-- `disable` 時に試合が進行中なら中断する。
+- Enables/disables. If already in that state: an "already enabled/disabled" message.
+- `disable` aborts a match in progress.
 
 ### `/1vs1 arena setInv [arena]`
 
-- プレイヤーのみ。実行者の現在の装備・インベントリをアリーナ装備として `arena/<name>.yml` の `inventory` セクションに保存。
+- Player only. Saves the executor's current equipment/inventory as the arena kit in the `inventory` section of `arena/<name>.yml`.
 
 ### `/1vs1 arena setsign [arena]`
 
-- プレイヤーのみ。視線先(10 ブロック以内)の看板を参加看板として登録。
-- 看板を見ていなければ「看板を見て実行してください」。
-- その看板が別アリーナに登録済みなら「その看板はすでに登録されています」。
-- 登録中の看板は破壊できない。
+- Player only. Registers the sign being looked at (within 10 blocks) as the join sign.
+- If not looking at a sign: "Look at a sign and run the command".
+- If that sign is already registered to another arena: "That sign is already registered".
+- A registered sign cannot be destroyed.
 
 ### `/1vs1 arena removesign [arena]`
 
-- アリーナの看板登録を解除する。看板ブロック自体は残り、破壊可能になる。
-- 看板が未登録なら「そのアリーナには看板が登録されていません」。
+- Unregisters the arena's sign. The sign block itself remains and becomes breakable.
+- If no sign is registered: "No sign is registered for that arena".
 
-## タブ補完
+## Tab Completion
 
-- 第 1 引数: `stats` `leave` `arena`(+ OP は `setlobby`)。
-- `arena` 第 2 引数: OP は全サブコマンド、非 OP は `info` のみ。
-- `arena` 第 3 引数: 登録済みアリーナ名。
+- 1st argument: `stats` `leave` `arena` (plus `setlobby` for OP).
+- `arena` 2nd argument: all subcommands for OP, only `info` for non-OP.
+- `arena` 3rd argument: registered arena names.

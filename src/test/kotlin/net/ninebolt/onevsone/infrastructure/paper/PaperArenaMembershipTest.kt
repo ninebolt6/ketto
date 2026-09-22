@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
-/** 退出・切断・有効化/停止・メンバーシップ登録のシナリオ。 */
+/** Scenarios for leaving, disconnecting, enable/disable, and membership registration. */
 class PaperArenaMembershipTest {
 
     @TempDir
@@ -85,7 +85,7 @@ class PaperArenaMembershipTest {
         env.join(p1, arena)
         env.join(p2, arena)
         env.tick(6)
-        // INGAME でサイドバー用ボードが割り当てられていること
+        // A sidebar board must be assigned during INGAME
         val ingameBoard = p1.scoreboard
         assertTrue(env.boards.contains(ingameBoard))
         env.service.abort(arena)
@@ -160,7 +160,7 @@ class PaperArenaMembershipTest {
         env.join(p2, arena)
         env.removePlayer(p1)
         env.quit(p1)
-        // 試合未開始の切断は登録解除のみ: 残った参加者は ONEMORE で待機継続
+        // A disconnect before match start only unregisters: the remaining participant keeps waiting at ONEMORE
         assertEquals(ArenaState.ONEMORE, env.view().state)
         assertNull(env.service.arenaIdOf(p1.uuid))
         assertEquals(arena, env.service.arenaIdOf(p2.uuid))

@@ -1,15 +1,15 @@
 package net.ninebolt.onevsone.domain
 
 sealed interface DefeatOutcome {
-    /** 通常の拒否(状態不適・人数不足・解決中の重複通知) */
+    /** Ordinary rejection (wrong state, not full, duplicate notification while resolving) */
     data object Rejected : DefeatOutcome
-    /** ラウンドのみ決着。round は終了したラウンド番号(合計勝数)。
-     *  解決ガードの解放は遷移後 match の世代(epoch)で行う。 */
+    /** Only the round is decided. round is the finished round number (total wins).
+     *  The resolution guard is released against the post-transition match's epoch. */
     data class RoundWon(
         val round: Int,
         val winner: Participant,
         val loser: Participant
     ) : DefeatOutcome
-    /** 規定勝数に到達してマッチ終了。最終キルは勝数に加算しない現挙動を維持。 */
+    /** Match ends on reaching the required wins. Keeps the current behavior of not adding the final kill to the win count. */
     data class MatchFinished(val winner: Participant, val loser: Participant) : DefeatOutcome
 }

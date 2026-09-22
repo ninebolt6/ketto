@@ -1,7 +1,8 @@
 package net.ninebolt.onevsone.domain
 
 /**
- * 1 アリーナの試合進行状態。表示文言・色は infrastructure 側の Messages が担う。
+ * Match progression state of one arena. Display text and colors are handled by
+ * Messages on the infrastructure side.
  */
 enum class ArenaState {
     WAITING,
@@ -13,9 +14,10 @@ enum class ArenaState {
     fun isJoinable(): Boolean = this == WAITING || this == ONEMORE
 
     /**
-     * この状態で敗北通知を受理するか。
-     * 死亡は INGAME のみ、落下(非死亡)は INGAME/ROUNDCOUNTDOWN で受理する。
-     * recordDefeat と resolvesVoidFall の双方がこの規則を共有する。
+     * Whether this state accepts a defeat notification.
+     * Death is accepted only in INGAME; falls (non-death) are accepted in
+     * INGAME/ROUNDCOUNTDOWN. Both recordDefeat and resolvesVoidFall share
+     * this rule.
      */
     fun acceptsDefeat(cause: DefeatCause): Boolean = when (this) {
         INGAME -> true

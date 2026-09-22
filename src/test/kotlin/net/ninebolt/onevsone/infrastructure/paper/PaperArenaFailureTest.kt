@@ -26,7 +26,7 @@ import java.io.IOException
 import java.util.logging.Level
 import java.util.logging.Logger
 
-/** 永続化・戦績・登録解除の失敗注入シナリオ。 */
+/** Failure-injection scenarios for persistence, stats, and unregistration. */
 class PaperArenaFailureTest {
 
     @TempDir

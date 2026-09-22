@@ -19,13 +19,14 @@ import net.ninebolt.onevsone.domain.Participant
 import kotlin.uuid.Uuid
 
 /**
- * 開始カウントダウン・ラウンド遷移・決着・中断の進行機構。
- * ArenaApplicationService からの委譲先として、アリーナごとのタイマーを所有し、
- * 遅延コールバックは世代(ArenaMatch.epoch)一致と生存確認で有効性を検証する。
+ * Progression engine for the initial countdown, round transitions, resolution,
+ * and aborts. As the delegate of ArenaApplicationService it owns a per-arena
+ * timer; deferred callbacks are validated by generation (ArenaMatch.epoch)
+ * match and liveness checks.
  *
- * ArenaMatch は immutable: 遅延実行されるコールバック内では参照をキャプチャせず
- * registry.match(arenaId) で最新状態を再読みすること。
- * すべての操作はメインスレッドで直列化されている前提。
+ * ArenaMatch is immutable: never capture a reference inside a deferred
+ * callback — re-read the latest state via registry.match(arenaId).
+ * All operations are assumed to be serialized on the main thread.
  */
 class MatchProgressionService(
     private val registry: ArenaRegistry,
@@ -41,14 +42,14 @@ class MatchProgressionService(
 ) {
     private val timers = mutableMapOf<Arena.Id, Cancellation>()
 
-    /** 死亡したが敗北として受理されなかった場合のリスポーン予約。 */
+    /** Respawn reservation for a player who died but was not accepted as a defeat. */
     fun requestRespawn(playerId: Uuid) {
         scheduler.schedule(0) {
             players.handle(playerId)?.takeIf { it.dead }?.respawn()
         }
     }
 
-    // ---- 中断 ---------------------------------------------------------------
+    // ---- Abort ---------------------------------------------------------------
 
     fun abort(arenaId: Arena.Id) {
         cancelCountdown(arenaId)
@@ -64,12 +65,12 @@ class MatchProgressionService(
         sync.publish(step.match)
     }
 
-    /** 走行中のカウントダウンだけを止める(shutdown 用)。 */
+    /** Stops only the running countdown (for shutdown). */
     internal fun cancelCountdown(arenaId: Arena.Id) {
         timers.remove(arenaId)?.cancel()
     }
 
-    // ---- ラウンド・終了 -------------------------------------------------------
+    // ---- Rounds & finish -------------------------------------------------------
 
     internal fun endRound(match: ArenaMatch, outcome: DefeatOutcome.RoundWon, death: Boolean) {
         val arenaId = match.arenaId
@@ -109,7 +110,7 @@ class MatchProgressionService(
             sync.publish(match)
             startRoundCountdown(arenaId)
         } catch (e: Exception) {
-            // 決着コミット後の失敗はタイマーの無い ROUNDCOUNTDOWN のまま進行不能になるため中断する
+            // A failure after the resolution commit would leave a timer-less ROUNDCOUNTDOWN stuck, so abort
             failures.report("Could not finish round ${outcome.round} in arena ${arenaId.name}; match aborted", e)
             abort(arenaId)
         }
@@ -126,7 +127,7 @@ class MatchProgressionService(
         cancelCountdown(arenaId)
         val gen = match.epoch
 
-        // 復元対象を先に確保してから登録解除・タスク停止へ
+        // Secure the restore targets first, then unregister and stop tasks
         val winnerTicket = recovery.pending(winner.id)
         val loserTicket = recovery.pending(loser.id)
         listOf(winner, loser).forEach { unregisterKeepingRestore(it) }
@@ -151,7 +152,7 @@ class MatchProgressionService(
                 resetAndRestore(h, loserTicket)
             }
         } else {
-            // 非死亡の敗者は即時処理。quit 経由の死者も含むため dead 判定で遅延化しない
+            // A non-dead loser is processed immediately. Players who died via quit are included here, so do not defer on a dead check
             players.handle(loser.id)?.let { h ->
                 if (forfeit) {
                     recovery.restoreNow(h, loserTicket, respawn = false, lobby = false)
@@ -165,7 +166,7 @@ class MatchProgressionService(
         recordResult(winner, loser)
     }
 
-    /** 戦績更新の失敗は winner/loser それぞれ独立に報告し、復元・相手の記録を止めない。 */
+    /** Stats-update failures are reported independently for winner/loser so neither restore nor the other's record is blocked. */
     private fun recordResult(winner: Participant, loser: Participant) {
         listOf(winner to true, loser to false).forEach { (participant, win) ->
             try {
@@ -180,7 +181,7 @@ class MatchProgressionService(
         }
     }
 
-    // ---- カウントダウン ---------------------------------------------------------
+    // ---- Countdown ---------------------------------------------------------
 
     internal fun startInitialCountdown(arenaId: Arena.Id) {
         runCountdown(arenaId, ticks = 5, stillCounting = { it.canBeginMatch }) {
@@ -188,9 +189,9 @@ class MatchProgressionService(
                 presentation.countdownTick(participantIds, remaining)
                 return@runCountdown false
             }
-            // 開始直前に両者の接続・生存を再確認(死亡中は開始を保留)
+            // Re-verify both players' connection and liveness just before starting (postponed while either is dead)
             if (p1.dead || p2.dead) return@runCountdown false
-            // 両者の持ち物を一括保存してから装備を交換する
+            // Bulk-save both players' inventories before swapping equipment
             val refs = try {
                 backups.backupBeforeMatch(MatchId.new(), match.participants)
             } catch (e: PersistenceFailure) {
@@ -211,7 +212,7 @@ class MatchProgressionService(
                     sync.publish(began.match)
                 }
             } catch (e: Exception) {
-                // 交換途中失敗: 取得済みバックアップで中断・復元する
+                // Failed mid-swap: abort and restore using the backups already taken
                 failures.report("Could not apply equipment before starting arena ${arenaId.name}; match aborted", e)
                 abort(arenaId)
             }
@@ -240,10 +241,11 @@ class MatchProgressionService(
     }
 
     /**
-     * カウントダウン共通骨格。毎 tick 最新の match を再読みし、世代トークン一致と
-     * stillCounting の進行条件を確認してから両者のハンドルを解決する。
-     * ハンドル消失(切断)時はタスク終了と併せて abort する。onTick が true を
-     * 返した tick で終了。remaining は ticks から減り 0 以下でも呼ばれる。
+     * Shared countdown skeleton. Re-reads the latest match each tick, verifies
+     * the generation token and stillCounting's progression condition, then
+     * resolves both players' handles. If a handle is lost (disconnect), the
+     * task ends and aborts. Ends on the tick where onTick returns true.
+     * remaining counts down from ticks and is still called at 0 or below.
      */
     private fun runCountdown(
         arenaId: Arena.Id,
@@ -277,7 +279,7 @@ class MatchProgressionService(
         }
     }
 
-    /** runCountdown の各 tick に渡す、match と両者ハンドルを解決済みのコンテキスト。 */
+    /** Context handed to each runCountdown tick, with match and both handles already resolved. */
     private class CountdownTick(
         val match: ArenaMatch,
         val first: Participant,
@@ -289,30 +291,31 @@ class MatchProgressionService(
         val participantIds: List<Uuid> get() = match.participants.map { it.id }
     }
 
-    // ---- 共通 -----------------------------------------------------------------
+    // ---- Shared -----------------------------------------------------------------
 
-    /** 台帳解除の失敗は warn に潰す。復元記録はインメモリに保持される。 */
+    /** Ledger-unregister failures are swallowed into a warn. The restore record stays in memory. */
     private fun unregisterKeepingRestore(participant: Participant) =
         failures.warnOnFailure("Could not unregister ${participant.name} from players.yml; pending restore retained in memory") {
             sync.unregister(participant)
         }
 
-    /** 体力・飛行を対戦用に整えてアリーナ装備を適用する。 */
+    /** Prepares health/flight for the match and applies the arena kit. */
     private fun rearm(arenaId: Arena.Id, participant: Participant, handle: PlayerHandle) {
         handle.prepareForMatch()
         kit.applyKit(arenaId, participant.id)
     }
 
-    /** 体力を戻してバックアップを復元し、ロビーへ送る。 */
+    /** Restores health, restores the backup, and sends the player to the lobby. */
     private fun resetAndRestore(handle: PlayerHandle, ticket: PlayerRecoveryService.RestoreTicket?) {
         handle.resetVitals()
         recovery.restoreNow(handle, ticket, respawn = false, lobby = true)
     }
 
     /**
-     * 退出・後処理対象の参加者へ action を振り分ける。生存なら即時、
-     * 死亡中なら次 tick の respawn 後に実行する。オフライン(ハンドル無し)は
-     * 何もしない。遅延経路の有効条件は ticket 同一性(優先)、無ければ valid。
+     * Dispatches action for a leaving/teardown participant: immediately if
+     * alive, after next tick's respawn if dead. Does nothing when offline (no
+     * handle). The deferred path's validity is ticket identity (preferred), or
+     * valid when there is no ticket.
      */
     private fun runNowOrAfterRespawn(
         playerId: Uuid,
@@ -329,10 +332,10 @@ class MatchProgressionService(
     }
 
     /**
-     * 次 tick に死亡中プレイヤーの後処理を行う。
-     * valid が実行時点でも成立するときだけハンドルを解決し、
-     * 未リスポーンなら先に respawn してから action を実行する。
-     * オフライン等でハンドルを得られなければ何もしない。
+     * Runs follow-up processing for a dead player on the next tick.
+     * The handle is resolved only if valid still holds at execution time;
+     * respawn is invoked first if the player has not respawned yet, then
+     * action runs. Does nothing if no handle is available (offline etc.).
      */
     private fun scheduleDeferred(playerId: Uuid, valid: () -> Boolean, action: (PlayerHandle) -> Unit) {
         scheduler.schedule(0) {
@@ -343,14 +346,14 @@ class MatchProgressionService(
         }
     }
 
-    /** pending 中の復元 ticket の同一性を有効条件とする scheduleDeferred。 */
+    /** scheduleDeferred whose validity is the identity of the pending restore ticket. */
     private fun scheduleTicketed(
         playerId: Uuid,
         ticket: PlayerRecoveryService.RestoreTicket,
         action: (PlayerHandle) -> Unit
     ) = scheduleDeferred(playerId, { recovery.pending(playerId) === ticket }, action)
 
-    /** ticket があれば同一性で、無ければ valid で有効性を検証する scheduleDeferred。 */
+    /** scheduleDeferred validating by ticket identity when present, otherwise by valid. */
     private fun scheduleDeferred(
         playerId: Uuid,
         ticket: PlayerRecoveryService.RestoreTicket?,

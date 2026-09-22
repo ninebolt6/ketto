@@ -1,32 +1,39 @@
-# メッセージ・表示文言
+# Messages and Display Text
 
-全メッセージは `lang/messages_<lang>.yml` の MiniMessage テンプレートとして管理する。
-コード側はキーと引数を保持する `Msg` を組み立て、送信時に宛先の言語で描画する。
-キーと既定文言の正本は `MessageKeys` と同梱 `messages_ja.yml`/`messages_en.yml` を参照。
+All messages are managed as MiniMessage templates in `lang/messages_<lang>.yml`.
+Code builds a `Msg` holding a key and arguments, which is rendered in the
+recipient's language at send time. The canonical list of keys and default text
+lives in `MessageKeys` and the bundled `messages_ja.yml`/`messages_en.yml`.
 
-## 言語の選択
+## Language Selection
 
 ```yaml
 # config.yml
-language: auto # auto=各プレイヤーのクライアントロケール。ja/en 等でサーバー固定
-default-language: ja # フォールバック + 看板・スコアボード等の共有面
+language: auto # auto = each player's client locale. ja/en etc. fixes it server-wide
+default-language: ja # fallback + shared surfaces like signs and scoreboard
 ```
 
-- `language: auto` 時、チャット/broadcast は `Player.locale()`(`ja_jp` → 完全一致 → `ja`
-  言語部一致)で言語を解決する。未対応ロケールは `default-language` にフォールバック
-- 看板・スコアボード・コンソールは共有面のため固定言語(`language` 固定値、
-  auto 時は `default-language`)で描画する
-- 言語ファイルは `plugins/1vs1/lang/messages_<lang>.yml` に配置。jar 同梱の既定言語を
-  基底に dataFolder 側の同名ファイルでキー単位に上書きできる。新言語は
-  `messages_<lang>.yml` を置くだけで追加できる。既定言語に存在し当該言語に無いキーは
-  起動時に warn され、描画時は既定言語へフォールバックする
+- With `language: auto`, chat/broadcast resolve the language from
+  `Player.locale()` (`ja_jp` → exact match → `ja` language-part match).
+  Unsupported locales fall back to `default-language`
+- Signs, scoreboard, and console are shared surfaces, so they render in a fixed
+  language (the fixed `language` value, or `default-language` when auto)
+- Language files live in `plugins/1vs1/lang/messages_<lang>.yml`. The bundled
+  default language is the base and same-named files in dataFolder override it
+  per key. A new language is added just by dropping in `messages_<lang>.yml`.
+  Keys present in the default language but missing from a language are warned
+  at startup and fall back to the default language at render time
 
-## 仕組み
+## Mechanism
 
-- `MessageKeys`: 全キーを集約。`MessagesTest` が全同梱言語のキー網羅性を検証する
-- `Messages` のファクトリ(`joined(name)` 等)は `Msg` を返すだけで描画しない。
-  `send(sender, msg)` が宛先ロケールで描画し prefix を前置する
-- 引数は `Msg.Str`(プレーンテキスト。`<` を含んでもタグ化しない)と
-  `Msg.Nested`(同ロケールで描画される別 Msg。状態表示の埋め込み用)の2種
-- プレースホルダは `<name>` 等の MiniMessage タグ。テンプレート側のタグ名と
-  `Str`/`Nested` の name が一致する必要がある(未解決プレースホルダはそのまま表示)
+- `MessageKeys`: aggregates all keys. `MessagesTest` verifies key coverage
+  across all bundled languages
+- `Messages` factories (`joined(name)` etc.) only return a `Msg`; they do not
+  render. `send(sender, msg)` renders in the recipient's locale and prepends
+  the prefix
+- Arguments come in two kinds: `Msg.Str` (plain text; `<` is never treated as
+  a tag) and `Msg.Nested` (another Msg rendered in the same locale; used to
+  embed state displays)
+- Placeholders are MiniMessage tags such as `<name>`. The tag name in the
+  template must match the `Str`/`Nested` name (unresolved placeholders render
+  as-is)

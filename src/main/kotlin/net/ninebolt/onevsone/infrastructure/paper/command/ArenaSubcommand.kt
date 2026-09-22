@@ -6,7 +6,7 @@ import net.ninebolt.onevsone.infrastructure.paper.Messages
 import org.bukkit.command.CommandSender
 import org.bukkit.util.StringUtil
 
-/** arena サブコマンド共通部品。全て第 1 引数にアリーナ名を取る前提。 */
+/** Shared pieces for arena subcommands. All assume the first argument is an arena name. */
 internal abstract class ArenaSubcommand(
     protected val admin: ArenaAdministrationService,
     messages: Messages

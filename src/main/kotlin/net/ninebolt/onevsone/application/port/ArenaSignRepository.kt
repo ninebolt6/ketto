@@ -3,7 +3,8 @@ package net.ninebolt.onevsone.application.port
 import net.ninebolt.onevsone.domain.WorldPosition
 
 /**
- * Join 看板の配置情報の永続化。アリーナ名 ⇔ 看板座標の対応を管理する。
+ * Persistence of Join sign placement. Manages the arena-name <-> sign
+ * coordinates mapping.
  */
 interface ArenaSignRepository {
     fun signLocation(arenaName: String): WorldPosition?
