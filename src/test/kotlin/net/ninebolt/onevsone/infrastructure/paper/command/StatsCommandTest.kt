@@ -1,4 +1,4 @@
-package net.ninebolt.onevsone.infrastructure.paper
+package net.ninebolt.onevsone.infrastructure.paper.command
 
 import io.mockk.every
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
@@ -15,8 +15,8 @@ import org.bukkit.Server
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
-/** Verifies /1vs1 stats plus no-args, permission, and unknown-subcommand paths. */
-class OneVsOneStatsCommandTest {
+/** Verifies /1vs1 stats: own/other player lookups, offline resolution, and rate limiting. */
+class StatsCommandTest {
 
     @TempDir
     lateinit var folder: File
@@ -34,29 +34,10 @@ class OneVsOneStatsCommandTest {
     }
 
     @Test
-    fun `no args shows usage`() {
-        val p = env.player("Alice")
-        env.run(p)
-        assertTrue(p.drainMessages().any { it.contains("/1vs1 stats [player] | /1vs1 leave") })
-    }
-
-    @Test
-    fun `console cannot run player commands`() {
+    fun `console cannot run stats`() {
         val console = env.server.consoleSender
         env.run(console, "stats")
         assertTrue(console.drainMessages().any { it.contains("このコマンドはプレイヤーのみ実行可能です") })
-        env.run(console, "leave")
-        assertTrue(console.drainMessages().any { it.contains("このコマンドはプレイヤーのみ実行可能です") })
-    }
-
-    @Test
-    fun `non op management commands denied`() {
-        val p = env.player("Alice")
-        p.isOp = false
-        env.run(p, "lobby", "set")
-        assertTrue(p.drainMessages().any { it.contains("権限がありません！") })
-        env.run(p, "arena", "create", "x")
-        assertTrue(p.drainMessages().any { it.contains("権限がありません！") })
     }
 
     @Test
@@ -139,17 +120,5 @@ class OneVsOneStatsCommandTest {
         // Viewing oneself involves no resolution, so it is not rate-limited
         env.run(viewer, "stats")
         assertTrue(viewer.drainMessages().any { it.contains("Statsが存在しません") })
-    }
-
-    @Test
-    fun `unknown subcommand falls back to usage`() {
-        val p = env.player("Alice")
-        env.run(p, "bogus")
-        assertTrue(p.drainMessages().any { it.contains("/1vs1 stats [player] | /1vs1 leave") })
-        // Under the arena namespace an unknown name is an arena lookup; an unknown op shows usage
-        env.run(p, "arena", "bogus")
-        assertTrue(p.drainMessages().any { it.contains("そのアリーナは存在しません") })
-        env.run(p, "arena", "bogus", "bogus")
-        assertTrue(p.drainMessages().any { it.contains("/1vs1 arena <arena>") })
     }
 }
