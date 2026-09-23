@@ -7,6 +7,9 @@ build
 # Ignore Kotlin plugin data
 .kotlin
 
+# macOS
+.DS_Store
+
 # Ignore IDE (Eclipse) output directory
 bin
 
