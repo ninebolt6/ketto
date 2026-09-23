@@ -1,7 +1,7 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
 import net.ninebolt.onevsone.domain.ArenaState
-import net.ninebolt.onevsone.domain.WorldPosition
+import net.ninebolt.onevsone.domain.BlockPosition
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.attackDamage
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.interact
@@ -44,7 +44,7 @@ class MatchScenarioTest {
     @Test
     fun `sign click to match end`() {
         val arena = env.newArena()
-        env.signRepo.setSign("arena1", WorldPosition.new("world", 3.0, 64.0, 3.0))
+        env.signRepo.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
         env.setKit(arena, PaperInventorySnapshot(items = listOf(env.item(Material.IRON_SWORD))))
         val p1 = env.player("Alice")
         val p2 = env.player("Bob")

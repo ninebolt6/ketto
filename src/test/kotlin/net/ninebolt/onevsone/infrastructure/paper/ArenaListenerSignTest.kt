@@ -1,7 +1,7 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
-import net.ninebolt.onevsone.domain.WorldPosition
+import net.ninebolt.onevsone.domain.BlockPosition
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.breakBlock
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
@@ -52,7 +52,7 @@ class ArenaListenerSignTest {
     @Test
     fun `registered sign join works and unregistered ignored`() {
         val arena = env.newArena()
-        env.signRepo.setSign("arena1", WorldPosition.new("world", 3.0, 64.0, 3.0))
+        env.signRepo.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
         val p1 = env.player("Alice")
 
         val unregistered = interact(p1, env.signBlock(9, 64, 9))
@@ -76,7 +76,7 @@ class ArenaListenerSignTest {
     @Test
     fun `cannot join sign click shows message`() {
         val arena = env.newArena()
-        env.signRepo.setSign("arena1", WorldPosition.new("world", 3.0, 64.0, 3.0))
+        env.signRepo.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
         val block = env.signBlock(3, 64, 3)
         val p1 = env.player("Alice")
         val p2 = env.player("Bob")
@@ -90,7 +90,7 @@ class ArenaListenerSignTest {
 
     @Test
     fun `non sign block and non right click ignored`() {
-        env.signRepo.setSign("arena1", WorldPosition.new("world", 3.0, 64.0, 3.0))
+        env.signRepo.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
         env.newArena()
         val p1 = env.player("Alice")
 
@@ -104,7 +104,7 @@ class ArenaListenerSignTest {
     @Test
     fun `registered sign cannot be broken until unregistered`() {
         env.newArena()
-        env.signRepo.setSign("arena1", WorldPosition.new("world", 3.0, 64.0, 3.0))
+        env.signRepo.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
         val p1 = env.player("Alice")
         val sim = p1.simulation()
 
@@ -122,7 +122,7 @@ class ArenaListenerSignTest {
     @Test
     fun `registered sign survives explosions`() {
         env.newArena()
-        env.signRepo.setSign("arena1", WorldPosition.new("world", 3.0, 64.0, 3.0))
+        env.signRepo.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
         val sign = env.signBlock(3, 64, 3)
         val plain = env.plainBlock(9, 64, 9)
 
@@ -140,7 +140,7 @@ class ArenaListenerSignTest {
     @Test
     fun `non sign break is ignored`() {
         env.newArena()
-        env.signRepo.setSign("arena1", WorldPosition.new("world", 3.0, 64.0, 3.0))
+        env.signRepo.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
         val p1 = env.player("Alice")
 
         val event = p1.simulation().breakBlock(env.plainBlock(3, 64, 3))
@@ -151,7 +151,7 @@ class ArenaListenerSignTest {
     fun `registered sign renders arena name and state`() {
         env.newArena()
         val block = env.signBlock(3, 64, 3)
-        env.admin.setSign("arena1", WorldPosition.new("world", 3.0, 64.0, 3.0))
+        env.admin.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
 
         val plain = PlainTextComponentSerializer.plainText()
         fun lines() = (0..3).map {

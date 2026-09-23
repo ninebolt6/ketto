@@ -2,7 +2,7 @@ package net.ninebolt.onevsone.infrastructure.persistence
 
 import net.ninebolt.onevsone.application.port.ArenaSignRepository
 import net.ninebolt.onevsone.application.port.PersistenceFailure
-import net.ninebolt.onevsone.domain.WorldPosition
+import net.ninebolt.onevsone.domain.BlockPosition
 import org.bukkit.configuration.file.YamlConfiguration
 
 /**
@@ -14,11 +14,9 @@ import org.bukkit.configuration.file.YamlConfiguration
  */
 class YamlSignRepository(private val store: YamlStore) : ArenaSignRepository {
 
-    private data class SignPos(val world: String, val x: Int, val y: Int, val z: Int)
+    private val index: MutableMap<BlockPosition, String> by lazy { scan() }
 
-    private val index: MutableMap<SignPos, String> by lazy { scan() }
-
-    private fun scan(): MutableMap<SignPos, String> = mutableMapOf<SignPos, String>().apply {
+    private fun scan(): MutableMap<BlockPosition, String> = mutableMapOf<BlockPosition, String>().apply {
         store.arenaDir.listFiles()?.forEach { file ->
             if (!file.isFile || file.extension != "yml") return@forEach
             val pos = try {
@@ -31,10 +29,11 @@ class YamlSignRepository(private val store: YamlStore) : ArenaSignRepository {
         }
     }
 
-    private fun signPos(yaml: YamlConfiguration): SignPos? {
+    private fun signPos(yaml: YamlConfiguration): BlockPosition? {
         val world = yaml.getString("sign.world")?.takeIf { it.isNotBlank() } ?: return null
         if (!yaml.contains("sign.x")) return null
-        return SignPos(
+        // Files written by older versions hold fractional coordinates; they truncate to the block
+        return BlockPosition.new(
             world,
             yaml.getDouble("sign.x").toInt(),
             yaml.getDouble("sign.y").toInt(),
@@ -42,16 +41,19 @@ class YamlSignRepository(private val store: YamlStore) : ArenaSignRepository {
         )
     }
 
-    override fun signLocation(arenaName: String): WorldPosition? =
+    override fun signLocation(arenaName: String): BlockPosition? =
         index.entries.firstOrNull { it.value == arenaName }?.key
-            ?.let { WorldPosition.new(it.world, it.x.toDouble(), it.y.toDouble(), it.z.toDouble()) }
 
-    override fun setSign(arenaName: String, position: WorldPosition) {
+    override fun setSign(arenaName: String, position: BlockPosition) {
         store.update(store.arenaFile(arenaName)) { yaml ->
-            store.writeLocation(yaml, "sign", position)
+            yaml.set("sign", null)
+            yaml.set("sign.world", position.world)
+            yaml.set("sign.x", position.x)
+            yaml.set("sign.y", position.y)
+            yaml.set("sign.z", position.z)
         }
         index.values.remove(arenaName)
-        index[SignPos(position.world, position.x.toInt(), position.y.toInt(), position.z.toInt())] = arenaName
+        index[position] = arenaName
     }
 
     override fun clearSign(arenaName: String) {
@@ -61,6 +63,5 @@ class YamlSignRepository(private val store: YamlStore) : ArenaSignRepository {
         index.entries.removeAll { it.value == arenaName }
     }
 
-    override fun signOwner(world: String, x: Int, y: Int, z: Int): String? =
-        index[SignPos(world, x, y, z)]
+    override fun signOwner(position: BlockPosition): String? = index[position]
 }

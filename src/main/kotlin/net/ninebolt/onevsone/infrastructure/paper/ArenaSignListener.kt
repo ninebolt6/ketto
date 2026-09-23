@@ -38,7 +38,7 @@ class ArenaSignListener(
         if (event.hand != EquipmentSlot.HAND) return
         val block = event.clickedBlock ?: return
         if (block.state !is Sign) return
-        val name = admin.signOwner(block.world.name, block.x, block.y, block.z) ?: return
+        val name = admin.signOwner(block.toBlockPosition()) ?: return
         // A handled click denies both block interaction and item use, because anyone can
         // open the edit screen by right-clicking an unwaxed sign in vanilla
         event.denyUse()
@@ -68,7 +68,7 @@ class ArenaSignListener(
     }
 
     private fun isRegisteredSign(block: Block): Boolean =
-        block.state is Sign && admin.signOwner(block.world.name, block.x, block.y, block.z) != null
+        block.state is Sign && admin.signOwner(block.toBlockPosition()) != null
 
     /** Maps the join use-case result to message text. Shared by the sign-join path. */
     fun renderJoin(player: Player, arenaName: String, reply: JoinReply) {

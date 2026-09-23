@@ -1,7 +1,7 @@
 package net.ninebolt.onevsone.infrastructure.paper.command
 
 import net.ninebolt.onevsone.application.ArenaAdministrationService
-import net.ninebolt.onevsone.domain.Arena
+import net.ninebolt.onevsone.domain.SpawnSlot
 import net.ninebolt.onevsone.infrastructure.paper.message.Message
 import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import net.ninebolt.onevsone.infrastructure.paper.toWorldPosition
@@ -19,15 +19,15 @@ internal class ArenaSpawnSetCommand(
 
     override fun executeFor(sender: CommandSender, arenaName: String, rest: List<String>) {
         val player = sender.requirePlayer() ?: return
-        val slot = rest.singleOrNull()?.toIntOrNull()?.takeIf { it in 1..Arena.SPAWN_COUNT }
+        val slot = rest.singleOrNull()?.toIntOrNull()?.let(SpawnSlot::ofNumber)
         if (slot == null) {
             messenger.send(sender, usage)
             return
         }
         val arena = arenaOrWarn(sender, arenaName) ?: return
         // Positions without a world skip saving but still report success
-        player.location.toWorldPosition()?.let { admin.setSpawn(arena.name, slot - 1, it) }
-        messenger.send(sender, Message.ArenaSpawnSet(arena.name, slot))
+        player.location.toWorldPosition()?.let { admin.setSpawn(arena.name, slot, it) }
+        messenger.send(sender, Message.ArenaSpawnSet(arena.name, slot.number))
     }
 
     override fun tabComplete(sender: CommandSender, args: List<String>): List<String> =
@@ -35,6 +35,6 @@ internal class ArenaSpawnSetCommand(
         else super.tabComplete(sender, args)
 
     private companion object {
-        val SLOTS = (1..Arena.SPAWN_COUNT).map(Int::toString)
+        val SLOTS: List<String> = SpawnSlot.entries.map { it.number.toString() }
     }
 }

@@ -6,6 +6,8 @@ import net.ninebolt.onevsone.application.port.KitPort
 import net.ninebolt.onevsone.application.port.LobbyRepository
 import net.ninebolt.onevsone.application.port.MatchPresentationPort
 import net.ninebolt.onevsone.domain.Arena
+import net.ninebolt.onevsone.domain.BlockPosition
+import net.ninebolt.onevsone.domain.SpawnSlot
 import net.ninebolt.onevsone.domain.WorldPosition
 import kotlin.uuid.Uuid
 
@@ -60,8 +62,7 @@ class ArenaAdministrationService(
         return ToggleReply.Changed
     }
 
-    /** slot is 0-based, same as Arena.withSpawn. */
-    fun setSpawn(name: String, slot: Int, position: WorldPosition): Boolean {
+    fun setSpawn(name: String, slot: SpawnSlot, position: WorldPosition): Boolean {
         val id = registry.resolveArenaId(name) ?: return false
         val updated = registry.updateArena(id) { it.withSpawn(slot, position) } ?: return false
         arenas.save(updated)
@@ -79,12 +80,11 @@ class ArenaAdministrationService(
         lobby.setLobby(position)
     }
 
-    fun signLocation(arenaName: String): WorldPosition? = signs.signLocation(arenaName)
+    fun signLocation(arenaName: String): BlockPosition? = signs.signLocation(arenaName)
 
-    fun signOwner(world: String, x: Int, y: Int, z: Int): String? =
-        signs.signOwner(world, x, y, z)
+    fun signOwner(position: BlockPosition): String? = signs.signOwner(position)
 
-    fun setSign(name: String, position: WorldPosition): Boolean {
+    fun setSign(name: String, position: BlockPosition): Boolean {
         val arena = arena(name) ?: return false
         signs.setSign(arena.name, position)
         val state = registry.match(arena.id)?.state ?: return true

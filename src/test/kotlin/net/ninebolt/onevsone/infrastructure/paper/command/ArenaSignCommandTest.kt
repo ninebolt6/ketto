@@ -1,6 +1,6 @@
 package net.ninebolt.onevsone.infrastructure.paper.command
 
-import net.ninebolt.onevsone.domain.WorldPosition
+import net.ninebolt.onevsone.domain.BlockPosition
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.opPlayer
@@ -54,7 +54,7 @@ class ArenaSignCommandTest {
         second.targetBlock = sign
 
         env.run(op, "arena", "arena1", "sign", "set")
-        assertEquals("arena1", env.signRepo.signOwner("world", 4, 64, 4))
+        assertEquals("arena1", env.signRepo.signOwner(BlockPosition.new("world", 4, 64, 4)))
 
         env.run(second, "arena", "arena2", "sign", "set")
         assertTrue(second.drainMessages().any { it.contains("その看板はすでに登録されています") })
@@ -64,11 +64,11 @@ class ArenaSignCommandTest {
     fun `arena sign remove unregisters sign`() {
         val op = env.opPlayer("Op")
         env.newArena()
-        env.signRepo.setSign("arena1", WorldPosition.new("world", 4.0, 64.0, 4.0))
+        env.signRepo.setSign("arena1", BlockPosition.new("world", 4, 64, 4))
 
         env.run(op, "arena", "arena1", "sign", "remove")
         assertTrue(op.drainMessages().any { it.contains("の看板登録を解除しました") })
-        assertNull(env.signRepo.signOwner("world", 4, 64, 4))
+        assertNull(env.signRepo.signOwner(BlockPosition.new("world", 4, 64, 4)))
         assertNull(env.signRepo.signLocation("arena1"))
 
         env.run(op, "arena", "arena1", "sign", "remove")

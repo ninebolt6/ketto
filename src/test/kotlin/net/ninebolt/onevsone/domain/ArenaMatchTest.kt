@@ -161,13 +161,12 @@ class ArenaMatchTest {
         var m = match()
         m = m.join(alice).match
         m = m.join(bob).match
-        assertEquals(0, m.slotOf(alice.id))
-        assertEquals(1, m.slotOf(bob.id))
+        assertEquals(SpawnSlot.FIRST, m.slotOf(alice.id))
+        assertEquals(SpawnSlot.SECOND, m.slotOf(bob.id))
         assertNull(m.slotOf(carol.id))
         assertNull(m.participant(carol.id))
-        assertEquals(alice, m.participantAt(0))
-        assertEquals(bob, m.participantAt(1))
-        assertNull(m.participantAt(2))
+        assertEquals(alice, m.participantAt(SpawnSlot.FIRST))
+        assertEquals(bob, m.participantAt(SpawnSlot.SECOND))
     }
 
     @Test

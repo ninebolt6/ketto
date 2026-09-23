@@ -8,6 +8,7 @@ import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.application.port.PlayerStatsRepository
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
+import net.ninebolt.onevsone.domain.BlockPosition
 import net.ninebolt.onevsone.domain.Participant
 import net.ninebolt.onevsone.domain.PlayerStats
 import net.ninebolt.onevsone.domain.WorldPosition
@@ -18,7 +19,7 @@ class InMemoryArenaRepository : ArenaRepository, LobbyRepository, ArenaSignRepos
     val names = mutableListOf<String>()
     val definitions = mutableMapOf<String, Arena>()
     var lobbyPosition: WorldPosition? = null
-    val signs = mutableMapOf<String, WorldPosition>()
+    val signs = mutableMapOf<String, BlockPosition>()
     var failOnSave = false
 
     override fun loadAll(): List<Arena> {
@@ -47,8 +48,8 @@ class InMemoryArenaRepository : ArenaRepository, LobbyRepository, ArenaSignRepos
         lobbyPosition = position
     }
 
-    override fun signLocation(arenaName: String): WorldPosition? = signs[arenaName]
-    override fun setSign(arenaName: String, position: WorldPosition) {
+    override fun signLocation(arenaName: String): BlockPosition? = signs[arenaName]
+    override fun setSign(arenaName: String, position: BlockPosition) {
         signs[arenaName] = position
     }
 
@@ -56,10 +57,8 @@ class InMemoryArenaRepository : ArenaRepository, LobbyRepository, ArenaSignRepos
         signs.remove(arenaName)
     }
 
-    override fun signOwner(world: String, x: Int, y: Int, z: Int): String? =
-        signs.entries.firstOrNull { (_, pos) ->
-            pos.world == world && pos.x.toInt() == x && pos.y.toInt() == y && pos.z.toInt() == z
-        }?.key
+    override fun signOwner(position: BlockPosition): String? =
+        signs.entries.firstOrNull { (_, pos) -> pos == position }?.key
 }
 
 class InMemoryMatchStateRepository : MatchStateRepository {

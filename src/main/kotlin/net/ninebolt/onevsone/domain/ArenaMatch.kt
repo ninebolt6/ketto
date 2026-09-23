@@ -24,8 +24,8 @@ data class ArenaMatch private constructor(
     val epoch: Long = 0L
 ) {
     companion object {
-        // participants[i] teleports to arena spawn slot i, so capacity equals the arena's spawn count
-        const val MAX_PARTICIPANTS = Arena.SPAWN_COUNT
+        // participants[i] teleports to the spawn slot with index i, so capacity equals the spawn slot count
+        val MAX_PARTICIPANTS = SpawnSlot.entries.size
 
         /** A fresh aggregate (WAITING, 0 participants). */
         fun new(arenaId: Arena.Id, requiredWins: Int): ArenaMatch {
@@ -89,15 +89,15 @@ data class ArenaMatch private constructor(
 
     /** The two opponents in join order, present only while the match is in progress. */
     fun matchup(): Pair<Participant, Participant>? =
-        if (inProgress) participants[0] to participants[1] else null
+        if (inProgress) participants[SpawnSlot.FIRST.index] to participants[SpawnSlot.SECOND.index] else null
 
     fun participant(id: Uuid): Participant? = participants.firstOrNull { it.id == id }
 
-    /** A participant's spawn slot (0-based = spawn1/spawn2). null if not participating. */
-    fun slotOf(id: Uuid): Int? =
-        participants.indexOfFirst { it.id == id }.takeIf { it >= 0 }
+    /** A participant's spawn slot (join order). null if not participating. */
+    fun slotOf(id: Uuid): SpawnSlot? =
+        SpawnSlot.ofIndex(participants.indexOfFirst { it.id == id })
 
-    fun participantAt(slot: Int): Participant? = participants.getOrNull(slot)
+    fun participantAt(slot: SpawnSlot): Participant? = participants.getOrNull(slot.index)
 
     fun winsOf(id: Uuid): Int = wins[id] ?: 0
 

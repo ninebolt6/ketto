@@ -16,6 +16,7 @@ import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.DefeatOutcome
 import net.ninebolt.onevsone.domain.MatchId
 import net.ninebolt.onevsone.domain.Participant
+import net.ninebolt.onevsone.domain.SpawnSlot
 import kotlin.uuid.Uuid
 
 /**
@@ -261,8 +262,8 @@ class MatchProgressionService(
                 task.cancel()
                 return@repeat
             }
-            val first = match.participantAt(0)
-            val second = match.participantAt(1)
+            val first = match.participantAt(SpawnSlot.FIRST)
+            val second = match.participantAt(SpawnSlot.SECOND)
             if (first == null || second == null) {
                 task.cancel()
                 return@repeat
@@ -369,7 +370,7 @@ class MatchProgressionService(
         val slot = match.slotOf(participant.id) ?: return
         val spawn = registry.arena(match.arenaId)?.spawn(slot)
         if (spawn == null) {
-            failures.warn("Arena ${match.arenaId.name} spawn ${slot + 1} is not set; skipping teleport")
+            failures.warn("Arena ${match.arenaId.name} spawn ${slot.number} is not set; skipping teleport")
             return
         }
         handle.teleport(spawn)

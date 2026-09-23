@@ -3,10 +3,11 @@ package net.ninebolt.onevsone.application
 import net.ninebolt.onevsone.application.fixtures.TestApp
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaState
+import net.ninebolt.onevsone.domain.BlockPosition
 import net.ninebolt.onevsone.domain.DefeatCause
+import net.ninebolt.onevsone.domain.SpawnSlot
 import net.ninebolt.onevsone.domain.WorldPosition
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -39,7 +40,7 @@ class ArenaAdministrationServiceTest {
     fun `remove aborts running match and clears registrations`() {
         val arena = app.newArena()
         val (p1, p2) = app.joinedTwo()
-        app.admin.setSign("arena1", WorldPosition.new("world", 3.0, 64.0, 3.0))
+        app.admin.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
         assertTrue(app.admin.remove("arena1"))
         assertNull(app.service.arena("arena1"))
         assertNull(app.service.arenaIdOf(p1.id))
@@ -76,13 +77,11 @@ class ArenaAdministrationServiceTest {
     fun `setSpawn writes slot and persists`() {
         app.newArena()
         val pos = WorldPosition.new("world", 9.5, 70.0, -2.5, 33.3f, 12.5f)
-        assertTrue(app.admin.setSpawn("arena1", 0, pos))
+        assertTrue(app.admin.setSpawn("arena1", SpawnSlot.FIRST, pos))
         assertEquals(pos, app.arenas.find("arena1").spawn1)
-        assertTrue(app.admin.setSpawn("arena1", 1, pos))
+        assertTrue(app.admin.setSpawn("arena1", SpawnSlot.SECOND, pos))
         assertEquals(pos, app.arenas.find("arena1").spawn2)
-        assertFalse(app.admin.setSpawn("missing", 0, pos))
-        // Out-of-range slots must fail fast (withSpawn enforces the bound)
-        assertFailsWith<IllegalArgumentException> { app.admin.setSpawn("arena1", 2, pos) }
+        assertFalse(app.admin.setSpawn("missing", SpawnSlot.FIRST, pos))
     }
 
     @Test
@@ -92,10 +91,10 @@ class ArenaAdministrationServiceTest {
         assertEquals(pos, app.arenas.lobbyPosition)
 
         app.newArena()
-        val sign = WorldPosition.new("world", 3.0, 64.0, 3.0)
+        val sign = BlockPosition.new("world", 3, 64, 3)
         assertTrue(app.admin.setSign("arena1", sign))
         assertEquals(sign, app.admin.signLocation("arena1"))
-        assertEquals("arena1", app.admin.signOwner("world", 3, 64, 3))
+        assertEquals("arena1", app.admin.signOwner(BlockPosition.new("world", 3, 64, 3)))
         assertEquals(Arena.Id.new("arena1") to ArenaState.WAITING, app.presentation.signUpdates.last())
 
         assertFalse(app.admin.setSign("missing", sign))
@@ -125,9 +124,9 @@ class ArenaAdministrationServiceTest {
         assertFalse(app.service.arena("Arena1")!!.enabled)
         assertEquals(ToggleReply.AlreadyDisabled, app.admin.setEnabled("arena1", false))
 
-        assertTrue(app.admin.setSpawn("ARENA1", 0, WorldPosition.new("world", 1.0, 64.0, 1.0)))
-        assertTrue(app.admin.setSign("arena1", WorldPosition.new("world", 3.0, 64.0, 3.0)))
-        assertEquals("Arena1", app.admin.signOwner("world", 3, 64, 3))
+        assertTrue(app.admin.setSpawn("ARENA1", SpawnSlot.FIRST, WorldPosition.new("world", 1.0, 64.0, 1.0)))
+        assertTrue(app.admin.setSign("arena1", BlockPosition.new("world", 3, 64, 3)))
+        assertEquals("Arena1", app.admin.signOwner(BlockPosition.new("world", 3, 64, 3)))
 
         assertTrue(app.admin.remove("aReNa1"))
         assertNull(app.service.arena("Arena1"))

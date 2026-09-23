@@ -136,9 +136,3 @@ private class PaperPlayerHandle(
         }
     }
 }
-
-/** Location -> pure coordinates conversion for the command side. null when world is absent. */
-fun Location.toWorldPosition(): WorldPosition? {
-    val world = world ?: return null
-    return WorldPosition.new(world.name, x, y, z, yaw, pitch)
-}

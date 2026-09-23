@@ -4,6 +4,7 @@ import net.ninebolt.onevsone.application.port.BackupRef
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.ArenaState
+import net.ninebolt.onevsone.domain.BlockPosition
 import net.ninebolt.onevsone.domain.MatchId
 import net.ninebolt.onevsone.domain.Participant
 import net.ninebolt.onevsone.domain.WorldPosition
@@ -335,7 +336,7 @@ class YamlPersistenceTest {
     @Test
     fun `lobby and sign locations persist`() {
         lobby().setLobby(WorldPosition.new("lobby", 1.0, 2.0, 3.0, 45.5f, 10.25f))
-        signs().setSign("a1", WorldPosition.new("world", 5.0, 64.0, 5.0))
+        signs().setSign("a1", BlockPosition.new("world", 5, 64, 5))
         assertTrue(File(folder, "lobby.yml").exists())
         assertNotNull(
             YamlConfiguration.loadConfiguration(File(folder, "arena/a1.yml"))
@@ -345,11 +346,11 @@ class YamlPersistenceTest {
         assertEquals("lobby", lobby.world)
         assertEquals(45.5f, lobby.yaw, 0.001f)
         val sign = signs().signLocation("a1")!!
-        assertEquals(5.0, sign.x)
-        assertEquals("a1", signs().signOwner("world", 5, 64, 5))
+        assertEquals(5, sign.x)
+        assertEquals("a1", signs().signOwner(BlockPosition.new("world", 5, 64, 5)))
         signs().clearSign("a1")
         assertNull(signs().signLocation("a1"))
-        assertNull(signs().signOwner("world", 5, 64, 5))
+        assertNull(signs().signOwner(BlockPosition.new("world", 5, 64, 5)))
     }
 
     @Test
@@ -361,45 +362,45 @@ class YamlPersistenceTest {
         val before = file.readBytes()
 
         lobby().setLobby(WorldPosition.new("lobby", 1.0, 2.0, 3.0))
-        signs().setSign("a1", WorldPosition.new("world", 5.0, 64.0, 5.0))
+        signs().setSign("a1", BlockPosition.new("world", 5, 64, 5))
         assertContentEquals(before, file.readBytes())
     }
 
     @Test
     fun `sign index is rebuilt from arena files by a new instance`() {
-        signs().setSign("a1", WorldPosition.new("world", 5.0, 64.0, 5.0))
+        signs().setSign("a1", BlockPosition.new("world", 5, 64, 5))
         // A separate instance has no index, so it builds one from arena/<name>.yml
-        assertEquals("a1", signs().signOwner("world", 5, 64, 5))
-        assertEquals(5.0, signs().signLocation("a1")!!.x)
+        assertEquals("a1", signs().signOwner(BlockPosition.new("world", 5, 64, 5)))
+        assertEquals(5, signs().signLocation("a1")!!.x)
     }
 
     @Test
     fun `setSign releases old position when re-registered`() {
         val repo = signs()
-        repo.setSign("a1", WorldPosition.new("world", 5.0, 64.0, 5.0))
-        repo.setSign("a1", WorldPosition.new("world", 9.0, 64.0, 9.0))
-        assertNull(repo.signOwner("world", 5, 64, 5))
-        assertEquals("a1", repo.signOwner("world", 9, 64, 9))
-        assertEquals(9.0, repo.signLocation("a1")!!.x)
+        repo.setSign("a1", BlockPosition.new("world", 5, 64, 5))
+        repo.setSign("a1", BlockPosition.new("world", 9, 64, 9))
+        assertNull(repo.signOwner(BlockPosition.new("world", 5, 64, 5)))
+        assertEquals("a1", repo.signOwner(BlockPosition.new("world", 9, 64, 9)))
+        assertEquals(9, repo.signLocation("a1")!!.x)
     }
 
     @Test
     fun `clearSign does not recreate a deleted arena file`() {
         val repo = signs()
-        repo.setSign("a1", WorldPosition.new("world", 5.0, 64.0, 5.0))
+        repo.setSign("a1", BlockPosition.new("world", 5, 64, 5))
         arenas().delete("a1")
         repo.clearSign("a1")
         assertFalse(File(folder, "arena/a1.yml").exists())
-        assertNull(repo.signOwner("world", 5, 64, 5))
+        assertNull(repo.signOwner(BlockPosition.new("world", 5, 64, 5)))
     }
 
     @Test
     fun `sign section survives arena save`() {
-        signs().setSign("a1", WorldPosition.new("world", 5.0, 64.0, 5.0))
+        signs().setSign("a1", BlockPosition.new("world", 5, 64, 5))
         arenas().save(Arena.new(Arena.Id.new("a1"), enabled = true))
         val yaml = YamlConfiguration.loadConfiguration(File(folder, "arena/a1.yml"))
         assertNotNull(yaml.getConfigurationSection("sign"))
-        assertEquals("a1", signs().signOwner("world", 5, 64, 5))
+        assertEquals("a1", signs().signOwner(BlockPosition.new("world", 5, 64, 5)))
     }
 
     @Test

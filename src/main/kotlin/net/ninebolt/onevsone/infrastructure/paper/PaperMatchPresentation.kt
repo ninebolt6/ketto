@@ -135,7 +135,7 @@ class PaperMatchPresentation(
             failures.warn("Sign world '${sign.world}' for arena ${arena.name} is not loaded")
             return
         }
-        val blockState = world.getBlockAt(sign.x.toInt(), sign.y.toInt(), sign.z.toInt()).state
+        val blockState = world.getBlockAt(sign.x, sign.y, sign.z).state
         if (blockState !is Sign) return
         val front = blockState.getSide(Side.FRONT)
         front.line(0, messenger.render(Message.SignTitle))
