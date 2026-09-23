@@ -21,8 +21,8 @@ import net.ninebolt.onevsone.infrastructure.paper.ArenaGuardListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaMatchListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaSignListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaTeleportListener
-import net.ninebolt.onevsone.infrastructure.paper.Message
-import net.ninebolt.onevsone.infrastructure.paper.Messenger
+import net.ninebolt.onevsone.infrastructure.paper.message.Message
+import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import net.ninebolt.onevsone.infrastructure.paper.command.OneVsOneCommand
 import net.ninebolt.onevsone.infrastructure.paper.PaperEquipmentAdapter
 import net.ninebolt.onevsone.infrastructure.paper.PaperInventorySnapshot

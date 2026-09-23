@@ -1,4 +1,4 @@
-package net.ninebolt.onevsone.infrastructure.paper
+package net.ninebolt.onevsone.infrastructure.paper.message
 
 import org.bukkit.configuration.file.YamlConfiguration
 import java.io.File

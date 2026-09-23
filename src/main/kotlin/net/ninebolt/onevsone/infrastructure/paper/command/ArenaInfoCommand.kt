@@ -2,8 +2,8 @@ package net.ninebolt.onevsone.infrastructure.paper.command
 
 import net.ninebolt.onevsone.application.ArenaAdministrationService
 import net.ninebolt.onevsone.application.ArenaApplicationService
-import net.ninebolt.onevsone.infrastructure.paper.Message
-import net.ninebolt.onevsone.infrastructure.paper.Messenger
+import net.ninebolt.onevsone.infrastructure.paper.message.Message
+import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import org.bukkit.command.CommandSender
 
 /** /1vs1 arena <name> info. The only arena op available to non-OP users; also the default for bare `arena <name>`. */

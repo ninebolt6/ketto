@@ -1,4 +1,4 @@
-package net.ninebolt.onevsone.infrastructure.paper
+package net.ninebolt.onevsone.infrastructure.paper.message
 
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.PlayerStats

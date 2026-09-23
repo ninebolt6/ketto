@@ -1,7 +1,7 @@
 package net.ninebolt.onevsone.infrastructure.paper.command
 
-import net.ninebolt.onevsone.infrastructure.paper.Message
-import net.ninebolt.onevsone.infrastructure.paper.Messenger
+import net.ninebolt.onevsone.infrastructure.paper.message.Message
+import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 

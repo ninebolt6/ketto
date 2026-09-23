@@ -1,4 +1,4 @@
-package net.ninebolt.onevsone.infrastructure.paper
+package net.ninebolt.onevsone.infrastructure.paper.message
 
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.minimessage.MiniMessage

@@ -4,8 +4,8 @@ import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.application.port.FailureReporter
 import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.application.port.PlayerPort
-import net.ninebolt.onevsone.infrastructure.paper.Message
-import net.ninebolt.onevsone.infrastructure.paper.Messenger
+import net.ninebolt.onevsone.infrastructure.paper.message.Message
+import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import org.bukkit.command.CommandSender
 import kotlin.uuid.Uuid
 import kotlin.uuid.toKotlinUuid

@@ -4,6 +4,8 @@ import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.domain.DamageAdmission
 import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.domain.ParticipantRestrictions
+import net.ninebolt.onevsone.infrastructure.paper.message.Message
+import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
