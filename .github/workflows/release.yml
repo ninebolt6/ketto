@@ -29,4 +29,8 @@ jobs:
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "${GITHUB_REF_NAME}" build/libs/*.jar --generate-notes --verify-tag
+        run: |
+          # Semver: a "-" suffix (v1.0.0-alpha) marks a prerelease
+          PRERELEASE=""
+          case "${GITHUB_REF_NAME}" in *-*) PRERELEASE="--prerelease" ;; esac
+          gh release create "${GITHUB_REF_NAME}" build/libs/*.jar --generate-notes --verify-tag $PRERELEASE
