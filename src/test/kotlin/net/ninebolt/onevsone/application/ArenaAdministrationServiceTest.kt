@@ -1,14 +1,17 @@
 package net.ninebolt.onevsone.application
 
 import net.ninebolt.onevsone.application.fixtures.TestApp
+import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.BlockPosition
 import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.domain.SpawnSlot
 import net.ninebolt.onevsone.domain.WorldPosition
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
@@ -122,5 +125,18 @@ class ArenaAdministrationServiceTest {
         // The loser's stats are already settled; the point is that no registrations remain after remove aborts
         assertNull(app.matchState.registrations[p1.id])
         assertNull(app.matchState.registrations[p2.id])
+    }
+
+    @Test
+    fun `authoritative persist failure propagates and leaves the registry unchanged`() {
+        app.arenas.failOnSave = true
+        assertFailsWith<PersistenceFailure> { app.admin.create("arena1") }
+        assertNull(app.service.arena("arena1"))
+
+        app.arenas.failOnSave = false
+        app.newArena()
+        app.arenas.failOnSave = true
+        assertFailsWith<PersistenceFailure> { app.admin.setEnabled("arena1", false) }
+        assertTrue(app.service.arena("arena1")!!.enabled)
     }
 }

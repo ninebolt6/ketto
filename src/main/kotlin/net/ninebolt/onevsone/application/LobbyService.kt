@@ -5,7 +5,8 @@ import net.ninebolt.onevsone.domain.WorldPosition
 
 /**
  * The server-wide lobby setting. A single lobby exists, not per arena.
- * All operations are assumed to be serialized on the main thread.
+ * Calls are serialized by the main thread; each repository call is one
+ * atomic persistence unit.
  */
 class LobbyService(private val lobby: LobbyRepository) {
     fun setLobby(position: WorldPosition) {

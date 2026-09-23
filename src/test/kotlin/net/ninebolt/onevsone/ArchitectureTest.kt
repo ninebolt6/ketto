@@ -55,6 +55,17 @@ class ArchitectureTest {
     }
 
     @Test
+    fun `inner layers do not touch jdbc or sqlite`() {
+        // java.sql sits inside the jdk whitelist, so the database boundary is
+        // enforced by a dedicated rule: storage details belong to
+        // infrastructure.persistence only.
+        noClasses().that()
+            .resideInAnyPackage("net.ninebolt.onevsone.domain..", "net.ninebolt.onevsone.application..")
+            .should().dependOnClassesThat().resideInAnyPackage("java.sql..", "javax.sql..", "org.sqlite..")
+            .check(classes)
+    }
+
+    @Test
     fun `infrastructure only references repository ports it implements`() {
         // Repositories are the persistence seam: application services consume
         // them and adapters implement them; other infrastructure must not.

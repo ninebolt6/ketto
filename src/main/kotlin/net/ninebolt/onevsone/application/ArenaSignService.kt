@@ -9,7 +9,8 @@ import net.ninebolt.onevsone.domain.BlockPosition
 /**
  * Join sign management: coordinate persistence via ArenaSignRepository and
  * sign display refresh via PresentationPort.
- * All operations are assumed to be serialized on the main thread.
+ * Calls are serialized by the main thread; each repository call is one
+ * atomic persistence unit.
  */
 class ArenaSignService(
     private val registry: ArenaRegistry,

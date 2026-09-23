@@ -6,7 +6,8 @@ import kotlin.uuid.Uuid
 
 /**
  * Read side of player stats, including the rate-limited named lookup.
- * All operations are assumed to be serialized on the main thread.
+ * Calls are serialized by the main thread; each repository call is one
+ * atomic persistence unit.
  */
 class PlayerStatsService(private val stats: PlayerStatsRepository) {
 

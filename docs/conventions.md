@@ -6,6 +6,18 @@
   enforced by `ArchitectureTest`). `OneVsOnePlugin` is the composition root and
   wires all dependencies manually
 - application connects to the outside through interfaces in `port/`
+- One repository port method is one atomic persistence unit; cross-table
+  writes are grouped inside the implementation. Application code never opens
+  a transaction itself, and code inside a nested atomic section must not
+  catch an inner persistence failure and continue — the unit is rollback-only
+  from that point
+- `ArenaRegistry` mutators run the required `persist` hook before writing
+  back in-memory state, so a strict failure leaves memory and indexes
+  untouched. Callers that deliberately persist nothing write `persist = {}`
+- `PersistenceFailure` is the only exception type allowed to cross a
+  persistence implementation boundary; JDBC, codec, and stored-data
+  validation failures are all converted at the seam so lenient callers cannot
+  be bypassed
 - Use-case results: `*Error?` (null means success) when callers only need the
   rejection reason, or sealed `*Output` types when success itself has multiple
   outcomes or carries data. Result types are declared at the bottom of the

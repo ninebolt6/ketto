@@ -7,6 +7,7 @@ import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.fallIntoVoid
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.registrations
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.genericDamage
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.statusOf
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
@@ -60,6 +61,33 @@ class PaperArenaFailureTest {
         assertEquals(arena, env.service.arenaIdOf(p.uuid))
         assertEquals(ArenaState.ONEMORE, env.view().state)
         assertTrue(records.any { it.message.contains("match projection") && it.thrown is PersistenceFailure })
+    }
+
+    @Test
+    fun `next projection write converges the ledger after a lenient failure`() {
+        env.close()
+        env = TestEnv(folder)
+        val spyState = spyk(env.matchStateRepo)
+        var failing = true
+        every { spyState.persistMatch(any()) } answers {
+            if (failing) throw PersistenceFailure("disk gone") else callOriginal()
+        }
+        env.rebuildWith(matchState = spyState)
+        val arena = env.newArena()
+        val p1 = env.player("Alice")
+        val p2 = env.player("Bob")
+
+        // The first join commits in memory only; nothing reaches the ledger
+        env.join(p1, arena)
+        assertTrue(env.registrations().isEmpty())
+
+        // The next successful projection write converges both participants
+        failing = false
+        env.join(p2, arena)
+        assertEquals(
+            setOf(p1.uniqueId.toString() to "Alice", p2.uniqueId.toString() to "Bob"),
+            env.registrations().map { it.playerUuid to it.playerName }.toSet()
+        )
     }
 
     @Test
