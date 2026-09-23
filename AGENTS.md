@@ -64,4 +64,8 @@ actrun lint                                     # static check of workflows
 - Comments should state intent, constraints, or non-obvious rationale. Prefer
   no comment to boilerplate; avoid facts inferable from names/signatures and
   caller/lifecycle or concrete storage details that can go stale
+- Comments must stand alone for a first-time reader of the file. Never
+  mention rejected alternatives, previous behavior, or the change itself
+  ("instead of X", "now does Y") — that context belongs in commit messages
+  and PR descriptions
 - Do not write fully qualified names; resolve them with imports
