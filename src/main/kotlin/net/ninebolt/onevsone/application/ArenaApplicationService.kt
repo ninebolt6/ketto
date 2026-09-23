@@ -94,6 +94,16 @@ class ArenaApplicationService(
     /** Throws PersistenceFailure on corruption (handled by the caller). */
     fun statsFor(playerId: Uuid): PlayerStats? = stats.find(playerId)
 
+    /**
+     * Rate-limits the named-stats lookup, which resolves uncached names through
+     * an external call. Once per cooldown window per requester.
+     */
+    private val statsLookupThrottle = RequestThrottle(STATS_LOOKUP_COOLDOWN_NANOS)
+
+    /** true when the requester may run a named-stats lookup now. */
+    fun tryAcquireStatsLookup(playerId: Uuid, nowNanos: Long): Boolean =
+        statsLookupThrottle.tryAcquire(playerId, nowNanos)
+
     fun pendingRestore(playerId: Uuid) = recovery.pending(playerId)
 
     // ---- Join, leave, quit ---------------------------------------------------
@@ -211,4 +221,8 @@ class ArenaApplicationService(
         failures.warnOnFailure("Could not unregister ${participant.name} from players.yml; membership record may be stale") {
             sync.unregister(participant)
         }
+
+    private companion object {
+        const val STATS_LOOKUP_COOLDOWN_NANOS = 3_000_000_000L
+    }
 }

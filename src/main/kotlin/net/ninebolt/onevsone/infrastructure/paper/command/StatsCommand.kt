@@ -18,9 +18,6 @@ internal class StatsCommand(
     messenger: Messenger
 ) : AbstractSubcommand(messenger) {
 
-    /** Execution time of argument lookups. Entries past the cooldown are discarded each run, so only the latest request matters. */
-    private val lastLookup = mutableMapOf<Uuid, Long>()
-
     override fun visibleTo(sender: CommandSender): Boolean = true
 
     override fun execute(sender: CommandSender, args: List<String>) {
@@ -31,13 +28,10 @@ internal class StatsCommand(
             return
         }
         // UUID resolution of uncached names hits an external lookup, so rate-limit it
-        val now = System.nanoTime()
-        lastLookup.entries.removeAll { now - it.value >= LOOKUP_COOLDOWN_NANOS }
-        if (playerId in lastLookup) {
+        if (!service.tryAcquireStatsLookup(playerId, System.nanoTime())) {
             messenger.send(player, Message.StatsCooldown)
             return
         }
-        lastLookup[playerId] = now
         players.resolveOfflineId(args[0]) { uuid ->
             if (player.isOnline) {
                 if (uuid == null) messenger.send(player, Message.StatsNone) else showStats(player, uuid)
@@ -60,10 +54,5 @@ internal class StatsCommand(
         messenger.send(sender, Message.StatsWin(stats.wins))
         messenger.send(sender, Message.StatsLose(stats.losses))
         messenger.send(sender, Message.StatsRatio(stats))
-    }
-
-    private companion object {
-        /** Cooldown interval limiting repeated argument-lookup stats calls. */
-        const val LOOKUP_COOLDOWN_NANOS = 3_000_000_000L
     }
 }
