@@ -6,7 +6,6 @@ import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver
 import org.bukkit.Server
 import org.bukkit.command.CommandSender
-import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.entity.Player
 import java.io.File
 import java.util.Locale
@@ -71,40 +70,16 @@ class Messenger private constructor(
     }
 
     companion object {
-        /** Default languages bundled in the jar. User-added languages load from dataFolder/messages/<lang>.yaml. */
-        private val BUNDLED_LANGS = listOf("ja", "en")
-
         /**
-         * Loads messagesDir/<lang>.{yaml,yml} merged per language over the
-         * bundled languages; when both extensions exist for a language, .yaml
-         * wins. "auto" renders per recipient locale; anything else pins all
-         * recipients to that language.
+         * Loads message bundles via LanguageFiles. "auto" renders per
+         * recipient locale; any other value pins all recipients to it.
          */
-        fun load(messagesDir: File, fallbackLang: String, language: String, logger: Logger): Messenger {
-            val bundled = BUNDLED_LANGS.mapNotNull { lang ->
-                val yaml = Messenger::class.java.getResourceAsStream("/messages/$lang.yaml")
-                    ?.bufferedReader()?.use { YamlConfiguration.loadConfiguration(it) }
-                    ?: return@mapNotNull null
-                lang to flatten(yaml)
-            }.toMap()
-            val overrides = messagesDir.listFiles { f -> f.name.matches(Regex(".+\\.ya?ml")) }
-                ?.groupBy { it.nameWithoutExtension.lowercase(Locale.ROOT) }
-                ?.mapValues { (_, files) ->
-                    flatten(YamlConfiguration.loadConfiguration(
-                        files.firstOrNull { it.extension == "yaml" } ?: files.first()))
-                } ?: emptyMap()
-            val bundles = (bundled.keys + overrides.keys)
-                .associateWith { (bundled[it] ?: emptyMap()) + (overrides[it] ?: emptyMap()) }
-            (bundles[fallbackLang]?.keys ?: emptySet()).forEach { key ->
-                bundles.filterKeys { it != fallbackLang }
-                    .filterValues { key !in it }
-                    .keys.forEach { lang -> logger.warning("language '$lang' is missing key '$key' (falls back to '$fallbackLang')") }
-            }
-            return Messenger(bundles, fallbackLang, if (language.equals("auto", ignoreCase = true)) null else language, logger)
-        }
-
-        /** Flattens nested YAML into a map of a.b.c keys to templates. */
-        private fun flatten(config: YamlConfiguration): Map<String, String> =
-            config.getKeys(true).mapNotNull { key -> config.getString(key)?.let { key to it } }.toMap()
+        fun load(messagesDir: File, fallbackLang: String, language: String, logger: Logger): Messenger =
+            Messenger(
+                LanguageFiles.loadBundles(messagesDir, fallbackLang, logger),
+                fallbackLang,
+                if (language.equals("auto", ignoreCase = true)) null else language,
+                logger
+            )
     }
 }

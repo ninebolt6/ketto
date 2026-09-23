@@ -166,6 +166,25 @@ class MessengerTest {
     }
 
     @Test
+    fun `backfill appends only missing keys and keeps custom values`() {
+        File(folder, "messages").mkdirs()
+        val file = File(folder, "messages/ja.yaml")
+        file.writeText("# user comment\nMATCH_JOINED: \"<green>CUSTOM <name>\"")
+        val bundled = javaClass.getResourceAsStream("/messages/ja.yaml")!!
+            .reader().use(YamlConfiguration::loadConfiguration)
+
+        val added = LanguageFiles.backfill(file, bundled)
+        assertEquals(bundledKeys("ja").size - 1, added)
+
+        val reloaded = YamlConfiguration.loadConfiguration(file)
+        assertEquals("<green>CUSTOM <name>", reloaded.getString("MATCH_JOINED"))
+        bundledKeys("ja").forEach { assertTrue(reloaded.isString(it), "still missing: $it") }
+        assertTrue(file.readText().startsWith("# user comment"))
+
+        assertEquals(0, LanguageFiles.backfill(file, bundled))
+    }
+
+    @Test
     fun `rendered color matches template`() {
         val messenger = load()
         assertEquals(NamedTextColor.RED, messenger.render(Message.StatsNone).color())

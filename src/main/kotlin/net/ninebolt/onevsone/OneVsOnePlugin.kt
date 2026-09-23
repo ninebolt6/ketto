@@ -10,6 +10,7 @@ import net.ninebolt.onevsone.infrastructure.paper.ArenaGuardListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaMatchListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaSignListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaTeleportListener
+import net.ninebolt.onevsone.infrastructure.paper.LanguageFiles
 import net.ninebolt.onevsone.infrastructure.paper.Messenger
 import net.ninebolt.onevsone.infrastructure.paper.command.OneVsOneCommand
 import net.ninebolt.onevsone.infrastructure.paper.PaperEquipmentAdapter
@@ -54,8 +55,9 @@ open class OneVsOnePlugin : JavaPlugin() {
         val signRepository = YamlSignRepository(store)
         val matchState = YamlMatchStateRepository(store)
         val stats = YamlPlayerStatsRepository(store)
-        saveResource("messages/ja.yaml", false)
-        saveResource("messages/en.yaml", false)
+        LanguageFiles.syncBundled(dataFolder, logger) {
+            saveResource(it, false)
+        }
         val messenger = Messenger.load(
             messagesDir = File(dataFolder, "messages"),
             fallbackLang = config.getString("default-language") ?: "en",
