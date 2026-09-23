@@ -144,7 +144,7 @@ class MatchProgressionService(
         }
 
         if (death) {
-            runNowOrAfterRespawn(
+            scheduleDeferred(
                 loser.id,
                 loserTicket,
                 valid = { registry.match(arenaId)?.epoch == gen && registry.arenaOf(loser.id) == null }
