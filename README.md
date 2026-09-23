@@ -64,11 +64,11 @@ a second player starts the countdown.
 # Chat language. auto = each player's client locale; a code such as ja/en fixes it server-wide
 language: auto
 # Fallback + language for shared surfaces (signs, scoreboard, etc.)
-default-language: ja
+default-language: en
 required-wins: 3
 ```
 
-Additional languages can be added as `lang/messages_<lang>.yml`.
+Additional languages can be added as `messages/<lang>.yaml`.
 
 Build instructions and contribution flow live in [CONTRIBUTING.md](CONTRIBUTING.md).
 

@@ -25,25 +25,27 @@ class MessagesTest {
     private val plain = PlainTextComponentSerializer.plainText()
 
     private fun load(language: String = "auto", logger: Logger = this.logger) =
-        Messages.load(File(folder, "lang"), "ja", language, logger)
+        Messages.load(File(folder, "messages"), "ja", language, logger)
 
     /** Extracts the set of leaf keys from a bundled resource. */
     private fun bundledKeys(lang: String): Set<String> {
-        val config = javaClass.getResourceAsStream("/lang/messages_$lang.yml")!!
+        val config = javaClass.getResourceAsStream("/messages/$lang.yaml")!!
             .reader().use(YamlConfiguration::loadConfiguration)
         return config.getKeys(true).filterTo(HashSet()) { config.isString(it) }
     }
 
     @Test
-    fun `bundled languages have identical key sets`() {
-        assertEquals(bundledKeys("ja"), bundledKeys("en"))
+    fun `bundled languages cover every message key`() {
+        val keys = MessageKey.entries.mapTo(HashSet()) { it.name }
+        assertEquals(keys, bundledKeys("ja"))
+        assertEquals(keys, bundledKeys("en"))
     }
 
     @Test
     fun `every bundled ja key resolves to a template`() {
         val messages = load()
-        bundledKeys("ja").forEach { key ->
-            assertNotEquals(key, plain.serialize(messages.render(Msg(key), "ja")), "ja missing key: $key")
+        MessageKey.entries.forEach { key ->
+            assertNotEquals(key.name, plain.serialize(messages.render(Msg(key), "ja")), "ja missing key: $key")
         }
     }
 
@@ -113,26 +115,44 @@ class MessagesTest {
 
     @Test
     fun `dataFolder lang file overrides bundled value`() {
-        File(folder, "lang").mkdirs()
-        File(folder, "lang/messages_ja.yml").writeText(
-            """
-            match:
-              joined: "<green>OVERRIDDEN <name>"
-            """.trimIndent()
-        )
+        File(folder, "messages").mkdirs()
+        File(folder, "messages/ja.yaml").writeText("MATCH_JOINED: \"<green>OVERRIDDEN <name>\"\n")
         val text = plain.serialize(load().render(load().joined("a1"), "ja"))
         assertTrue(text.contains("OVERRIDDEN a1"))
     }
 
     @Test
     fun `extra language file registers and missing keys warn`() {
-        File(folder, "lang").mkdirs()
-        File(folder, "lang/messages_de.yml").writeText("match:\n  joined: \"<green>Beigetreten: <name>\"\n")
+        File(folder, "messages").mkdirs()
+        File(folder, "messages/de.yaml").writeText("MATCH_JOINED: \"<green>Beigetreten: <name>\"\n")
         val recording = RecordingLogger()
         val messages = load(logger = recording)
         assertTrue(recording.warnings.any { "missing key" in it })
         assertEquals(
             "Beigetreten: a1",
+            plain.serialize(messages.render(messages.joined("a1"), "de"))
+        )
+    }
+
+    @Test
+    fun `yml extension is also accepted`() {
+        File(folder, "messages").mkdirs()
+        File(folder, "messages/de.yml").writeText("MATCH_JOINED: \"<green>Beigetreten: <name>\"\n")
+        val messages = load()
+        assertEquals(
+            "Beigetreten: a1",
+            plain.serialize(messages.render(messages.joined("a1"), "de"))
+        )
+    }
+
+    @Test
+    fun `yaml wins over yml for the same language`() {
+        File(folder, "messages").mkdirs()
+        File(folder, "messages/de.yml").writeText("MATCH_JOINED: \"<green>yml <name>\"\n")
+        File(folder, "messages/de.yaml").writeText("MATCH_JOINED: \"<green>yaml <name>\"\n")
+        val messages = load()
+        assertEquals(
+            "yaml a1",
             plain.serialize(messages.render(messages.joined("a1"), "de"))
         )
     }

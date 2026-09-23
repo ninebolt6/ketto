@@ -117,7 +117,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         every { plugin.isEnabled } returns true
     }
 
-    val messages = Messages.load(File(folder, "lang"), "ja", "auto", Logger.getLogger("1vs1-test"))
+    val messages = Messages.load(File(folder, "messages"), "ja", "auto", Logger.getLogger("1vs1-test"))
     val failures = PluginFailureReporter { plugin.logger }
     val lookup = PaperPlayerLookup(server)
     val playerPort = PaperPlayerAdapter(lookup, server, plugin, failures)

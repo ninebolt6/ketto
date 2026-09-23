@@ -22,4 +22,4 @@ Architecture, domain, test, and style rules: see [docs/conventions.md](docs/conv
 - Keep changes focused; one concern per PR
 - CI runs `./gradlew clean build`, which treats warnings as errors
 - If the change alters observable behavior, update `README.md`,
-  `config.yml`, or `lang/messages_*.yml` accordingly
+  `config.yml`, or `messages/*.yaml` accordingly

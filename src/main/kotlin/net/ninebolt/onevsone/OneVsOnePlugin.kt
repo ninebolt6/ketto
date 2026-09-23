@@ -54,11 +54,11 @@ open class OneVsOnePlugin : JavaPlugin() {
         val signRepository = YamlSignRepository(store)
         val matchState = YamlMatchStateRepository(store)
         val stats = YamlPlayerStatsRepository(store)
-        saveResource("lang/messages_ja.yml", false)
-        saveResource("lang/messages_en.yml", false)
+        saveResource("messages/ja.yaml", false)
+        saveResource("messages/en.yaml", false)
         val messages = Messages.load(
-            langDir = File(dataFolder, "lang"),
-            defaultLang = config.getString("default-language") ?: "ja",
+            messagesDir = File(dataFolder, "messages"),
+            fallbackLang = config.getString("default-language") ?: "en",
             language = config.getString("language") ?: "auto",
             logger = logger
         )
