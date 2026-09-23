@@ -1,13 +1,13 @@
 package net.ninebolt.onevsone.infrastructure.paper.command
 
-import net.ninebolt.onevsone.application.ArenaAdministrationService
+import net.ninebolt.onevsone.application.LobbyService
 import net.ninebolt.onevsone.infrastructure.paper.message.Message
 import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import net.ninebolt.onevsone.infrastructure.paper.toWorldPosition
 import org.bukkit.command.CommandSender
 
 internal class SetLobbyCommand(
-    private val admin: ArenaAdministrationService,
+    private val lobby: LobbyService,
     messenger: Messenger
 ) : AbstractSubcommand(messenger) {
 
@@ -16,7 +16,7 @@ internal class SetLobbyCommand(
         val player = sender.requirePlayer() ?: return
         val position = player.location.toWorldPosition()
         if (position != null) {
-            admin.setLobby(position)
+            lobby.setLobby(position)
             messenger.send(player, Message.LobbySet)
         }
     }

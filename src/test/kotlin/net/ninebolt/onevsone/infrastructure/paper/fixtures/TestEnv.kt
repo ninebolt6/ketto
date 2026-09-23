@@ -12,6 +12,7 @@ import net.ninebolt.onevsone.application.ArenaRegistry
 import net.ninebolt.onevsone.application.ArenaSignService
 import net.ninebolt.onevsone.application.JoinReply
 import net.ninebolt.onevsone.application.LeaveReply
+import net.ninebolt.onevsone.application.LobbyService
 import net.ninebolt.onevsone.application.MatchProgressionService
 import net.ninebolt.onevsone.application.MatchStateSync
 import net.ninebolt.onevsone.application.PlayerRecoveryService
@@ -147,6 +148,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         val admin: ArenaAdministrationService,
         val statsService: PlayerStatsService,
         val signs: ArenaSignService,
+        val lobby: LobbyService,
         val signListener: ArenaSignListener,
         val command: OneVsOneCommand
     )
@@ -178,6 +180,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     val admin get() = deps.admin
     val statsService get() = deps.statsService
     val signs get() = deps.signs
+    val lobby get() = deps.lobby
     val signListener get() = deps.signListener
     val command get() = deps.command
 
@@ -206,15 +209,16 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         val lifecycle = ArenaLifecycleService(
             registry, arenaRepo, MatchStateSync(matchStateRepo, presentation), recovery, progression, failures
         )
-        val admin = ArenaAdministrationService(registry, arenaRepo, signRepo, lobbyRepo, equipment, progression)
+        val admin = ArenaAdministrationService(registry, arenaRepo, signRepo, equipment, progression)
         val statsService = PlayerStatsService(statsRepo)
         val signs = ArenaSignService(registry, signRepo, presentation)
+        val lobby = LobbyService(lobbyRepo)
         return Deps(
             store, backupStore, kitStore, arenaRepo, lobbyRepo, signRepo, matchStateRepo, statsRepo,
             equipment, presentation, registry, recovery, progression, service, lifecycle, admin,
-            statsService, signs,
+            statsService, signs, lobby,
             ArenaSignListener(service, signs, messenger),
-            OneVsOneCommand(service, admin, statsService, signs, playerPort, failures, messenger)
+            OneVsOneCommand(service, admin, statsService, signs, lobby, playerPort, failures, messenger)
         )
     }
 

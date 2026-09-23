@@ -84,13 +84,6 @@ class ArenaAdministrationServiceTest {
     }
 
     @Test
-    fun `setLobby persists position`() {
-        val pos = WorldPosition.new("lobby", 5.0, 64.0, 5.0)
-        app.admin.setLobby(pos)
-        assertEquals(pos, app.arenas.lobbyPosition)
-    }
-
-    @Test
     fun `setKit delegates to kit port`() {
         app.newArena()
         val p = app.players.add("Alice")

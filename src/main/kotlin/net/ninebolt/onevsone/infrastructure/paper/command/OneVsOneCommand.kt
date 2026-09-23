@@ -3,6 +3,7 @@ package net.ninebolt.onevsone.infrastructure.paper.command
 import net.ninebolt.onevsone.application.ArenaAdministrationService
 import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.application.ArenaSignService
+import net.ninebolt.onevsone.application.LobbyService
 import net.ninebolt.onevsone.application.PlayerStatsService
 import net.ninebolt.onevsone.application.port.FailureReporter
 import net.ninebolt.onevsone.application.port.PlayerPort
@@ -21,6 +22,7 @@ class OneVsOneCommand(
     admin: ArenaAdministrationService,
     statsService: PlayerStatsService,
     signs: ArenaSignService,
+    lobby: LobbyService,
     players: PlayerPort,
     failures: FailureReporter,
     private val messenger: Messenger
@@ -32,7 +34,7 @@ class OneVsOneCommand(
             "stats" to StatsCommand(statsService, players, failures, messenger),
             "leave" to LeaveCommand(service, messenger),
             "lobby" to CommandGroup(Message.UsageLobby, messenger, mapOf(
-                "set" to SetLobbyCommand(admin, messenger)
+                "set" to SetLobbyCommand(lobby, messenger)
             )),
             "arena" to ArenaGroup(
                 Message.UsageArena, Message.UsageArenaOps, messenger, admin,

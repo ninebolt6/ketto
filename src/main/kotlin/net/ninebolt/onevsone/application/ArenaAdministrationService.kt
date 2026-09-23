@@ -3,21 +3,19 @@ package net.ninebolt.onevsone.application
 import net.ninebolt.onevsone.application.port.ArenaRepository
 import net.ninebolt.onevsone.application.port.ArenaSignRepository
 import net.ninebolt.onevsone.application.port.KitPort
-import net.ninebolt.onevsone.application.port.LobbyRepository
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.SpawnSlot
 import net.ninebolt.onevsone.domain.WorldPosition
 import kotlin.uuid.Uuid
 
 /**
- * Admin operations: create/remove/enable/disable and spawn/kit/lobby
- * settings. Any needed abort is requested to MatchProgressionService.
+ * Admin operations: create/remove/enable/disable and spawn/kit settings.
+ * Any needed abort is requested to MatchProgressionService.
  */
 class ArenaAdministrationService(
     private val registry: ArenaRegistry,
     private val arenas: ArenaRepository,
     private val signs: ArenaSignRepository,
-    private val lobby: LobbyRepository,
     private val kit: KitPort,
     private val progression: MatchProgressionService
 ) {
@@ -71,9 +69,5 @@ class ArenaAdministrationService(
         val arena = arena(name) ?: return false
         kit.saveKit(arena.id, playerId)
         return true
-    }
-
-    fun setLobby(position: WorldPosition) {
-        lobby.setLobby(position)
     }
 }
