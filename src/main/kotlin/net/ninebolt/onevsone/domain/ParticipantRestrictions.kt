@@ -3,6 +3,11 @@ package net.ninebolt.onevsone.domain
 /**
  * Pure rules deriving participant restrictions from the arena state.
  * Listeners only convert events; per-state decisions are centralized here.
+ * Explicitly out of scope: third-party splash/lingering potion effects,
+ * knockback from wind charges (damage is blocked, knockback may remain),
+ * unattributable environmental interference such as third-party lava
+ * (left to arena enclosure or region protection), and destruction via
+ * igniting pre-existing TNT (flint and steel is allowed).
  */
 data class ParticipantRestrictions private constructor(
     val horizontalMoveFrozen: Boolean,

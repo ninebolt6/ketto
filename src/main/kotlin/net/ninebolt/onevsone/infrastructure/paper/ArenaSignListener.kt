@@ -21,6 +21,8 @@ import kotlin.uuid.toKotlinUuid
  * Event side of join signs: joining via clicks and protecting registered signs
  * from destruction. Registration/coordinate persistence is
  * ArenaSignRepository's job; display updates are MatchPresentationPort's.
+ * Destruction of the supporting block and changes by server commands or other
+ * plugins are out of scope.
  */
 class ArenaSignListener(
     private val service: ArenaApplicationService,

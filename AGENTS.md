@@ -16,8 +16,7 @@ actrun lint                                     # static check of workflows
 - Dependency direction is `infrastructure → application → domain` (inward only,
   enforced by `ArchitectureTest`). `OneVsOnePlugin` is the composition root and
   wires all dependencies manually
-- application connects to the outside through interfaces in `port/`. See docs/
-  for detailed specs
+- application connects to the outside through interfaces in `port/`
 
 ## Domain
 
