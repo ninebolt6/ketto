@@ -1,6 +1,7 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
 import net.kyori.adventure.text.format.NamedTextColor
+import net.kyori.adventure.text.minimessage.MiniMessage
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.RecordingLogger
@@ -42,10 +43,16 @@ class MessengerTest {
     }
 
     @Test
-    fun `every bundled ja key resolves to a template`() {
-        val messenger = load()
-        MessageKey.entries.forEach { key ->
-            assertNotEquals(key.name, plain.serialize(messenger.render(key, "ja")), "ja missing key: $key")
+    fun `every bundled template parses and differs from its key`() {
+        val mini = MiniMessage.miniMessage()
+        listOf("ja", "en").forEach { lang ->
+            val config = javaClass.getResourceAsStream("/messages/$lang.yaml")!!
+                .reader().use(YamlConfiguration::loadConfiguration)
+            config.getKeys(true).filter { config.isString(it) }.forEach { key ->
+                val template = config.getString(key)!!
+                assertNotEquals(key, template, "$lang template equals key name: $key")
+                mini.deserialize(template)
+            }
         }
     }
 

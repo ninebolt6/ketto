@@ -59,10 +59,6 @@ class Messenger private constructor(
             }
         }.toTypedArray<TagResolver>())
 
-    /** Renders a bare key with no placeholders. For tests that enumerate keys. */
-    internal fun render(key: MessageKey, lang: String = serverLang): Component =
-        mini.deserialize(template(lang, key.name))
-
     fun send(sender: CommandSender, message: Message) {
         val lang = localeOf(sender)
         sender.sendMessage(render(Message.Prefix, lang).append(render(message, lang)))
