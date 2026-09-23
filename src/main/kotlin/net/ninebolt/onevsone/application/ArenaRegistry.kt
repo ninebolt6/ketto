@@ -19,7 +19,6 @@ import kotlin.uuid.Uuid
  */
 class ArenaRegistry(private val requiredWins: Int) {
 
-    /** A pair of an arena and its current match aggregate. */
     private data class Slot(val arena: Arena, val match: ArenaMatch)
 
     private val slots = linkedMapOf<Arena.Id, Slot>()

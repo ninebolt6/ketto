@@ -37,12 +37,10 @@ class PlayerRecoveryService(
     private val ticketsByUuid = mutableMapOf<Uuid, RestoreTicket>()
     private val ticketsByName = mutableMapOf<String, RestoreTicket>()
 
-    /** Called at startup. */
     fun loadPersisted() {
         backups.pendingBackups().forEach(::registerTicket)
     }
 
-    /** Called after backupBeforeMatch succeeds. */
     fun register(refs: List<BackupRef>) {
         refs.forEach(::registerTicket)
     }

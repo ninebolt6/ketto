@@ -2,7 +2,6 @@ package net.ninebolt.onevsone.domain
 
 /** Rule deriving a participant's teleport permission from the state. */
 enum class TeleportRestriction {
-    /** No restriction. */
     UNRESTRICTED,
 
     /** Only ender pearls and the plugin's own teleports are allowed. */

@@ -9,12 +9,12 @@ import net.ninebolt.onevsone.domain.Participant
  * aggregate snapshots.
  */
 interface MatchStateRepository {
-    /** Writes state, participant names, and win counts to status/<arena>.yml. */
+    /** Persists state, participant names, and win counts. */
     fun saveStatus(match: ArenaMatch)
-    /** Registers participation in players.yml (membership only; no inventory). */
+    /** Records arena membership without changing inventory backups. */
     fun registerParticipant(participant: Participant, arena: Arena.Id)
-    /** Removes the participation record from players.yml. Backups (inv.*) are not deleted. */
+    /** Removes arena membership without deleting inventory backups. */
     fun unregisterParticipant(playerName: String)
-    /** Resets leftover registrations on startup (inv.* backups are kept). */
+    /** Clears arena membership while preserving inventory backups. */
     fun clearRegistrations()
 }

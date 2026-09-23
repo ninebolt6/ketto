@@ -30,7 +30,6 @@ interface MatchPresentationPort {
     fun championFirework(playerId: Uuid)
     /** Updates the sidebar scoreboard with the latest match state. */
     fun updateScoreboard(match: ArenaMatch)
-    /** Clears the scoreboard. */
     fun clearScoreboard(playerId: Uuid)
     /** Updates the sign display (joinability + state line). */
     fun updateSign(arena: Arena.Id, state: ArenaState)

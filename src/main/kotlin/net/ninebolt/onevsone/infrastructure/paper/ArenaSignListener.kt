@@ -63,7 +63,6 @@ class ArenaSignListener(
         event.blockList().removeIf(::isRegisteredSign)
     }
 
-    /** Whether the block is a join sign of a registered arena. */
     private fun isRegisteredSign(block: Block): Boolean =
         block.state is Sign && admin.signOwner(block.world.name, block.x, block.y, block.z) != null
 

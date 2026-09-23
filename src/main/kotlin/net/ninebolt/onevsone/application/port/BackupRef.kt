@@ -21,7 +21,6 @@ data class BackupRef private constructor(
         fun new(matchId: MatchId, playerId: Uuid?, playerName: String): BackupRef =
             BackupRef(Uuid.random(), matchId, playerId, playerName)
 
-        /** Reconstruction from players.yml etc. */
         fun restored(backupId: Uuid, matchId: MatchId, playerId: Uuid?, playerName: String): BackupRef =
             BackupRef(backupId, matchId, playerId, playerName)
     }

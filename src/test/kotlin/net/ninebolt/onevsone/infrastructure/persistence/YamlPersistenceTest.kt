@@ -22,7 +22,6 @@ import java.io.File
 import java.util.logging.Logger
 import kotlin.uuid.Uuid
 
-/** Verifies the YamlPersistence scenarios through the repository APIs. */
 class YamlPersistenceTest {
 
     @TempDir

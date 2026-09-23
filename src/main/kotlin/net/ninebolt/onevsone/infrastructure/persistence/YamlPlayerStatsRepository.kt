@@ -5,7 +5,6 @@ import net.ninebolt.onevsone.application.port.PlayerStatsRepository
 import net.ninebolt.onevsone.domain.PlayerStats
 import kotlin.uuid.Uuid
 
-/** Persistence for stats/<uuid>.yml. */
 class YamlPlayerStatsRepository(private val store: YamlStore) : PlayerStatsRepository {
 
     /** A missing file is null; corruption is PersistenceFailure. */
