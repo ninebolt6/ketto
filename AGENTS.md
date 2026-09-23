@@ -69,9 +69,10 @@
 
 ## Style
 
-- Comments should state intent, constraints, or non-obvious rationale. Prefer
-  no comment to boilerplate; avoid facts inferable from names/signatures and
-  caller/lifecycle or concrete storage details that can go stale
+- Write no comments. The only exception is a single line stating a constraint
+  the code cannot express — e.g. imposed by an external system or ordering
+  that looks arbitrary. If a comment would describe what the adjacent code
+  does, the code is under-named; fix the code instead
 - Comments must stand alone for a first-time reader of the file. Never
   mention rejected alternatives, previous behavior, or the change itself
   ("instead of X", "now does Y") — that context belongs in commit messages
