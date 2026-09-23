@@ -7,7 +7,8 @@ import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.lastBroadcast
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.playersYaml
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.backupByName
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.registrations
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.view
 import org.bukkit.Material
@@ -98,10 +99,10 @@ class PaperArenaMembershipTest {
         val p1 = env.player("Alice")
         env.join(p1, arena)
         assertNull(p1.inventory.contents[0])
-        val yaml = env.playersYaml()
-        assertTrue(yaml.getStringList("players").contains("Alice"))
-        assertEquals("arena1", yaml.getString("arena.Alice"))
-        assertNull(yaml.getConfigurationSection("inv.Alice"))
+        val registration = env.registrations().single { it.playerName == "Alice" }
+        assertEquals(p1.uniqueId.toString(), registration.playerUuid)
+        assertEquals("arena1", registration.arenaName)
+        assertNull(env.backupByName("Alice"))
     }
 
     @Test
@@ -165,9 +166,8 @@ class PaperArenaMembershipTest {
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
         assertNull(env.statsRepo.find(p2.uuid))
         assertNull(env.statsRepo.find(p1.uuid))
-        val yaml = env.playersYaml()
-        assertNull(yaml.getConfigurationSection("inv.Alice"))
-        assertNull(yaml.getConfigurationSection("inv.Bob"))
+        assertNull(env.backupByName("Alice"))
+        assertNull(env.backupByName("Bob"))
     }
 
     @Test

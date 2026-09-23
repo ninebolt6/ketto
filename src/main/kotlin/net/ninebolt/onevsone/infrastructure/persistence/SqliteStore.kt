@@ -52,11 +52,21 @@ class SqliteStore(folder: File, private val logger: Logger) : AutoCloseable {
         }
         try {
             logger.info("SQLite ${connection.metaData.driverVersion} at ${file.name}")
+            // A newer file must be rejected before pragmas touch it (even
+            // journal_mode=WAL would rewrite the header of an unknown schema).
+            checkVersion()
             applyPragmas()
             migrate()
         } catch (e: Throwable) {
             runCatching { connection.close() }
             throw e
+        }
+    }
+
+    private fun checkVersion() {
+        val version = userVersion()
+        if (version > SCHEMA_VERSION) {
+            throw PersistenceFailure("data.db has schema version $version, newer than supported $SCHEMA_VERSION; not modifying it")
         }
     }
 
@@ -74,21 +84,20 @@ class SqliteStore(folder: File, private val logger: Logger) : AutoCloseable {
 
     /** user_version guards schema migrations; a newer file is never rewritten. */
     private fun migrate() {
-        val version = connection.createStatement().use { st ->
-            st.executeQuery("PRAGMA user_version").use { rs ->
-                rs.next()
-                rs.getInt(1)
-            }
-        }
-        if (version > SCHEMA_VERSION) {
-            throw PersistenceFailure("data.db has schema version $version, newer than supported $SCHEMA_VERSION; not modifying it")
-        }
-        if (version == SCHEMA_VERSION) return
+        if (userVersion() == SCHEMA_VERSION) return
         connection.createStatement().use { st ->
             SCHEMA.forEach(st::execute)
             st.execute("PRAGMA user_version=$SCHEMA_VERSION")
         }
     }
+
+    private fun userVersion(): Int =
+        connection.createStatement().use { st ->
+            st.executeQuery("PRAGMA user_version").use { rs ->
+                rs.next()
+                rs.getInt(1)
+            }
+        }
 
     /**
      * Runs block inside one transaction. The outermost call commits or rolls
@@ -114,10 +123,13 @@ class SqliteStore(folder: File, private val logger: Logger) : AutoCloseable {
         try {
             val result = block()
             if (txRollbackOnly) {
+                // An inner block failed and was swallowed by the caller; the
+                // unit still rolls back, and callers must not see a silent
+                // rollback as a successful commit.
                 rollbackQuietly()
-            } else {
-                connection.commit()
+                throw PersistenceFailure("Transaction rolled back: an inner operation failed")
             }
+            connection.commit()
             return result
         } catch (e: Throwable) {
             rollbackQuietly()

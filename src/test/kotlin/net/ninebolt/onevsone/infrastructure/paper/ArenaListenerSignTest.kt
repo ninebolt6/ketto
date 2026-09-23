@@ -90,8 +90,8 @@ class ArenaListenerSignTest {
 
     @Test
     fun `non sign block and non right click ignored`() {
-        env.signRepo.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
         env.newArena()
+        env.signRepo.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
         val p1 = env.player("Alice")
 
         env.fire(interact(p1, env.plainBlock(3, 64, 3)))

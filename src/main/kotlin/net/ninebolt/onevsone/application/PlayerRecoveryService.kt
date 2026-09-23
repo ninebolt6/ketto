@@ -48,8 +48,8 @@ class PlayerRecoveryService(
         val owner = ref.playerId
         if (owner == null) {
             failures.warn(
-                "Backup for ${ref.playerName} has no owner uuid and cannot be restored; " +
-                    "add 'uuid' to inv.${ref.playerName} in players.yml or delete the record"
+                "Backup ${ref.backupId} for ${ref.playerName} has no owner uuid and cannot be restored; " +
+                    "remove the stale row from the backups table"
             )
             return
         }

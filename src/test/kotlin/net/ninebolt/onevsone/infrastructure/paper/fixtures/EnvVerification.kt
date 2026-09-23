@@ -1,9 +1,7 @@
 package net.ninebolt.onevsone.infrastructure.paper.fixtures
 
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
-import org.bukkit.configuration.file.YamlConfiguration
 import org.mockbukkit.mockbukkit.command.MessageTarget
-import java.io.File
 
 /** Observation helpers for TestEnv. Only collects reads of already-sent messages. */
 
@@ -18,5 +16,31 @@ internal fun TestEnv.lastBroadcast(): String =
 
 internal fun TestEnv.view(name: String = "arena1") = service.matchOf(name)!!
 
-internal fun TestEnv.playersYaml() =
-    YamlConfiguration.loadConfiguration(File(folder, "status/players.yml"))
+// ---- Database assertions ----------------------------------------------------
+
+internal data class RegistrationRow(val playerUuid: String, val playerName: String, val arenaName: String)
+
+internal data class BackupRow(val backupId: String, val matchId: String, val playerUuid: String?, val playerName: String)
+
+internal data class StatusRow(val state: String, val players: List<String>)
+
+internal fun TestEnv.registrations(): List<RegistrationRow> =
+    store.query("SELECT player_uuid, player_name, arena_name FROM registrations ORDER BY rowid") { row ->
+        RegistrationRow(row.getString("player_uuid"), row.getString("player_name"), row.getString("arena_name"))
+    }
+
+internal fun TestEnv.backupByName(playerName: String): BackupRow? =
+    store.queryOne("SELECT backup_id, match_id, player_uuid, player_name FROM backups WHERE player_name = ?", playerName) { row ->
+        BackupRow(
+            row.getString("backup_id"),
+            row.getString("match_id"),
+            row.getString("player_uuid"),
+            row.getString("player_name")
+        )
+    }
+
+internal fun TestEnv.statusOf(arena: String): StatusRow? =
+    store.queryOne("SELECT state, players FROM match_status WHERE arena_name = ?", arena) { row ->
+        val players = row.getString("players")
+        StatusRow(row.getString("state"), if (players.isEmpty()) emptyList() else players.split(","))
+    }

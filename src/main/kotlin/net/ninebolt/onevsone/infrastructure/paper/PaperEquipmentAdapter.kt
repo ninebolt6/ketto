@@ -8,8 +8,8 @@ import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.MatchId
 import net.ninebolt.onevsone.domain.Participant
 import net.ninebolt.onevsone.infrastructure.persistence.PersistedBackup
-import net.ninebolt.onevsone.infrastructure.persistence.YamlBackupStore
-import net.ninebolt.onevsone.infrastructure.persistence.YamlKitStore
+import net.ninebolt.onevsone.infrastructure.persistence.SqliteBackupStore
+import net.ninebolt.onevsone.infrastructure.persistence.SqliteKitStore
 import org.bukkit.entity.Player
 import kotlin.uuid.Uuid
 
@@ -18,12 +18,12 @@ import kotlin.uuid.Uuid
  * layer as PaperInventorySnapshot.
  */
 class PaperEquipmentAdapter(
-    private val backups: YamlBackupStore,
-    private val kitStore: YamlKitStore,
+    private val backups: SqliteBackupStore,
+    private val kitStore: SqliteKitStore,
     private val lookup: PaperPlayerLookup
 ) : KitPort, InventoryBackupPort {
 
-    /** In-memory cache of arena kits (the inventory of arena/<name>.yml). */
+    /** In-memory cache of arena kits. */
     private val kits = mutableMapOf<Arena.Id, PaperInventorySnapshot>()
 
     /** Backup payloads captured/loaded while running (backupId -> snapshot). */

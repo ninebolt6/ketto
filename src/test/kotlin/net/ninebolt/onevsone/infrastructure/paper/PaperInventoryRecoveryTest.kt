@@ -7,8 +7,8 @@ import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.MatchId
 import net.ninebolt.onevsone.domain.Participant
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.backupByName
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.genericDamage
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.playersYaml
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.view
 import net.ninebolt.onevsone.infrastructure.persistence.PersistedBackup
@@ -116,6 +116,7 @@ class PaperInventoryRecoveryTest {
         p.disconnect()
         p.inventory.setItem(0, env.item(Material.STONE))
 
+        env.arenaRepo.save(Arena.new(Arena.Id.new("a1")))
         val ref = BackupRef.new(MatchId.new(), participant.id, participant.name)
         env.matchStateRepo.persistMatch(
             ArenaMatch.restored(
@@ -132,7 +133,7 @@ class PaperInventoryRecoveryTest {
 
         p.reconnect()
         assertNull(p.inventory.contents[0])
-        assertNull(env.playersYaml().getConfigurationSection("inv.Alice"))
+        assertNull(env.backupByName("Alice"))
     }
 
     @Test
@@ -175,12 +176,12 @@ class PaperInventoryRecoveryTest {
         env.lifecycle.shutdown()
 
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
-        assertEquals(p2.uniqueId.toString(), env.playersYaml().getString("inv.Bob.uuid"))
+        assertEquals(p2.uniqueId.toString(), env.backupByName("Bob")!!.playerUuid)
 
         env.disconnectWithoutQuitHandler(p2)
         p2.reconnect()
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
-        assertNull(env.playersYaml().getConfigurationSection("inv.Bob"))
+        assertNull(env.backupByName("Bob"))
 
         env.runOneShots()
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
@@ -220,11 +221,11 @@ class PaperInventoryRecoveryTest {
         env.disconnectWithoutQuitHandler(p2)
         env.service.abort(arena)
 
-        assertEquals(p2.uniqueId.toString(), env.playersYaml().getString("inv.Bob.uuid"))
+        assertEquals(p2.uniqueId.toString(), env.backupByName("Bob")!!.playerUuid)
 
         p2.reconnect()
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
-        assertNull(env.playersYaml().getConfigurationSection("inv.Bob"))
+        assertNull(env.backupByName("Bob"))
     }
 
     @Test
@@ -238,13 +239,12 @@ class PaperInventoryRecoveryTest {
         env.join(p2, arena)
         p1.inventory.setItem(0, env.item(Material.APPLE))
         env.tick(5)
-        assertNull(env.playersYaml().getConfigurationSection("inv.Alice"))
+        assertNull(env.backupByName("Alice"))
         env.tick()
         assertEquals(ArenaState.INGAME, env.view().state)
         assertEquals(Material.IRON_SWORD, p1.inventory.contents[0]?.type)
-        val yaml = env.playersYaml()
-        assertEquals(p1.uniqueId.toString(), yaml.getString("inv.Alice.uuid"))
-        assertEquals(p2.uniqueId.toString(), yaml.getString("inv.Bob.uuid"))
+        assertEquals(p1.uniqueId.toString(), env.backupByName("Alice")!!.playerUuid)
+        assertEquals(p2.uniqueId.toString(), env.backupByName("Bob")!!.playerUuid)
         env.service.abort(arena)
         assertEquals(Material.APPLE, p1.inventory.contents[0]?.type)
     }

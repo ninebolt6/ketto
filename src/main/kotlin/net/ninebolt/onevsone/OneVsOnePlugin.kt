@@ -24,14 +24,14 @@ import net.ninebolt.onevsone.infrastructure.paper.PaperPlayerLookup
 import net.ninebolt.onevsone.infrastructure.paper.PaperScheduler
 import net.ninebolt.onevsone.infrastructure.paper.PluginFailureReporter
 import net.ninebolt.onevsone.infrastructure.paper.PluginSettings
-import net.ninebolt.onevsone.infrastructure.persistence.YamlArenaRepository
-import net.ninebolt.onevsone.infrastructure.persistence.YamlBackupStore
-import net.ninebolt.onevsone.infrastructure.persistence.YamlKitStore
-import net.ninebolt.onevsone.infrastructure.persistence.YamlLobbyRepository
-import net.ninebolt.onevsone.infrastructure.persistence.YamlMatchStateRepository
-import net.ninebolt.onevsone.infrastructure.persistence.YamlSignRepository
-import net.ninebolt.onevsone.infrastructure.persistence.YamlPlayerStatsRepository
-import net.ninebolt.onevsone.infrastructure.persistence.YamlStore
+import net.ninebolt.onevsone.infrastructure.persistence.SqliteArenaRepository
+import net.ninebolt.onevsone.infrastructure.persistence.SqliteArenaSignRepository
+import net.ninebolt.onevsone.infrastructure.persistence.SqliteBackupStore
+import net.ninebolt.onevsone.infrastructure.persistence.SqliteKitStore
+import net.ninebolt.onevsone.infrastructure.persistence.SqliteLobbyRepository
+import net.ninebolt.onevsone.infrastructure.persistence.SqliteMatchStateRepository
+import net.ninebolt.onevsone.infrastructure.persistence.SqlitePlayerStatsRepository
+import net.ninebolt.onevsone.infrastructure.persistence.SqliteStore
 import org.bukkit.plugin.java.JavaPlugin
 
 /**
@@ -46,6 +46,8 @@ open class OneVsOnePlugin : JavaPlugin() {
 
     private lateinit var lifecycle: ArenaLifecycleService
 
+    private lateinit var sqliteStore: SqliteStore
+
     override fun onEnable() {
         saveDefaultConfig()
         val settings = PluginSettings.load(config, logger)
@@ -59,18 +61,19 @@ open class OneVsOnePlugin : JavaPlugin() {
         )
 
         val failures = PluginFailureReporter { logger }
-        val store = YamlStore(dataFolder, logger)
-        val arenaRepository = YamlArenaRepository(store)
-        val lobbyRepository = YamlLobbyRepository(store)
-        val signRepository = YamlSignRepository(store)
-        val matchState = YamlMatchStateRepository(store)
-        val stats = YamlPlayerStatsRepository(store)
+        val store = SqliteStore(dataFolder, logger)
+        sqliteStore = store
+        val arenaRepository = SqliteArenaRepository(store)
+        val lobbyRepository = SqliteLobbyRepository(store)
+        val signRepository = SqliteArenaSignRepository(store)
+        val matchState = SqliteMatchStateRepository(store)
+        val stats = SqlitePlayerStatsRepository(store)
 
         val lookup = PaperPlayerLookup(server)
         val playerPort = PaperPlayerAdapter(lookup = lookup, server = server, plugin = this, failures = failures)
         val equipment = PaperEquipmentAdapter(
-            backups = YamlBackupStore(store),
-            kitStore = YamlKitStore(store),
+            backups = SqliteBackupStore(store),
+            kitStore = SqliteKitStore(store),
             lookup = lookup
         )
         val presentation = PaperPresentation(server = server, messenger = messenger, failures = failures)
@@ -145,5 +148,6 @@ open class OneVsOnePlugin : JavaPlugin() {
 
     override fun onDisable() {
         if (::lifecycle.isInitialized) lifecycle.shutdown()
+        if (::sqliteStore.isInitialized) sqliteStore.close()
     }
 }

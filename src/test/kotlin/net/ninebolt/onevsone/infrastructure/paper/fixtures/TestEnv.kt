@@ -35,14 +35,14 @@ import net.ninebolt.onevsone.infrastructure.paper.PaperPlayerAdapter
 import net.ninebolt.onevsone.infrastructure.paper.PaperPlayerLookup
 import net.ninebolt.onevsone.infrastructure.paper.PaperScheduler
 import net.ninebolt.onevsone.infrastructure.paper.PluginFailureReporter
-import net.ninebolt.onevsone.infrastructure.persistence.YamlArenaRepository
-import net.ninebolt.onevsone.infrastructure.persistence.YamlBackupStore
-import net.ninebolt.onevsone.infrastructure.persistence.YamlKitStore
-import net.ninebolt.onevsone.infrastructure.persistence.YamlLobbyRepository
-import net.ninebolt.onevsone.infrastructure.persistence.YamlMatchStateRepository
-import net.ninebolt.onevsone.infrastructure.persistence.YamlSignRepository
-import net.ninebolt.onevsone.infrastructure.persistence.YamlPlayerStatsRepository
-import net.ninebolt.onevsone.infrastructure.persistence.YamlStore
+import net.ninebolt.onevsone.infrastructure.persistence.SqliteArenaRepository
+import net.ninebolt.onevsone.infrastructure.persistence.SqliteArenaSignRepository
+import net.ninebolt.onevsone.infrastructure.persistence.SqliteBackupStore
+import net.ninebolt.onevsone.infrastructure.persistence.SqliteKitStore
+import net.ninebolt.onevsone.infrastructure.persistence.SqliteLobbyRepository
+import net.ninebolt.onevsone.infrastructure.persistence.SqliteMatchStateRepository
+import net.ninebolt.onevsone.infrastructure.persistence.SqlitePlayerStatsRepository
+import net.ninebolt.onevsone.infrastructure.persistence.SqliteStore
 import net.kyori.adventure.text.Component
 import org.bukkit.Location
 import org.bukkit.Material
@@ -130,12 +130,12 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
 
     /** Dependencies torn down and rebuilt together by rebuildWith. Access always resolves the current generation. */
     private class Deps(
-        val store: YamlStore,
-        val backupStore: YamlBackupStore,
-        val kitStore: YamlKitStore,
-        val arenaRepo: YamlArenaRepository,
-        val lobbyRepo: YamlLobbyRepository,
-        val signRepo: YamlSignRepository,
+        val store: SqliteStore,
+        val backupStore: SqliteBackupStore,
+        val kitStore: SqliteKitStore,
+        val arenaRepo: SqliteArenaRepository,
+        val lobbyRepo: SqliteLobbyRepository,
+        val signRepo: SqliteArenaSignRepository,
         val matchStateRepo: MatchStateRepository,
         val statsRepo: PlayerStatsRepository,
         val equipment: PaperEquipmentAdapter,
@@ -154,8 +154,8 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     )
 
     private var deps = run {
-        val store = YamlStore(folder, Logger.getLogger("1vs1-test"))
-        makeDeps(store, YamlBackupStore(store), YamlMatchStateRepository(store), YamlPlayerStatsRepository(store))
+        val store = SqliteStore(folder, Logger.getLogger("1vs1-test"))
+        makeDeps(store, SqliteBackupStore(store), SqliteMatchStateRepository(store), SqlitePlayerStatsRepository(store))
     }
 
     init {
@@ -185,15 +185,15 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     val command get() = deps.command
 
     private fun makeDeps(
-        store: YamlStore,
-        backupStore: YamlBackupStore,
+        store: SqliteStore,
+        backupStore: SqliteBackupStore,
         matchStateRepo: MatchStateRepository,
         statsRepo: PlayerStatsRepository
     ): Deps {
-        val kitStore = YamlKitStore(store)
-        val arenaRepo = YamlArenaRepository(store)
-        val lobbyRepo = YamlLobbyRepository(store)
-        val signRepo = YamlSignRepository(store)
+        val kitStore = SqliteKitStore(store)
+        val arenaRepo = SqliteArenaRepository(store)
+        val lobbyRepo = SqliteLobbyRepository(store)
+        val signRepo = SqliteArenaSignRepository(store)
         val equipment = PaperEquipmentAdapter(backupStore, kitStore, lookup)
         val presentation = PaperPresentation(server, messenger, failures)
         val registry = ArenaRegistry(requiredWins, failures)
@@ -224,10 +224,10 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
 
     /** Rebuilds all dependencies with the store or individual ports swapped out (for fault injection). */
     fun rebuildWith(
-        newStore: YamlStore = deps.store,
-        backupStore: YamlBackupStore = YamlBackupStore(newStore),
-        matchState: MatchStateRepository = YamlMatchStateRepository(newStore),
-        statsRepo: PlayerStatsRepository = YamlPlayerStatsRepository(newStore)
+        newStore: SqliteStore = deps.store,
+        backupStore: SqliteBackupStore = SqliteBackupStore(newStore),
+        matchState: MatchStateRepository = SqliteMatchStateRepository(newStore),
+        statsRepo: PlayerStatsRepository = SqlitePlayerStatsRepository(newStore)
     ) {
         deps = makeDeps(newStore, backupStore, matchState, statsRepo)
         registerListeners()
@@ -296,7 +296,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
                 spawn1 = WorldPosition.new("world", 1.0, 64.0, 1.0),
                 spawn2 = WorldPosition.new("world", 2.0, 64.0, 2.0)
             ),
-            persist = {}
+            persist = arenaRepo::save
         )
         return id
     }
@@ -324,6 +324,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     fun state(name: String = "arena1") = service.matchOf(name)?.state
 
     fun close() {
+        deps.store.close()
         MockBukkit.unmock()
     }
 }
