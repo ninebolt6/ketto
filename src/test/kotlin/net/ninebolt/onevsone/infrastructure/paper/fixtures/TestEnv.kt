@@ -9,6 +9,7 @@ import net.ninebolt.onevsone.application.ArenaAdministrationService
 import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.application.ArenaLifecycleService
 import net.ninebolt.onevsone.application.ArenaRegistry
+import net.ninebolt.onevsone.application.ArenaSignService
 import net.ninebolt.onevsone.application.JoinReply
 import net.ninebolt.onevsone.application.LeaveReply
 import net.ninebolt.onevsone.application.MatchProgressionService
@@ -145,6 +146,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         val lifecycle: ArenaLifecycleService,
         val admin: ArenaAdministrationService,
         val statsService: PlayerStatsService,
+        val signs: ArenaSignService,
         val signListener: ArenaSignListener,
         val command: OneVsOneCommand
     )
@@ -175,6 +177,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     val lifecycle get() = deps.lifecycle
     val admin get() = deps.admin
     val statsService get() = deps.statsService
+    val signs get() = deps.signs
     val signListener get() = deps.signListener
     val command get() = deps.command
 
@@ -203,13 +206,15 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         val lifecycle = ArenaLifecycleService(
             registry, arenaRepo, MatchStateSync(matchStateRepo, presentation), recovery, progression, failures
         )
-        val admin = ArenaAdministrationService(registry, arenaRepo, signRepo, lobbyRepo, equipment, presentation, progression)
+        val admin = ArenaAdministrationService(registry, arenaRepo, signRepo, lobbyRepo, equipment, progression)
         val statsService = PlayerStatsService(statsRepo)
+        val signs = ArenaSignService(registry, signRepo, presentation)
         return Deps(
             store, backupStore, kitStore, arenaRepo, lobbyRepo, signRepo, matchStateRepo, statsRepo,
-            equipment, presentation, registry, recovery, progression, service, lifecycle, admin, statsService,
-            ArenaSignListener(service, admin, messenger),
-            OneVsOneCommand(service, admin, statsService, playerPort, failures, messenger)
+            equipment, presentation, registry, recovery, progression, service, lifecycle, admin,
+            statsService, signs,
+            ArenaSignListener(service, signs, messenger),
+            OneVsOneCommand(service, admin, statsService, signs, playerPort, failures, messenger)
         )
     }
 
@@ -235,7 +240,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         server.pluginManager.registerEvents(ArenaMatchListener(service, lookup, messenger), plugin)
         server.pluginManager.registerEvents(ArenaGuardListener(service), plugin)
         server.pluginManager.registerEvents(ArenaTeleportListener(service, lookup), plugin)
-        server.pluginManager.registerEvents(ArenaSignListener(service, admin, messenger), plugin)
+        server.pluginManager.registerEvents(ArenaSignListener(service, signs, messenger), plugin)
     }
 
     /** Fires an event through the real dispatch path of the registered listeners. */

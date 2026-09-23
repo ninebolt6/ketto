@@ -1,7 +1,7 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
-import net.ninebolt.onevsone.application.ArenaAdministrationService
 import net.ninebolt.onevsone.application.ArenaApplicationService
+import net.ninebolt.onevsone.application.ArenaSignService
 import net.ninebolt.onevsone.application.JoinReply
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.infrastructure.paper.message.Message
@@ -21,14 +21,13 @@ import kotlin.uuid.toKotlinUuid
 
 /**
  * Event side of join signs: joining via clicks and protecting registered signs
- * from destruction. Registration/coordinate persistence is
- * ArenaSignRepository's job; display updates are MatchPresentationPort's.
- * Destruction of the supporting block and changes by server commands or other
- * plugins are out of scope.
+ * from destruction. Registration and display updates are ArenaSignService's
+ * job. Destruction of the supporting block and changes by server commands or
+ * other plugins are out of scope.
  */
 class ArenaSignListener(
     private val service: ArenaApplicationService,
-    private val admin: ArenaAdministrationService,
+    private val signs: ArenaSignService,
     private val messenger: Messenger
 ) : Listener {
 
@@ -38,7 +37,7 @@ class ArenaSignListener(
         if (event.hand != EquipmentSlot.HAND) return
         val block = event.clickedBlock ?: return
         if (block.state !is Sign) return
-        val name = admin.signOwner(block.toBlockPosition()) ?: return
+        val name = signs.signOwner(block.toBlockPosition()) ?: return
         // A handled click denies both block interaction and item use, because anyone can
         // open the edit screen by right-clicking an unwaxed sign in vanilla
         event.denyUse()
@@ -68,7 +67,7 @@ class ArenaSignListener(
     }
 
     private fun isRegisteredSign(block: Block): Boolean =
-        block.state is Sign && admin.signOwner(block.toBlockPosition()) != null
+        block.state is Sign && signs.signOwner(block.toBlockPosition()) != null
 
     /** Maps the join use-case result to message text. Shared by the sign-join path. */
     fun renderJoin(player: Player, arenaName: String, reply: JoinReply) {

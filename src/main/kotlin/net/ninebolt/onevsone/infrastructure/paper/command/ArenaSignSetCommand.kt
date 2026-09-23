@@ -1,6 +1,7 @@
 package net.ninebolt.onevsone.infrastructure.paper.command
 
 import net.ninebolt.onevsone.application.ArenaAdministrationService
+import net.ninebolt.onevsone.application.ArenaSignService
 import net.ninebolt.onevsone.infrastructure.paper.message.Message
 import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import net.ninebolt.onevsone.infrastructure.paper.toBlockPosition
@@ -10,6 +11,7 @@ import org.bukkit.command.CommandSender
 /** `arena <name> sign set`. Registers the sign the executor is looking at. */
 internal class ArenaSignSetCommand(
     admin: ArenaAdministrationService,
+    private val signs: ArenaSignService,
     messenger: Messenger
 ) : ArenaSubcommand(admin, messenger) {
 
@@ -29,11 +31,11 @@ internal class ArenaSignSetCommand(
             return
         }
         val position = target.toBlockPosition()
-        val existing = admin.signOwner(position)
+        val existing = signs.signOwner(position)
         if (existing != null && existing != arena.name) {
             messenger.send(sender, Message.SignTaken)
             return
         }
-        admin.setSign(arena.name, position)
+        signs.setSign(arena.name, position)
     }
 }

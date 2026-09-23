@@ -1,7 +1,6 @@
 package net.ninebolt.onevsone.application
 
 import net.ninebolt.onevsone.application.fixtures.TestApp
-import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.BlockPosition
 import net.ninebolt.onevsone.domain.DefeatCause
@@ -14,7 +13,7 @@ import kotlin.test.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
-/** Unit tests for admin operations (create/remove/enable/spawn/kit/sign). */
+/** Unit tests for admin operations (create/remove/enable/spawn/kit). */
 class ArenaAdministrationServiceTest {
 
     private lateinit var app: TestApp
@@ -40,12 +39,12 @@ class ArenaAdministrationServiceTest {
     fun `remove aborts running match and clears registrations`() {
         val arena = app.newArena()
         val (p1, p2) = app.joinedTwo()
-        app.admin.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
+        app.signs.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
         assertTrue(app.admin.remove("arena1"))
         assertNull(app.service.arena("arena1"))
         assertNull(app.service.arenaIdOf(p1.id))
         assertNull(app.service.arenaIdOf(p2.id))
-        assertNull(app.admin.signLocation("arena1"))
+        assertNull(app.signs.signLocation("arena1"))
         assertNull(app.arenas.signs["arena1"])
         assertFalse(app.arenas.names.contains("arena1"))
         // The kit cache is dropped so recreating under the same name cannot apply the old kit
@@ -85,23 +84,10 @@ class ArenaAdministrationServiceTest {
     }
 
     @Test
-    fun `setLobby and sign lifecycle`() {
+    fun `setLobby persists position`() {
         val pos = WorldPosition.new("lobby", 5.0, 64.0, 5.0)
         app.admin.setLobby(pos)
         assertEquals(pos, app.arenas.lobbyPosition)
-
-        app.newArena()
-        val sign = BlockPosition.new("world", 3, 64, 3)
-        assertTrue(app.admin.setSign("arena1", sign))
-        assertEquals(sign, app.admin.signLocation("arena1"))
-        assertEquals("arena1", app.admin.signOwner(BlockPosition.new("world", 3, 64, 3)))
-        assertEquals(Arena.Id.new("arena1") to ArenaState.WAITING, app.presentation.signUpdates.last())
-
-        assertFalse(app.admin.setSign("missing", sign))
-        // clearSign is idempotent: it succeeds whenever the arena exists; only an unregistered arena fails
-        assertTrue(app.admin.clearSign("arena1"))
-        assertNull(app.admin.signLocation("arena1"))
-        assertFalse(app.admin.clearSign("missing"))
     }
 
     @Test
@@ -125,12 +111,12 @@ class ArenaAdministrationServiceTest {
         assertEquals(ToggleReply.AlreadyDisabled, app.admin.setEnabled("arena1", false))
 
         assertTrue(app.admin.setSpawn("ARENA1", SpawnSlot.FIRST, WorldPosition.new("world", 1.0, 64.0, 1.0)))
-        assertTrue(app.admin.setSign("arena1", BlockPosition.new("world", 3, 64, 3)))
-        assertEquals("Arena1", app.admin.signOwner(BlockPosition.new("world", 3, 64, 3)))
+        assertTrue(app.signs.setSign("arena1", BlockPosition.new("world", 3, 64, 3)))
+        assertEquals("Arena1", app.signs.signOwner(BlockPosition.new("world", 3, 64, 3)))
 
         assertTrue(app.admin.remove("aReNa1"))
         assertNull(app.service.arena("Arena1"))
-        assertNull(app.admin.signLocation("Arena1"))
+        assertNull(app.signs.signLocation("Arena1"))
         assertNull(app.arenas.signs["Arena1"])
     }
 

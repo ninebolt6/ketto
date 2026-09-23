@@ -4,15 +4,13 @@ import net.ninebolt.onevsone.application.port.ArenaRepository
 import net.ninebolt.onevsone.application.port.ArenaSignRepository
 import net.ninebolt.onevsone.application.port.KitPort
 import net.ninebolt.onevsone.application.port.LobbyRepository
-import net.ninebolt.onevsone.application.port.MatchPresentationPort
 import net.ninebolt.onevsone.domain.Arena
-import net.ninebolt.onevsone.domain.BlockPosition
 import net.ninebolt.onevsone.domain.SpawnSlot
 import net.ninebolt.onevsone.domain.WorldPosition
 import kotlin.uuid.Uuid
 
 /**
- * Admin operations: create/remove/enable/disable and spawn/kit/sign/lobby
+ * Admin operations: create/remove/enable/disable and spawn/kit/lobby
  * settings. Any needed abort is requested to MatchProgressionService.
  */
 class ArenaAdministrationService(
@@ -21,7 +19,6 @@ class ArenaAdministrationService(
     private val signs: ArenaSignRepository,
     private val lobby: LobbyRepository,
     private val kit: KitPort,
-    private val presentation: MatchPresentationPort,
     private val progression: MatchProgressionService
 ) {
     /** Arena names in registration order (for tab completion). */
@@ -78,24 +75,5 @@ class ArenaAdministrationService(
 
     fun setLobby(position: WorldPosition) {
         lobby.setLobby(position)
-    }
-
-    fun signLocation(arenaName: String): BlockPosition? = signs.signLocation(arenaName)
-
-    fun signOwner(position: BlockPosition): String? = signs.signOwner(position)
-
-    fun setSign(name: String, position: BlockPosition): Boolean {
-        val arena = arena(name) ?: return false
-        signs.setSign(arena.name, position)
-        val state = registry.match(arena.id)?.state ?: return true
-        presentation.updateSign(arena.id, state)
-        return true
-    }
-
-    /** Unregisters only the sign. The sign block itself remains and becomes breakable. */
-    fun clearSign(name: String): Boolean {
-        val arena = arena(name) ?: return false
-        signs.clearSign(arena.name)
-        return true
     }
 }

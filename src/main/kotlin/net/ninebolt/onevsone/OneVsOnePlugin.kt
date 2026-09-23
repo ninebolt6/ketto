@@ -4,6 +4,7 @@ import net.ninebolt.onevsone.application.ArenaAdministrationService
 import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.application.ArenaLifecycleService
 import net.ninebolt.onevsone.application.ArenaRegistry
+import net.ninebolt.onevsone.application.ArenaSignService
 import net.ninebolt.onevsone.application.MatchProgressionService
 import net.ninebolt.onevsone.application.MatchStateSync
 import net.ninebolt.onevsone.application.PlayerRecoveryService
@@ -115,9 +116,9 @@ open class OneVsOnePlugin : JavaPlugin() {
             signs = signRepository,
             lobby = lobbyRepository,
             kit = equipment,
-            presentation = presentation,
             progression = progression
         )
+        val signs = ArenaSignService(registry = registry, signs = signRepository, presentation = presentation)
         val statsService = PlayerStatsService(stats = stats)
         lifecycle.load()
         this.service = service
@@ -126,6 +127,7 @@ open class OneVsOnePlugin : JavaPlugin() {
             service = service,
             admin = admin,
             statsService = statsService,
+            signs = signs,
             players = playerPort,
             failures = failures,
             messenger = messenger
@@ -137,7 +139,7 @@ open class OneVsOnePlugin : JavaPlugin() {
         server.pluginManager.registerEvents(ArenaMatchListener(service, lookup, messenger), this)
         server.pluginManager.registerEvents(ArenaGuardListener(service), this)
         server.pluginManager.registerEvents(ArenaTeleportListener(service, lookup), this)
-        server.pluginManager.registerEvents(ArenaSignListener(service, admin, messenger), this)
+        server.pluginManager.registerEvents(ArenaSignListener(service, signs, messenger), this)
     }
 
     override fun onDisable() {

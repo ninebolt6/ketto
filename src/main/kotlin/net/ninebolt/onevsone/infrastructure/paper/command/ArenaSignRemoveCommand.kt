@@ -1,6 +1,7 @@
 package net.ninebolt.onevsone.infrastructure.paper.command
 
 import net.ninebolt.onevsone.application.ArenaAdministrationService
+import net.ninebolt.onevsone.application.ArenaSignService
 import net.ninebolt.onevsone.infrastructure.paper.message.Message
 import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import org.bukkit.command.CommandSender
@@ -8,6 +9,7 @@ import org.bukkit.command.CommandSender
 /** `arena <name> sign remove`. Unregisters the arena's join sign. */
 internal class ArenaSignRemoveCommand(
     admin: ArenaAdministrationService,
+    private val signs: ArenaSignService,
     messenger: Messenger
 ) : ArenaSubcommand(admin, messenger) {
 
@@ -19,11 +21,11 @@ internal class ArenaSignRemoveCommand(
             return
         }
         val arena = arenaOrWarn(sender, arenaName) ?: return
-        if (admin.signLocation(arena.name) == null) {
+        if (signs.signLocation(arena.name) == null) {
             messenger.send(sender, Message.SignNotRegistered)
             return
         }
-        admin.clearSign(arena.name)
+        signs.clearSign(arena.name)
         messenger.send(sender, Message.SignRemoved(arena.name))
     }
 }

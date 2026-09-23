@@ -114,7 +114,7 @@ class ArenaListenerSignTest {
         val unregistered = sim.breakBlock(env.signBlock(9, 64, 9))
         assertFalse(unregistered.isCancelled)
 
-        env.admin.clearSign("arena1")
+        env.signs.clearSign("arena1")
         val freed = sim.breakBlock(env.signBlock(3, 64, 3))
         assertFalse(freed.isCancelled)
     }
@@ -151,7 +151,7 @@ class ArenaListenerSignTest {
     fun `registered sign renders arena name and state`() {
         env.newArena()
         val block = env.signBlock(3, 64, 3)
-        env.admin.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
+        env.signs.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
 
         val plain = PlainTextComponentSerializer.plainText()
         fun lines() = (0..3).map {

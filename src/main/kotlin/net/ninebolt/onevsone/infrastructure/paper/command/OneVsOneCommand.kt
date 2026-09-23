@@ -2,6 +2,7 @@ package net.ninebolt.onevsone.infrastructure.paper.command
 
 import net.ninebolt.onevsone.application.ArenaAdministrationService
 import net.ninebolt.onevsone.application.ArenaApplicationService
+import net.ninebolt.onevsone.application.ArenaSignService
 import net.ninebolt.onevsone.application.PlayerStatsService
 import net.ninebolt.onevsone.application.port.FailureReporter
 import net.ninebolt.onevsone.application.port.PlayerPort
@@ -19,6 +20,7 @@ class OneVsOneCommand(
     service: ArenaApplicationService,
     admin: ArenaAdministrationService,
     statsService: PlayerStatsService,
+    signs: ArenaSignService,
     players: PlayerPort,
     failures: FailureReporter,
     private val messenger: Messenger
@@ -53,8 +55,8 @@ class OneVsOneCommand(
                         ),
                         "sign" to ArenaScopedGroup(
                             Message.CommandNoPermission, Message.UsageSign, messenger, admin, mapOf(
-                                "set" to ArenaSignSetCommand(admin, messenger),
-                                "remove" to ArenaSignRemoveCommand(admin, messenger)
+                                "set" to ArenaSignSetCommand(admin, signs, messenger),
+                                "remove" to ArenaSignRemoveCommand(admin, signs, messenger)
                             )
                         )
                     ),
