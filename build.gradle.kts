@@ -6,7 +6,8 @@ plugins {
 }
 
 group = "net.ninebolt"
-version = "1.0.0"
+// Release builds override with -PreleaseVersion=<tag without "v">
+version = (findProperty("releaseVersion") as String?) ?: "1.0.0"
 
 val mcApiVersion = "1.21.3"
 
