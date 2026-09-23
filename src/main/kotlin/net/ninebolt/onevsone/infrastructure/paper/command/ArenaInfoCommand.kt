@@ -25,9 +25,7 @@ internal class ArenaInfoCommand(
         }
         messenger.send(sender, Message.ArenaInfoHeader(match.arenaId.name))
         messenger.send(sender, Message.ArenaInfoState(match.state))
-        if (match.inProgress) {
-            val p1 = match.participants[0]
-            val p2 = match.participants[1]
+        match.matchup()?.let { (p1, p2) ->
             messenger.send(sender, Message.ArenaInfoVersus(p1.name, p2.name))
             messenger.send(sender, Message.ArenaInfoWinCount(match.winsOf(p1.id), match.winsOf(p2.id)))
         }

@@ -87,6 +87,10 @@ data class ArenaMatch private constructor(
     val inProgress: Boolean get() =
         (state == ArenaState.INGAME || state == ArenaState.ROUNDCOUNTDOWN) && full
 
+    /** The two opponents in join order, present only while the match is in progress. */
+    fun matchup(): Pair<Participant, Participant>? =
+        if (inProgress) participants[0] to participants[1] else null
+
     fun participant(id: Uuid): Participant? = participants.firstOrNull { it.id == id }
 
     /** A participant's spawn slot (0-based = spawn1/spawn2). null if not participating. */
