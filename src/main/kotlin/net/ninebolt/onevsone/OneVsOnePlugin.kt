@@ -22,7 +22,6 @@ import net.ninebolt.onevsone.infrastructure.paper.PaperPresentation
 import net.ninebolt.onevsone.infrastructure.paper.PaperPlayerAdapter
 import net.ninebolt.onevsone.infrastructure.paper.PaperPlayerLookup
 import net.ninebolt.onevsone.infrastructure.paper.PaperScheduler
-import net.ninebolt.onevsone.infrastructure.paper.PluginFailureReporter
 import net.ninebolt.onevsone.infrastructure.paper.PluginSettings
 import net.ninebolt.onevsone.infrastructure.persistence.SqliteArenaRepository
 import net.ninebolt.onevsone.infrastructure.persistence.SqliteArenaSignRepository
@@ -54,12 +53,10 @@ open class OneVsOnePlugin : JavaPlugin() {
             language = settings.language,
             logger = logger
         )
-        val failures = PluginFailureReporter { logger }
-
         // the store is created outside the module so it can be closed if wiring fails midway
         val store = SqliteStore(dataFolder, logger)
         try {
-            module = PluginModule(this, store, settings.requiredWins, messenger, failures)
+            module = PluginModule(this, store, settings.requiredWins, messenger)
         } catch (e: Throwable) {
             runCatching { store.close() }
             throw e
@@ -79,8 +76,7 @@ private class PluginModule(
     private val plugin: OneVsOnePlugin,
     val store: SqliteStore,
     requiredWins: Int,
-    private val messenger: Messenger,
-    private val failures: PluginFailureReporter
+    private val messenger: Messenger
 ) {
     private val arenaRepository = SqliteArenaRepository(store, plugin.logger)
     private val lobbyRepository = SqliteLobbyRepository(store)
@@ -89,22 +85,22 @@ private class PluginModule(
     private val stats = SqlitePlayerStatsRepository(store)
 
     private val lookup = PaperPlayerLookup(plugin.server)
-    private val players = PaperPlayerAdapter(lookup = lookup, server = plugin.server, plugin = plugin, failures = failures)
+    private val players = PaperPlayerAdapter(lookup = lookup, server = plugin.server, plugin = plugin, logger = plugin.logger)
     private val equipment = PaperEquipmentAdapter(
         backups = SqliteBackupStore(store),
         kitStore = SqliteKitStore(store),
         lookup = lookup
     )
-    private val presentation = PaperPresentation(server = plugin.server, messenger = messenger, failures = failures)
+    private val presentation = PaperPresentation(server = plugin.server, messenger = messenger, logger = plugin.logger)
 
-    private val registry = ArenaRegistry(requiredWins, failures)
+    private val registry = ArenaRegistry(requiredWins, plugin.logger)
     private val signs = ArenaSignService(registry = registry, signs = signRepository, presentation = presentation)
     private val recovery = PlayerRecoveryService(
         backups = equipment,
         players = players,
         lobby = lobbyRepository,
         presentation = presentation,
-        failures = failures
+        logger = plugin.logger
     )
     private val stateSync = MatchStateSync(matchState = matchState, signs = signs)
     private val progression = MatchProgressionService(
@@ -116,7 +112,7 @@ private class PluginModule(
         scheduler = PaperScheduler(plugin),
         presentation = presentation,
         recovery = recovery,
-        failures = failures
+        logger = plugin.logger
     )
     private val service = ArenaApplicationService(
         registry = registry,
@@ -131,7 +127,7 @@ private class PluginModule(
         sync = stateSync,
         recovery = recovery,
         progression = progression,
-        failures = failures
+        logger = plugin.logger
     )
     private val admin = ArenaAdministrationService(
         registry = registry,
@@ -156,7 +152,7 @@ private class PluginModule(
             signs = signs,
             lobby = lobby,
             players = players,
-            failures = failures,
+            logger = plugin.logger,
             messenger = messenger
         )
         val command = plugin.getCommand("1vs1") ?: error("1vs1 command missing from plugin.yml")

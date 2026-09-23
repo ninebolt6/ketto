@@ -41,7 +41,7 @@ class ArenaApplicationServiceResilienceTest {
         assertNull(app.service.arenaIdOf(p2.id))
         assertTrue(app.equipment.kitApplies.isEmpty())
         assertTrue(app.equipment.restored.isEmpty())
-        assertTrue(app.failures.reports.any { it.first.contains("Could not save inventories") })
+        assertTrue(app.logger.reports.any { it.message.contains("Could not save inventories") })
         app.scheduler.tick(3)
         assertTrue(p1.teleports.isEmpty())
     }
@@ -57,7 +57,7 @@ class ArenaApplicationServiceResilienceTest {
         assertNull(app.service.arenaIdOf(p1.id))
         // Both are restored from the already-captured backups
         assertEquals(2, app.equipment.restored.size)
-        assertTrue(app.failures.reports.any { it.first.contains("Could not apply equipment") })
+        assertTrue(app.logger.reports.any { it.message.contains("Could not apply equipment") })
     }
 
     @Test
@@ -72,7 +72,7 @@ class ArenaApplicationServiceResilienceTest {
         assertNull(app.service.arenaIdOf(p1.id))
         assertNull(app.service.arenaIdOf(p2.id))
         assertEquals(2, app.equipment.restored.size)
-        assertTrue(app.failures.reports.any { it.first.contains("Could not finish round") })
+        assertTrue(app.logger.reports.any { it.message.contains("Could not finish round") })
     }
 
     @Test
@@ -110,7 +110,7 @@ class ArenaApplicationServiceResilienceTest {
         assertEquals(1, app.stats.stats[p2.id]?.losses)
         assertNull(app.stats.stats[p1.id])
         assertEquals(2, app.equipment.restored.size)
-        assertTrue(app.failures.reports.any { it.first.startsWith("Failed to record win") })
+        assertTrue(app.logger.reports.any { it.message.startsWith("Failed to record win") })
     }
 
     @Test
@@ -120,7 +120,7 @@ class ArenaApplicationServiceResilienceTest {
         app.stats.failOnLoss = PersistenceFailure("write failed")
         assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
         assertEquals(1, app.stats.stats[p1.id]?.wins)
-        assertTrue(app.failures.reports.any { it.first.startsWith("Failed to record loss") })
+        assertTrue(app.logger.reports.any { it.message.startsWith("Failed to record loss") })
     }
 
     @Test
@@ -131,7 +131,7 @@ class ArenaApplicationServiceResilienceTest {
         app.service.abort(Arena.Id.new("arena1"))
         // The ledger row was left behind by the failed projection, but the commit still ran
         assertNull(app.service.arenaIdOf(p1.id))
-        assertTrue(app.failures.reports.any { it.first.contains("match projection") })
+        assertTrue(app.logger.reports.any { it.message.contains("match projection") })
         // A successful next projection converges the stale row
         app.matchState.failOnPersist = false
         app.matchState.persistMatch(app.service.matchOf("arena1")!!)
@@ -147,7 +147,7 @@ class ArenaApplicationServiceResilienceTest {
         app.lifecycle.load()
         assertEquals(ArenaState.WAITING, app.service.matchOf("broken")!!.state)
         assertEquals(ArenaState.WAITING, app.service.matchOf("healthy")!!.state)
-        assertTrue(app.failures.warnings.any { it.contains("broken") })
+        assertTrue(app.logger.warnings.any { it.contains("broken") })
     }
 
     @Test

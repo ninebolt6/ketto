@@ -1,12 +1,12 @@
 package net.ninebolt.onevsone.infrastructure.paper.command
 
 import net.ninebolt.onevsone.application.PlayerStatsService
-import net.ninebolt.onevsone.application.port.FailureReporter
 import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.application.port.PlayerPort
 import net.ninebolt.onevsone.infrastructure.paper.message.Message
 import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import org.bukkit.command.CommandSender
+import java.util.logging.Logger
 import kotlin.uuid.Uuid
 import kotlin.uuid.toKotlinUuid
 
@@ -14,7 +14,7 @@ import kotlin.uuid.toKotlinUuid
 internal class StatsCommand(
     private val statsService: PlayerStatsService,
     private val players: PlayerPort,
-    private val failures: FailureReporter,
+    private val logger: Logger,
     messenger: Messenger
 ) : AbstractSubcommand(messenger) {
 
@@ -44,7 +44,7 @@ internal class StatsCommand(
         val stats = try {
             statsService.statsFor(uuid)
         } catch (e: PersistenceFailure) {
-            failures.warn("Could not read stats for $uuid: ${e.message}")
+            logger.warning("Could not read stats for $uuid: ${e.message}")
             null
         }
         if (stats == null) {

@@ -1,7 +1,6 @@
 package net.ninebolt.onevsone.application
 
 import net.ninebolt.onevsone.application.port.Cancellation
-import net.ninebolt.onevsone.application.port.FailureReporter
 import net.ninebolt.onevsone.application.port.KitPort
 import net.ninebolt.onevsone.application.port.PresentationPort
 import net.ninebolt.onevsone.application.port.PersistenceFailure
@@ -14,6 +13,8 @@ import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.DefeatOutcome
 import net.ninebolt.onevsone.domain.Participant
 import net.ninebolt.onevsone.domain.SpawnSlot
+import java.util.logging.Level
+import java.util.logging.Logger
 import kotlin.uuid.Uuid
 
 /**
@@ -40,7 +41,7 @@ class MatchProgressionService(
     private val scheduler: SchedulerPort,
     private val presentation: PresentationPort,
     private val recovery: PlayerRecoveryService,
-    private val failures: FailureReporter
+    private val logger: Logger
 ) {
     private val timers = mutableMapOf<Arena.Id, Cancellation>()
 
@@ -115,7 +116,7 @@ class MatchProgressionService(
             startRoundCountdown(arenaId)
         } catch (e: Exception) {
             // A failure after the resolution commit would leave a timer-less ROUNDCOUNTDOWN stuck, so abort
-            failures.report("Could not finish round ${outcome.round} in arena ${arenaId.name}; match aborted", e)
+            logger.log(Level.SEVERE, "Could not finish round ${outcome.round} in arena ${arenaId.name}; match aborted", e)
             abort(arenaId)
         }
     }
@@ -175,7 +176,8 @@ class MatchProgressionService(
             try {
                 if (win) stats.recordWin(participant.id) else stats.recordLoss(participant.id)
             } catch (e: IllegalStateException) {
-                failures.report(
+                logger.log(
+                    Level.SEVERE,
                     "Failed to record ${if (win) "win" else "loss"} for ${participant.name} (${participant.id}); " +
                         "arena cleanup completed, statistics require manual recovery",
                     e
@@ -198,7 +200,7 @@ class MatchProgressionService(
             try {
                 recovery.backupBeforeMatch(match.participants)
             } catch (e: PersistenceFailure) {
-                failures.report("Could not save inventories before starting arena ${arenaId.name}; match aborted", e)
+                logger.log(Level.SEVERE, "Could not save inventories before starting arena ${arenaId.name}; match aborted", e)
                 abort(arenaId)
                 return@runCountdown true
             }
@@ -215,7 +217,7 @@ class MatchProgressionService(
                 }
             } catch (e: Exception) {
                 // Failed mid-swap: abort and restore using the backups already taken
-                failures.report("Could not apply equipment before starting arena ${arenaId.name}; match aborted", e)
+                logger.log(Level.SEVERE, "Could not apply equipment before starting arena ${arenaId.name}; match aborted", e)
                 abort(arenaId)
             }
             true
@@ -365,7 +367,7 @@ class MatchProgressionService(
         val slot = match.slotOf(participant.id) ?: return
         val spawn = registry.arena(match.arenaId)?.spawn(slot)
         if (spawn == null) {
-            failures.warn("Arena ${match.arenaId.name} spawn ${slot.number} is not set; skipping teleport")
+            logger.warning("Arena ${match.arenaId.name} spawn ${slot.number} is not set; skipping teleport")
             return
         }
         handle.teleport(spawn)

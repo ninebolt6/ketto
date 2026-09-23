@@ -5,13 +5,13 @@ import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.application.ArenaSignService
 import net.ninebolt.onevsone.application.LobbyService
 import net.ninebolt.onevsone.application.PlayerStatsService
-import net.ninebolt.onevsone.application.port.FailureReporter
 import net.ninebolt.onevsone.application.port.PlayerPort
 import net.ninebolt.onevsone.infrastructure.paper.message.Message
 import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import org.bukkit.command.Command
 import org.bukkit.command.CommandSender
 import org.bukkit.command.TabExecutor
+import java.util.logging.Logger
 
 /**
  * TabExecutor for /1vs1. This is the only registration point from plugin.yml;
@@ -24,14 +24,14 @@ class OneVsOneCommand(
     signs: ArenaSignService,
     lobby: LobbyService,
     players: PlayerPort,
-    failures: FailureReporter,
+    logger: Logger,
     private val messenger: Messenger
 ) : TabExecutor {
 
     private val root = run {
         val arenaInfo = ArenaInfoCommand(service, admin, messenger)
         CommandGroup(Message.UsageRoot, messenger, mapOf(
-            "stats" to StatsCommand(statsService, players, failures, messenger),
+            "stats" to StatsCommand(statsService, players, logger, messenger),
             "leave" to LeaveCommand(service, messenger),
             "lobby" to CommandGroup(Message.UsageLobby, messenger, mapOf(
                 "set" to SetLobbyCommand(lobby, messenger)

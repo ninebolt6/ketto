@@ -34,7 +34,6 @@ import net.ninebolt.onevsone.infrastructure.paper.PaperPresentation
 import net.ninebolt.onevsone.infrastructure.paper.PaperPlayerAdapter
 import net.ninebolt.onevsone.infrastructure.paper.PaperPlayerLookup
 import net.ninebolt.onevsone.infrastructure.paper.PaperScheduler
-import net.ninebolt.onevsone.infrastructure.paper.PluginFailureReporter
 import net.ninebolt.onevsone.infrastructure.persistence.SqliteArenaRepository
 import net.ninebolt.onevsone.infrastructure.persistence.SqliteArenaSignRepository
 import net.ninebolt.onevsone.infrastructure.persistence.SqliteBackupStore
@@ -123,9 +122,9 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     }
 
     val messenger = Messenger.load(File(folder, "messages"), "ja", "auto", Logger.getLogger("1vs1-test"))
-    val failures = PluginFailureReporter { plugin.logger }
+    val logger = plugin.logger
     val lookup = PaperPlayerLookup(server)
-    val playerPort = PaperPlayerAdapter(lookup, server, plugin, failures)
+    val playerPort = PaperPlayerAdapter(lookup, server, plugin, logger)
     val schedulerPort = PaperScheduler(plugin)
 
     /** Dependencies torn down and rebuilt together by rebuildWith. Access always resolves the current generation. */
@@ -195,20 +194,20 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         val lobbyRepo = SqliteLobbyRepository(store)
         val signRepo = SqliteArenaSignRepository(store)
         val equipment = PaperEquipmentAdapter(backupStore, kitStore, lookup)
-        val presentation = PaperPresentation(server, messenger, failures)
-        val registry = ArenaRegistry(requiredWins, failures)
+        val presentation = PaperPresentation(server, messenger, logger)
+        val registry = ArenaRegistry(requiredWins, logger)
         val signs = ArenaSignService(registry, signRepo, presentation)
-        val recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepo, presentation, failures)
+        val recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepo, presentation, logger)
         val progression = MatchProgressionService(
             registry, MatchStateSync(matchStateRepo, signs), statsRepo,
-            equipment, playerPort, schedulerPort, presentation, recovery, failures
+            equipment, playerPort, schedulerPort, presentation, recovery, logger
         )
         val service = ArenaApplicationService(
             registry, playerPort,
             recovery, progression, MatchStateSync(matchStateRepo, signs)
         )
         val lifecycle = ArenaLifecycleService(
-            registry, arenaRepo, MatchStateSync(matchStateRepo, signs), recovery, progression, failures
+            registry, arenaRepo, MatchStateSync(matchStateRepo, signs), recovery, progression, logger
         )
         val admin = ArenaAdministrationService(registry, arenaRepo, signRepo, equipment, progression)
         val statsService = PlayerStatsService(statsRepo)
@@ -218,7 +217,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
             equipment, presentation, registry, recovery, progression, service, lifecycle, admin,
             statsService, signs, lobby,
             ArenaSignListener(service, signs, messenger),
-            OneVsOneCommand(service, admin, statsService, signs, lobby, playerPort, failures, messenger)
+            OneVsOneCommand(service, admin, statsService, signs, lobby, playerPort, logger, messenger)
         )
     }
 

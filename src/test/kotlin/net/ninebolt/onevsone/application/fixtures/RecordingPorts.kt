@@ -1,6 +1,8 @@
 package net.ninebolt.onevsone.application.fixtures
 
-import net.ninebolt.onevsone.application.port.FailureReporter
+import java.util.logging.Level
+import java.util.logging.LogRecord
+import java.util.logging.Logger
 import net.ninebolt.onevsone.application.port.PresentationPort
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
@@ -69,15 +71,13 @@ class RecordingPresentation : PresentationPort {
     }
 }
 
-class RecordingFailures : FailureReporter {
-    val warnings = mutableListOf<String>()
-    val reports = mutableListOf<Pair<String, Throwable>>()
+class RecordingLogger : Logger("test", null) {
+    val records = mutableListOf<LogRecord>()
 
-    override fun warn(message: String) {
-        warnings += message
+    override fun log(record: LogRecord) {
+        records += record
     }
 
-    override fun report(context: String, error: Throwable) {
-        reports += context to error
-    }
+    val warnings: List<String> get() = records.filter { it.level == Level.WARNING }.map { it.message }
+    val reports: List<LogRecord> get() = records.filter { it.level == Level.SEVERE }
 }

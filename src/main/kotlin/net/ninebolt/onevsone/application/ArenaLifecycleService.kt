@@ -1,10 +1,10 @@
 package net.ninebolt.onevsone.application
 
 import net.ninebolt.onevsone.application.port.ArenaRepository
-import net.ninebolt.onevsone.application.port.FailureReporter
 import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.application.port.warnOnFailure
 import net.ninebolt.onevsone.domain.ArenaState
+import java.util.logging.Logger
 
 /**
  * Startup and shutdown processing: installs persisted arenas into the
@@ -22,30 +22,30 @@ class ArenaLifecycleService(
     private val sync: MatchStateSync,
     private val recovery: PlayerRecoveryService,
     private val progression: MatchProgressionService,
-    private val failures: FailureReporter
+    private val logger: Logger
 ) {
 
     fun load() {
         val loaded = try {
             arenas.loadAll()
         } catch (e: PersistenceFailure) {
-            failures.warn("Arena definitions are unreadable; no arenas loaded this session")
+            logger.warning("Arena definitions are unreadable; no arenas loaded this session")
             emptyList()
         }
         loaded.forEach { arena ->
             // The definition is already persisted; only the projection and sign are refreshed
             registry.installArena(arena, persist = {})
-            failures.warnOnFailure("Could not persist status for arena ${arena.id.name}; continuing startup") {
+            logger.warnOnFailure("Could not persist status for arena ${arena.id.name}; continuing startup") {
                 registry.match(arena.id)?.let { sync.saveStatus(it) }
             }
-            failures.warnOnFailure("Could not update sign for arena ${arena.id.name}; continuing startup") {
+            logger.warnOnFailure("Could not update sign for arena ${arena.id.name}; continuing startup") {
                 sync.refreshSign(arena.id, ArenaState.WAITING)
             }
         }
-        failures.warnOnFailure("Persisted backups are unreadable; pending restores unavailable this session") {
+        logger.warnOnFailure("Persisted backups are unreadable; pending restores unavailable this session") {
             recovery.loadPersisted()
         }
-        failures.warnOnFailure("Could not clear stale registrations") {
+        logger.warnOnFailure("Could not clear stale registrations") {
             sync.clearRegistrations()
         }
     }

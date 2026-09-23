@@ -1,10 +1,11 @@
 package net.ninebolt.onevsone.application
 
-import net.ninebolt.onevsone.application.port.FailureReporter
 import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.Transition
+import java.util.logging.Level
+import java.util.logging.Logger
 import kotlin.uuid.Uuid
 
 /**
@@ -35,7 +36,7 @@ import kotlin.uuid.Uuid
  */
 class ArenaRegistry(
     private val requiredWins: Int,
-    private val failures: FailureReporter
+    private val logger: Logger
 ) {
 
     private data class Slot(val arena: Arena, val match: ArenaMatch)
@@ -153,7 +154,8 @@ class ArenaRegistry(
         try {
             persist(match)
         } catch (e: PersistenceFailure) {
-            failures.report(
+            logger.log(
+                Level.SEVERE,
                 "Could not persist match projection for arena ${id.name}; in-memory state committed",
                 e
             )

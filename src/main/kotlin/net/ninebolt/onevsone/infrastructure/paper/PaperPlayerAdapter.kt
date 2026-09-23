@@ -1,6 +1,5 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
-import net.ninebolt.onevsone.application.port.FailureReporter
 import net.ninebolt.onevsone.application.port.PlayerHandle
 import net.ninebolt.onevsone.application.port.PlayerPort
 import net.ninebolt.onevsone.domain.WorldPosition
@@ -12,6 +11,7 @@ import org.bukkit.entity.Player
 import org.bukkit.event.player.PlayerTeleportEvent
 import org.bukkit.plugin.IllegalPluginAccessException
 import org.bukkit.plugin.java.JavaPlugin
+import java.util.logging.Logger
 import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
 import kotlin.uuid.toKotlinUuid
@@ -62,10 +62,10 @@ class PaperPlayerAdapter(
     private val lookup: PaperPlayerLookup,
     private val server: Server,
     private val plugin: JavaPlugin,
-    private val failures: FailureReporter
+    private val logger: Logger
 ) : PlayerPort {
     override fun handle(playerId: Uuid): PlayerHandle? =
-        lookup.resolve(playerId)?.let { PaperPlayerHandle(it, server, failures, lookup) }
+        lookup.resolve(playerId)?.let { PaperPlayerHandle(it, server, logger, lookup) }
 
     override fun resolveOfflineId(name: String, callback: (Uuid?) -> Unit) {
         val known = server.getPlayerExact(name) ?: server.getOfflinePlayerIfCached(name)
@@ -89,7 +89,7 @@ class PaperPlayerAdapter(
 private class PaperPlayerHandle(
     private val player: Player,
     private val server: Server,
-    private val failures: FailureReporter,
+    private val logger: Logger,
     private val lookup: PaperPlayerLookup
 ) : PlayerHandle {
     override val id: Uuid get() = player.uniqueId.toKotlinUuid()
@@ -123,7 +123,7 @@ private class PaperPlayerHandle(
     override fun teleport(position: WorldPosition) {
         val world = server.getWorld(position.world)
         if (world == null) {
-            failures.warn("World '${position.world}' is not loaded; skipping teleport")
+            logger.warning("World '${position.world}' is not loaded; skipping teleport")
             return
         }
         // Participant teleport restriction exempts "the plugin's own teleports", so

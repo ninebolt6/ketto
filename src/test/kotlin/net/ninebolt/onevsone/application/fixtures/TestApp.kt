@@ -17,8 +17,8 @@ import net.ninebolt.onevsone.domain.WorldPosition
 import kotlin.test.assertEquals
 
 class TestApp(val requiredWins: Int = 3) {
-    val failures = RecordingFailures()
-    val registry = ArenaRegistry(requiredWins, failures)
+    val logger = RecordingLogger()
+    val registry = ArenaRegistry(requiredWins, logger)
     val arenas = InMemoryArenaRepository()
     val matchState = InMemoryMatchStateRepository()
     val stats = InMemoryPlayerStatsRepository()
@@ -26,16 +26,16 @@ class TestApp(val requiredWins: Int = 3) {
     val equipment = FakeEquipment(players)
     val scheduler = FakeScheduler()
     val presentation = RecordingPresentation()
-    val recovery = PlayerRecoveryService(equipment, players, arenas, presentation, failures)
+    val recovery = PlayerRecoveryService(equipment, players, arenas, presentation, logger)
     val signs = ArenaSignService(registry, arenas, presentation)
     val stateSync = MatchStateSync(matchState, signs)
     val progression = MatchProgressionService(
-        registry, stateSync, stats, equipment, players, scheduler, presentation, recovery, failures
+        registry, stateSync, stats, equipment, players, scheduler, presentation, recovery, logger
     )
     val service = ArenaApplicationService(
         registry, players, recovery, progression, stateSync
     )
-    val lifecycle = ArenaLifecycleService(registry, arenas, stateSync, recovery, progression, failures)
+    val lifecycle = ArenaLifecycleService(registry, arenas, stateSync, recovery, progression, logger)
     val admin = ArenaAdministrationService(registry, arenas, arenas, equipment, progression)
     val lobby = LobbyService(arenas)
     val statsService = PlayerStatsService(stats)

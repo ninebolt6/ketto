@@ -117,7 +117,7 @@ class PlayerRecoveryServiceTest {
         val ref = BackupRef.new(MatchId.new(), null, "Alice")
         app.equipment.seedBackup(ref)
         app.recovery.loadPersisted()
-        assertTrue(app.failures.warnings.any { it.contains("no owner uuid") })
+        assertTrue(app.logger.warnings.any { it.contains("no owner uuid") })
 
         app.service.restorePending(p.id)
         assertTrue(app.equipment.restored.isEmpty())
@@ -138,7 +138,7 @@ class PlayerRecoveryServiceTest {
         assertEquals(1, app.equipment.restored.size)
         // The disk record remains (restored again next startup = fail-safe)
         assertTrue(app.equipment.storedBackups.containsKey(ref.backupId))
-        assertTrue(app.failures.reports.any { it.first.contains("Could not discard") })
+        assertTrue(app.logger.reports.any { it.message.contains("Could not discard") })
     }
 
     @Test

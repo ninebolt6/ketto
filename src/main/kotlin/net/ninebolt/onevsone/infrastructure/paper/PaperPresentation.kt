@@ -1,6 +1,5 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
-import net.ninebolt.onevsone.application.port.FailureReporter
 import net.ninebolt.onevsone.application.port.PresentationPort
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
@@ -21,13 +20,14 @@ import org.bukkit.entity.Firework
 import org.bukkit.entity.Player
 import org.bukkit.scoreboard.Criteria
 import org.bukkit.scoreboard.DisplaySlot
+import java.util.logging.Logger
 import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
 
 class PaperPresentation(
     private val server: Server,
     private val messenger: Messenger,
-    private val failures: FailureReporter
+    private val logger: Logger
 ) : PresentationPort {
 
     private fun player(id: Uuid): Player? = server.getPlayer(id.toJavaUuid())
@@ -130,7 +130,7 @@ class PaperPresentation(
     override fun updateSign(arena: Arena.Id, position: BlockPosition, state: ArenaState) {
         val world = server.getWorld(position.world)
         if (world == null) {
-            failures.warn("Sign world '${position.world}' for arena ${arena.name} is not loaded")
+            logger.warning("Sign world '${position.world}' for arena ${arena.name} is not loaded")
             return
         }
         val blockState = world.getBlockAt(position.x, position.y, position.z).state

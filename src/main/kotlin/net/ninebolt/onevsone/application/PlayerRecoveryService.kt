@@ -1,7 +1,6 @@
 package net.ninebolt.onevsone.application
 
 import net.ninebolt.onevsone.application.port.BackupRef
-import net.ninebolt.onevsone.application.port.FailureReporter
 import net.ninebolt.onevsone.application.port.InventoryBackupPort
 import net.ninebolt.onevsone.application.port.LobbyRepository
 import net.ninebolt.onevsone.application.port.PresentationPort
@@ -10,6 +9,8 @@ import net.ninebolt.onevsone.application.port.PlayerHandle
 import net.ninebolt.onevsone.application.port.PlayerPort
 import net.ninebolt.onevsone.domain.MatchId
 import net.ninebolt.onevsone.domain.Participant
+import java.util.logging.Level
+import java.util.logging.Logger
 import kotlin.uuid.Uuid
 
 /**
@@ -25,7 +26,7 @@ class PlayerRecoveryService(
     private val players: PlayerPort,
     private val lobby: LobbyRepository,
     private val presentation: PresentationPort,
-    private val failures: FailureReporter
+    private val logger: Logger
 ) {
     /** Token for one restore target. Deferred callbacks match it by reference identity. */
     class RestoreTicket(val ref: BackupRef)
@@ -47,7 +48,7 @@ class PlayerRecoveryService(
     private fun registerTicket(ref: BackupRef) {
         val owner = ref.playerId
         if (owner == null) {
-            failures.warn(
+            logger.warning(
                 "Backup ${ref.backupId} for ${ref.playerName} has no owner uuid and cannot be restored; " +
                     "remove the stale row from the backups table"
             )
@@ -71,7 +72,7 @@ class PlayerRecoveryService(
         try {
             backups.restore(ticket.ref)
         } catch (e: PersistenceFailure) {
-            failures.report("Could not restore inventory for ${handle.name} (${handle.id}); backup retained", e)
+            logger.log(Level.SEVERE, "Could not restore inventory for ${handle.name} (${handle.id}); backup retained", e)
             return false
         }
         presentation.clearScoreboard(handle.id)
@@ -80,7 +81,7 @@ class PlayerRecoveryService(
             backups.acknowledge(ticket.ref)
         } catch (e: PersistenceFailure) {
             // On delete failure the on-disk record remains (restored again next startup = safe side)
-            failures.report("Could not discard restored backup for ${handle.name} (${handle.id}); record retained", e)
+            logger.log(Level.SEVERE, "Could not discard restored backup for ${handle.name} (${handle.id}); record retained", e)
         }
         return true
     }
@@ -101,7 +102,7 @@ class PlayerRecoveryService(
     private fun teleportLobby(handle: PlayerHandle) {
         val lobby = lobby.lobby()
         if (lobby == null) {
-            failures.warn("Lobby is not set; skipping teleport for ${handle.name}")
+            logger.warning("Lobby is not set; skipping teleport for ${handle.name}")
             return
         }
         handle.teleport(lobby)
@@ -120,7 +121,7 @@ class PlayerRecoveryService(
                 try {
                     backups.restore(ticket.ref)
                 } catch (e: PersistenceFailure) {
-                    failures.report("Could not restore inventory for ${handle.name} (${handle.id}); backup retained", e)
+                    logger.log(Level.SEVERE, "Could not restore inventory for ${handle.name} (${handle.id}); backup retained", e)
                     return@forEach
                 }
                 presentation.clearScoreboard(id)
