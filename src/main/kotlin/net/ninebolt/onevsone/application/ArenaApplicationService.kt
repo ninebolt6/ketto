@@ -123,7 +123,7 @@ class ArenaApplicationService(
         val handle = players.handle(playerId)
         recovery.ticketFor(playerId, playerName)?.let { ticket ->
             if (handle == null || handle.dead) return JoinReply.InMatch
-            recovery.restoreNow(handle, ticket, respawn = true, lobby = false)
+            recovery.restoreNow(handle, ticket)
         }
 
         // Membership registration. On failure we are still pre-commit,
@@ -164,7 +164,7 @@ class ArenaApplicationService(
             // Even when not participating, restore any unrestored backup so the disconnect is safe
             recovery.ticketFor(playerId, playerName)?.let { ticket ->
                 players.handle(playerId)?.let { handle ->
-                    recovery.restoreNow(handle, ticket, respawn = false, lobby = false)
+                    recovery.restoreNow(handle, ticket)
                 }
             }
             return
@@ -187,7 +187,9 @@ class ArenaApplicationService(
         if (registry.isJoined(playerId)) return
         val ticket = recovery.ticketFor(playerId, playerName) ?: return
         val handle = players.handle(playerId) ?: return
-        recovery.restoreNow(handle, ticket, respawn = true, lobby = false)
+        // A login can arrive dead; revive first so the restore lands on a live player
+        handle.respawn()
+        recovery.restoreNow(handle, ticket)
     }
 
     // ---- Win/loss --------------------------------------------------------------

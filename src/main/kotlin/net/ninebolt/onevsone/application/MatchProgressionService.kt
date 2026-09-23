@@ -59,7 +59,7 @@ class MatchProgressionService(
         left.forEach { unregisterKeepingRestore(it) }
         tickets.forEach { (participant, ticket) ->
             runNowOrAfterRespawn(participant.id, ticket) { h ->
-                recovery.restoreNow(h, ticket, respawn = false, lobby = false)
+                ticket?.let { recovery.restoreNow(h, it) }
             }
         }
         sync.publish(step.match)
@@ -155,7 +155,7 @@ class MatchProgressionService(
             // A non-dead loser is processed immediately. Players who died via quit are included here, so do not defer on a dead check
             players.handle(loser.id)?.let { h ->
                 if (forfeit) {
-                    recovery.restoreNow(h, loserTicket, respawn = false, lobby = false)
+                    loserTicket?.let { recovery.restoreNow(h, it) }
                 } else {
                     resetAndRestore(h, loserTicket)
                 }
@@ -308,7 +308,7 @@ class MatchProgressionService(
     /** Restores health, restores the backup, and sends the player to the lobby. */
     private fun resetAndRestore(handle: PlayerHandle, ticket: PlayerRecoveryService.RestoreTicket?) {
         handle.resetVitals()
-        recovery.restoreNow(handle, ticket, respawn = false, lobby = true)
+        recovery.restoreToLobby(handle, ticket)
     }
 
     /**

@@ -73,24 +73,19 @@ class PlayerRecoveryService(
             (ticketsByName[handle.name] === ticket && ticket.matchesId(handle.id))
 
     /**
-     * Completes a backup restore.
-     * When ticket is null only the lobby transfer runs; the inventory is untouched.
+     * Completes a backup restore (inventory, scoreboard, record close-out).
+     * true when the restore completed; false when the ticket is not owned or
+     * the backup could not be restored.
      */
-    fun restoreNow(handle: PlayerHandle, ticket: RestoreTicket?, respawn: Boolean, lobby: Boolean) {
-        if (ticket == null) {
-            if (lobby) teleportLobby(handle)
-            return
-        }
-        if (!ownedBy(handle, ticket)) return
-        if (respawn && handle.dead) handle.respawn()
+    fun restoreNow(handle: PlayerHandle, ticket: RestoreTicket): Boolean {
+        if (!ownedBy(handle, ticket)) return false
         try {
             backups.restore(ticket.ref)
         } catch (e: PersistenceFailure) {
             failures.report("Could not restore inventory for ${handle.name} (${handle.id}); backup retained", e)
-            return
+            return false
         }
         presentation.clearScoreboard(handle.id)
-        if (lobby) teleportLobby(handle)
         forget(ticket)
         try {
             backups.acknowledge(ticket.ref)
@@ -98,6 +93,16 @@ class PlayerRecoveryService(
             // On delete failure the on-disk record remains (restored again next startup = safe side)
             failures.report("Could not discard restored backup for ${handle.name} (${handle.id}); record retained", e)
         }
+        return true
+    }
+
+    /**
+     * Sends the player to the lobby, completing the backup restore first when a
+     * ticket exists. A failed or unowned restore leaves the player in place.
+     */
+    fun restoreToLobby(handle: PlayerHandle, ticket: RestoreTicket?) {
+        if (ticket != null && !restoreNow(handle, ticket)) return
+        teleportLobby(handle)
     }
 
     private fun forget(ticket: RestoreTicket) {
@@ -132,7 +137,7 @@ class PlayerRecoveryService(
                 }
                 presentation.clearScoreboard(id)
             } else {
-                restoreNow(handle, ticket, respawn = false, lobby = false)
+                restoreNow(handle, ticket)
             }
         }
     }
