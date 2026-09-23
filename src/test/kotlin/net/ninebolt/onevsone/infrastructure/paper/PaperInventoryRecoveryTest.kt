@@ -3,10 +3,10 @@ package net.ninebolt.onevsone.infrastructure.paper
 import net.ninebolt.onevsone.application.port.BackupRef
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaState
-import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.domain.MatchId
 import net.ninebolt.onevsone.domain.Participant
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.genericDamage
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.playersYaml
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.view
@@ -74,8 +74,7 @@ class PaperInventoryRecoveryTest {
         env.tick(6)
         assertEquals(Material.IRON_SWORD, p2.inventory.contents[0]?.type)
 
-        p2.health = 0.0
-        env.service.defeat(p2.uuid, DefeatCause.DEATH)
+        p2.simulateDamage(100.0, genericDamage())
         assertEquals(ArenaState.WAITING, env.view().state)
         env.runOneShots()
         assertEquals(1, p2.respawnCount)
@@ -94,8 +93,7 @@ class PaperInventoryRecoveryTest {
         env.join(p1, arena)
         env.join(p2, arena)
         env.tick(6)
-        env.removePlayer(p1)
-        env.quit(p1)
+        p1.disconnect()
         assertNull(p1.inventory.contents[0])
     }
 
@@ -113,15 +111,17 @@ class PaperInventoryRecoveryTest {
     @Test
     fun `pending restore applied on join and discarded`() {
         val participant = Participant.new("Alice")
+        val p = env.player("Alice", participant.id)
+        p.disconnect()
+        p.inventory.setItem(0, env.item(Material.STONE))
+
         val ref = BackupRef.new(MatchId.new(), participant.id, participant.name)
         env.matchStateRepo.registerParticipant(participant, Arena.Id.new("a1"))
         env.backupStore.saveBackups(listOf(PersistedBackup(ref, PaperInventorySnapshot())))
         env.matchStateRepo.clearRegistrations()
         env.service.load()
 
-        val p = env.player("Alice", participant.id)
-        p.inventory.setItem(0, env.item(Material.STONE))
-        env.service.restorePending(p.uuid, p.name)
+        p.reconnect()
         assertNull(p.inventory.contents[0])
         assertNull(env.playersYaml().getConfigurationSection("inv.Alice"))
     }
@@ -138,12 +138,10 @@ class PaperInventoryRecoveryTest {
         env.join(p2, arena)
         env.tick(6)
 
-        p2.health = 0.0
-        env.service.defeat(p2.uuid, DefeatCause.DEATH)
+        p2.simulateDamage(100.0, genericDamage())
         assertEquals(ArenaState.WAITING, env.view().state)
 
-        env.removePlayer(p2)
-        env.quit(p2)
+        p2.disconnect()
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
 
         p2.reconnect()
@@ -164,14 +162,14 @@ class PaperInventoryRecoveryTest {
         env.join(p2, arena)
         env.tick(6)
 
-        p2.health = 0.0
-        env.service.defeat(p2.uuid, DefeatCause.DEATH)
+        p2.simulateDamage(100.0, genericDamage())
         env.service.shutdown()
 
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
         assertEquals(p2.uniqueId.toString(), env.playersYaml().getString("inv.Bob.uuid"))
 
-        env.service.restorePending(p2.uuid, p2.name)
+        env.disconnectWithoutQuitHandler(p2)
+        p2.reconnect()
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
         assertNull(env.playersYaml().getConfigurationSection("inv.Bob"))
 
@@ -190,8 +188,7 @@ class PaperInventoryRecoveryTest {
         env.join(p2, arena)
         env.tick(6)
 
-        p2.health = 0.0
-        env.service.defeat(p2.uuid, DefeatCause.DEATH)
+        p2.simulateDamage(100.0, genericDamage())
         env.service.abort(arena)
         env.runOneShots()
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
@@ -211,13 +208,12 @@ class PaperInventoryRecoveryTest {
         env.join(p2, arena)
         env.tick(6)
 
-        env.removePlayer(p2)
+        env.disconnectWithoutQuitHandler(p2)
         env.service.abort(arena)
 
         assertEquals(p2.uniqueId.toString(), env.playersYaml().getString("inv.Bob.uuid"))
 
         p2.reconnect()
-        env.service.restorePending(p2.uuid, p2.name)
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
         assertNull(env.playersYaml().getConfigurationSection("inv.Bob"))
     }

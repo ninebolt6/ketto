@@ -58,7 +58,6 @@ class ArenaListenerItemGuardTest {
     @BeforeEach
     fun setup() {
         env = TestEnv(folder)
-        env.registerListeners()
     }
 
     @AfterEach

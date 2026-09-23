@@ -34,7 +34,6 @@ class MatchScenarioTest {
     @BeforeEach
     fun setup() {
         env = TestEnv(folder, requiredWins = 1)
-        env.registerListeners()
     }
 
     @AfterEach

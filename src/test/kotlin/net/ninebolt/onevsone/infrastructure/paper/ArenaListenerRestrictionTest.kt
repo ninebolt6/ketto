@@ -1,7 +1,7 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
-import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.fallIntoVoid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.breakBlock
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.dropEvent
@@ -34,7 +34,6 @@ class ArenaListenerRestrictionTest {
     @BeforeEach
     fun setup() {
         env = TestEnv(folder)
-        env.registerListeners()
     }
 
     @AfterEach
@@ -85,7 +84,7 @@ class ArenaListenerRestrictionTest {
         env.fire(ingame)
         assertTrue(ingame.isCancelled)
 
-        env.service.defeat(p2.uuid, DefeatCause.FALL)
+        fallIntoVoid(p2)
         val roundCountdown = env.dropEvent(p1)
         env.fire(roundCountdown)
         assertTrue(roundCountdown.isCancelled)
@@ -119,7 +118,7 @@ class ArenaListenerRestrictionTest {
         assertFalse(place().isCancelled)
         p1.inventory.clear(p1.inventory.heldItemSlot)
 
-        env.service.defeat(p2.uuid, DefeatCause.FALL)
+        fallIntoVoid(p2)
         assertTrue(place().isCancelled) // ROUNDCOUNTDOWN
     }
 
@@ -150,7 +149,7 @@ class ArenaListenerRestrictionTest {
         env.tick(6)
         assertState(damageCancelled = false, breakCancelled = true, commandBlocked = true) // INGAME
 
-        env.service.defeat(p2.uuid, DefeatCause.FALL)
+        fallIntoVoid(p2)
         assertState(damageCancelled = true, breakCancelled = true, commandBlocked = true) // ROUNDCOUNTDOWN
     }
 }

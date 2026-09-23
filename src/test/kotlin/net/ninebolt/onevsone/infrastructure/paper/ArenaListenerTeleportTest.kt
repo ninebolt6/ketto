@@ -1,9 +1,9 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
 import net.ninebolt.onevsone.domain.ArenaState
-import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.domain.WorldPosition
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.fallIntoVoid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.twoPlayerIngame
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import org.bukkit.Location
@@ -33,7 +33,6 @@ class ArenaListenerTeleportTest {
     @BeforeEach
     fun setup() {
         env = TestEnv(folder)
-        env.registerListeners()
     }
 
     @AfterEach
@@ -82,7 +81,7 @@ class ArenaListenerTeleportTest {
     @Test
     fun `round countdown allows only plugin teleports`() {
         val (p1, p2) = env.twoPlayerIngame()
-        env.service.defeat(p2.uuid, DefeatCause.FALL)
+        fallIntoVoid(p2)
         assertEquals(ArenaState.ROUNDCOUNTDOWN, env.state())
 
         val pearl = teleport(p1, PlayerTeleportEvent.TeleportCause.ENDER_PEARL)
@@ -163,7 +162,7 @@ class ArenaListenerTeleportTest {
         env.fire(ingame)
         assertFalse(ingame.isCancelled)
 
-        env.service.defeat(p2.uuid, DefeatCause.FALL)
+        fallIntoVoid(p2)
         assertEquals(ArenaState.ROUNDCOUNTDOWN, env.state())
         val frozen = VehicleEnterEvent(boat, p1)
         env.fire(frozen)

@@ -1,8 +1,9 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
 import net.ninebolt.onevsone.domain.ArenaState
-import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.fallIntoVoid
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.genericDamage
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.lastBroadcast
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
@@ -112,7 +113,7 @@ class PaperMatchProgressionTest {
         env.tick(6)
         assertEquals(ArenaState.INGAME, env.view().state)
 
-        env.service.defeat(p2.uuid, DefeatCause.FALL)
+        fallIntoVoid(p2)
         assertEquals(ArenaState.ROUNDCOUNTDOWN, env.view().state)
         assertEquals(1, env.view().winsOf(p1.uuid))
         val roundEnd = p1.drainMessages()
@@ -140,13 +141,13 @@ class PaperMatchProgressionTest {
         env.join(p2, arena)
         env.tick(6)
 
-        env.service.defeat(p2.uuid, DefeatCause.FALL)
+        fallIntoVoid(p2)
         assertEquals(1, env.view().winsOf(p1.uuid))
         env.tick(8)
-        env.service.defeat(p2.uuid, DefeatCause.FALL)
+        fallIntoVoid(p2)
         assertEquals(2, env.view().winsOf(p1.uuid))
         env.tick(8)
-        env.service.defeat(p2.uuid, DefeatCause.FALL)
+        fallIntoVoid(p2)
 
         assertEquals(ArenaState.WAITING, env.view().state)
         assertTrue(env.view().wins.isEmpty())
@@ -170,8 +171,7 @@ class PaperMatchProgressionTest {
         // Clear the loser's first slot so re-equip is observable in the slot record
         p2.inventory.setItem(0, null)
 
-        p2.health = 0.0
-        env.service.defeat(p2.uuid, DefeatCause.DEATH)
+        p2.simulateDamage(100.0, genericDamage())
         env.runOneShots()
         assertEquals(1, p2.respawnCount)
         // At respawn time the kit is not yet applied (= null); re-equip runs after respawn
@@ -191,7 +191,7 @@ class PaperMatchProgressionTest {
         env.tick(6)
 
         val ingameBoard = p1.scoreboard
-        env.service.defeat(p2.uuid, DefeatCause.FALL)
+        fallIntoVoid(p2)
         assertEquals(20.0, p1.health)
         assertEquals(20, p1.foodLevel)
         assertEquals(0, p1.fireTicks)
@@ -202,7 +202,7 @@ class PaperMatchProgressionTest {
     }
 
     @Test
-    fun `participant vanishing during countdown aborts before touching inventory`() {
+    fun `quit during countdown stops start without changing either inventory`() {
         val arena = env.newArena()
         env.setKit(arena, PaperInventorySnapshot(items = listOf(env.item(Material.IRON_SWORD))))
         val p1 = env.player("Alice")
@@ -213,12 +213,14 @@ class PaperMatchProgressionTest {
         env.join(p2, arena)
         env.tick(5)
 
-        // Player vanishes right before start -> abort without backup or equipment swap
-        env.removePlayer(p2)
+        p2.disconnect()
         env.tick()
-        assertEquals(ArenaState.WAITING, env.view().state)
+        assertEquals(ArenaState.ONEMORE, env.view().state)
+        assertEquals(arena, env.service.arenaIdOf(p1.uuid))
+        assertNull(env.service.arenaIdOf(p2.uuid))
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
+        assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
         assertFalse(p1.hasTeleported())
-        assertNull(env.service.arenaIdOf(p1.uuid))
+        assertFalse(p2.hasTeleported())
     }
 }

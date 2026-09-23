@@ -1,8 +1,8 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
 import net.ninebolt.onevsone.domain.ArenaState
-import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.fallIntoVoid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.assertFired
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.attackDamage
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.genericDamage
@@ -40,7 +40,6 @@ class ArenaListenerCombatTest {
     @BeforeEach
     fun setup() {
         env = TestEnv(folder)
-        env.registerListeners()
     }
 
     @AfterEach
@@ -101,7 +100,7 @@ class ArenaListenerCombatTest {
     @Test
     fun `damage cancelled in round countdown state`() {
         val (p1, p2) = env.twoPlayerIngame()
-        env.service.defeat(p2.uuid, DefeatCause.FALL)
+        fallIntoVoid(p2)
         assertEquals(ArenaState.ROUNDCOUNTDOWN, env.state())
         val event = p1.simulateDamage(1.0, genericDamage())
         assertTrue(event.isCancelled)
@@ -155,7 +154,7 @@ class ArenaListenerCombatTest {
     @Test
     fun `opponent damage cancelled during round countdown`() {
         val (p1, p2) = env.twoPlayerIngame()
-        env.service.defeat(p2.uuid, DefeatCause.FALL)
+        fallIntoVoid(p2)
         val event = p1.simulateDamage(1.0, attackDamage(p2))
         assertTrue(event.isCancelled)
     }
@@ -210,7 +209,7 @@ class ArenaListenerCombatTest {
     @Test
     fun `round countdown freezes xz movement but allows y only`() {
         val (p1, p2) = env.twoPlayerIngame()
-        env.service.defeat(p2.uuid, DefeatCause.FALL)
+        fallIntoVoid(p2)
 
         val sim = p1.simulation()
         val from = p1.location
@@ -245,7 +244,7 @@ class ArenaListenerCombatTest {
     @Test
     fun `void fall in ROUNDCOUNTDOWN scores again after resolving guard released`() {
         val (p1, p2) = env.twoPlayerIngame()
-        env.service.defeat(p2.uuid, DefeatCause.FALL)
+        fallIntoVoid(p2)
         assertEquals(ArenaState.ROUNDCOUNTDOWN, env.state())
 
         env.runOneShots()

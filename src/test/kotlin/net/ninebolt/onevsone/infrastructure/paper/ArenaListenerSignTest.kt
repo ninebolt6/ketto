@@ -42,7 +42,6 @@ class ArenaListenerSignTest {
     @BeforeEach
     fun setup() {
         env = TestEnv(folder)
-        env.registerListeners()
     }
 
     @AfterEach

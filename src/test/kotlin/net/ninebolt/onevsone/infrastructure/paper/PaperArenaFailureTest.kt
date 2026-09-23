@@ -1,13 +1,11 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
 import io.mockk.every
-import io.mockk.mockk
 import io.mockk.spyk
-import io.mockk.verify
 import net.ninebolt.onevsone.domain.ArenaState
-import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.containsText
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.fallIntoVoid
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.genericDamage
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.view
 import org.bukkit.Material
@@ -23,7 +21,9 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import java.io.IOException
+import java.util.logging.Handler
 import java.util.logging.Level
+import java.util.logging.LogRecord
 import java.util.logging.Logger
 
 /** Failure-injection scenarios for persistence, stats, and unregistration. */
@@ -33,6 +33,7 @@ class PaperArenaFailureTest {
     lateinit var folder: File
 
     private lateinit var env: TestEnv
+    private var logTarget: Pair<Logger, Handler>? = null
 
     @BeforeEach
     fun setup() {
@@ -41,6 +42,7 @@ class PaperArenaFailureTest {
 
     @AfterEach
     fun tearDown() {
+        logTarget?.let { (logger, handler) -> logger.removeHandler(handler) }
         env.close()
     }
 
@@ -65,8 +67,7 @@ class PaperArenaFailureTest {
     fun `malformed winner stats does not prevent final death cleanup`() {
         env.close()
         env = TestEnv(folder, requiredWins = 1)
-        val logger = mockk<Logger>(relaxed = true)
-        every { env.plugin.logger } returns logger
+        val records = capturePluginLog()
         val arena = env.newArena()
         env.setKit(arena, PaperInventorySnapshot(items = listOf(env.item(Material.IRON_SWORD))))
         val p1 = env.player("Alice")
@@ -78,9 +79,7 @@ class PaperArenaFailureTest {
         env.tick(6)
         val winnerStats = File(folder, "stats/${p1.uuid}.yml")
         winnerStats.writeText("win: [broken")
-        p2.health = 0.0
-
-        assertTrue(env.service.defeat(p2.uuid, DefeatCause.DEATH))
+        p2.simulateDamage(100.0, genericDamage())
         assertEquals(ArenaState.WAITING, env.view().state)
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
         env.runOneShots()
@@ -90,13 +89,9 @@ class PaperArenaFailureTest {
         assertTrue(env.boards.contains(p1.scoreboard))
         assertEquals("win: [broken", winnerStats.readText())
         assertEquals(1, env.statsRepo.find(p2.uuid)!!.losses)
-        verify(exactly = 1) {
-            logger.log(
-                eq(Level.SEVERE),
-                containsText("Failed to record"),
-                any<Throwable>()
-            )
-        }
+        val failedLog = records.single { it.message.contains("Failed to record") }
+        assertEquals(Level.SEVERE, failedLog.level)
+        assertTrue(failedLog.thrown is IllegalStateException)
         val statusYaml = YamlConfiguration.loadConfiguration(File(folder, "status/arena1.yml"))
         assertEquals("WAITING", statusYaml.getString("status"))
         assertTrue(statusYaml.getStringList("players").isEmpty())
@@ -115,7 +110,7 @@ class PaperArenaFailureTest {
         env.tick(6)
         File(folder, "stats/${p2.uuid}.yml").writeText("lose: [broken")
 
-        assertTrue(env.service.defeat(p2.uuid, DefeatCause.FALL))
+        fallIntoVoid(p2)
         assertEquals(ArenaState.WAITING, env.view().state)
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
         assertEquals(1, env.statsRepo.find(p1.uuid)!!.wins)
@@ -139,7 +134,7 @@ class PaperArenaFailureTest {
         every { spyStats.recordWin(winnerId) } throws IllegalStateException("write failed", IOException("disk full"))
         env.tick(6)
 
-        assertTrue(env.service.defeat(p2.uuid, DefeatCause.FALL))
+        fallIntoVoid(p2)
         assertEquals(ArenaState.WAITING, env.service.matchOf("spy-arena")!!.state)
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
@@ -162,13 +157,29 @@ class PaperArenaFailureTest {
         env.join(p2, arena)
         env.tick(6)
         File(folder, "stats/${p1.uuid}.yml").writeText("lose: [broken")
-        env.removePlayer(p1)
-
-        env.quit(p1)
+        p1.disconnect()
         assertEquals(ArenaState.WAITING, env.view().state)
         assertNull(env.service.arenaIdOf(p2.uuid))
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
         assertEquals(1, env.statsRepo.find(p2.uuid)!!.wins)
+    }
+
+    /** Records LogRecords published to the plugin logger; detached in tearDown. */
+    private fun capturePluginLog(): MutableList<LogRecord> {
+        val records = mutableListOf<LogRecord>()
+        val logger = env.plugin.logger
+        val handler = object : Handler() {
+            override fun publish(record: LogRecord) {
+                records += record
+            }
+
+            override fun flush() = Unit
+
+            override fun close() = Unit
+        }
+        logger.addHandler(handler)
+        logTarget = logger to handler
+        return records
     }
 }

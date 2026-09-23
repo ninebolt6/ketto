@@ -1,9 +1,9 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
 import net.ninebolt.onevsone.domain.Arena
-import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.domain.WorldPosition
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.fallIntoVoid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.opPlayer
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.run
@@ -62,7 +62,7 @@ class OneVsOneAdminCommandTest {
         env.join(p1, arena)
         env.join(p2, arena)
         env.tick(6)
-        env.service.defeat(p2.uuid, DefeatCause.FALL)
+        fallIntoVoid(p2)
 
         env.run(viewer, "arena", "info", "arena1")
         val msgs = viewer.drainMessages()

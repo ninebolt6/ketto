@@ -50,8 +50,7 @@ class PaperArenaMembershipTest {
         env.join(p2, arena)
         env.tick(6)
 
-        env.removePlayer(p2)
-        env.quit(p2)
+        p2.disconnect()
 
         assertEquals(ArenaState.WAITING, env.view().state)
         assertNull(env.service.arenaIdOf(p1.uuid))
@@ -128,8 +127,7 @@ class PaperArenaMembershipTest {
         val p1 = env.player("Alice")
         p1.inventory.setItem(0, env.item(Material.BREAD))
         env.join(p1, arena)
-        env.removePlayer(p1)
-        env.quit(p1)
+        p1.disconnect()
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
         assertNull(env.service.pendingRestore(p1.uuid))
 
@@ -158,8 +156,7 @@ class PaperArenaMembershipTest {
         p2.inventory.setItem(0, env.item(Material.APPLE))
         env.join(p1, arena)
         env.join(p2, arena)
-        env.removePlayer(p1)
-        env.quit(p1)
+        p1.disconnect()
         // A disconnect before match start only unregisters: the remaining participant keeps waiting at ONEMORE
         assertEquals(ArenaState.ONEMORE, env.view().state)
         assertNull(env.service.arenaIdOf(p1.uuid))

@@ -40,10 +40,8 @@ internal fun attackDamage(attacker: Entity, type: DamageType = DamageType.PLAYER
 internal fun projectileDamage(direct: Entity, causing: Entity): DamageSource =
     DamageSource.builder(DamageType.GENERIC).withDirectEntity(direct).withCausingEntity(causing).build()
 
-/** PlayerMock.simulate* is a delegating shim marked @Deprecated, so use the supported PlayerSimulation directly. */
 internal fun PlayerMock.simulation() = PlayerSimulation(this)
 
-/** MockBukkit 4.103 deprecates the assertEventFired family, so inspect fired events directly. */
 internal inline fun <reified T : Event> TestEnv.assertFired(noinline predicate: (T) -> Boolean = { true }) {
     val fired = server.pluginManager.firedEvents.toList().filterIsInstance<T>()
     assertTrue(fired.any(predicate), "no fired ${T::class.simpleName} matched; fired=$fired")
@@ -64,6 +62,11 @@ internal fun TestEnv.twoPlayerIngame(): Pair<ArenaPlayerMock, ArenaPlayerMock> {
     join(p2, arena)
     tick(6)
     return p1 to p2
+}
+
+internal fun fallIntoVoid(player: ArenaPlayerMock) {
+    val target = player.location.clone().apply { y = player.world.minHeight - 1.0 }
+    player.simulation().simulatePlayerMove(target)
 }
 
 /** Turns a real block into a sign and returns it. Later getBlockAt calls return the same state. */

@@ -149,6 +149,10 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         makeDeps(store, YamlBackupStore(store), YamlMatchStateRepository(store), YamlPlayerStatsRepository(store))
     }
 
+    init {
+        registerListeners()
+    }
+
     val store get() = deps.store
     val backupStore get() = deps.backupStore
     val kitStore get() = deps.kitStore
@@ -206,6 +210,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         statsRepo: PlayerStatsRepository = YamlPlayerStatsRepository(newStore)
     ) {
         deps = makeDeps(newStore, backupStore, matchState, statsRepo)
+        registerListeners()
     }
 
     /**
@@ -214,7 +219,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
      * service, registered handlers are unregistered first and recreated from
      * the current dependencies.
      */
-    fun registerListeners() {
+    private fun registerListeners() {
         HandlerList.unregisterAll(plugin)
         server.pluginManager.registerEvents(ArenaMatchListener(service, lookup, messages), plugin)
         server.pluginManager.registerEvents(ArenaGuardListener(service), plugin)
@@ -241,9 +246,14 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
 
     fun item(type: Material): ItemStack = ItemStack.of(type)
 
-    /** Disconnects: removed from the online list, isOnline=false. Quit handling is driven by quit(). */
-    fun removePlayer(p: Player) {
-        (p as? PlayerMock)?.disconnect()
+    /** Models a connection loss before this plugin can process its quit event. */
+    fun disconnectWithoutQuitHandler(player: ArenaPlayerMock) {
+        HandlerList.unregisterAll(plugin)
+        try {
+            player.disconnect()
+        } finally {
+            registerListeners()
+        }
     }
 
     /** Advances time enough to fire the countdown timer (period=20 ticks) n times. */
@@ -277,18 +287,6 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         val reply = service.join(player.uuid, player.name, arena)
         signListener.renderJoin(player, arena.name, reply)
         return reply
-    }
-
-    /**
-     * Calls quit inside a disconnect scope, same as QuitEvent.
-     * In an environment with listeners registered, a disconnect()ed player's
-     * quit is already driven through the real event path, so calling this too
-     * double-invokes it (currently idempotent, but muddies intent).
-     */
-    fun quit(player: Player) {
-        lookup.scopeQuitting(player) {
-            service.quit(player.uuid, player.name)
-        }
     }
 
     /** Delivers reply messages, same as /1vs1 leave. */
