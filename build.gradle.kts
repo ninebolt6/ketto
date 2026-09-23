@@ -20,6 +20,7 @@ dependencies {
     compileOnly(libs.paper.api)
     // Provided by Paper at runtime; declared explicitly to avoid implicit reliance on transitive deps
     compileOnly(libs.adventure.minimessage)
+    compileOnly(libs.sqlite.jdbc)
 
     // MockBukkit must come before the bukkit provider (paper-api)
     // pairs with the Paper-Version (1.21.11) in the manifest
@@ -31,6 +32,7 @@ dependencies {
     testRuntimeOnly(libs.junit.platform.launcher)
     testImplementation(libs.mockk)
     testImplementation(libs.archunit)
+    testImplementation(libs.sqlite.jdbc)
 }
 
 kotlin {
