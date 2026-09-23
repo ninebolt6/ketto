@@ -13,10 +13,6 @@ actrun lint                                   # static check of workflows
 
 Requires JDK 21 (see `.java-version`).
 
-## Conventions
-
-Architecture, domain, test, and style rules: see [docs/conventions.md](docs/conventions.md).
-
 ## Pull requests
 
 - Keep changes focused; one concern per PR
