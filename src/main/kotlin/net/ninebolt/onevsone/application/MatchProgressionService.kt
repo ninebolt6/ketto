@@ -2,7 +2,6 @@ package net.ninebolt.onevsone.application
 
 import net.ninebolt.onevsone.application.port.Cancellation
 import net.ninebolt.onevsone.application.port.FailureReporter
-import net.ninebolt.onevsone.application.port.InventoryBackupPort
 import net.ninebolt.onevsone.application.port.KitPort
 import net.ninebolt.onevsone.application.port.MatchPresentationPort
 import net.ninebolt.onevsone.application.port.PersistenceFailure
@@ -14,7 +13,6 @@ import net.ninebolt.onevsone.application.port.warnOnFailure
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.DefeatOutcome
-import net.ninebolt.onevsone.domain.MatchId
 import net.ninebolt.onevsone.domain.Participant
 import net.ninebolt.onevsone.domain.SpawnSlot
 import kotlin.uuid.Uuid
@@ -33,7 +31,6 @@ class MatchProgressionService(
     private val registry: ArenaRegistry,
     private val sync: MatchStateSync,
     private val stats: PlayerStatsRepository,
-    private val backups: InventoryBackupPort,
     private val kit: KitPort,
     private val players: PlayerPort,
     private val scheduler: SchedulerPort,
@@ -193,14 +190,13 @@ class MatchProgressionService(
             // Re-verify both players' connection and liveness just before starting (postponed while either is dead)
             if (p1.dead || p2.dead) return@runCountdown false
             // Bulk-save both players' inventories before swapping equipment
-            val refs = try {
-                backups.backupBeforeMatch(MatchId.new(), match.participants)
+            try {
+                recovery.backupBeforeMatch(match.participants)
             } catch (e: PersistenceFailure) {
                 failures.report("Could not save inventories before starting arena ${arenaId.name}; match aborted", e)
                 abort(arenaId)
                 return@runCountdown true
             }
-            recovery.register(refs)
             try {
                 rearm(arenaId, first, p1)
                 rearm(arenaId, second, p2)

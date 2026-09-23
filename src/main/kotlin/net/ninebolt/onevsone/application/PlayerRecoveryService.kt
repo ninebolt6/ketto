@@ -8,6 +8,8 @@ import net.ninebolt.onevsone.application.port.MatchPresentationPort
 import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.application.port.PlayerHandle
 import net.ninebolt.onevsone.application.port.PlayerPort
+import net.ninebolt.onevsone.domain.MatchId
+import net.ninebolt.onevsone.domain.Participant
 import kotlin.uuid.Uuid
 
 /**
@@ -34,8 +36,12 @@ class PlayerRecoveryService(
         backups.pendingBackups().forEach(::registerTicket)
     }
 
-    fun register(refs: List<BackupRef>) {
-        refs.forEach(::registerTicket)
+    /**
+     * Bulk-saves the participants' inventories and registers the restore
+     * tickets. PersistenceFailure propagates with no tickets registered.
+     */
+    fun backupBeforeMatch(participants: List<Participant>) {
+        backups.backupBeforeMatch(MatchId.new(), participants).forEach(::registerTicket)
     }
 
     private fun registerTicket(ref: BackupRef) {

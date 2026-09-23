@@ -188,7 +188,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         val recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepo, presentation, failures)
         val progression = MatchProgressionService(
             registry, MatchStateSync(matchStateRepo, presentation), statsRepo,
-            equipment, equipment, playerPort, schedulerPort, presentation, recovery, failures
+            equipment, playerPort, schedulerPort, presentation, recovery, failures
         )
         val service = ArenaApplicationService(
             registry, arenaRepo, matchStateRepo, statsRepo, playerPort,

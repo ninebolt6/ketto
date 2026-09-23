@@ -82,7 +82,6 @@ open class OneVsOnePlugin : JavaPlugin() {
             registry = registry,
             sync = stateSync,
             stats = stats,
-            backups = equipment,
             kit = equipment,
             players = playerPort,
             scheduler = PaperScheduler(this),
