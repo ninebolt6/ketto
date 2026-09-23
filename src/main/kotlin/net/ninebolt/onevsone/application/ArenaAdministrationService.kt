@@ -60,9 +60,10 @@ class ArenaAdministrationService(
         return ToggleReply.Changed
     }
 
+    /** slot is 0-based, same as Arena.withSpawn. */
     fun setSpawn(name: String, slot: Int, position: WorldPosition): Boolean {
         val id = registry.resolveArenaId(name) ?: return false
-        val updated = registry.updateArena(id) { it.withSpawn(slot - 1, position) } ?: return false
+        val updated = registry.updateArena(id) { it.withSpawn(slot, position) } ?: return false
         arenas.save(updated)
         return true
     }

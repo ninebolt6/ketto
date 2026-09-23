@@ -76,13 +76,13 @@ class ArenaAdministrationServiceTest {
     fun `setSpawn writes slot and persists`() {
         app.newArena()
         val pos = WorldPosition.new("world", 9.5, 70.0, -2.5, 33.3f, 12.5f)
-        assertTrue(app.admin.setSpawn("arena1", 1, pos))
+        assertTrue(app.admin.setSpawn("arena1", 0, pos))
         assertEquals(pos, app.arenas.find("arena1").spawn1)
-        assertTrue(app.admin.setSpawn("arena1", 2, pos))
+        assertTrue(app.admin.setSpawn("arena1", 1, pos))
         assertEquals(pos, app.arenas.find("arena1").spawn2)
-        assertFalse(app.admin.setSpawn("missing", 1, pos))
-        // The command surface is fixed to 1/2, but an invalid slot via the service must fail fast
-        assertFailsWith<IllegalArgumentException> { app.admin.setSpawn("arena1", 3, pos) }
+        assertFalse(app.admin.setSpawn("missing", 0, pos))
+        // Out-of-range slots must fail fast (withSpawn enforces the bound)
+        assertFailsWith<IllegalArgumentException> { app.admin.setSpawn("arena1", 2, pos) }
     }
 
     @Test
@@ -125,7 +125,7 @@ class ArenaAdministrationServiceTest {
         assertFalse(app.service.arena("Arena1")!!.enabled)
         assertEquals(ToggleReply.AlreadyDisabled, app.admin.setEnabled("arena1", false))
 
-        assertTrue(app.admin.setSpawn("ARENA1", 1, WorldPosition.new("world", 1.0, 64.0, 1.0)))
+        assertTrue(app.admin.setSpawn("ARENA1", 0, WorldPosition.new("world", 1.0, 64.0, 1.0)))
         assertTrue(app.admin.setSign("arena1", WorldPosition.new("world", 3.0, 64.0, 3.0)))
         assertEquals("Arena1", app.admin.signOwner("world", 3, 64, 3))
 

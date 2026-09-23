@@ -56,7 +56,7 @@ data class Arena private constructor(
 
     /** slot is 0-based, same as spawn(slot). */
     fun withSpawn(slot: Int, position: WorldPosition): Arena {
-        require(slot in 0..1) { "spawn slot must be 0 or 1 (was $slot)" }
+        require(slot in 0 until SPAWN_COUNT) { "spawn slot must be in 0 until $SPAWN_COUNT (was $slot)" }
         return if (slot == 0) copy(spawn1 = position) else copy(spawn2 = position)
     }
 
@@ -67,6 +67,9 @@ data class Arena private constructor(
     }
 
     companion object {
+        /** Number of spawn slots per arena (spawn1/spawn2); also bounds match participants. */
+        const val SPAWN_COUNT = 2
+
         fun new(
             id: Id,
             enabled: Boolean = false,

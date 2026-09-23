@@ -24,7 +24,8 @@ data class ArenaMatch private constructor(
     val epoch: Long = 0L
 ) {
     companion object {
-        const val MAX_PARTICIPANTS = 2
+        // participants[i] teleports to arena spawn slot i, so capacity equals the arena's spawn count
+        const val MAX_PARTICIPANTS = Arena.SPAWN_COUNT
 
         /** A fresh aggregate (WAITING, 0 participants). */
         fun new(arenaId: Arena.Id, requiredWins: Int): ArenaMatch {
