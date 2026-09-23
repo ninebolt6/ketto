@@ -33,28 +33,36 @@ actrun lint                                     # static check of workflows
 
 ## Tests
 
-- Use `kotlin.test` assertions (not `org.junit.jupiter.api.Assertions`)
-- domain/application use pure tests + fakes (via `TestApp`).
-  infrastructure uses MockBukkit (mock + manual wiring via `TestEnv`) and
-  asserts on real state
-- Listener tests register via `env.registerListeners()` and verify through the
-  real dispatch of `env.fire(event)`. Never call handler methods directly
-  (that would miss forgotten `@EventHandler` registration or events lost to
-  custom HandlerLists)
-- Prefer real actions and simulate for event creation: `PlayerSimulation`
-  (`PlayerMock.simulate*` is a delegating shim and deprecated),
-  `simulateDamage` + a real `DamageSource.builder`, `disconnect()`,
-  `teleport()`, `reconnect()`. Build a fixture and `fire` it only for events
-  that have no simulate
-- Verify fired events with `env.assertFired<T> { }` (MockBukkit's
-  assertEventFired family is deprecated)
-- MockK only for limited use: fault injection, APIs MockBukkit does not
-  implement, etc.
-- Test helpers (fakes/fixtures/TestApp/TestEnv, etc.) go in the `fixtures/`
-  subpackage of each layer
+- Use `kotlin.test` assertions. `ArchitectureTest` prevents direct use of JUnit
+  assertions and checks test-layer dependencies
+- domain/application tests use pure tests and fakes (via `TestApp`).
+  `ArchitectureTest` keeps those packages free of infrastructure, Bukkit/Paper,
+  and MockK dependencies
+- Infrastructure tests that exercise Bukkit/Paper behavior use MockBukkit.
+  `TestEnv` wires real adapters and services, registers listeners on creation,
+  and verifies real state. Isolated persistence tests may use `@TempDir` without
+  starting a server
+- When listener behavior is under test, drive it through a real player action
+  or `env.fire(event)`; never invoke handler methods directly, since custom
+  HandlerLists require the event's own dispatch path. Scenario setup may use
+  `TestEnv` helpers
+- Prefer real player actions such as `disconnect()`, `reconnect()`, and
+  `teleport()`. Use `PlayerSimulation` for supported action simulations and
+  `simulateDamage` with a real `DamageSource.builder` for damage. Construct and
+  fire an event fixture only when neither an action nor a simulator exists
+- For event-driven progression and recovery behavior, use player actions and
+  registered listeners instead of direct calls to application service
+  entrypoints. `ArchitectureTest` protects those test boundaries
+- Verify fired events with `env.assertFired<T> { }`
+- Use MockK only for fault injection or APIs MockBukkit does not implement;
+  verify observable behavior through real events and state rather than mock
+  interactions
+- Test helpers (fakes, fixtures, `TestApp`, `TestEnv`, etc.) go in each layer's
+  `fixtures/` subpackage
 
 ## Style
 
-- Comments must not repeat what names and signatures already convey. Write only
-  intent, constraints, and non-obvious rationale
+- Comments should state intent, constraints, or non-obvious rationale. Prefer
+  no comment to boilerplate; avoid facts inferable from names/signatures and
+  caller/lifecycle or concrete storage details that can go stale
 - Do not write fully qualified names; resolve them with imports
