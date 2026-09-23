@@ -6,6 +6,14 @@
   enforced by `ArchitectureTest`). `OneVsOnePlugin` is the composition root and
   wires all dependencies manually
 - application connects to the outside through interfaces in `port/`
+- Use-case results: `*Error?` (null means success) when callers only need the
+  rejection reason, or sealed `*Output` types when success itself has multiple
+  outcomes or carries data. Result types are declared at the bottom of the
+  service file that returns them. Internal binary guards return Boolean and
+  lookups return null. Persistence and external-reference failures throw
+  `PersistenceFailure`
+- Domain state-machine transition results are `*Outcome` types, kept distinct
+  from application-level `Output`/`Error` results
 
 ## Domain
 
