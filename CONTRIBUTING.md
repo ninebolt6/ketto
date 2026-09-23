@@ -5,27 +5,17 @@ Issues and pull requests are welcome.
 ## Getting started
 
 ```sh
-./gradlew clean build --warning-mode all   # compile + tests + jar
+./gradlew clean build --warning-mode all      # compile + tests + jar
+nix develop                                   # shell with JDK 21 + actrun
+actrun workflow run .github/workflows/ci.yml  # run CI locally
+actrun lint                                   # static check of workflows
 ```
 
-Requires JDK 21 (see `.java-version`). With Nix installed, `nix develop`
-provides a shell with the right toolchain and `actrun` for running the CI
-workflow locally:
-
-```sh
-actrun workflow run .github/workflows/ci.yml
-```
+Requires JDK 21 (see `.java-version`).
 
 ## Conventions
 
-The repository's architecture and style rules are documented in
-[AGENTS.md](AGENTS.md) — please read it before making changes. In short:
-
-- Layered architecture: `infrastructure → application → domain`, enforced by
-  `ArchitectureTest`
-- Immutable domain values created through companion factories
-- Tests use `kotlin.test`, fakes, and MockBukkit (`TestEnv`); drive listener
-  behavior through real player actions rather than direct handler calls
+Architecture, domain, test, and style rules: see [docs/conventions.md](docs/conventions.md).
 
 ## Pull requests
 
