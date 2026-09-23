@@ -14,6 +14,7 @@ import net.ninebolt.onevsone.application.LeaveReply
 import net.ninebolt.onevsone.application.MatchProgressionService
 import net.ninebolt.onevsone.application.MatchStateSync
 import net.ninebolt.onevsone.application.PlayerRecoveryService
+import net.ninebolt.onevsone.application.PlayerStatsService
 import net.ninebolt.onevsone.application.port.MatchStateRepository
 import net.ninebolt.onevsone.application.port.PlayerStatsRepository
 import net.ninebolt.onevsone.domain.Arena
@@ -143,6 +144,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         val service: ArenaApplicationService,
         val lifecycle: ArenaLifecycleService,
         val admin: ArenaAdministrationService,
+        val statsService: PlayerStatsService,
         val signListener: ArenaSignListener,
         val command: OneVsOneCommand
     )
@@ -172,6 +174,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     val service get() = deps.service
     val lifecycle get() = deps.lifecycle
     val admin get() = deps.admin
+    val statsService get() = deps.statsService
     val signListener get() = deps.signListener
     val command get() = deps.command
 
@@ -194,18 +197,19 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
             equipment, playerPort, schedulerPort, presentation, recovery, failures
         )
         val service = ArenaApplicationService(
-            registry, statsRepo, playerPort,
+            registry, playerPort,
             recovery, failures, progression, MatchStateSync(matchStateRepo, presentation)
         )
         val lifecycle = ArenaLifecycleService(
             registry, arenaRepo, MatchStateSync(matchStateRepo, presentation), recovery, progression, failures
         )
         val admin = ArenaAdministrationService(registry, arenaRepo, signRepo, lobbyRepo, equipment, presentation, progression)
+        val statsService = PlayerStatsService(statsRepo)
         return Deps(
             store, backupStore, kitStore, arenaRepo, lobbyRepo, signRepo, matchStateRepo, statsRepo,
-            equipment, presentation, registry, recovery, progression, service, lifecycle, admin,
+            equipment, presentation, registry, recovery, progression, service, lifecycle, admin, statsService,
             ArenaSignListener(service, admin, messenger),
-            OneVsOneCommand(service, admin, playerPort, failures, messenger)
+            OneVsOneCommand(service, admin, statsService, playerPort, failures, messenger)
         )
     }
 

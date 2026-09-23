@@ -2,7 +2,6 @@ package net.ninebolt.onevsone.application
 
 import net.ninebolt.onevsone.application.port.FailureReporter
 import net.ninebolt.onevsone.application.port.PlayerPort
-import net.ninebolt.onevsone.application.port.PlayerStatsRepository
 import net.ninebolt.onevsone.application.port.warnOnFailure
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
@@ -11,7 +10,6 @@ import net.ninebolt.onevsone.domain.DefeatOutcome
 import net.ninebolt.onevsone.domain.JoinOutcome
 import net.ninebolt.onevsone.domain.LeaveOutcome
 import net.ninebolt.onevsone.domain.Participant
-import net.ninebolt.onevsone.domain.PlayerStats
 import net.ninebolt.onevsone.domain.QuitOutcome
 import kotlin.uuid.Uuid
 
@@ -25,7 +23,6 @@ import kotlin.uuid.Uuid
  */
 class ArenaApplicationService(
     private val registry: ArenaRegistry,
-    private val stats: PlayerStatsRepository,
     private val players: PlayerPort,
     private val recovery: PlayerRecoveryService,
     private val failures: FailureReporter,
@@ -43,19 +40,6 @@ class ArenaApplicationService(
     fun arena(name: String): Arena? = registry.resolveArenaId(name)?.let { registry.arena(it) }
 
     fun matchOf(name: String): ArenaMatch? = registry.resolveArenaId(name)?.let { registry.match(it) }
-
-    /** Throws PersistenceFailure on corruption (handled by the caller). */
-    fun statsFor(playerId: Uuid): PlayerStats? = stats.find(playerId)
-
-    /**
-     * Rate-limits the named-stats lookup, which resolves uncached names through
-     * an external call. Once per cooldown window per requester.
-     */
-    private val statsLookupThrottle = RequestThrottle(STATS_LOOKUP_COOLDOWN_NANOS)
-
-    /** true when the requester may run a named-stats lookup now. */
-    fun tryAcquireStatsLookup(playerId: Uuid, nowNanos: Long): Boolean =
-        statsLookupThrottle.tryAcquire(playerId, nowNanos)
 
     fun pendingRestore(playerId: Uuid) = recovery.pending(playerId)
 
@@ -176,8 +160,4 @@ class ArenaApplicationService(
         failures.warnOnFailure("Could not unregister ${participant.name} from players.yml; membership record may be stale") {
             sync.unregister(participant)
         }
-
-    private companion object {
-        const val STATS_LOOKUP_COOLDOWN_NANOS = 3_000_000_000L
-    }
 }

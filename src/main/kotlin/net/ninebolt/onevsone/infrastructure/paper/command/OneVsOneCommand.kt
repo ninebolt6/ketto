@@ -2,6 +2,7 @@ package net.ninebolt.onevsone.infrastructure.paper.command
 
 import net.ninebolt.onevsone.application.ArenaAdministrationService
 import net.ninebolt.onevsone.application.ArenaApplicationService
+import net.ninebolt.onevsone.application.PlayerStatsService
 import net.ninebolt.onevsone.application.port.FailureReporter
 import net.ninebolt.onevsone.application.port.PlayerPort
 import net.ninebolt.onevsone.infrastructure.paper.message.Message
@@ -17,6 +18,7 @@ import org.bukkit.command.TabExecutor
 class OneVsOneCommand(
     service: ArenaApplicationService,
     admin: ArenaAdministrationService,
+    statsService: PlayerStatsService,
     players: PlayerPort,
     failures: FailureReporter,
     private val messenger: Messenger
@@ -25,7 +27,7 @@ class OneVsOneCommand(
     private val root = run {
         val arenaInfo = ArenaInfoCommand(service, admin, messenger)
         CommandGroup(Message.UsageRoot, messenger, mapOf(
-            "stats" to StatsCommand(service, players, failures, messenger),
+            "stats" to StatsCommand(statsService, players, failures, messenger),
             "leave" to LeaveCommand(service, messenger),
             "lobby" to CommandGroup(Message.UsageLobby, messenger, mapOf(
                 "set" to SetLobbyCommand(admin, messenger)

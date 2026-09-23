@@ -1,6 +1,6 @@
 package net.ninebolt.onevsone.infrastructure.paper.command
 
-import net.ninebolt.onevsone.application.ArenaApplicationService
+import net.ninebolt.onevsone.application.PlayerStatsService
 import net.ninebolt.onevsone.application.port.FailureReporter
 import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.application.port.PlayerPort
@@ -12,7 +12,7 @@ import kotlin.uuid.toKotlinUuid
 
 /** /1vs1 stats. UUID resolution of offline players is delegated to the PlayerPort async path. */
 internal class StatsCommand(
-    private val service: ArenaApplicationService,
+    private val statsService: PlayerStatsService,
     private val players: PlayerPort,
     private val failures: FailureReporter,
     messenger: Messenger
@@ -28,7 +28,7 @@ internal class StatsCommand(
             return
         }
         // UUID resolution of uncached names hits an external lookup, so rate-limit it
-        if (!service.tryAcquireStatsLookup(playerId, System.nanoTime())) {
+        if (!statsService.tryAcquireStatsLookup(playerId, System.nanoTime())) {
             messenger.send(player, Message.StatsCooldown)
             return
         }
@@ -42,7 +42,7 @@ internal class StatsCommand(
     private fun showStats(sender: CommandSender, uuid: Uuid) {
         // Treat corrupt stats as "none" after warning
         val stats = try {
-            service.statsFor(uuid)
+            statsService.statsFor(uuid)
         } catch (e: PersistenceFailure) {
             failures.warn("Could not read stats for $uuid: ${e.message}")
             null
