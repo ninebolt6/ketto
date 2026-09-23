@@ -1,7 +1,7 @@
 package net.ninebolt.onevsone.application.fixtures
 
 import net.ninebolt.onevsone.application.port.FailureReporter
-import net.ninebolt.onevsone.application.port.MatchPresentationPort
+import net.ninebolt.onevsone.application.port.PresentationPort
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.ArenaState
@@ -9,7 +9,7 @@ import net.ninebolt.onevsone.domain.BlockPosition
 import net.ninebolt.onevsone.domain.WorldPosition
 import kotlin.uuid.Uuid
 
-class RecordingPresentation : MatchPresentationPort {
+class RecordingPresentation : PresentationPort {
     data class Countdown(val ids: List<Uuid>, val seconds: Int)
 
     val countdownTicks = mutableListOf<Countdown>()

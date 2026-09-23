@@ -8,11 +8,11 @@ import net.ninebolt.onevsone.domain.WorldPosition
 import kotlin.uuid.Uuid
 
 /**
- * Match-progression display and effects. String formatting and Adventure live
- * on the Paper side. Direct replies to users (join results etc.) are returned
- * as use-case results and not included here.
+ * Player-facing display and effects driven by match and sign state. String
+ * formatting and Adventure live on the Paper side. Direct replies to users
+ * (join results etc.) are returned as use-case results and not included here.
  */
-interface MatchPresentationPort {
+interface PresentationPort {
     /** Initial countdown: "Teleport in: Ns" + sound (pitch 1). */
     fun countdownTick(participantIds: List<Uuid>, secondsLeft: Int)
     /** Inter-round countdown: "Starting in: Ns" + sound (pitch 1). */

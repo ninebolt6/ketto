@@ -1,7 +1,7 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
 import net.ninebolt.onevsone.application.port.FailureReporter
-import net.ninebolt.onevsone.application.port.MatchPresentationPort
+import net.ninebolt.onevsone.application.port.PresentationPort
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.ArenaState
@@ -24,11 +24,11 @@ import org.bukkit.scoreboard.DisplaySlot
 import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
 
-class PaperMatchPresentation(
+class PaperPresentation(
     private val server: Server,
     private val messenger: Messenger,
     private val failures: FailureReporter
-) : MatchPresentationPort {
+) : PresentationPort {
 
     private fun player(id: Uuid): Player? = server.getPlayer(id.toJavaUuid())
 

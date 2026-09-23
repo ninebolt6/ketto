@@ -18,7 +18,7 @@ import net.ninebolt.onevsone.infrastructure.paper.message.LanguageFiles
 import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import net.ninebolt.onevsone.infrastructure.paper.command.OneVsOneCommand
 import net.ninebolt.onevsone.infrastructure.paper.PaperEquipmentAdapter
-import net.ninebolt.onevsone.infrastructure.paper.PaperMatchPresentation
+import net.ninebolt.onevsone.infrastructure.paper.PaperPresentation
 import net.ninebolt.onevsone.infrastructure.paper.PaperPlayerAdapter
 import net.ninebolt.onevsone.infrastructure.paper.PaperPlayerLookup
 import net.ninebolt.onevsone.infrastructure.paper.PaperScheduler
@@ -73,7 +73,7 @@ open class OneVsOnePlugin : JavaPlugin() {
             kitStore = YamlKitStore(store),
             lookup = lookup
         )
-        val presentation = PaperMatchPresentation(server = server, messenger = messenger, failures = failures)
+        val presentation = PaperPresentation(server = server, messenger = messenger, failures = failures)
 
         val registry = ArenaRegistry(settings.requiredWins)
         val signs = ArenaSignService(registry = registry, signs = signRepository, presentation = presentation)

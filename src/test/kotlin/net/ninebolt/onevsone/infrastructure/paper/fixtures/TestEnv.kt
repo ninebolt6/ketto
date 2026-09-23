@@ -30,7 +30,7 @@ import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import net.ninebolt.onevsone.infrastructure.paper.command.OneVsOneCommand
 import net.ninebolt.onevsone.infrastructure.paper.PaperEquipmentAdapter
 import net.ninebolt.onevsone.infrastructure.paper.PaperInventorySnapshot
-import net.ninebolt.onevsone.infrastructure.paper.PaperMatchPresentation
+import net.ninebolt.onevsone.infrastructure.paper.PaperPresentation
 import net.ninebolt.onevsone.infrastructure.paper.PaperPlayerAdapter
 import net.ninebolt.onevsone.infrastructure.paper.PaperPlayerLookup
 import net.ninebolt.onevsone.infrastructure.paper.PaperScheduler
@@ -139,7 +139,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         val matchStateRepo: MatchStateRepository,
         val statsRepo: PlayerStatsRepository,
         val equipment: PaperEquipmentAdapter,
-        val presentation: PaperMatchPresentation,
+        val presentation: PaperPresentation,
         val registry: ArenaRegistry,
         val recovery: PlayerRecoveryService,
         val progression: MatchProgressionService,
@@ -195,7 +195,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         val lobbyRepo = YamlLobbyRepository(store)
         val signRepo = YamlSignRepository(store)
         val equipment = PaperEquipmentAdapter(backupStore, kitStore, lookup)
-        val presentation = PaperMatchPresentation(server, messenger, failures)
+        val presentation = PaperPresentation(server, messenger, failures)
         val registry = ArenaRegistry(requiredWins)
         val signs = ArenaSignService(registry, signRepo, presentation)
         val recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepo, presentation, failures)

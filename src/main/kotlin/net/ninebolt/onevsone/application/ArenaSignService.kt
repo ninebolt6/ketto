@@ -1,20 +1,20 @@
 package net.ninebolt.onevsone.application
 
 import net.ninebolt.onevsone.application.port.ArenaSignRepository
-import net.ninebolt.onevsone.application.port.MatchPresentationPort
+import net.ninebolt.onevsone.application.port.PresentationPort
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.BlockPosition
 
 /**
  * Join sign management: coordinate persistence via ArenaSignRepository and
- * sign display refresh via MatchPresentationPort.
+ * sign display refresh via PresentationPort.
  * All operations are assumed to be serialized on the main thread.
  */
 class ArenaSignService(
     private val registry: ArenaRegistry,
     private val signs: ArenaSignRepository,
-    private val presentation: MatchPresentationPort
+    private val presentation: PresentationPort
 ) {
     fun signLocation(arenaName: String): BlockPosition? = signs.signLocation(arenaName)
 

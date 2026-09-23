@@ -3,7 +3,7 @@ package net.ninebolt.onevsone.application
 import net.ninebolt.onevsone.application.port.Cancellation
 import net.ninebolt.onevsone.application.port.FailureReporter
 import net.ninebolt.onevsone.application.port.KitPort
-import net.ninebolt.onevsone.application.port.MatchPresentationPort
+import net.ninebolt.onevsone.application.port.PresentationPort
 import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.application.port.PlayerHandle
 import net.ninebolt.onevsone.application.port.PlayerPort
@@ -34,7 +34,7 @@ class MatchProgressionService(
     private val kit: KitPort,
     private val players: PlayerPort,
     private val scheduler: SchedulerPort,
-    private val presentation: MatchPresentationPort,
+    private val presentation: PresentationPort,
     private val recovery: PlayerRecoveryService,
     private val failures: FailureReporter
 ) {

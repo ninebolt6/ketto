@@ -4,7 +4,7 @@ import net.ninebolt.onevsone.application.port.BackupRef
 import net.ninebolt.onevsone.application.port.FailureReporter
 import net.ninebolt.onevsone.application.port.InventoryBackupPort
 import net.ninebolt.onevsone.application.port.LobbyRepository
-import net.ninebolt.onevsone.application.port.MatchPresentationPort
+import net.ninebolt.onevsone.application.port.PresentationPort
 import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.application.port.PlayerHandle
 import net.ninebolt.onevsone.application.port.PlayerPort
@@ -24,7 +24,7 @@ class PlayerRecoveryService(
     private val backups: InventoryBackupPort,
     private val players: PlayerPort,
     private val lobby: LobbyRepository,
-    private val presentation: MatchPresentationPort,
+    private val presentation: PresentationPort,
     private val failures: FailureReporter
 ) {
     /** Token for one restore target. Deferred callbacks match it by reference identity. */
