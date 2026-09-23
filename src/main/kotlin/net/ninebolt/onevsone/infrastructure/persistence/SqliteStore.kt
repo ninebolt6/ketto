@@ -14,7 +14,8 @@ import java.util.logging.Logger
  * ordinary deployment shape: bounded contexts are separated by tables, not
  * files, so cross-table statements and foreign-key cascades stay inside one
  * transactional unit. This class is JDBC plumbing only — schema lives in
- * SqliteMigrations and payload codecs next to their repositories.
+ * the db/migration SQL files applied by SqliteMigrations, and payload
+ * codecs sit next to their repositories.
  *
  * Transaction boundary = one public repository method = one `atomic` call.
  * Nested `atomic` blocks join the ambient transaction (depth counter); an
