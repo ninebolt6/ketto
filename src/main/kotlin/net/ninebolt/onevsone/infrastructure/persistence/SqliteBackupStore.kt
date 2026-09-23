@@ -23,7 +23,7 @@ class SqliteBackupStore(private val store: SqliteStore) {
                     backup.ref.matchId.value.toString(),
                     backup.ref.playerId?.toString(),
                     backup.ref.playerName,
-                    store.encodeSnapshot(backup.snapshot)
+                    InventoryPayloadCodec.encode(backup.snapshot)
                 )
             }
         }
@@ -39,7 +39,7 @@ class SqliteBackupStore(private val store: SqliteStore) {
                     playerId = row.getString("player_uuid")?.let(Uuid::parseOrNull),
                     playerName = row.getString("player_name")
                 ),
-                store.decodeSnapshot(row.getString("payload"))
+                InventoryPayloadCodec.decode(row.getString("payload"))
             )
         }
 
@@ -51,7 +51,7 @@ class SqliteBackupStore(private val store: SqliteStore) {
     /** Fallback read for restore (when no in-memory snapshot exists). */
     fun backupFor(ref: BackupRef): PersistedBackup? =
         store.queryOne("SELECT payload FROM backups WHERE backup_id = ?", ref.backupId.toString()) { row ->
-            PersistedBackup(ref, store.decodeSnapshot(row.getString("payload")))
+            PersistedBackup(ref, InventoryPayloadCodec.decode(row.getString("payload")))
         }
 }
 

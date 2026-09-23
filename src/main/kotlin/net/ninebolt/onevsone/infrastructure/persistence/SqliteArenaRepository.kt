@@ -4,23 +4,27 @@ import net.ninebolt.onevsone.application.port.ArenaRepository
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.WorldPosition
 import java.sql.ResultSet
+import java.util.logging.Logger
 
 /**
  * Arena definitions in the arenas table. Registration order is kept in the
  * seq column, assigned on first insert. Delete cascades to kit, sign, and
  * match-status rows owned by the arena.
  */
-class SqliteArenaRepository(private val store: SqliteStore) : ArenaRepository {
+class SqliteArenaRepository(
+    private val store: SqliteStore,
+    private val logger: Logger = Logger.getLogger(SqliteArenaRepository::class.java.name)
+) : ArenaRepository {
 
     override fun loadAll(): List<Arena> =
         store.query("SELECT * FROM arenas ORDER BY seq") { row ->
             val name = row.getString("name")
             if (Arena.Id.of(name) == null) {
-                store.warn("Ignoring invalid arena name '$name' in arenas table")
+                logger.warning("Ignoring invalid arena name '$name' in arenas table")
                 null
             } else {
                 decode(row) ?: run {
-                    store.warn("Arena '$name' could not be loaded; skipping")
+                    logger.warning("Arena '$name' could not be loaded; skipping")
                     null
                 }
             }

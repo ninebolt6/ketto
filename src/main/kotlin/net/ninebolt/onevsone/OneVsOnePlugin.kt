@@ -63,7 +63,7 @@ open class OneVsOnePlugin : JavaPlugin() {
         val failures = PluginFailureReporter { logger }
         val store = SqliteStore(dataFolder, logger)
         sqliteStore = store
-        val arenaRepository = SqliteArenaRepository(store)
+        val arenaRepository = SqliteArenaRepository(store, logger)
         val lobbyRepository = SqliteLobbyRepository(store)
         val signRepository = SqliteArenaSignRepository(store)
         val matchState = SqliteMatchStateRepository(store)

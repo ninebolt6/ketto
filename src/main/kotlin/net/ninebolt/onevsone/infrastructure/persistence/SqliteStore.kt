@@ -1,9 +1,6 @@
 package net.ninebolt.onevsone.infrastructure.persistence
 
 import net.ninebolt.onevsone.application.port.PersistenceFailure
-import net.ninebolt.onevsone.infrastructure.paper.PaperInventorySnapshot
-import org.bukkit.configuration.file.YamlConfiguration
-import org.bukkit.inventory.ItemStack
 import java.io.File
 import java.sql.Connection
 import java.sql.DriverManager
@@ -16,7 +13,8 @@ import java.util.logging.Logger
  * The plugin's single SQLite database (data.db). One file per plugin is the
  * ordinary deployment shape: bounded contexts are separated by tables, not
  * files, so cross-table statements and foreign-key cascades stay inside one
- * transactional unit.
+ * transactional unit. This class is JDBC plumbing only — schema lives in
+ * SqliteMigrations and payload codecs next to their repositories.
  *
  * Transaction boundary = one public repository method = one `atomic` call.
  * Nested `atomic` blocks join the ambient transaction (depth counter); an
@@ -52,21 +50,15 @@ class SqliteStore(folder: File, private val logger: Logger) : AutoCloseable {
         }
         try {
             logger.info("SQLite ${connection.metaData.driverVersion} at ${file.name}")
+            val migrations = SqliteMigrations(connection)
             // A newer file must be rejected before pragmas touch it (even
             // journal_mode=WAL would rewrite the header of an unknown schema).
-            checkVersion()
+            migrations.checkSupported()
             applyPragmas()
-            migrate()
+            migrations.migrate()
         } catch (e: Throwable) {
             runCatching { connection.close() }
             throw e
-        }
-    }
-
-    private fun checkVersion() {
-        val version = userVersion()
-        if (version > SCHEMA_VERSION) {
-            throw PersistenceFailure("data.db has schema version $version, newer than supported $SCHEMA_VERSION; not modifying it")
         }
     }
 
@@ -81,23 +73,6 @@ class SqliteStore(folder: File, private val logger: Logger) : AutoCloseable {
             st.executeQuery("PRAGMA journal_mode=WAL").use { it.next() }
         }
     }
-
-    /** user_version guards schema migrations; a newer file is never rewritten. */
-    private fun migrate() {
-        if (userVersion() == SCHEMA_VERSION) return
-        connection.createStatement().use { st ->
-            SCHEMA.forEach(st::execute)
-            st.execute("PRAGMA user_version=$SCHEMA_VERSION")
-        }
-    }
-
-    private fun userVersion(): Int =
-        connection.createStatement().use { st ->
-            st.executeQuery("PRAGMA user_version").use { rs ->
-                rs.next()
-                rs.getInt(1)
-            }
-        }
 
     /**
      * Runs block inside one transaction. The outermost call commits or rolls
@@ -173,8 +148,6 @@ class SqliteStore(folder: File, private val logger: Logger) : AutoCloseable {
     internal fun <T> queryOne(sql: String, vararg params: Any?, map: (ResultSet) -> T): T? =
         query(sql, *params, map = map).firstOrNull()
 
-    internal fun warn(message: String) = logger.warning(message)
-
     private fun bind(ps: PreparedStatement, params: Array<out Any?>) {
         params.forEachIndexed { i, value ->
             when (value) {
@@ -195,24 +168,6 @@ class SqliteStore(folder: File, private val logger: Logger) : AutoCloseable {
     private fun asFailure(e: Throwable): Throwable =
         if (e is Exception) e as? PersistenceFailure ?: PersistenceFailure("SQLite operation failed", e) else e
 
-    // ---- snapshot codec ------------------------------------------------
-
-    /** Inventory payload as a YAML string; the column stores ItemStacks without exposing them. */
-    internal fun encodeSnapshot(snapshot: PaperInventorySnapshot): String {
-        val yaml = YamlConfiguration()
-        yaml.set("armor", snapshot.armor)
-        yaml.set("item", snapshot.items)
-        return yaml.saveToString()
-    }
-
-    internal fun decodeSnapshot(payload: String): PaperInventorySnapshot {
-        val yaml = YamlConfiguration()
-        yaml.loadFromString(payload)
-        val armor = (yaml.getList("armor") ?: emptyList()).map { it as? ItemStack }
-        val items = (yaml.getList("item") ?: emptyList()).map { it as? ItemStack }
-        return PaperInventorySnapshot(armor, items)
-    }
-
     override fun close() {
         try {
             // Fold the WAL back into the main file so the database directory is self-contained
@@ -221,78 +176,5 @@ class SqliteStore(folder: File, private val logger: Logger) : AutoCloseable {
             logger.warning("WAL checkpoint failed on close: ${e.message}")
         }
         connection.close()
-    }
-
-    private companion object {
-        const val SCHEMA_VERSION = 1
-
-        /**
-         * Table layout by bounded context. match_status is a lifecycle-dependent
-         * projection of arenas (CASCADE); registrations deliberately has no FK
-         * because membership is removed by the abort/leave flow before arena
-         * deletion, and it must not silently re-point at a recreated arena.
-         */
-        val SCHEMA = listOf(
-            """
-            CREATE TABLE IF NOT EXISTS arenas(
-              name TEXT PRIMARY KEY COLLATE NOCASE,
-              enabled INTEGER NOT NULL DEFAULT 0,
-              spawn1_world TEXT, spawn1_x REAL, spawn1_y REAL, spawn1_z REAL, spawn1_yaw REAL, spawn1_pitch REAL,
-              spawn2_world TEXT, spawn2_x REAL, spawn2_y REAL, spawn2_z REAL, spawn2_yaw REAL, spawn2_pitch REAL,
-              seq INTEGER NOT NULL UNIQUE
-            )
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS arena_kits(
-              arena_name TEXT PRIMARY KEY REFERENCES arenas(name) ON DELETE CASCADE,
-              payload TEXT NOT NULL
-            )
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS arena_signs(
-              arena_name TEXT PRIMARY KEY REFERENCES arenas(name) ON DELETE CASCADE,
-              world TEXT NOT NULL, x INTEGER NOT NULL, y INTEGER NOT NULL, z INTEGER NOT NULL
-            )
-            """,
-            "CREATE INDEX IF NOT EXISTS arena_signs_pos ON arena_signs(world, x, y, z)",
-            """
-            CREATE TABLE IF NOT EXISTS match_status(
-              arena_name TEXT PRIMARY KEY REFERENCES arenas(name) ON DELETE CASCADE,
-              state TEXT NOT NULL,
-              players TEXT NOT NULL DEFAULT '',
-              wins TEXT NOT NULL DEFAULT ''
-            )
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS lobby(
-              id INTEGER PRIMARY KEY CHECK (id = 1),
-              world TEXT NOT NULL, x REAL NOT NULL, y REAL NOT NULL, z REAL NOT NULL,
-              yaw REAL NOT NULL, pitch REAL NOT NULL
-            )
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS registrations(
-              player_uuid TEXT PRIMARY KEY,
-              player_name TEXT NOT NULL,
-              arena_name TEXT NOT NULL
-            )
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS backups(
-              backup_id TEXT PRIMARY KEY,
-              match_id TEXT NOT NULL,
-              player_uuid TEXT,
-              player_name TEXT NOT NULL,
-              payload TEXT NOT NULL
-            )
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS player_stats(
-              player_uuid TEXT PRIMARY KEY,
-              wins INTEGER NOT NULL DEFAULT 0,
-              losses INTEGER NOT NULL DEFAULT 0
-            )
-            """
-        )
     }
 }
