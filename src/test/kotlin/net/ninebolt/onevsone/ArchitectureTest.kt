@@ -8,10 +8,9 @@ import org.junit.jupiter.api.Test
 import java.io.File
 
 /**
- * Static check of the dependency direction. Parses compiled bytecode with
- * ArchUnit and enforces that domain/application depend on nothing outside the
- * allowed packages. Whitelist rather than blacklist, so new external
- * dependencies other than Bukkit/YAML/infrastructure are also caught.
+ * Static checks over compiled production and test bytecode. Inner-layer rules
+ * use a whitelist so new external dependencies are caught; test rules protect
+ * the same boundaries at the test seam.
  */
 class ArchitectureTest {
 
@@ -19,6 +18,10 @@ class ArchitectureTest {
         ClassFileImporter()
             .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
             .importPackages("net.ninebolt.onevsone")
+    }
+
+    private val testClasses by lazy {
+        ClassFileImporter().importPath("build/classes/kotlin/test")
     }
 
     // Allow compiler-generated references such as java.lang, kotlin.jvm.internal, @NotNull
@@ -49,6 +52,42 @@ class ArchitectureTest {
             .resideInAnyPackage("net.ninebolt.onevsone.domain..", "net.ninebolt.onevsone.application..")
             .should().dependOnClassesThat().resideInAnyPackage("java.io..", "java.nio..")
             .check(classes)
+    }
+
+    @Test
+    fun `domain and application tests stay independent of infrastructure and platform APIs`() {
+        noClasses().that().resideInAnyPackage(
+            "net.ninebolt.onevsone.domain..",
+            "net.ninebolt.onevsone.application.."
+        ).should().dependOnClassesThat().resideInAnyPackage(
+            "net.ninebolt.onevsone.infrastructure..",
+            "org.bukkit..",
+            "io.papermc.paper..",
+            "net.kyori..",
+            "org.mockbukkit..",
+            "io.mockk.."
+        ).check(testClasses)
+    }
+
+    @Test
+    fun `infrastructure tests use events instead of calling progression entrypoints`() {
+        val forbiddenNames = setOf("defeat", "quit", "restorePending")
+        // Kotlin appends a hash to JVM method names that accept value classes.
+        val directCalls = testClasses
+            .filter { it.packageName.startsWith("net.ninebolt.onevsone.infrastructure") }
+            .flatMap { it.methodCallsFromSelf }
+            .filter {
+                it.targetOwner.name == "net.ninebolt.onevsone.application.ArenaApplicationService" &&
+                    it.name.substringBefore('-') in forbiddenNames
+            }
+        assertTrue(directCalls.isEmpty(), "progression entrypoints called directly: $directCalls")
+    }
+
+    @Test
+    fun `tests use kotlin test assertions`() {
+        noClasses().should().dependOnClassesThat()
+            .haveFullyQualifiedName("org.junit.jupiter.api.Assertions")
+            .check(testClasses)
     }
 
     @Test
