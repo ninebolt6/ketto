@@ -24,7 +24,7 @@ class PlayerRecoveryServiceTest {
         val ref = backupRef(Uuid.random(), "Alice")
         app.equipment.seedBackup(ref)
         app.recovery.loadPersisted()
-        assertNotNull(app.recovery.ticketFor(ref.playerId!!, "Alice"))
+        assertNotNull(app.recovery.pending(ref.playerId!!))
     }
 
     @Test
@@ -36,11 +36,11 @@ class PlayerRecoveryServiceTest {
         assertEquals(ArenaState.WAITING, app.state())
 
         // Disconnect before restore: the ticket remains, so quit restores synchronously
-        val ticket = app.recovery.ticketFor(p2.id, p2.name) ?: app.recovery.pending(p2.id)
+        val ticket = app.recovery.pending(p2.id)
         assertNotNull(ticket)
         app.players.disconnect(p2)
         app.players.quittingScope(p2) {
-            app.service.quit(p2.id, p2.name)
+            app.service.quit(p2.id)
         }
         assertEquals(2, app.equipment.restored.size)
         assertTrue(app.equipment.storedBackups.isEmpty())
@@ -66,7 +66,7 @@ class PlayerRecoveryServiceTest {
         // Leave/disconnect/shutdown before start never touches the inventory
         app.players.disconnect(p1)
         app.players.quittingScope(p1) {
-            app.service.quit(p1.id, p1.name)
+            app.service.quit(p1.id)
         }
         assertTrue(app.equipment.restored.isEmpty())
         assertNull(app.service.pendingRestore(p1.id))
@@ -84,7 +84,7 @@ class PlayerRecoveryServiceTest {
 
         // Restored on re-login
         p2.online = true
-        app.service.restorePending(p2.id, p2.name)
+        app.service.restorePending(p2.id)
         assertEquals(2, app.equipment.restored.size)
         assertTrue(app.equipment.storedBackups.isEmpty())
         assertNull(app.service.pendingRestore(p2.id))
@@ -100,42 +100,29 @@ class PlayerRecoveryServiceTest {
 
         // Same name under a different UUID is not a restore target
         val squatter = app.players.add("Alice")
-        app.service.restorePending(squatter.id, squatter.name)
+        app.service.restorePending(squatter.id)
         assertTrue(app.equipment.restored.isEmpty())
 
         // The same UUID under a renamed account is restored
         val renamed = app.players.add("Alice2", original.id)
-        app.service.restorePending(renamed.id, renamed.name)
+        app.service.restorePending(renamed.id)
         assertEquals(1, app.equipment.restored.size)
         assertTrue(app.equipment.storedBackups.isEmpty())
     }
 
     @Test
-    fun `legacy backup without uuid is not restored when name matching is disabled`() {
-        val app = TestApp(legacyNameRestore = false)
+    fun `backup without uuid is not restored`() {
+        val app = TestApp()
         val p = app.players.add("Alice")
         val ref = BackupRef.new(MatchId.new(), null, "Alice")
         app.equipment.seedBackup(ref)
         app.recovery.loadPersisted()
         assertTrue(app.failures.warnings.any { it.contains("no owner uuid") })
 
-        app.service.restorePending(p.id, p.name)
+        app.service.restorePending(p.id)
         assertTrue(app.equipment.restored.isEmpty())
         // The record stays until an admin fills in the uuid or deletes it
         assertTrue(app.equipment.storedBackups.containsKey(ref.backupId))
-    }
-
-    @Test
-    fun `legacy backup without uuid is restored when name matching is allowed`() {
-        val app = TestApp()
-        val p = app.players.add("Alice")
-        val ref = BackupRef.new(MatchId.new(), null, "Alice")
-        app.equipment.seedBackup(ref)
-        app.recovery.loadPersisted()
-
-        app.service.restorePending(p.id, p.name)
-        assertEquals(1, app.equipment.restored.size)
-        assertTrue(app.equipment.storedBackups.isEmpty())
     }
 
     @Test
@@ -147,7 +134,7 @@ class PlayerRecoveryServiceTest {
         app.recovery.loadPersisted()
         app.equipment.failOnAcknowledge = true
 
-        app.service.restorePending(p.id, p.name)
+        app.service.restorePending(p.id)
         assertEquals(1, app.equipment.restored.size)
         // The disk record remains (restored again next startup = fail-safe)
         assertTrue(app.equipment.storedBackups.containsKey(ref.backupId))
@@ -163,12 +150,12 @@ class PlayerRecoveryServiceTest {
         app.recovery.loadPersisted()
         app.equipment.failOnRestore = true
 
-        app.service.restorePending(p.id, p.name)
+        app.service.restorePending(p.id)
         assertTrue(app.equipment.restored.isEmpty())
         // The ticket is retained, so retry works
         assertNotNull(app.service.pendingRestore(p.id))
         app.equipment.failOnRestore = false
-        app.service.restorePending(p.id, p.name)
+        app.service.restorePending(p.id)
         assertEquals(1, app.equipment.restored.size)
     }
 
@@ -209,7 +196,7 @@ class PlayerRecoveryServiceTest {
         // Re-login completes the ticket's restore
         p2.online = true
         p2.dead = false
-        app.service.restorePending(p2.id, p2.name)
+        app.service.restorePending(p2.id)
         assertTrue(app.equipment.restored.any { it.playerId == p2.id })
         assertNull(app.service.pendingRestore(p2.id))
     }

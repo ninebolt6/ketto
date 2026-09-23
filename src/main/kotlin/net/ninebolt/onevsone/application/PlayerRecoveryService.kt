@@ -23,19 +23,12 @@ class PlayerRecoveryService(
     private val players: PlayerPort,
     private val lobby: LobbyRepository,
     private val presentation: MatchPresentationPort,
-    private val failures: FailureReporter,
-    /**
-     * Whether a legacy backup without a recorded uuid may be restored by name
-     * match. In offline mode a different person can log in under the same name,
-     * so this is allowed only in online mode.
-     */
-    private val allowLegacyNameRestore: Boolean
+    private val failures: FailureReporter
 ) {
     /** Token for one restore target. Deferred callbacks match it by reference identity. */
     class RestoreTicket(val ref: BackupRef)
 
-    private val ticketsByUuid = mutableMapOf<Uuid, RestoreTicket>()
-    private val ticketsByName = mutableMapOf<String, RestoreTicket>()
+    private val tickets = mutableMapOf<Uuid, RestoreTicket>()
 
     fun loadPersisted() {
         backups.pendingBackups().forEach(::registerTicket)
@@ -46,31 +39,21 @@ class PlayerRecoveryService(
     }
 
     private fun registerTicket(ref: BackupRef) {
-        if (ref.playerId == null && !allowLegacyNameRestore) {
+        val owner = ref.playerId
+        if (owner == null) {
             failures.warn(
-                "Backup for ${ref.playerName} has no owner uuid and is not restored on an offline-mode server; " +
+                "Backup for ${ref.playerName} has no owner uuid and cannot be restored; " +
                     "add 'uuid' to inv.${ref.playerName} in players.yml or delete the record"
             )
+            return
         }
-        val ticket = RestoreTicket(ref)
-        ref.playerId?.let { ticketsByUuid[it] = ticket }
-        ticketsByName[ref.playerName] = ticket
+        tickets[owner] = RestoreTicket(ref)
     }
 
-    /** UUID takes precedence; a name is used only when the backup's uuid matches (or is unrecorded and allowed). */
-    fun ticketFor(playerId: Uuid, playerName: String): RestoreTicket? =
-        ticketsByUuid[playerId]
-            ?: ticketsByName[playerName]?.takeIf { it.matchesId(playerId) }
-
-    fun pending(playerId: Uuid): RestoreTicket? = ticketsByUuid[playerId]
-
-    /** Whether the name index may vouch for ownership. Legacy backups without uuid are allowed only when permitted. */
-    private fun RestoreTicket.matchesId(playerId: Uuid): Boolean =
-        if (ref.playerId == null) allowLegacyNameRestore else ref.playerId == playerId
+    fun pending(playerId: Uuid): RestoreTicket? = tickets[playerId]
 
     private fun ownedBy(handle: PlayerHandle, ticket: RestoreTicket): Boolean =
-        ticketsByUuid[handle.id] === ticket ||
-            (ticketsByName[handle.name] === ticket && ticket.matchesId(handle.id))
+        tickets[handle.id] === ticket
 
     /**
      * Completes a backup restore (inventory, scoreboard, record close-out).
@@ -106,8 +89,7 @@ class PlayerRecoveryService(
     }
 
     private fun forget(ticket: RestoreTicket) {
-        ticketsByUuid.values.remove(ticket)
-        ticketsByName.values.remove(ticket)
+        tickets.values.remove(ticket)
     }
 
     private fun teleportLobby(handle: PlayerHandle) {
@@ -126,7 +108,7 @@ class PlayerRecoveryService(
      * Incomplete data such as offline players is left in place.
      */
     fun restoreAllOnline() {
-        ticketsByUuid.toList().forEach { (id, ticket) ->
+        tickets.toList().forEach { (id, ticket) ->
             val handle = players.handle(id) ?: return@forEach
             if (handle.dead) {
                 try {

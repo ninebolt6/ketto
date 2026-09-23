@@ -156,7 +156,7 @@ class ArenaApplicationServiceTest {
         val (p1, p2) = app.joinedTwo()
         app.players.disconnect(p1)
         app.players.quittingScope(p1) {
-            app.service.quit(p1.id, p1.name)
+            app.service.quit(p1.id)
         }
         // A disconnect before match start only unregisters: no stats, champion broadcast, or restore
         assertEquals(ArenaState.ONEMORE, app.state())
@@ -180,7 +180,7 @@ class ArenaApplicationServiceTest {
         app.service.join(p1.id, p1.name, Arena.Id.new("arena1"))
         app.players.disconnect(p1)
         app.players.quittingScope(p1) {
-            app.service.quit(p1.id, p1.name)
+            app.service.quit(p1.id)
         }
         assertEquals(ArenaState.WAITING, app.state())
         assertNull(app.service.arenaIdOf(p1.id))
@@ -255,7 +255,7 @@ class ArenaApplicationServiceTest {
         assertEquals(ArenaState.ROUNDCOUNTDOWN, app.state())
         app.players.disconnect(p1)
         app.players.quittingScope(p1) {
-            app.service.quit(p1.id, p1.name)
+            app.service.quit(p1.id)
         }
         assertEquals(ArenaState.WAITING, app.state())
         assertEquals(1, app.stats.stats[p2.id]?.wins)

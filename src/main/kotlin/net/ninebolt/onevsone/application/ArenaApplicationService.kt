@@ -121,7 +121,7 @@ class ArenaApplicationService(
 
         // Complete any unrestored backup from a previous match before rejoining (does not read the inventory)
         val handle = players.handle(playerId)
-        recovery.ticketFor(playerId, playerName)?.let { ticket ->
+        recovery.pending(playerId)?.let { ticket ->
             if (handle == null || handle.dead) return JoinReply.InMatch
             recovery.restoreNow(handle, ticket)
         }
@@ -158,11 +158,11 @@ class ArenaApplicationService(
      * During QuitEvent the adapter provides an operation handle for the
      * disconnecting player, so processing here needs only the UUID.
      */
-    fun quit(playerId: Uuid, playerName: String) {
+    fun quit(playerId: Uuid) {
         val arenaId = registry.arenaOf(playerId)
         if (arenaId == null) {
             // Even when not participating, restore any unrestored backup so the disconnect is safe
-            recovery.ticketFor(playerId, playerName)?.let { ticket ->
+            recovery.pending(playerId)?.let { ticket ->
                 players.handle(playerId)?.let { handle ->
                     recovery.restoreNow(handle, ticket)
                 }
@@ -183,9 +183,9 @@ class ArenaApplicationService(
     }
 
     /** Equivalent of PlayerJoinEvent. */
-    fun restorePending(playerId: Uuid, playerName: String) {
+    fun restorePending(playerId: Uuid) {
         if (registry.isJoined(playerId)) return
-        val ticket = recovery.ticketFor(playerId, playerName) ?: return
+        val ticket = recovery.pending(playerId) ?: return
         val handle = players.handle(playerId) ?: return
         // A login can arrive dead; revive first so the restore lands on a live player
         handle.respawn()

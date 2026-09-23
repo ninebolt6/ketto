@@ -82,13 +82,13 @@ class ArenaMatchListener(
         // A disconnecting player can no longer be fetched from Server, so this is
         // called inside a scope that can resolve the event's Player only during synchronous handling.
         lookup.scopeQuitting(event.player) {
-            service.quit(event.player.uniqueId.toKotlinUuid(), event.player.name)
+            service.quit(event.player.uniqueId.toKotlinUuid())
         }
     }
 
     @EventHandler
     fun onJoin(event: PlayerJoinEvent) {
-        service.restorePending(event.player.uniqueId.toKotlinUuid(), event.player.name)
+        service.restorePending(event.player.uniqueId.toKotlinUuid())
     }
 
     @EventHandler

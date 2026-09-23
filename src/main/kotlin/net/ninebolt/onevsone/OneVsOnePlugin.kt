@@ -75,8 +75,7 @@ open class OneVsOnePlugin : JavaPlugin() {
             players = playerPort,
             lobby = lobbyRepository,
             presentation = presentation,
-            failures = failures,
-            allowLegacyNameRestore = server.onlineMode
+            failures = failures
         )
         val stateSync = MatchStateSync(matchState = matchState, presentation = presentation)
         val progression = MatchProgressionService(

@@ -185,7 +185,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         val equipment = PaperEquipmentAdapter(backupStore, kitStore, lookup)
         val presentation = PaperMatchPresentation(server, messenger, signRepo, failures)
         val registry = ArenaRegistry(requiredWins)
-        val recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepo, presentation, failures, server.onlineMode)
+        val recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepo, presentation, failures)
         val progression = MatchProgressionService(
             registry, MatchStateSync(matchStateRepo, presentation), statsRepo,
             equipment, equipment, playerPort, schedulerPort, presentation, recovery, failures
