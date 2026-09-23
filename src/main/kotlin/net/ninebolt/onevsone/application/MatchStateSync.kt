@@ -1,6 +1,5 @@
 package net.ninebolt.onevsone.application
 
-import net.ninebolt.onevsone.application.port.MatchPresentationPort
 import net.ninebolt.onevsone.application.port.MatchStateRepository
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
@@ -8,13 +7,13 @@ import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.Participant
 
 /**
- * Synchronizes committed match state, the participant ledger, and the join
- * sign through the persistence and presentation ports. Failures propagate for
- * context-dependent handling.
+ * Synchronizes committed match state and the participant ledger through the
+ * persistence port, and delegates join-sign repaints to ArenaSignService.
+ * Failures propagate for context-dependent handling.
  */
 class MatchStateSync(
     private val matchState: MatchStateRepository,
-    private val presentation: MatchPresentationPort
+    private val signs: ArenaSignService
 ) {
     fun register(participant: Participant, arena: Arena.Id) {
         matchState.registerParticipant(participant, arena)
@@ -29,7 +28,7 @@ class MatchStateSync(
     }
 
     fun refreshSign(arena: Arena.Id, state: ArenaState) {
-        presentation.updateSign(arena, state)
+        signs.refreshSign(arena, state)
     }
 
     fun clearRegistrations() {

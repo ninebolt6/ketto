@@ -73,9 +73,10 @@ open class OneVsOnePlugin : JavaPlugin() {
             kitStore = YamlKitStore(store),
             lookup = lookup
         )
-        val presentation = PaperMatchPresentation(server = server, messenger = messenger, signs = signRepository, failures = failures)
+        val presentation = PaperMatchPresentation(server = server, messenger = messenger, failures = failures)
 
         val registry = ArenaRegistry(settings.requiredWins)
+        val signs = ArenaSignService(registry = registry, signs = signRepository, presentation = presentation)
         val recovery = PlayerRecoveryService(
             backups = equipment,
             players = playerPort,
@@ -83,7 +84,7 @@ open class OneVsOnePlugin : JavaPlugin() {
             presentation = presentation,
             failures = failures
         )
-        val stateSync = MatchStateSync(matchState = matchState, presentation = presentation)
+        val stateSync = MatchStateSync(matchState = matchState, signs = signs)
         val progression = MatchProgressionService(
             registry = registry,
             sync = stateSync,
@@ -118,7 +119,6 @@ open class OneVsOnePlugin : JavaPlugin() {
             kit = equipment,
             progression = progression
         )
-        val signs = ArenaSignService(registry = registry, signs = signRepository, presentation = presentation)
         val lobby = LobbyService(lobby = lobbyRepository)
         val statsService = PlayerStatsService(stats = stats)
         lifecycle.load()

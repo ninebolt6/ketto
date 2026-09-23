@@ -195,23 +195,23 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         val lobbyRepo = YamlLobbyRepository(store)
         val signRepo = YamlSignRepository(store)
         val equipment = PaperEquipmentAdapter(backupStore, kitStore, lookup)
-        val presentation = PaperMatchPresentation(server, messenger, signRepo, failures)
+        val presentation = PaperMatchPresentation(server, messenger, failures)
         val registry = ArenaRegistry(requiredWins)
+        val signs = ArenaSignService(registry, signRepo, presentation)
         val recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepo, presentation, failures)
         val progression = MatchProgressionService(
-            registry, MatchStateSync(matchStateRepo, presentation), statsRepo,
+            registry, MatchStateSync(matchStateRepo, signs), statsRepo,
             equipment, playerPort, schedulerPort, presentation, recovery, failures
         )
         val service = ArenaApplicationService(
             registry, playerPort,
-            recovery, failures, progression, MatchStateSync(matchStateRepo, presentation)
+            recovery, failures, progression, MatchStateSync(matchStateRepo, signs)
         )
         val lifecycle = ArenaLifecycleService(
-            registry, arenaRepo, MatchStateSync(matchStateRepo, presentation), recovery, progression, failures
+            registry, arenaRepo, MatchStateSync(matchStateRepo, signs), recovery, progression, failures
         )
         val admin = ArenaAdministrationService(registry, arenaRepo, signRepo, equipment, progression)
         val statsService = PlayerStatsService(statsRepo)
-        val signs = ArenaSignService(registry, signRepo, presentation)
         val lobby = LobbyService(lobbyRepo)
         return Deps(
             store, backupStore, kitStore, arenaRepo, lobbyRepo, signRepo, matchStateRepo, statsRepo,

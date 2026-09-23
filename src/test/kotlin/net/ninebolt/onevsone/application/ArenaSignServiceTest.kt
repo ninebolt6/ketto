@@ -21,7 +21,7 @@ class ArenaSignServiceTest {
         assertTrue(app.signs.setSign("arena1", sign))
         assertEquals(sign, app.signs.signLocation("arena1"))
         assertEquals("arena1", app.signs.signOwner(BlockPosition.new("world", 3, 64, 3)))
-        assertEquals(Arena.Id.new("arena1") to ArenaState.WAITING, app.presentation.signUpdates.last())
+        assertEquals(Triple(Arena.Id.new("arena1"), sign, ArenaState.WAITING), app.presentation.signUpdates.last())
 
         assertFalse(app.signs.setSign("missing", sign))
         // clearSign is idempotent: it succeeds whenever the arena exists; only an unregistered arena fails

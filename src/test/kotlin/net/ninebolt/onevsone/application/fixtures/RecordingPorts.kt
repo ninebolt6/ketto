@@ -5,6 +5,7 @@ import net.ninebolt.onevsone.application.port.MatchPresentationPort
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.ArenaState
+import net.ninebolt.onevsone.domain.BlockPosition
 import net.ninebolt.onevsone.domain.WorldPosition
 import kotlin.uuid.Uuid
 
@@ -21,7 +22,7 @@ class RecordingPresentation : MatchPresentationPort {
     val fireworks = mutableListOf<Uuid>()
     val scoreboards = mutableListOf<ArenaMatch>()
     val clearedScoreboards = mutableListOf<Uuid>()
-    val signUpdates = mutableListOf<Pair<Arena.Id, ArenaState>>()
+    val signUpdates = mutableListOf<Triple<Arena.Id, BlockPosition, ArenaState>>()
 
     override fun countdownTick(participantIds: List<Uuid>, secondsLeft: Int) {
         countdownTicks += Countdown(participantIds, secondsLeft)
@@ -63,8 +64,8 @@ class RecordingPresentation : MatchPresentationPort {
         clearedScoreboards += playerId
     }
 
-    override fun updateSign(arena: Arena.Id, state: ArenaState) {
-        signUpdates += arena to state
+    override fun updateSign(arena: Arena.Id, position: BlockPosition, state: ArenaState) {
+        signUpdates += Triple(arena, position, state)
     }
 }
 

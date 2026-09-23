@@ -3,6 +3,7 @@ package net.ninebolt.onevsone.application
 import net.ninebolt.onevsone.application.port.ArenaSignRepository
 import net.ninebolt.onevsone.application.port.MatchPresentationPort
 import net.ninebolt.onevsone.domain.Arena
+import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.BlockPosition
 
 /**
@@ -23,8 +24,14 @@ class ArenaSignService(
         val arena = arena(name) ?: return false
         signs.setSign(arena.name, position)
         val state = registry.match(arena.id)?.state ?: return true
-        presentation.updateSign(arena.id, state)
+        presentation.updateSign(arena.id, position, state)
         return true
+    }
+
+    /** Repaints the join sign with the given state. Does nothing when no sign is registered. */
+    fun refreshSign(arena: Arena.Id, state: ArenaState) {
+        val position = signs.signLocation(arena.name) ?: return
+        presentation.updateSign(arena, position, state)
     }
 
     /** Unregisters only the sign. The sign block itself remains and becomes breakable. */

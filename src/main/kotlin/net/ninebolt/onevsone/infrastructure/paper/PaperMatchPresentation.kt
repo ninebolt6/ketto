@@ -1,11 +1,11 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
-import net.ninebolt.onevsone.application.port.ArenaSignRepository
 import net.ninebolt.onevsone.application.port.FailureReporter
 import net.ninebolt.onevsone.application.port.MatchPresentationPort
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.ArenaState
+import net.ninebolt.onevsone.domain.BlockPosition
 import net.ninebolt.onevsone.domain.WorldPosition
 import net.ninebolt.onevsone.infrastructure.paper.message.Message
 import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
@@ -27,7 +27,6 @@ import kotlin.uuid.toJavaUuid
 class PaperMatchPresentation(
     private val server: Server,
     private val messenger: Messenger,
-    private val signs: ArenaSignRepository,
     private val failures: FailureReporter
 ) : MatchPresentationPort {
 
@@ -128,14 +127,13 @@ class PaperMatchPresentation(
         player(playerId)?.scoreboard = manager.newScoreboard
     }
 
-    override fun updateSign(arena: Arena.Id, state: ArenaState) {
-        val sign = signs.signLocation(arena.name) ?: return
-        val world = server.getWorld(sign.world)
+    override fun updateSign(arena: Arena.Id, position: BlockPosition, state: ArenaState) {
+        val world = server.getWorld(position.world)
         if (world == null) {
-            failures.warn("Sign world '${sign.world}' for arena ${arena.name} is not loaded")
+            failures.warn("Sign world '${position.world}' for arena ${arena.name} is not loaded")
             return
         }
-        val blockState = world.getBlockAt(sign.x, sign.y, sign.z).state
+        val blockState = world.getBlockAt(position.x, position.y, position.z).state
         if (blockState !is Sign) return
         val front = blockState.getSide(Side.FRONT)
         front.line(0, messenger.render(Message.SignTitle))

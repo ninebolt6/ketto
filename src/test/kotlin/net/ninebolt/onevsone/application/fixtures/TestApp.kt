@@ -27,7 +27,8 @@ class TestApp(val requiredWins: Int = 3) {
     val presentation = RecordingPresentation()
     val failures = RecordingFailures()
     val recovery = PlayerRecoveryService(equipment, players, arenas, presentation, failures)
-    val stateSync = MatchStateSync(matchState, presentation)
+    val signs = ArenaSignService(registry, arenas, presentation)
+    val stateSync = MatchStateSync(matchState, signs)
     val progression = MatchProgressionService(
         registry, stateSync, stats, equipment, players, scheduler, presentation, recovery, failures
     )
@@ -36,7 +37,6 @@ class TestApp(val requiredWins: Int = 3) {
     )
     val lifecycle = ArenaLifecycleService(registry, arenas, stateSync, recovery, progression, failures)
     val admin = ArenaAdministrationService(registry, arenas, arenas, equipment, progression)
-    val signs = ArenaSignService(registry, arenas, presentation)
     val lobby = LobbyService(arenas)
     val statsService = PlayerStatsService(stats)
 

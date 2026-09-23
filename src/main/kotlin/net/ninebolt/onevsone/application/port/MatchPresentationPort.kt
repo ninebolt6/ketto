@@ -3,6 +3,7 @@ package net.ninebolt.onevsone.application.port
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.ArenaState
+import net.ninebolt.onevsone.domain.BlockPosition
 import net.ninebolt.onevsone.domain.WorldPosition
 import kotlin.uuid.Uuid
 
@@ -31,6 +32,6 @@ interface MatchPresentationPort {
     /** Updates the sidebar scoreboard with the latest match state. */
     fun updateScoreboard(match: ArenaMatch)
     fun clearScoreboard(playerId: Uuid)
-    /** Updates the sign display (joinability + state line). */
-    fun updateSign(arena: Arena.Id, state: ArenaState)
+    /** Repaints the join sign at the given block (joinability + state line). */
+    fun updateSign(arena: Arena.Id, position: BlockPosition, state: ArenaState)
 }
