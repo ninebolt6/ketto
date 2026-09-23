@@ -37,12 +37,20 @@ import org.bukkit.plugin.java.JavaPlugin
 // open is required because MockBukkit generates a proxy subclass at load time
 open class OneVsOnePlugin : JavaPlugin() {
 
-    var service: ArenaApplicationService? = null
+    lateinit var service: ArenaApplicationService
         private set
 
     override fun onEnable() {
         saveDefaultConfig()
         val settings = PluginSettings.load(config, logger)
+
+        LanguageFiles.syncBundled(dataFolder, logger) { saveResource(it, false) }
+        val messenger = Messenger.load(
+            messagesDir = LanguageFiles.dir(dataFolder),
+            fallbackLang = settings.defaultLanguage,
+            language = settings.language,
+            logger = logger
+        )
 
         val failures = PluginFailureReporter { logger }
         val store = YamlStore(dataFolder, logger)
@@ -51,25 +59,26 @@ open class OneVsOnePlugin : JavaPlugin() {
         val signRepository = YamlSignRepository(store)
         val matchState = YamlMatchStateRepository(store)
         val stats = YamlPlayerStatsRepository(store)
-        LanguageFiles.syncBundled(dataFolder, logger) {
-            saveResource(it, false)
-        }
-        val messenger = Messenger.load(
-            messagesDir = LanguageFiles.dir(dataFolder),
-            fallbackLang = settings.defaultLanguage,
-            language = settings.language,
-            logger = logger
-        )
 
         val lookup = PaperPlayerLookup(server)
-        val playerPort = PaperPlayerAdapter(lookup, server, this, failures)
-        val equipment = PaperEquipmentAdapter(YamlBackupStore(store), YamlKitStore(store), lookup)
-        val scheduler = PaperScheduler(this)
-        val presentation = PaperMatchPresentation(server, messenger, signRepository, failures)
+        val playerPort = PaperPlayerAdapter(lookup = lookup, server = server, plugin = this, failures = failures)
+        val equipment = PaperEquipmentAdapter(
+            backups = YamlBackupStore(store),
+            kitStore = YamlKitStore(store),
+            lookup = lookup
+        )
+        val presentation = PaperMatchPresentation(server = server, messenger = messenger, signs = signRepository, failures = failures)
 
         val registry = ArenaRegistry(settings.requiredWins)
-        val recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepository, presentation, failures, server.onlineMode)
-        val stateSync = MatchStateSync(matchState, presentation)
+        val recovery = PlayerRecoveryService(
+            backups = equipment,
+            players = playerPort,
+            lobby = lobbyRepository,
+            presentation = presentation,
+            failures = failures,
+            allowLegacyNameRestore = server.onlineMode
+        )
+        val stateSync = MatchStateSync(matchState = matchState, presentation = presentation)
         val progression = MatchProgressionService(
             registry = registry,
             sync = stateSync,
@@ -77,7 +86,7 @@ open class OneVsOnePlugin : JavaPlugin() {
             backups = equipment,
             kit = equipment,
             players = playerPort,
-            scheduler = scheduler,
+            scheduler = PaperScheduler(this),
             presentation = presentation,
             recovery = recovery,
             failures = failures
@@ -94,15 +103,29 @@ open class OneVsOnePlugin : JavaPlugin() {
             progression = progression,
             sync = stateSync
         )
-        val admin = ArenaAdministrationService(registry, arenaRepository, signRepository, lobbyRepository, equipment, presentation, progression)
-        this.service = service
+        val admin = ArenaAdministrationService(
+            registry = registry,
+            arenas = arenaRepository,
+            signs = signRepository,
+            lobby = lobbyRepository,
+            kit = equipment,
+            presentation = presentation,
+            progression = progression
+        )
         service.load()
+        this.service = service
 
-        val executor = OneVsOneCommand(service, admin, playerPort, failures, messenger)
-        val command = getCommand("1vs1")
+        val executor = OneVsOneCommand(
+            service = service,
+            admin = admin,
+            players = playerPort,
+            failures = failures,
+            messenger = messenger
+        )
+        val command = getCommand("1vs1") ?: error("1vs1 command missing from plugin.yml")
         @Suppress("UsePropertyAccessSyntax") // the setter takes @Nullable, so executor stays a val-style property access
-        command?.setExecutor(executor)
-        command?.tabCompleter = executor
+        command.setExecutor(executor)
+        command.tabCompleter = executor
         server.pluginManager.registerEvents(ArenaMatchListener(service, lookup, messenger), this)
         server.pluginManager.registerEvents(ArenaGuardListener(service), this)
         server.pluginManager.registerEvents(ArenaTeleportListener(service, lookup), this)
@@ -110,6 +133,6 @@ open class OneVsOnePlugin : JavaPlugin() {
     }
 
     override fun onDisable() {
-        service?.shutdown()
+        if (::service.isInitialized) service.shutdown()
     }
 }
