@@ -25,7 +25,7 @@ import kotlin.uuid.Uuid
  * The progression engine (initial countdown, round transitions, resolution,
  * aborts) is delegated to MatchProgressionService (one-way dependency).
  * Inputs are UUIDs etc.; outputs are results or aggregate snapshots. It takes
- * neither JavaPlugin nor Messages.
+ * neither JavaPlugin nor Messenger.
  * All operations are assumed to be serialized on the main thread.
  */
 class ArenaApplicationService(

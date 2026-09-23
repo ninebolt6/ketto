@@ -24,7 +24,7 @@ import kotlin.uuid.toJavaUuid
 
 class PaperMatchPresentation(
     private val server: Server,
-    private val messages: Messages,
+    private val messenger: Messenger,
     private val signs: ArenaSignRepository,
     private val failures: FailureReporter
 ) : MatchPresentationPort {
@@ -36,20 +36,20 @@ class PaperMatchPresentation(
     }
 
     override fun countdownTick(participantIds: List<Uuid>, secondsLeft: Int) {
-        val message = messages.teleportIn(secondsLeft)
+        val message = Message.MatchTeleportIn(secondsLeft)
         participantIds.forEach { id ->
             player(id)?.let { p ->
-                messages.send(p, message)
+                messenger.send(p, message)
                 pling(p, 1f)
             }
         }
     }
 
     override fun roundCountdownTick(participantIds: List<Uuid>, secondsLeft: Int) {
-        val message = messages.startIn(secondsLeft)
+        val message = Message.MatchStartIn(secondsLeft)
         participantIds.forEach { id ->
             player(id)?.let { p ->
-                messages.send(p, message)
+                messenger.send(p, message)
                 pling(p, 1f)
             }
         }
@@ -59,7 +59,7 @@ class PaperMatchPresentation(
         participantIds.forEach { id ->
             player(id)?.let { p ->
                 pling(p, 2f)
-                messages.send(p, messages.gameStart)
+                messenger.send(p, Message.MatchGameStart)
             }
         }
     }
@@ -68,15 +68,15 @@ class PaperMatchPresentation(
         participantIds.forEach { id ->
             player(id)?.let { p ->
                 pling(p, 2f)
-                messages.send(p, messages.roundStart)
+                messenger.send(p, Message.MatchRoundStart)
             }
         }
     }
 
     override fun roundWon(participantIds: List<Uuid>, round: Int, winnerName: String) {
-        val message = messages.roundWinner(round, winnerName)
+        val message = Message.MatchRoundWinner(round, winnerName)
         participantIds.forEach { id ->
-            player(id)?.let { messages.send(it, message) }
+            player(id)?.let { messenger.send(it, message) }
         }
     }
 
@@ -86,7 +86,7 @@ class PaperMatchPresentation(
     }
 
     override fun champion(arena: Arena.Id, winnerName: String) {
-        messages.broadcast(server, messages.champion(arena.name, winnerName))
+        messenger.broadcast(server, Message.MatchChampion(arena.name, winnerName))
     }
 
     override fun championFirework(playerId: Uuid) {
@@ -110,12 +110,12 @@ class PaperMatchPresentation(
         val objective = board.registerNewObjective(
             "1vs1",
             Criteria.DUMMY,
-            messages.render(messages.scoreboardTitle(match.arenaId.name))
+            messenger.render(Message.ScoreboardTitle(match.arenaId.name))
         )
         objective.displaySlot = DisplaySlot.SIDEBAR
         match.participants.forEach { (id, name) ->
             val score = objective.getScore(name)
-            score.customName(messages.render(messages.scoreboardEntry(name)))
+            score.customName(messenger.render(Message.ScoreboardEntry(name)))
             score.score = match.winsOf(id)
             player(id)?.scoreboard = board
         }
@@ -136,10 +136,10 @@ class PaperMatchPresentation(
         val blockState = world.getBlockAt(sign.x.toInt(), sign.y.toInt(), sign.z.toInt()).state
         if (blockState !is Sign) return
         val front = blockState.getSide(Side.FRONT)
-        front.line(0, messages.render(messages.signTitle))
-        front.line(1, messages.render(messages.signArena(arena.name)))
-        front.line(2, messages.render(if (state.isJoinable()) messages.signJoin else messages.signCannotJoin))
-        front.line(3, messages.render(messages.stateDisplay(state)))
+        front.line(0, messenger.render(Message.SignTitle))
+        front.line(1, messenger.render(Message.SignArena(arena.name)))
+        front.line(2, messenger.render(if (state.isJoinable()) Message.SignJoin else Message.SignCannotJoin))
+        front.line(3, messenger.render(Message.StateDisplay(state)))
         blockState.update()
     }
 }

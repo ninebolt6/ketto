@@ -1,8 +1,8 @@
 package net.ninebolt.onevsone.infrastructure.paper.command
 
 import net.ninebolt.onevsone.application.ArenaAdministrationService
-import net.ninebolt.onevsone.infrastructure.paper.Messages
-import net.ninebolt.onevsone.infrastructure.paper.Msg
+import net.ninebolt.onevsone.infrastructure.paper.Message
+import net.ninebolt.onevsone.infrastructure.paper.Messenger
 import org.bukkit.command.CommandSender
 import org.bukkit.util.StringUtil
 
@@ -12,9 +12,9 @@ import org.bukkit.util.StringUtil
  * "create" is a reserved arena name (Arena.Id) so the two never collide.
  */
 internal class ArenaGroup(
-    private val usage: Msg,
-    private val opsUsage: Msg,
-    private val messages: Messages,
+    private val usage: Message,
+    private val opsUsage: Message,
+    private val messenger: Messenger,
     private val admin: ArenaAdministrationService,
     private val create: Subcommand,
     private val ops: Subcommand
@@ -47,7 +47,7 @@ internal class ArenaGroup(
     }
 
     private fun sendUsage(sender: CommandSender) =
-        messages.send(sender, if (sender.isOp) opsUsage else usage)
+        messenger.send(sender, if (sender.isOp) opsUsage else usage)
 
     private companion object {
         const val CREATE = "create"

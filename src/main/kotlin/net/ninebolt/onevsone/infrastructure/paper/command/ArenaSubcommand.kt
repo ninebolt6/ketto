@@ -2,18 +2,18 @@ package net.ninebolt.onevsone.infrastructure.paper.command
 
 import net.ninebolt.onevsone.application.ArenaAdministrationService
 import net.ninebolt.onevsone.domain.Arena
-import net.ninebolt.onevsone.infrastructure.paper.Messages
-import net.ninebolt.onevsone.infrastructure.paper.Msg
+import net.ninebolt.onevsone.infrastructure.paper.Message
+import net.ninebolt.onevsone.infrastructure.paper.Messenger
 import org.bukkit.command.CommandSender
 import org.bukkit.util.StringUtil
 
 /** Base for /1vs1 arena * commands. Runs the deny -> player -> arity checks, then delegates with the first argument as the arena name. */
 internal abstract class ArenaSubcommand(
     protected val admin: ArenaAdministrationService,
-    messages: Messages
-) : AbstractSubcommand(messages) {
+    messenger: Messenger
+) : AbstractSubcommand(messenger) {
 
-    protected abstract val usage: Msg
+    protected abstract val usage: Message
     protected open val requiresPlayer: Boolean = false
 
     /** Reply has been sent when this returns true. Default requires OP. */
@@ -23,7 +23,7 @@ internal abstract class ArenaSubcommand(
         if (denied(sender)) return
         if (requiresPlayer && sender.requirePlayer() == null) return
         if (args.isEmpty()) {
-            messages.send(sender, usage)
+            messenger.send(sender, usage)
             return
         }
         executeFor(sender, args[0], args.drop(1))
@@ -36,7 +36,7 @@ internal abstract class ArenaSubcommand(
 
     protected fun arenaOrWarn(sender: CommandSender, name: String): Arena? =
         admin.arena(name) ?: run {
-            messages.send(sender, messages.noArena)
+            messenger.send(sender, Message.ArenaNotFound)
             null
         }
 }

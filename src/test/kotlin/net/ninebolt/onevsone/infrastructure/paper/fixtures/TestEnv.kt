@@ -21,7 +21,8 @@ import net.ninebolt.onevsone.infrastructure.paper.ArenaGuardListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaMatchListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaSignListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaTeleportListener
-import net.ninebolt.onevsone.infrastructure.paper.Messages
+import net.ninebolt.onevsone.infrastructure.paper.Message
+import net.ninebolt.onevsone.infrastructure.paper.Messenger
 import net.ninebolt.onevsone.infrastructure.paper.command.OneVsOneCommand
 import net.ninebolt.onevsone.infrastructure.paper.PaperEquipmentAdapter
 import net.ninebolt.onevsone.infrastructure.paper.PaperInventorySnapshot
@@ -117,7 +118,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         every { plugin.isEnabled } returns true
     }
 
-    val messages = Messages.load(File(folder, "messages"), "ja", "auto", Logger.getLogger("1vs1-test"))
+    val messenger = Messenger.load(File(folder, "messages"), "ja", "auto", Logger.getLogger("1vs1-test"))
     val failures = PluginFailureReporter { plugin.logger }
     val lookup = PaperPlayerLookup(server)
     val playerPort = PaperPlayerAdapter(lookup, server, plugin, failures)
@@ -182,7 +183,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         val lobbyRepo = YamlLobbyRepository(store)
         val signRepo = YamlSignRepository(store)
         val equipment = PaperEquipmentAdapter(backupStore, kitStore, lookup)
-        val presentation = PaperMatchPresentation(server, messages, signRepo, failures)
+        val presentation = PaperMatchPresentation(server, messenger, signRepo, failures)
         val registry = ArenaRegistry(requiredWins)
         val recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepo, presentation, failures, server.onlineMode)
         val progression = MatchProgressionService(
@@ -197,8 +198,8 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         return Deps(
             store, backupStore, kitStore, arenaRepo, lobbyRepo, signRepo, matchStateRepo, statsRepo,
             equipment, presentation, registry, recovery, progression, service, admin,
-            ArenaSignListener(service, admin, messages),
-            OneVsOneCommand(service, admin, playerPort, failures, messages)
+            ArenaSignListener(service, admin, messenger),
+            OneVsOneCommand(service, admin, playerPort, failures, messenger)
         )
     }
 
@@ -221,10 +222,10 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
      */
     private fun registerListeners() {
         HandlerList.unregisterAll(plugin)
-        server.pluginManager.registerEvents(ArenaMatchListener(service, lookup, messages), plugin)
+        server.pluginManager.registerEvents(ArenaMatchListener(service, lookup, messenger), plugin)
         server.pluginManager.registerEvents(ArenaGuardListener(service), plugin)
         server.pluginManager.registerEvents(ArenaTeleportListener(service, lookup), plugin)
-        server.pluginManager.registerEvents(ArenaSignListener(service, admin, messages), plugin)
+        server.pluginManager.registerEvents(ArenaSignListener(service, admin, messenger), plugin)
     }
 
     /** Fires an event through the real dispatch path of the registered listeners. */
@@ -293,9 +294,9 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     fun leave(player: Player): LeaveReply {
         val reply = service.leave(player.uuid)
         when (reply) {
-            LeaveReply.Left -> messages.send(player, messages.leftArena)
-            LeaveReply.NotWaiting -> messages.send(player, messages.cannotLeave)
-            LeaveReply.NotJoined -> messages.send(player, messages.notJoined)
+            LeaveReply.Left -> messenger.send(player, Message.MatchLeft)
+            LeaveReply.NotWaiting -> messenger.send(player, Message.MatchCannotLeave)
+            LeaveReply.NotJoined -> messenger.send(player, Message.MatchNotJoined)
         }
         return reply
     }

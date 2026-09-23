@@ -2,7 +2,7 @@ package net.ninebolt.onevsone.domain
 
 /**
  * Match progression state of one arena. Display text and colors are handled by
- * Messages on the infrastructure side.
+ * Messenger on the infrastructure side.
  */
 enum class ArenaState {
     WAITING,

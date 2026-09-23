@@ -4,7 +4,8 @@ import net.ninebolt.onevsone.application.ArenaAdministrationService
 import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.application.port.FailureReporter
 import net.ninebolt.onevsone.application.port.PlayerPort
-import net.ninebolt.onevsone.infrastructure.paper.Messages
+import net.ninebolt.onevsone.infrastructure.paper.Message
+import net.ninebolt.onevsone.infrastructure.paper.Messenger
 import org.bukkit.command.Command
 import org.bukkit.command.CommandSender
 import org.bukkit.command.TabExecutor
@@ -18,40 +19,40 @@ class OneVsOneCommand(
     admin: ArenaAdministrationService,
     players: PlayerPort,
     failures: FailureReporter,
-    private val messages: Messages
+    private val messenger: Messenger
 ) : TabExecutor {
 
     private val root = run {
-        val arenaInfo = ArenaInfoCommand(service, admin, messages)
-        CommandGroup(messages.usageRoot, messages, mapOf(
-            "stats" to StatsCommand(service, players, failures, messages),
-            "leave" to LeaveCommand(service, messages),
-            "lobby" to CommandGroup(messages.usageLobby, messages, mapOf(
-                "set" to SetLobbyCommand(admin, messages)
+        val arenaInfo = ArenaInfoCommand(service, admin, messenger)
+        CommandGroup(Message.UsageRoot, messenger, mapOf(
+            "stats" to StatsCommand(service, players, failures, messenger),
+            "leave" to LeaveCommand(service, messenger),
+            "lobby" to CommandGroup(Message.UsageLobby, messenger, mapOf(
+                "set" to SetLobbyCommand(admin, messenger)
             )),
             "arena" to ArenaGroup(
-                messages.usageArena, messages.usageArenaOps, messages, admin,
-                ArenaCreateCommand(admin, messages),
+                Message.UsageArena, Message.UsageArenaOps, messenger, admin,
+                ArenaCreateCommand(admin, messenger),
                 ArenaScopedGroup(
-                    messages.usageArena, messages.usageArenaOps, messages, admin, mapOf(
+                    Message.UsageArena, Message.UsageArenaOps, messenger, admin, mapOf(
                         "info" to arenaInfo,
-                        "remove" to ArenaRemoveCommand(admin, messages),
-                        "enable" to ArenaSetEnabledCommand(true, admin, messages),
-                        "disable" to ArenaSetEnabledCommand(false, admin, messages),
+                        "remove" to ArenaRemoveCommand(admin, messenger),
+                        "enable" to ArenaSetEnabledCommand(true, admin, messenger),
+                        "disable" to ArenaSetEnabledCommand(false, admin, messenger),
                         "spawn" to ArenaScopedGroup(
-                            messages.noPermission, messages.usageSpawn, messages, admin, mapOf(
-                                "set" to ArenaSpawnSetCommand(admin, messages)
+                            Message.CommandNoPermission, Message.UsageSpawn, messenger, admin, mapOf(
+                                "set" to ArenaSpawnSetCommand(admin, messenger)
                             )
                         ),
                         "kit" to ArenaScopedGroup(
-                            messages.noPermission, messages.usageKit, messages, admin, mapOf(
-                                "set" to ArenaKitSetCommand(admin, messages)
+                            Message.CommandNoPermission, Message.UsageKit, messenger, admin, mapOf(
+                                "set" to ArenaKitSetCommand(admin, messenger)
                             )
                         ),
                         "sign" to ArenaScopedGroup(
-                            messages.noPermission, messages.usageSign, messages, admin, mapOf(
-                                "set" to ArenaSignSetCommand(admin, messages),
-                                "remove" to ArenaSignRemoveCommand(admin, messages)
+                            Message.CommandNoPermission, Message.UsageSign, messenger, admin, mapOf(
+                                "set" to ArenaSignSetCommand(admin, messenger),
+                                "remove" to ArenaSignRemoveCommand(admin, messenger)
                             )
                         )
                     ),

@@ -1,15 +1,15 @@
 package net.ninebolt.onevsone.infrastructure.paper.command
 
-import net.ninebolt.onevsone.infrastructure.paper.Messages
-import net.ninebolt.onevsone.infrastructure.paper.Msg
+import net.ninebolt.onevsone.infrastructure.paper.Message
+import net.ninebolt.onevsone.infrastructure.paper.Messenger
 import org.bukkit.command.CommandSender
 import org.bukkit.util.StringUtil
 import java.util.Locale
 
 /** Namespace that routes by subcommand name. Shared by the root and arena groups. */
 internal class CommandGroup(
-    private val usage: Msg,
-    private val messages: Messages,
+    private val usage: Message,
+    private val messenger: Messenger,
     subs: Map<String, Subcommand>
 ) : Subcommand {
     /** lowercase name -> (registered name, subcommand). Completion returns names with their registered case. */
@@ -25,7 +25,7 @@ internal class CommandGroup(
     override fun execute(sender: CommandSender, args: List<String>) {
         val sub = args.firstOrNull()?.let { byName[it.lowercase(Locale.ROOT)] }?.second
         if (sub == null) {
-            messages.send(sender, usage)
+            messenger.send(sender, usage)
             return
         }
         sub.execute(sender, args.drop(1))

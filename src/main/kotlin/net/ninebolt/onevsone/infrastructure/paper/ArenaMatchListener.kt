@@ -25,7 +25,7 @@ import kotlin.uuid.toKotlinUuid
 class ArenaMatchListener(
     private val service: ArenaApplicationService,
     private val lookup: PaperPlayerLookup,
-    private val messages: Messages
+    private val messenger: Messenger
 ) : Listener {
 
     @EventHandler(priority = EventPriority.HIGH)
@@ -110,7 +110,7 @@ class ArenaMatchListener(
     fun onCommand(event: PlayerCommandPreprocessEvent) {
         if (service.restrictionsOf(event.player)?.commandsBlocked == true) {
             event.isCancelled = true
-            messages.send(event.player, messages.commandBlocked)
+            messenger.send(event.player, Message.CommandBlocked)
         }
     }
 }

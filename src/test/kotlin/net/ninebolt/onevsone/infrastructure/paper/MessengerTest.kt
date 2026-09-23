@@ -16,7 +16,7 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 /** Unit tests for language-bundle completeness, rendering, and locale resolution. */
-class MessagesTest {
+class MessengerTest {
 
     @TempDir
     lateinit var folder: File
@@ -25,7 +25,7 @@ class MessagesTest {
     private val plain = PlainTextComponentSerializer.plainText()
 
     private fun load(language: String = "auto", logger: Logger = this.logger) =
-        Messages.load(File(folder, "messages"), "ja", language, logger)
+        Messenger.load(File(folder, "messages"), "ja", language, logger)
 
     /** Extracts the set of leaf keys from a bundled resource. */
     private fun bundledKeys(lang: String): Set<String> {
@@ -43,54 +43,54 @@ class MessagesTest {
 
     @Test
     fun `every bundled ja key resolves to a template`() {
-        val messages = load()
+        val messenger = load()
         MessageKey.entries.forEach { key ->
-            assertNotEquals(key.name, plain.serialize(messages.render(Msg(key), "ja")), "ja missing key: $key")
+            assertNotEquals(key.name, plain.serialize(messenger.render(key, "ja")), "ja missing key: $key")
         }
     }
 
     @Test
     fun `render substitutes unparsed placeholder literally`() {
-        val messages = load()
+        val messenger = load()
         // <name> is unparsed, so tag-like strings pass through literally
-        val text = plain.serialize(messages.render(messages.joined("<b>x</b>"), "ja"))
+        val text = plain.serialize(messenger.render(Message.MatchJoined("<b>x</b>"), "ja"))
         assertTrue(text.contains("アリーナ: <b>x</b> に参加しました"))
     }
 
     @Test
     fun `nested arg renders in same locale`() {
-        val messages = load()
+        val messenger = load()
         assertEquals(
             "状態: Ingame",
-            plain.serialize(messages.render(messages.arenaState(ArenaState.INGAME), "ja"))
+            plain.serialize(messenger.render(Message.ArenaInfoState(ArenaState.INGAME), "ja"))
         )
         assertEquals(
             "State: Ingame",
-            plain.serialize(messages.render(messages.arenaState(ArenaState.INGAME), "en"))
+            plain.serialize(messenger.render(Message.ArenaInfoState(ArenaState.INGAME), "en"))
         )
     }
 
     @Test
     fun `unknown lang falls back to default`() {
-        val messages = load()
+        val messenger = load()
         assertEquals(
-            plain.serialize(messages.render(messages.gameStart, "ja")),
-            plain.serialize(messages.render(messages.gameStart, "fr"))
+            plain.serialize(messenger.render(Message.MatchGameStart, "ja")),
+            plain.serialize(messenger.render(Message.MatchGameStart, "fr"))
         )
     }
 
     @Test
     fun `auto mode resolves player locale and falls back for console`() {
-        val messages = load()
+        val messenger = load()
         val server = MockBukkit.mock()
         try {
             val ja = server.addPlayer("Ja").also { it.setLocale(Locale.JAPAN) }
             val en = server.addPlayer("En").also { it.setLocale(Locale.ENGLISH) }
             val console = server.consoleSender
 
-            messages.send(ja, messages.joined("a1"))
-            messages.send(en, messages.joined("a1"))
-            messages.send(console, messages.joined("a1"))
+            messenger.send(ja, Message.MatchJoined("a1"))
+            messenger.send(en, Message.MatchJoined("a1"))
+            messenger.send(console, Message.MatchJoined("a1"))
 
             assertTrue(plain.serialize(ja.nextComponentMessage()!!).contains("アリーナ: a1 に参加しました"))
             assertTrue(plain.serialize(en.nextComponentMessage()!!).contains("Joined arena: a1"))
@@ -102,11 +102,11 @@ class MessagesTest {
 
     @Test
     fun `fixed language overrides player locale`() {
-        val messages = load(language = "en")
+        val messenger = load(language = "en")
         val server = MockBukkit.mock()
         try {
             val ja = server.addPlayer("Ja").also { it.setLocale(Locale.JAPAN) }
-            messages.send(ja, messages.joined("a1"))
+            messenger.send(ja, Message.MatchJoined("a1"))
             assertTrue(plain.serialize(ja.nextComponentMessage()!!).contains("Joined arena: a1"))
         } finally {
             MockBukkit.unmock()
@@ -117,7 +117,8 @@ class MessagesTest {
     fun `dataFolder lang file overrides bundled value`() {
         File(folder, "messages").mkdirs()
         File(folder, "messages/ja.yaml").writeText("MATCH_JOINED: \"<green>OVERRIDDEN <name>\"\n")
-        val text = plain.serialize(load().render(load().joined("a1"), "ja"))
+        val messenger = load()
+        val text = plain.serialize(messenger.render(Message.MatchJoined("a1"), "ja"))
         assertTrue(text.contains("OVERRIDDEN a1"))
     }
 
@@ -126,11 +127,11 @@ class MessagesTest {
         File(folder, "messages").mkdirs()
         File(folder, "messages/de.yaml").writeText("MATCH_JOINED: \"<green>Beigetreten: <name>\"\n")
         val recording = RecordingLogger()
-        val messages = load(logger = recording)
+        val messenger = load(logger = recording)
         assertTrue(recording.warnings.any { "missing key" in it })
         assertEquals(
             "Beigetreten: a1",
-            plain.serialize(messages.render(messages.joined("a1"), "de"))
+            plain.serialize(messenger.render(Message.MatchJoined("a1"), "de"))
         )
     }
 
@@ -138,10 +139,10 @@ class MessagesTest {
     fun `yml extension is also accepted`() {
         File(folder, "messages").mkdirs()
         File(folder, "messages/de.yml").writeText("MATCH_JOINED: \"<green>Beigetreten: <name>\"\n")
-        val messages = load()
+        val messenger = load()
         assertEquals(
             "Beigetreten: a1",
-            plain.serialize(messages.render(messages.joined("a1"), "de"))
+            plain.serialize(messenger.render(Message.MatchJoined("a1"), "de"))
         )
     }
 
@@ -150,17 +151,17 @@ class MessagesTest {
         File(folder, "messages").mkdirs()
         File(folder, "messages/de.yml").writeText("MATCH_JOINED: \"<green>yml <name>\"\n")
         File(folder, "messages/de.yaml").writeText("MATCH_JOINED: \"<green>yaml <name>\"\n")
-        val messages = load()
+        val messenger = load()
         assertEquals(
             "yaml a1",
-            plain.serialize(messages.render(messages.joined("a1"), "de"))
+            plain.serialize(messenger.render(Message.MatchJoined("a1"), "de"))
         )
     }
 
     @Test
     fun `rendered color matches template`() {
-        val messages = load()
-        assertEquals(NamedTextColor.RED, messages.render(messages.noStats).color())
-        assertEquals(NamedTextColor.GREEN, messages.render(messages.gameStart).color())
+        val messenger = load()
+        assertEquals(NamedTextColor.RED, messenger.render(Message.StatsNone).color())
+        assertEquals(NamedTextColor.GREEN, messenger.render(Message.MatchGameStart).color())
     }
 }

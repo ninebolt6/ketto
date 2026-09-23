@@ -1,8 +1,8 @@
 package net.ninebolt.onevsone.infrastructure.paper.command
 
 import net.ninebolt.onevsone.application.ArenaAdministrationService
-import net.ninebolt.onevsone.infrastructure.paper.Messages
-import net.ninebolt.onevsone.infrastructure.paper.Msg
+import net.ninebolt.onevsone.infrastructure.paper.Message
+import net.ninebolt.onevsone.infrastructure.paper.Messenger
 import org.bukkit.command.CommandSender
 import org.bukkit.util.StringUtil
 import java.util.Locale
@@ -15,9 +15,9 @@ import java.util.Locale
  * `usage` keeps non-OP replies consistent with leaf denial.
  */
 internal class ArenaScopedGroup(
-    private val usage: Msg,
-    private val opsUsage: Msg,
-    private val messages: Messages,
+    private val usage: Message,
+    private val opsUsage: Message,
+    private val messenger: Messenger,
     private val admin: ArenaAdministrationService,
     ops: Map<String, Subcommand>,
     private val defaultOp: Subcommand? = null
@@ -57,5 +57,5 @@ internal class ArenaScopedGroup(
     }
 
     private fun sendUsage(sender: CommandSender) =
-        messages.send(sender, if (sender.isOp) opsUsage else usage)
+        messenger.send(sender, if (sender.isOp) opsUsage else usage)
 }

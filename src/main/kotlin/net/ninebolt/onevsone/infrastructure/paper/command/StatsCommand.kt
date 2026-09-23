@@ -4,7 +4,8 @@ import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.application.port.FailureReporter
 import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.application.port.PlayerPort
-import net.ninebolt.onevsone.infrastructure.paper.Messages
+import net.ninebolt.onevsone.infrastructure.paper.Message
+import net.ninebolt.onevsone.infrastructure.paper.Messenger
 import org.bukkit.command.CommandSender
 import kotlin.uuid.Uuid
 import kotlin.uuid.toKotlinUuid
@@ -14,8 +15,8 @@ internal class StatsCommand(
     private val service: ArenaApplicationService,
     private val players: PlayerPort,
     private val failures: FailureReporter,
-    messages: Messages
-) : AbstractSubcommand(messages) {
+    messenger: Messenger
+) : AbstractSubcommand(messenger) {
 
     /** Execution time of argument lookups. Entries past the cooldown are discarded each run, so only the latest request matters. */
     private val lastLookup = mutableMapOf<Uuid, Long>()
@@ -33,13 +34,13 @@ internal class StatsCommand(
         val now = System.nanoTime()
         lastLookup.entries.removeAll { now - it.value >= LOOKUP_COOLDOWN_NANOS }
         if (playerId in lastLookup) {
-            messages.send(player, messages.statsCooldown)
+            messenger.send(player, Message.StatsCooldown)
             return
         }
         lastLookup[playerId] = now
         players.resolveOfflineId(args[0]) { uuid ->
             if (player.isOnline) {
-                if (uuid == null) messages.send(player, messages.noStats) else showStats(player, uuid)
+                if (uuid == null) messenger.send(player, Message.StatsNone) else showStats(player, uuid)
             }
         }
     }
@@ -53,12 +54,12 @@ internal class StatsCommand(
             null
         }
         if (stats == null) {
-            messages.send(sender, messages.noStats)
+            messenger.send(sender, Message.StatsNone)
             return
         }
-        messages.send(sender, messages.statWin(stats.wins))
-        messages.send(sender, messages.statLose(stats.losses))
-        messages.send(sender, messages.statRatio(stats))
+        messenger.send(sender, Message.StatsWin(stats.wins))
+        messenger.send(sender, Message.StatsLose(stats.losses))
+        messenger.send(sender, Message.StatsRatio(stats))
     }
 
     private companion object {

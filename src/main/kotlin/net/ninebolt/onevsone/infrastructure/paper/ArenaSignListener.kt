@@ -27,7 +27,7 @@ import kotlin.uuid.toKotlinUuid
 class ArenaSignListener(
     private val service: ArenaApplicationService,
     private val admin: ArenaAdministrationService,
-    private val messages: Messages
+    private val messenger: Messenger
 ) : Listener {
 
     @EventHandler
@@ -72,14 +72,14 @@ class ArenaSignListener(
     fun renderJoin(player: Player, arenaName: String, reply: JoinReply) {
         when (reply) {
             JoinReply.JoinedWaiting -> {
-                messages.send(player, messages.joined(arenaName))
-                messages.send(player, messages.waitOneMore)
+                messenger.send(player, Message.MatchJoined(arenaName))
+                messenger.send(player, Message.MatchWaitOneMore)
             }
-            JoinReply.JoinedStarting -> messages.send(player, messages.joined(arenaName))
-            JoinReply.AlreadyJoined -> messages.send(player, messages.alreadyJoined)
-            JoinReply.NotEnabled -> messages.send(player, messages.notEnabled)
-            JoinReply.InMatch -> messages.send(player, messages.arenaInGame)
-            JoinReply.NotFound -> messages.send(player, messages.noArena)
+            JoinReply.JoinedStarting -> messenger.send(player, Message.MatchJoined(arenaName))
+            JoinReply.AlreadyJoined -> messenger.send(player, Message.MatchAlreadyJoined)
+            JoinReply.NotEnabled -> messenger.send(player, Message.ArenaNotEnabled)
+            JoinReply.InMatch -> messenger.send(player, Message.MatchInGame)
+            JoinReply.NotFound -> messenger.send(player, Message.ArenaNotFound)
         }
     }
 }

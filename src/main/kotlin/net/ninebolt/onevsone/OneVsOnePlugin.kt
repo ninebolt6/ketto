@@ -10,7 +10,7 @@ import net.ninebolt.onevsone.infrastructure.paper.ArenaGuardListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaMatchListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaSignListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaTeleportListener
-import net.ninebolt.onevsone.infrastructure.paper.Messages
+import net.ninebolt.onevsone.infrastructure.paper.Messenger
 import net.ninebolt.onevsone.infrastructure.paper.command.OneVsOneCommand
 import net.ninebolt.onevsone.infrastructure.paper.PaperEquipmentAdapter
 import net.ninebolt.onevsone.infrastructure.paper.PaperMatchPresentation
@@ -56,7 +56,7 @@ open class OneVsOnePlugin : JavaPlugin() {
         val stats = YamlPlayerStatsRepository(store)
         saveResource("messages/ja.yaml", false)
         saveResource("messages/en.yaml", false)
-        val messages = Messages.load(
+        val messenger = Messenger.load(
             messagesDir = File(dataFolder, "messages"),
             fallbackLang = config.getString("default-language") ?: "en",
             language = config.getString("language") ?: "auto",
@@ -67,7 +67,7 @@ open class OneVsOnePlugin : JavaPlugin() {
         val playerPort = PaperPlayerAdapter(lookup, server, this, failures)
         val equipment = PaperEquipmentAdapter(YamlBackupStore(store), YamlKitStore(store), lookup)
         val scheduler = PaperScheduler(this)
-        val presentation = PaperMatchPresentation(server, messages, signRepository, failures)
+        val presentation = PaperMatchPresentation(server, messenger, signRepository, failures)
 
         val registry = ArenaRegistry(requiredWins)
         val recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepository, presentation, failures, server.onlineMode)
@@ -100,15 +100,15 @@ open class OneVsOnePlugin : JavaPlugin() {
         this.service = service
         service.load()
 
-        val executor = OneVsOneCommand(service, admin, playerPort, failures, messages)
+        val executor = OneVsOneCommand(service, admin, playerPort, failures, messenger)
         val command = getCommand("1vs1")
         @Suppress("UsePropertyAccessSyntax") // the setter takes @Nullable, so executor stays a val-style property access
         command?.setExecutor(executor)
         command?.tabCompleter = executor
-        server.pluginManager.registerEvents(ArenaMatchListener(service, lookup, messages), this)
+        server.pluginManager.registerEvents(ArenaMatchListener(service, lookup, messenger), this)
         server.pluginManager.registerEvents(ArenaGuardListener(service), this)
         server.pluginManager.registerEvents(ArenaTeleportListener(service, lookup), this)
-        server.pluginManager.registerEvents(ArenaSignListener(service, admin, messages), this)
+        server.pluginManager.registerEvents(ArenaSignListener(service, admin, messenger), this)
     }
 
     override fun onDisable() {
