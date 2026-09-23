@@ -1,6 +1,7 @@
 package net.ninebolt.onevsone.infrastructure.paper.command
 
 import net.ninebolt.onevsone.application.ArenaAdministrationService
+import net.ninebolt.onevsone.application.RemoveError
 import net.ninebolt.onevsone.infrastructure.paper.message.Message
 import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import org.bukkit.command.CommandSender
@@ -17,10 +18,9 @@ internal class ArenaRemoveCommand(
             messenger.send(sender, usage)
             return
         }
-        if (!admin.remove(arenaName)) {
-            messenger.send(sender, Message.ArenaNotFound)
-            return
+        when (admin.remove(arenaName)) {
+            null -> messenger.send(sender, Message.ArenaRemoved(arenaName))
+            RemoveError.NotFound -> messenger.send(sender, Message.ArenaNotFound)
         }
-        messenger.send(sender, Message.ArenaRemoved(arenaName))
     }
 }

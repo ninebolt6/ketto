@@ -2,7 +2,7 @@ package net.ninebolt.onevsone.infrastructure.paper
 
 import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.application.ArenaSignService
-import net.ninebolt.onevsone.application.JoinReply
+import net.ninebolt.onevsone.application.JoinOutput
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.infrastructure.paper.message.Message
 import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
@@ -42,10 +42,10 @@ class ArenaSignListener(
         // open the edit screen by right-clicking an unwaxed sign in vanilla
         event.denyUse()
         // No joinable pre-check; leave the outcome to join's rejection result rendering (InMatch etc.)
-        val reply = Arena.Id.of(name)
+        val output = Arena.Id.of(name)
             ?.let { service.join(event.player.uniqueId.toKotlinUuid(), event.player.name, it) }
-            ?: JoinReply.NotFound
-        renderJoin(event.player, name, reply)
+            ?: JoinOutput.NotFound
+        renderJoin(event.player, name, output)
     }
 
     /** Nobody can break a registered sign. Removal is only via /1vs1 arena <name> sign remove or arena <name> remove. */
@@ -70,17 +70,17 @@ class ArenaSignListener(
         block.state is Sign && signs.signOwner(block.toBlockPosition()) != null
 
     /** Maps the join use-case result to message text. Shared by the sign-join path. */
-    fun renderJoin(player: Player, arenaName: String, reply: JoinReply) {
-        when (reply) {
-            JoinReply.JoinedWaiting -> {
+    fun renderJoin(player: Player, arenaName: String, output: JoinOutput) {
+        when (output) {
+            JoinOutput.JoinedWaiting -> {
                 messenger.send(player, Message.MatchJoined(arenaName))
                 messenger.send(player, Message.MatchWaitOneMore)
             }
-            JoinReply.JoinedStarting -> messenger.send(player, Message.MatchJoined(arenaName))
-            JoinReply.AlreadyJoined -> messenger.send(player, Message.MatchAlreadyJoined)
-            JoinReply.NotEnabled -> messenger.send(player, Message.ArenaNotEnabled)
-            JoinReply.InMatch -> messenger.send(player, Message.MatchInGame)
-            JoinReply.NotFound -> messenger.send(player, Message.ArenaNotFound)
+            JoinOutput.JoinedStarting -> messenger.send(player, Message.MatchJoined(arenaName))
+            JoinOutput.AlreadyJoined -> messenger.send(player, Message.MatchAlreadyJoined)
+            JoinOutput.NotEnabled -> messenger.send(player, Message.ArenaNotEnabled)
+            JoinOutput.InMatch -> messenger.send(player, Message.MatchInGame)
+            JoinOutput.NotFound -> messenger.send(player, Message.ArenaNotFound)
         }
     }
 }

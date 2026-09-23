@@ -20,12 +20,12 @@ class ArenaSignService(
 
     fun signOwner(position: BlockPosition): String? = signs.signOwner(position)
 
-    fun setSign(name: String, position: BlockPosition): Boolean {
-        val arena = arena(name) ?: return false
+    fun setSign(name: String, position: BlockPosition): SetSignError? {
+        val arena = arena(name) ?: return SetSignError.NotFound
         signs.setSign(arena.name, position)
-        val state = registry.match(arena.id)?.state ?: return true
+        val state = registry.match(arena.id)?.state ?: return null
         presentation.updateSign(arena.id, position, state)
-        return true
+        return null
     }
 
     /** Repaints the join sign with the given state. Does nothing when no sign is registered. */
@@ -35,11 +35,21 @@ class ArenaSignService(
     }
 
     /** Unregisters only the sign. The sign block itself remains and becomes breakable. */
-    fun clearSign(name: String): Boolean {
-        val arena = arena(name) ?: return false
+    fun clearSign(name: String): ClearSignError? {
+        val arena = arena(name) ?: return ClearSignError.NotFound
         signs.clearSign(arena.name)
-        return true
+        return null
     }
 
     private fun arena(name: String): Arena? = registry.resolveArenaId(name)?.let { registry.arena(it) }
+}
+
+// ---- Use-case rejection reasons; `null` return means success ----------------
+
+sealed interface SetSignError {
+    data object NotFound : SetSignError
+}
+
+sealed interface ClearSignError {
+    data object NotFound : ClearSignError
 }

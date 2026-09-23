@@ -1,7 +1,7 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
-import net.ninebolt.onevsone.application.LeaveReply
-import net.ninebolt.onevsone.application.ToggleReply
+import net.ninebolt.onevsone.application.LeaveError
+import net.ninebolt.onevsone.application.ToggleError
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
@@ -66,12 +66,12 @@ class PaperArenaMembershipTest {
         val arena = env.newArena()
         val p1 = env.player("Alice")
         val p2 = env.player("Bob")
-        assertEquals(LeaveReply.NotJoined, env.leave(p1))
+        assertEquals(LeaveError.NotJoined, env.leave(p1))
         assertTrue(p1.drainMessages().any { it.contains("あなたはアリーナに参加していません！") })
 
         env.join(p1, arena)
         env.join(p2, arena)
-        assertEquals(LeaveReply.NotWaiting, env.leave(p1))
+        assertEquals(LeaveError.NotWaiting, env.leave(p1))
         assertTrue(p1.drainMessages().any { it.contains("カウントダウン中はアリーナから退出できません！") })
         assertEquals(arena, env.service.arenaIdOf(p1.uuid))
     }
@@ -189,7 +189,7 @@ class PaperArenaMembershipTest {
         val p2 = env.player("Bob")
         env.join(p1, arena)
         env.join(p2, arena)
-        assertEquals(ToggleReply.Changed, env.admin.setEnabled("arena1", false))
+        assertNull(env.admin.setEnabled("arena1", false))
         assertFalse(env.service.arena("arena1")!!.enabled)
         assertEquals(ArenaState.WAITING, env.view().state)
         assertNull(env.service.arenaIdOf(p1.uuid))

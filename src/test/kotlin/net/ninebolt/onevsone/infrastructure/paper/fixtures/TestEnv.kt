@@ -10,8 +10,8 @@ import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.application.ArenaLifecycleService
 import net.ninebolt.onevsone.application.ArenaRegistry
 import net.ninebolt.onevsone.application.ArenaSignService
-import net.ninebolt.onevsone.application.JoinReply
-import net.ninebolt.onevsone.application.LeaveReply
+import net.ninebolt.onevsone.application.JoinOutput
+import net.ninebolt.onevsone.application.LeaveError
 import net.ninebolt.onevsone.application.LobbyService
 import net.ninebolt.onevsone.application.MatchProgressionService
 import net.ninebolt.onevsone.application.MatchStateSync
@@ -302,22 +302,22 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
 
     fun setKit(arena: Arena.Id, snapshot: PaperInventorySnapshot) = equipment.putKit(arena, snapshot)
 
-    /** Joins via the same path as sign-join and also delivers the reply messages. */
-    fun join(player: Player, arena: Arena.Id = Arena.Id.new("arena1")): JoinReply {
-        val reply = service.join(player.uuid, player.name, arena)
-        signListener.renderJoin(player, arena.name, reply)
-        return reply
+    /** Joins via the same path as sign-join and also delivers the output messages. */
+    fun join(player: Player, arena: Arena.Id = Arena.Id.new("arena1")): JoinOutput {
+        val output = service.join(player.uuid, player.name, arena)
+        signListener.renderJoin(player, arena.name, output)
+        return output
     }
 
-    /** Delivers reply messages, same as /1vs1 leave. */
-    fun leave(player: Player): LeaveReply {
-        val reply = service.leave(player.uuid)
-        when (reply) {
-            LeaveReply.Left -> messenger.send(player, Message.MatchLeft)
-            LeaveReply.NotWaiting -> messenger.send(player, Message.MatchCannotLeave)
-            LeaveReply.NotJoined -> messenger.send(player, Message.MatchNotJoined)
+    /** Delivers output messages, same as /1vs1 leave. */
+    fun leave(player: Player): LeaveError? {
+        val output = service.leave(player.uuid)
+        when (output) {
+            null -> messenger.send(player, Message.MatchLeft)
+            LeaveError.NotWaiting -> messenger.send(player, Message.MatchCannotLeave)
+            LeaveError.NotJoined -> messenger.send(player, Message.MatchNotJoined)
         }
-        return reply
+        return output
     }
 
     fun state(name: String = "arena1") = service.matchOf(name)?.state

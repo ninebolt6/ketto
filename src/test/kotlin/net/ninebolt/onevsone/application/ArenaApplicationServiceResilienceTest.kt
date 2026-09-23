@@ -174,7 +174,7 @@ class ArenaApplicationServiceResilienceTest {
         assertTrue(app.equipment.kitApplies.isEmpty())
         // A fresh join is still possible
         val p3 = app.players.add("Carol")
-        assertEquals(JoinReply.JoinedWaiting, app.service.join(p3.id, p3.name, Arena.Id.new("arena1")))
+        assertEquals(JoinOutput.JoinedWaiting, app.service.join(p3.id, p3.name, Arena.Id.new("arena1")))
     }
 
     @Test

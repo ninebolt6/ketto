@@ -5,7 +5,7 @@ import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.application.ArenaLifecycleService
 import net.ninebolt.onevsone.application.ArenaRegistry
 import net.ninebolt.onevsone.application.ArenaSignService
-import net.ninebolt.onevsone.application.JoinReply
+import net.ninebolt.onevsone.application.JoinOutput
 import net.ninebolt.onevsone.application.LobbyService
 import net.ninebolt.onevsone.application.MatchProgressionService
 import net.ninebolt.onevsone.application.MatchStateSync
@@ -58,8 +58,8 @@ class TestApp(val requiredWins: Int = 3) {
         newArena(arenaName)
         val p1 = players.add("Alice")
         val p2 = players.add("Bob")
-        assertEquals(JoinReply.JoinedWaiting, service.join(p1.id, p1.name, Arena.Id.new(arenaName)))
-        assertEquals(JoinReply.JoinedStarting, service.join(p2.id, p2.name, Arena.Id.new(arenaName)))
+        assertEquals(JoinOutput.JoinedWaiting, service.join(p1.id, p1.name, Arena.Id.new(arenaName)))
+        assertEquals(JoinOutput.JoinedStarting, service.join(p2.id, p2.name, Arena.Id.new(arenaName)))
         return p1 to p2
     }
 

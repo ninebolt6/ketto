@@ -224,10 +224,10 @@ class PlayerRecoveryServiceTest {
         app.recovery.loadPersisted()
 
         p.dead = true
-        assertEquals(JoinReply.InMatch, app.service.join(p.id, p.name, Arena.Id.new("arena1")))
+        assertEquals(JoinOutput.InMatch, app.service.join(p.id, p.name, Arena.Id.new("arena1")))
         assertNull(app.service.arenaIdOf(p.id))
         p.dead = false
-        assertEquals(JoinReply.JoinedWaiting, app.service.join(p.id, p.name, Arena.Id.new("arena1")))
+        assertEquals(JoinOutput.JoinedWaiting, app.service.join(p.id, p.name, Arena.Id.new("arena1")))
         // Already restored (completed before join), so the record is gone
         assertTrue(app.equipment.restored.any { it.playerId == p.id })
         assertTrue(app.equipment.storedBackups.isEmpty())

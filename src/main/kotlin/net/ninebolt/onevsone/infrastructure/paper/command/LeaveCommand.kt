@@ -1,7 +1,7 @@
 package net.ninebolt.onevsone.infrastructure.paper.command
 
 import net.ninebolt.onevsone.application.ArenaApplicationService
-import net.ninebolt.onevsone.application.LeaveReply
+import net.ninebolt.onevsone.application.LeaveError
 import net.ninebolt.onevsone.infrastructure.paper.message.Message
 import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import org.bukkit.command.CommandSender
@@ -17,9 +17,9 @@ internal class LeaveCommand(
     override fun execute(sender: CommandSender, args: List<String>) {
         val player = sender.requirePlayer() ?: return
         when (service.leave(player.uniqueId.toKotlinUuid())) {
-            LeaveReply.Left -> messenger.send(player, Message.MatchLeft)
-            LeaveReply.NotWaiting -> messenger.send(player, Message.MatchCannotLeave)
-            LeaveReply.NotJoined -> messenger.send(player, Message.MatchNotJoined)
+            null -> messenger.send(player, Message.MatchLeft)
+            LeaveError.NotWaiting -> messenger.send(player, Message.MatchCannotLeave)
+            LeaveError.NotJoined -> messenger.send(player, Message.MatchNotJoined)
         }
     }
 }

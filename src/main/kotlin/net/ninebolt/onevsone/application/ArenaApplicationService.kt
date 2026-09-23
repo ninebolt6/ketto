@@ -45,21 +45,21 @@ class ArenaApplicationService(
 
     // ---- Join, leave, quit ---------------------------------------------------
 
-    fun join(playerId: Uuid, playerName: String, arenaId: Arena.Id): JoinReply {
-        if (registry.isJoined(playerId)) return JoinReply.AlreadyJoined
-        val arena = registry.arena(arenaId) ?: return JoinReply.NotFound
-        val match = registry.match(arenaId) ?: return JoinReply.NotFound
-        if (!arena.enabled) return JoinReply.NotEnabled
+    fun join(playerId: Uuid, playerName: String, arenaId: Arena.Id): JoinOutput {
+        if (registry.isJoined(playerId)) return JoinOutput.AlreadyJoined
+        val arena = registry.arena(arenaId) ?: return JoinOutput.NotFound
+        val match = registry.match(arenaId) ?: return JoinOutput.NotFound
+        if (!arena.enabled) return JoinOutput.NotEnabled
         val participant = Participant.new(playerId, playerName)
 
         // join is a pure function: rejection is decided before committing
         val step = match.join(participant)
-        if (step.outcome == JoinOutcome.Rejected) return JoinReply.InMatch
+        if (step.outcome == JoinOutcome.Rejected) return JoinOutput.InMatch
 
         // Complete any unrestored backup from a previous match before rejoining (does not read the inventory)
         val handle = players.handle(playerId)
         recovery.pending(playerId)?.let { ticket ->
-            if (handle == null || handle.dead) return JoinReply.InMatch
+            if (handle == null || handle.dead) return JoinOutput.InMatch
             recovery.restoreNow(handle, ticket)
         }
 
@@ -70,23 +70,23 @@ class ArenaApplicationService(
         if (step.outcome == JoinOutcome.MatchReady) progression.startInitialCountdown(arenaId)
         sync.publish(step.match)
         return when (step.outcome) {
-            JoinOutcome.FirstJoined -> JoinReply.JoinedWaiting
-            JoinOutcome.MatchReady -> JoinReply.JoinedStarting
-            JoinOutcome.Rejected -> JoinReply.InMatch
+            JoinOutcome.FirstJoined -> JoinOutput.JoinedWaiting
+            JoinOutcome.MatchReady -> JoinOutput.JoinedStarting
+            JoinOutcome.Rejected -> JoinOutput.InMatch
         }
     }
 
-    fun leave(playerId: Uuid): LeaveReply {
-        val arenaId = registry.arenaOf(playerId) ?: return LeaveReply.NotJoined
+    fun leave(playerId: Uuid): LeaveError? {
+        val arenaId = registry.arenaOf(playerId) ?: return LeaveError.NotJoined
         val step = registry.transact(arenaId) { it.leaveWaiting(playerId) }
-            ?: return LeaveReply.NotJoined
+            ?: return LeaveError.NotJoined
         when (val outcome = step.outcome) {
-            LeaveOutcome.NotWaiting -> return LeaveReply.NotWaiting
+            LeaveOutcome.NotWaiting -> return LeaveError.NotWaiting
             is LeaveOutcome.Left -> {
                 unregister(outcome.participant)
                 // Leaving before the match starts does not touch the inventory (no backup, no restore)
                 sync.publish(step.match)
-                return LeaveReply.Left
+                return null
             }
         }
     }
@@ -160,4 +160,31 @@ class ArenaApplicationService(
         failures.warnOnFailure("Could not unregister ${participant.name} from players.yml; membership record may be stale") {
             sync.unregister(participant)
         }
+}
+
+// ---- Use-case results. Conversion to message text happens on the caller's
+// side (infrastructure) ------------------------------------------------------
+
+/**
+ * Join can succeed in more than one way, so the output is a sealed type
+ * rather than a nullable error.
+ */
+sealed interface JoinOutput {
+    /** Registered as the first player; now waiting in ONEMORE. */
+    data object JoinedWaiting : JoinOutput
+    /** Registered as the second player; the initial countdown has started. */
+    data object JoinedStarting : JoinOutput
+    data object AlreadyJoined : JoinOutput
+    data object NotEnabled : JoinOutput
+    /** Cannot join: match in progress / full / holder of an unrestored backup is dead, etc. */
+    data object InMatch : JoinOutput
+    data object NotFound : JoinOutput
+}
+
+/** Rejection reasons; `null` return means the leave was applied. */
+sealed interface LeaveError {
+    /** The player is joined but the match is past the leavable waiting phase. */
+    data object NotWaiting : LeaveError
+    /** The player is not registered in any arena. */
+    data object NotJoined : LeaveError
 }

@@ -24,50 +24,78 @@ class ArenaAdministrationService(
 
     fun arena(name: String): Arena? = registry.resolveArenaId(name)?.let { registry.arena(it) }
 
-    fun create(name: String): Boolean {
-        val id = Arena.Id.of(name) ?: return false
-        if (registry.resolveArenaId(name) != null) return false
+    fun create(name: String): CreateError? {
+        val id = Arena.Id.of(name) ?: return CreateError.InvalidName
+        if (registry.resolveArenaId(name) != null) return CreateError.AlreadyExists
         val arena = Arena.new(id)
         registry.installArena(arena)
         arenas.save(arena)
-        return true
+        return null
     }
 
-    fun remove(name: String): Boolean {
-        val arena = arena(name) ?: return false
+    fun remove(name: String): RemoveError? {
+        val arena = arena(name) ?: return RemoveError.NotFound
         progression.abort(arena.id)
         registry.removeArena(arena.id)
         // Delete by the resolved canonical name (so case-differing input leaves neither the file nor the sign registration)
         arenas.delete(arena.name)
         signs.clearSign(arena.name)
         kit.forgetKit(arena.id)
-        return true
+        return null
     }
 
-    fun setEnabled(name: String, enabled: Boolean): ToggleReply {
-        val id = registry.resolveArenaId(name) ?: return ToggleReply.NotFound
-        val arena = registry.arena(id) ?: return ToggleReply.NotFound
+    fun setEnabled(name: String, enabled: Boolean): ToggleError? {
+        val id = registry.resolveArenaId(name) ?: return ToggleError.NotFound
+        val arena = registry.arena(id) ?: return ToggleError.NotFound
         if (arena.enabled == enabled) {
-            return if (enabled) ToggleReply.AlreadyEnabled else ToggleReply.AlreadyDisabled
+            return if (enabled) ToggleError.AlreadyEnabled else ToggleError.AlreadyDisabled
         }
         val updated = registry.updateArena(id) { if (enabled) it.enable() else it.disable() }
-            ?: return ToggleReply.NotFound
+            ?: return ToggleError.NotFound
         arenas.save(updated)
         if (!enabled) progression.abort(id)
-        return ToggleReply.Changed
+        return null
     }
 
-    fun setSpawn(name: String, slot: SpawnSlot, position: WorldPosition): Boolean {
-        val id = registry.resolveArenaId(name) ?: return false
-        val updated = registry.updateArena(id) { it.withSpawn(slot, position) } ?: return false
+    fun setSpawn(name: String, slot: SpawnSlot, position: WorldPosition): SetSpawnError? {
+        val id = registry.resolveArenaId(name) ?: return SetSpawnError.NotFound
+        val updated = registry.updateArena(id) { it.withSpawn(slot, position) } ?: return SetSpawnError.NotFound
         arenas.save(updated)
-        return true
+        return null
     }
 
     /** Saves the executor's current equipment as the arena kit. */
-    fun setKit(name: String, playerId: Uuid): Boolean {
-        val arena = arena(name) ?: return false
+    fun setKit(name: String, playerId: Uuid): SetKitError? {
+        val arena = arena(name) ?: return SetKitError.NotFound
         kit.saveKit(arena.id, playerId)
-        return true
+        return null
     }
+}
+
+// ---- Use-case rejection reasons; `null` return means success. Conversion to
+// message text happens on the caller's side (infrastructure) ------------------
+
+sealed interface CreateError {
+    /** A registered arena already uses this name (case-insensitive). */
+    data object AlreadyExists : CreateError
+    /** The name violates the arena-name acceptance rules (Arena.Id.of). */
+    data object InvalidName : CreateError
+}
+
+sealed interface RemoveError {
+    data object NotFound : RemoveError
+}
+
+sealed interface ToggleError {
+    data object AlreadyEnabled : ToggleError
+    data object AlreadyDisabled : ToggleError
+    data object NotFound : ToggleError
+}
+
+sealed interface SetSpawnError {
+    data object NotFound : SetSpawnError
+}
+
+sealed interface SetKitError {
+    data object NotFound : SetKitError
 }
