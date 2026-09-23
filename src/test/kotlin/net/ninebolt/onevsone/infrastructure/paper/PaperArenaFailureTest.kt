@@ -2,6 +2,7 @@ package net.ninebolt.onevsone.infrastructure.paper
 
 import io.mockk.every
 import io.mockk.spyk
+import net.ninebolt.onevsone.application.JoinOutput
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.fallIntoVoid
@@ -14,7 +15,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import org.junit.jupiter.api.AfterEach
-import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -47,20 +47,20 @@ class PaperArenaFailureTest {
     }
 
     @Test
-    fun `join refused when participant snapshot cannot be persisted`() {
+    fun `join commits with a report when the projection cannot be persisted`() {
         env.close()
         val broken = File(folder, "broken")
         broken.mkdirs()
         File(broken, "status").writeText("not a directory")
         env = TestEnv(broken)
+        val records = capturePluginLog()
         val arena = env.newArena()
         val p = env.player("Alice")
-        assertFailsWith<IllegalStateException> {
-            env.service.join(p.uuid, p.name, arena)
-        }
-        assertNull(env.service.arenaIdOf(p.uuid))
-        assertTrue(env.view().participants.isEmpty())
-        assertEquals(ArenaState.WAITING, env.view().state)
+        assertEquals(JoinOutput.JoinedWaiting, env.service.join(p.uuid, p.name, arena))
+        // A projection failure never blocks the flow: it is reported and the commit proceeds
+        assertEquals(arena, env.service.arenaIdOf(p.uuid))
+        assertEquals(ArenaState.ONEMORE, env.view().state)
+        assertTrue(records.any { it.message.contains("match projection") && it.thrown is IllegalStateException })
     }
 
     @Test

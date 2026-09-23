@@ -6,7 +6,6 @@ import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatCause
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -125,15 +124,17 @@ class ArenaApplicationServiceResilienceTest {
     }
 
     @Test
-    fun `status save failure does not prevent registration cleanup`() {
+    fun `projection failure during abort degrades to report and still commits`() {
         val app = TestApp()
         val (p1, _) = app.startMatch()
-        app.matchState.failOnSaveStatus = true
-        assertFailsWith<PersistenceFailure> {
-            app.service.abort(Arena.Id.new("arena1"))
-        }
-        // The in-memory unregistration has already happened
+        app.matchState.failOnPersist = true
+        app.service.abort(Arena.Id.new("arena1"))
+        // The ledger row was left behind by the failed projection, but the commit still ran
         assertNull(app.service.arenaIdOf(p1.id))
+        assertTrue(app.failures.reports.any { it.first.contains("match projection") })
+        // A successful next projection converges the stale row
+        app.matchState.failOnPersist = false
+        app.matchState.persistMatch(app.service.matchOf("arena1")!!)
         assertTrue(app.matchState.registrations.isEmpty())
     }
 

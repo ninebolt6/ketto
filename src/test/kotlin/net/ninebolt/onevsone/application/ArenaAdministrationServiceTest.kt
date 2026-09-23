@@ -120,7 +120,7 @@ class ArenaAdministrationServiceTest {
         assertNull(app.service.arenaIdOf(p1.id))
         assertNull(app.service.arenaIdOf(p2.id))
         // The loser's stats are already settled; the point is that no registrations remain after remove aborts
-        assertNull(app.matchState.registrations[p1.name])
-        assertNull(app.matchState.registrations[p2.name])
+        assertNull(app.matchState.registrations[p1.id])
+        assertNull(app.matchState.registrations[p2.id])
     }
 }

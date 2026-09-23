@@ -9,7 +9,6 @@ import net.ninebolt.onevsone.application.port.PlayerHandle
 import net.ninebolt.onevsone.application.port.PlayerPort
 import net.ninebolt.onevsone.application.port.PlayerStatsRepository
 import net.ninebolt.onevsone.application.port.SchedulerPort
-import net.ninebolt.onevsone.application.port.warnOnFailure
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.DefeatOutcome
@@ -25,7 +24,12 @@ import kotlin.uuid.Uuid
  *
  * ArenaMatch is immutable: never capture a reference inside a deferred
  * callback — re-read the latest state via registry.match(arenaId).
- * All operations are assumed to be serialized on the main thread.
+ *
+ * Match commits go through ArenaRegistry with the persist hook: the
+ * participant ledger and status projection are written before the in-memory
+ * state is replaced. Projection failures degrade to a report and never block
+ * the flow; world side effects (teleports, restores, kit swaps) run outside
+ * that boundary.
  */
 class MatchProgressionService(
     private val registry: ArenaRegistry,
@@ -51,16 +55,15 @@ class MatchProgressionService(
 
     fun abort(arenaId: Arena.Id) {
         cancelCountdown(arenaId)
-        val step = registry.transact(arenaId) { it.abort() } ?: return
+        val step = registry.transact(arenaId, persist = sync::persistMatch) { it.abort() } ?: return
         val left = step.outcome
         val tickets = left.map { it to recovery.pending(it.id) }
-        left.forEach { unregisterKeepingRestore(it) }
         tickets.forEach { (participant, ticket) ->
             runNowOrAfterRespawn(participant.id, ticket) { h ->
                 ticket?.let { recovery.restoreNow(h, it) }
             }
         }
-        sync.publish(step.match)
+        sync.refreshSign(step.match)
     }
 
     /** Stops only the running countdown (for shutdown). */
@@ -87,7 +90,10 @@ class MatchProgressionService(
             presentation.updateScoreboard(match)
 
             val loserHandle = players.handle(outcome.loser.id)
-            val release = { registry.updateMatch(arenaId) { it.releaseResolution(gen) } }
+            val release = {
+                // resolving is memory-only coordination metadata, so nothing is persisted here
+                registry.updateMatch(arenaId, persist = {}) { it.releaseResolution(gen) }
+            }
             if (death) {
                 scheduleDeferred(outcome.loser.id, {
                     registry.match(arenaId)?.epoch == gen && registry.arenaOf(outcome.loser.id) == arenaId
@@ -105,7 +111,7 @@ class MatchProgressionService(
             }
             winnerHandle?.let { teleportToSlot(match, outcome.winner, it) }
 
-            sync.publish(match)
+            sync.refreshSign(match)
             startRoundCountdown(arenaId)
         } catch (e: Exception) {
             // A failure after the resolution commit would leave a timer-less ROUNDCOUNTDOWN stuck, so abort
@@ -125,10 +131,9 @@ class MatchProgressionService(
         cancelCountdown(arenaId)
         val gen = match.epoch
 
-        // Secure the restore targets first, then unregister and stop tasks
+        // Secure the restore targets first (the participants were already unregistered by the committing transition)
         val winnerTicket = recovery.pending(winner.id)
         val loserTicket = recovery.pending(loser.id)
-        listOf(winner, loser).forEach { unregisterKeepingRestore(it) }
 
         presentation.champion(arenaId, winner.name)
 
@@ -160,7 +165,7 @@ class MatchProgressionService(
             }
         }
 
-        sync.publish(match)
+        sync.refreshSign(match)
         recordResult(winner, loser)
     }
 
@@ -203,10 +208,10 @@ class MatchProgressionService(
                 teleportToSlot(match, first, p1)
                 teleportToSlot(match, second, p2)
                 presentation.matchStart(participantIds)
-                val began = registry.transact(arenaId) { it.beginMatch() }
+                val began = registry.transact(arenaId, persist = sync::persistMatch) { it.beginMatch() }
                 if (began?.outcome == true) {
                     presentation.updateScoreboard(began.match)
-                    sync.publish(began.match)
+                    sync.refreshSign(began.match)
                 }
             } catch (e: Exception) {
                 // Failed mid-swap: abort and restore using the backups already taken
@@ -227,9 +232,9 @@ class MatchProgressionService(
                 in 1..5 -> presentation.roundCountdownTick(participantIds, remaining)
                 0 -> {
                     presentation.roundStart(participantIds)
-                    val resumed = registry.transact(arenaId) { it.resumeRound() }
+                    val resumed = registry.transact(arenaId, persist = sync::persistMatch) { it.resumeRound() }
                     if (resumed?.outcome == true) {
-                        sync.publish(resumed.match)
+                        sync.refreshSign(resumed.match)
                     }
                 }
             }
@@ -289,12 +294,6 @@ class MatchProgressionService(
     }
 
     // ---- Shared -----------------------------------------------------------------
-
-    /** Ledger-unregister failures are swallowed into a warn. The restore record stays in memory. */
-    private fun unregisterKeepingRestore(participant: Participant) =
-        failures.warnOnFailure("Could not unregister ${participant.name} from players.yml; pending restore retained in memory") {
-            sync.unregister(participant)
-        }
 
     /** Prepares health/flight for the match and applies the arena kit. */
     private fun rearm(arenaId: Arena.Id, participant: Participant, handle: PlayerHandle) {

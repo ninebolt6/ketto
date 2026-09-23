@@ -162,8 +162,8 @@ class ArenaApplicationServiceTest {
         assertEquals(ArenaState.ONEMORE, app.state())
         assertNull(app.service.arenaIdOf(p1.id))
         assertEquals(Arena.Id.new("arena1"), app.service.arenaIdOf(p2.id))
-        assertFalse(app.matchState.registrations.containsKey("Alice"))
-        assertTrue(app.matchState.registrations.containsKey("Bob"))
+        assertFalse(app.matchState.registrations.containsKey(p1.id))
+        assertTrue(app.matchState.registrations.containsKey(p2.id))
         assertTrue(app.stats.stats.isEmpty())
         assertTrue(app.equipment.restored.isEmpty())
         assertTrue(app.presentation.champions.isEmpty())
@@ -184,7 +184,7 @@ class ArenaApplicationServiceTest {
         }
         assertEquals(ArenaState.WAITING, app.state())
         assertNull(app.service.arenaIdOf(p1.id))
-        assertFalse(app.matchState.registrations.containsKey("Alice"))
+        assertFalse(app.matchState.registrations.containsKey(p1.id))
         assertTrue(app.stats.stats.isEmpty())
         assertTrue(app.equipment.restored.isEmpty())
     }
@@ -211,7 +211,7 @@ class ArenaApplicationServiceTest {
         assertNull(app.service.leave(p1.id))
         assertEquals(ArenaState.WAITING, app.state())
         assertNull(app.service.arenaIdOf(p1.id))
-        assertFalse(app.matchState.registrations.containsKey("Alice"))
+        assertFalse(app.matchState.registrations.containsKey(p1.id))
         assertTrue(app.equipment.restored.isEmpty())
     }
 

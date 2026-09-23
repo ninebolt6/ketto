@@ -1,8 +1,6 @@
 package net.ninebolt.onevsone.application
 
-import net.ninebolt.onevsone.application.port.FailureReporter
 import net.ninebolt.onevsone.application.port.PlayerPort
-import net.ninebolt.onevsone.application.port.warnOnFailure
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.DefeatCause
@@ -19,13 +17,17 @@ import kotlin.uuid.Uuid
  * aborts) is delegated to MatchProgressionService (one-way dependency).
  * Inputs are UUIDs etc.; outputs are results or aggregate snapshots. It takes
  * neither JavaPlugin nor Messenger.
- * All operations are assumed to be serialized on the main thread.
+ *
+ * Match commits go through ArenaRegistry with the persist hook: the
+ * participant ledger and status projection are written before the in-memory
+ * state is replaced. Projection failures degrade to a report and never block
+ * the flow; world side effects (inventory restores, teleports) run outside
+ * that boundary.
  */
 class ArenaApplicationService(
     private val registry: ArenaRegistry,
     private val players: PlayerPort,
     private val recovery: PlayerRecoveryService,
-    private val failures: FailureReporter,
     private val progression: MatchProgressionService,
     private val sync: MatchStateSync
 ) {
@@ -63,12 +65,9 @@ class ArenaApplicationService(
             recovery.restoreNow(handle, ticket)
         }
 
-        // Membership registration. On failure we are still pre-commit,
-        // so the exception propagates with nothing changed.
-        sync.register(participant, arenaId)
-        registry.putMatch(step.match)
+        registry.putMatch(step.match, persist = sync::persistMatch)
         if (step.outcome == JoinOutcome.MatchReady) progression.startInitialCountdown(arenaId)
-        sync.publish(step.match)
+        sync.refreshSign(step.match)
         return when (step.outcome) {
             JoinOutcome.FirstJoined -> JoinOutput.JoinedWaiting
             JoinOutcome.MatchReady -> JoinOutput.JoinedStarting
@@ -78,14 +77,13 @@ class ArenaApplicationService(
 
     fun leave(playerId: Uuid): LeaveError? {
         val arenaId = registry.arenaOf(playerId) ?: return LeaveError.NotJoined
-        val step = registry.transact(arenaId) { it.leaveWaiting(playerId) }
+        val step = registry.transact(arenaId, persist = sync::persistMatch) { it.leaveWaiting(playerId) }
             ?: return LeaveError.NotJoined
         when (val outcome = step.outcome) {
             LeaveOutcome.NotWaiting -> return LeaveError.NotWaiting
             is LeaveOutcome.Left -> {
-                unregister(outcome.participant)
                 // Leaving before the match starts does not touch the inventory (no backup, no restore)
-                sync.publish(step.match)
+                sync.refreshSign(step.match)
                 return null
             }
         }
@@ -106,11 +104,10 @@ class ArenaApplicationService(
             }
             return
         }
-        val step = registry.transact(arenaId) { it.forfeit(playerId) } ?: return
+        val step = registry.transact(arenaId, persist = sync::persistMatch) { it.forfeit(playerId) } ?: return
         when (val outcome = step.outcome) {
             is QuitOutcome.WaitingExit -> {
-                unregister(outcome.participant)
-                sync.publish(step.match)
+                sync.refreshSign(step.match)
             }
             is QuitOutcome.MatchEnded -> {
                 progression.finishMatch(step.match, outcome.winner, outcome.loser, forfeit = true, death = false)
@@ -134,7 +131,8 @@ class ArenaApplicationService(
     /** true when the defeat was accepted. */
     fun defeat(playerId: Uuid, cause: DefeatCause): Boolean {
         val arenaId = registry.arenaOf(playerId) ?: return false
-        val step = registry.transact(arenaId) { it.recordDefeat(playerId, cause) } ?: return false
+        val step = registry.transact(arenaId, persist = sync::persistMatch) { it.recordDefeat(playerId, cause) }
+            ?: return false
         return when (val outcome = step.outcome) {
             DefeatOutcome.Rejected -> false
             is DefeatOutcome.RoundWon -> {
@@ -154,12 +152,6 @@ class ArenaApplicationService(
     // ---- Abort ---------------------------------------------------------------
 
     fun abort(arenaId: Arena.Id) = progression.abort(arenaId)
-
-    /** Ledger-unregister failures are swallowed into a warn so later processing continues. */
-    private fun unregister(participant: Participant) =
-        failures.warnOnFailure("Could not unregister ${participant.name} from players.yml; membership record may be stale") {
-            sync.unregister(participant)
-        }
 }
 
 // ---- Use-case results. Conversion to message text happens on the caller's

@@ -28,17 +28,16 @@ class ArenaAdministrationService(
         val id = Arena.Id.of(name) ?: return CreateError.InvalidName
         if (registry.resolveArenaId(name) != null) return CreateError.AlreadyExists
         val arena = Arena.new(id)
-        registry.installArena(arena)
-        arenas.save(arena)
+        // Authoritative data: a save failure propagates and the arena is never registered
+        registry.installArena(arena, persist = arenas::save)
         return null
     }
 
     fun remove(name: String): RemoveError? {
         val arena = arena(name) ?: return RemoveError.NotFound
         progression.abort(arena.id)
-        registry.removeArena(arena.id)
-        // Delete by the resolved canonical name (so case-differing input leaves neither the file nor the sign registration)
-        arenas.delete(arena.name)
+        registry.removeArena(arena.id, persist = { arenas.delete(it.name) })
+        // clearSign also keeps the position index in sync; forgetKit clears the kit cache
         signs.clearSign(arena.name)
         kit.forgetKit(arena.id)
         return null
@@ -50,17 +49,16 @@ class ArenaAdministrationService(
         if (arena.enabled == enabled) {
             return if (enabled) ToggleError.AlreadyEnabled else ToggleError.AlreadyDisabled
         }
-        val updated = registry.updateArena(id) { if (enabled) it.enable() else it.disable() }
+        registry.updateArena(id, persist = arenas::save) { if (enabled) it.enable() else it.disable() }
             ?: return ToggleError.NotFound
-        arenas.save(updated)
         if (!enabled) progression.abort(id)
         return null
     }
 
     fun setSpawn(name: String, slot: SpawnSlot, position: WorldPosition): SetSpawnError? {
         val id = registry.resolveArenaId(name) ?: return SetSpawnError.NotFound
-        val updated = registry.updateArena(id) { it.withSpawn(slot, position) } ?: return SetSpawnError.NotFound
-        arenas.save(updated)
+        registry.updateArena(id, persist = arenas::save) { it.withSpawn(slot, position) }
+            ?: return SetSpawnError.NotFound
         return null
     }
 

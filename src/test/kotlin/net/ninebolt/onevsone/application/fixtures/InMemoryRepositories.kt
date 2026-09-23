@@ -9,7 +9,6 @@ import net.ninebolt.onevsone.application.port.PlayerStatsRepository
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.BlockPosition
-import net.ninebolt.onevsone.domain.Participant
 import net.ninebolt.onevsone.domain.PlayerStats
 import net.ninebolt.onevsone.domain.WorldPosition
 import java.util.Locale
@@ -63,27 +62,32 @@ class InMemoryArenaRepository : ArenaRepository, LobbyRepository, ArenaSignRepos
 
 class InMemoryMatchStateRepository : MatchStateRepository {
     val savedViews = mutableListOf<ArenaMatch>()
-    val registrations = linkedMapOf<String, Arena.Id>()
-    var failOnRegister = false
-    var failOnUnregister = false
+    /** player uuid -> arena, mirroring the ledger the projection writes */
+    val registrations = linkedMapOf<Uuid, Arena.Id>()
+    var failOnPersist = false
+    val failOnPersistFor = mutableSetOf<String>()
     var failOnSaveStatus = false
     val failOnSaveStatusFor = mutableSetOf<String>()
+
+    /**
+     * Mirrors the real projection: registrations pointing at this arena are
+     * rewritten to the current participants (upsert by player id), then the
+     * status snapshot is recorded. A failure leaves earlier writes in place.
+     */
+    override fun persistMatch(match: ArenaMatch) {
+        if (failOnPersist || match.arenaId.name in failOnPersistFor) {
+            throw PersistenceFailure("persist failed")
+        }
+        registrations.entries.removeIf { it.value == match.arenaId }
+        match.participants.forEach { registrations[it.id] = match.arenaId }
+        saveStatus(match)
+    }
 
     override fun saveStatus(match: ArenaMatch) {
         if (failOnSaveStatus || match.arenaId.name in failOnSaveStatusFor) {
             throw PersistenceFailure("status save failed")
         }
         savedViews += match
-    }
-
-    override fun registerParticipant(participant: Participant, arena: Arena.Id) {
-        if (failOnRegister) throw PersistenceFailure("register failed")
-        registrations[participant.name] = arena
-    }
-
-    override fun unregisterParticipant(playerName: String) {
-        if (failOnUnregister) throw PersistenceFailure("unregister failed")
-        registrations.remove(playerName)
     }
 
     override fun clearRegistrations() {

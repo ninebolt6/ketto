@@ -4,23 +4,20 @@ import net.ninebolt.onevsone.application.port.MatchStateRepository
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.ArenaState
-import net.ninebolt.onevsone.domain.Participant
 
 /**
- * Synchronizes committed match state and the participant ledger through the
- * persistence port, and delegates join-sign repaints to ArenaSignService.
- * Failures propagate for context-dependent handling.
+ * Synchronizes the match persistence projection (participant ledger plus
+ * status snapshot) through the persistence port, and delegates join-sign
+ * repaints to ArenaSignService. Failures propagate for context-dependent
+ * handling.
  */
 class MatchStateSync(
     private val matchState: MatchStateRepository,
     private val signs: ArenaSignService
 ) {
-    fun register(participant: Participant, arena: Arena.Id) {
-        matchState.registerParticipant(participant, arena)
-    }
-
-    fun unregister(participant: Participant) {
-        matchState.unregisterParticipant(participant.name)
+    /** Rewrites the projection for match's arena (ledger + status) in one call. */
+    fun persistMatch(match: ArenaMatch) {
+        matchState.persistMatch(match)
     }
 
     fun saveStatus(match: ArenaMatch) {
@@ -31,13 +28,12 @@ class MatchStateSync(
         signs.refreshSign(arena, state)
     }
 
-    fun clearRegistrations() {
-        matchState.clearRegistrations()
+    /** Repaints the join sign with the match's current state. */
+    fun refreshSign(match: ArenaMatch) {
+        refreshSign(match.arenaId, match.state)
     }
 
-    /** Persists the new state and refreshes the join sign. */
-    fun publish(match: ArenaMatch) {
-        saveStatus(match)
-        refreshSign(match.arenaId, match.state)
+    fun clearRegistrations() {
+        matchState.clearRegistrations()
     }
 }

@@ -75,7 +75,7 @@ open class OneVsOnePlugin : JavaPlugin() {
         )
         val presentation = PaperPresentation(server = server, messenger = messenger, failures = failures)
 
-        val registry = ArenaRegistry(settings.requiredWins)
+        val registry = ArenaRegistry(settings.requiredWins, failures)
         val signs = ArenaSignService(registry = registry, signs = signRepository, presentation = presentation)
         val recovery = PlayerRecoveryService(
             backups = equipment,
@@ -100,7 +100,6 @@ open class OneVsOnePlugin : JavaPlugin() {
             registry = registry,
             players = playerPort,
             recovery = recovery,
-            failures = failures,
             progression = progression,
             sync = stateSync
         )

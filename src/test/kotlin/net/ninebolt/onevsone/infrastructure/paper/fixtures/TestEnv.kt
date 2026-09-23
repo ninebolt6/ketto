@@ -196,7 +196,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         val signRepo = YamlSignRepository(store)
         val equipment = PaperEquipmentAdapter(backupStore, kitStore, lookup)
         val presentation = PaperPresentation(server, messenger, failures)
-        val registry = ArenaRegistry(requiredWins)
+        val registry = ArenaRegistry(requiredWins, failures)
         val signs = ArenaSignService(registry, signRepo, presentation)
         val recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepo, presentation, failures)
         val progression = MatchProgressionService(
@@ -205,7 +205,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         )
         val service = ArenaApplicationService(
             registry, playerPort,
-            recovery, failures, progression, MatchStateSync(matchStateRepo, signs)
+            recovery, progression, MatchStateSync(matchStateRepo, signs)
         )
         val lifecycle = ArenaLifecycleService(
             registry, arenaRepo, MatchStateSync(matchStateRepo, signs), recovery, progression, failures
@@ -295,7 +295,8 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
                 enabled = enabled,
                 spawn1 = WorldPosition.new("world", 1.0, 64.0, 1.0),
                 spawn2 = WorldPosition.new("world", 2.0, 64.0, 2.0)
-            )
+            ),
+            persist = {}
         )
         return id
     }

@@ -1,5 +1,7 @@
 package net.ninebolt.onevsone.application
 
+import net.ninebolt.onevsone.application.port.FailureReporter
+import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.Transition
@@ -17,15 +19,31 @@ import kotlin.uuid.Uuid
  * write-back (putMatch/transact/updateMatch), structurally maintaining
  * playerArena[uuid]=id ⟺ uuid ∈ matches[id].participants.
  * ArenaMatch is immutable, so every change must go through these methods.
+ *
+ * Write-back ordering contract: every mutator takes a `persist` hook that runs
+ * before the in-memory state is replaced. The failure policy is structural:
+ *
+ * - Arena mutations are authoritative data: a persist failure propagates and
+ *   the registry stays unchanged.
+ * - Match mutations are projections: a persist failure is reported and the
+ *   in-memory commit still proceeds (the game must go on; the projection
+ *   converges on the next write).
+ *
+ * Callers that deliberately persist nothing pass `persist = {}`. World side
+ * effects (teleports, inventory restores, sign repaints) never run inside the
+ * hook — the contract covers memory and persistence only.
  */
-class ArenaRegistry(private val requiredWins: Int) {
+class ArenaRegistry(
+    private val requiredWins: Int,
+    private val failures: FailureReporter
+) {
 
     private data class Slot(val arena: Arena, val match: ArenaMatch)
 
     private val slots = linkedMapOf<Arena.Id, Slot>()
     private val playerArena = mutableMapOf<Uuid, Arena.Id>()
 
-    // ---- Arenas ---------------------------------------------------------
+    // ---- Arenas (authoritative: persist failures propagate) -----------------
 
     fun arena(id: Arena.Id): Arena? = slots[id]?.arena
 
@@ -41,30 +59,36 @@ class ArenaRegistry(private val requiredWins: Int) {
     /** Arena IDs in registration order. */
     fun arenaIds(): List<Arena.Id> = slots.keys.toList()
 
-    /** Registers an arena and attaches a fresh match aggregate. */
-    fun installArena(arena: Arena) {
+    /** Persists, then registers an arena and attaches a fresh match aggregate. */
+    fun installArena(arena: Arena, persist: (Arena) -> Unit) {
+        persist(arena)
         val match = ArenaMatch.new(arena.id, requiredWins)
         val previous = slots.put(arena.id, Slot(arena, match))
         reconcileIndex(arena.id, previous?.match, match)
     }
 
-    fun removeArena(id: Arena.Id) {
-        val previous = slots.remove(id)
-        reconcileIndex(id, previous?.match, null)
+    /** Persists, then removes the arena. On failure the arena stays registered. */
+    fun removeArena(id: Arena.Id, persist: (Arena) -> Unit) {
+        val previous = slots[id] ?: return
+        persist(previous.arena)
+        slots.remove(id)
+        reconcileIndex(id, previous.match, null)
     }
 
     /**
-     * Transforms and writes back an arena definition. Does nothing and returns
-     * null when unregistered.
+     * Persists the transformed arena, then writes it back. Does nothing and
+     * returns null when unregistered; a persist failure leaves the current
+     * arena in place.
      */
-    fun updateArena(id: Arena.Id, transform: (Arena) -> Arena): Arena? {
+    fun updateArena(id: Arena.Id, persist: (Arena) -> Unit, transform: (Arena) -> Arena): Arena? {
         val slot = slots[id] ?: return null
         val next = transform(slot.arena)
+        persist(next)
         slots[id] = slot.copy(arena = next)
         return next
     }
 
-    // ---- Match aggregates ---------------------------------------------------------
+    // ---- Match aggregates (projections: persist failures degrade to a report) ----
 
     fun match(id: Arena.Id): ArenaMatch? = slots[id]?.match
 
@@ -76,8 +100,9 @@ class ArenaRegistry(private val requiredWins: Int) {
      * that need "compute -> side effects -> commit" ordering. Does nothing
      * when unregistered.
      */
-    fun putMatch(match: ArenaMatch) {
+    fun putMatch(match: ArenaMatch, persist: (ArenaMatch) -> Unit) {
         val slot = slots[match.arenaId] ?: return
+        if (match !== slot.match) persistProjection(match.arenaId, match, persist)
         slots[match.arenaId] = slot.copy(match = match)
         reconcileIndex(match.arenaId, slot.match, match)
     }
@@ -86,9 +111,14 @@ class ArenaRegistry(private val requiredWins: Int) {
      * Transforms and writes back a match. Does nothing and returns null when
      * the arena is absent.
      */
-    fun updateMatch(id: Arena.Id, transform: (ArenaMatch) -> ArenaMatch): ArenaMatch? {
+    fun updateMatch(
+        id: Arena.Id,
+        persist: (ArenaMatch) -> Unit,
+        transform: (ArenaMatch) -> ArenaMatch
+    ): ArenaMatch? {
         val slot = slots[id] ?: return null
         val next = transform(slot.match)
+        if (next !== slot.match) persistProjection(id, next, persist)
         slots[id] = slot.copy(match = next)
         reconcileIndex(id, slot.match, next)
         return next
@@ -97,14 +127,37 @@ class ArenaRegistry(private val requiredWins: Int) {
     /**
      * Applies an operation to the match, writes it back, and returns the
      * outcome. null when the arena is absent. Centralizes the commit step of
-     * "compute -> commit -> orchestrate based on the outcome".
+     * "compute -> commit -> orchestrate based on the outcome". Rejected
+     * transitions (same match instance) skip persistence entirely.
      */
-    fun <O> transact(id: Arena.Id, operation: (ArenaMatch) -> Transition<O>): Transition<O>? {
+    fun <O> transact(
+        id: Arena.Id,
+        persist: (ArenaMatch) -> Unit,
+        operation: (ArenaMatch) -> Transition<O>
+    ): Transition<O>? {
         val slot = slots[id] ?: return null
         val transition = operation(slot.match)
+        if (transition.match !== slot.match) persistProjection(id, transition.match, persist)
         slots[id] = slot.copy(match = transition.match)
         reconcileIndex(id, slot.match, transition.match)
         return transition
+    }
+
+    /**
+     * The match projection is write-only forensic data, so a persistence
+     * failure never blocks game flow: it is reported and the in-memory commit
+     * proceeds. A successful next projection converges the ledger regardless
+     * of what this attempt left behind.
+     */
+    private fun persistProjection(id: Arena.Id, match: ArenaMatch, persist: (ArenaMatch) -> Unit) {
+        try {
+            persist(match)
+        } catch (e: PersistenceFailure) {
+            failures.report(
+                "Could not persist match projection for arena ${id.name}; in-memory state committed",
+                e
+            )
+        }
     }
 
     // ---- Participation index ----------------------------------------------------------
