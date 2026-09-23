@@ -33,7 +33,7 @@ class OneVsOnePluginTest {
 
     @AfterEach
     fun tearDown() {
-        // Also exercises the real onDisable -> service.shutdown() path
+        // Also exercises the real onDisable -> lifecycle.shutdown() path
         MockBukkit.unmock()
     }
 

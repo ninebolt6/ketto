@@ -7,8 +7,9 @@ import kotlin.uuid.Uuid
 
 /**
  * Shared registry of arenas, match aggregates, and the UUID->arena index.
- * Shared by ArenaApplicationService and ArenaAdministrationService; the
- * playerArena index enforces the ban on joining two arenas at once.
+ * Shared by ArenaApplicationService, ArenaAdministrationService,
+ * ArenaLifecycleService, and MatchProgressionService; the playerArena index
+ * enforces the ban on joining two arenas at once.
  *
  * Arena and ArenaMatch always exist 1:1, and match.arenaId == arena.id is
  * guaranteed by construction in installArena (Slot). The map is not exposed.

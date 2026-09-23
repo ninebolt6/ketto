@@ -1,14 +1,11 @@
 package net.ninebolt.onevsone.application
 
-import net.ninebolt.onevsone.application.port.ArenaRepository
 import net.ninebolt.onevsone.application.port.FailureReporter
-import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.application.port.PlayerPort
 import net.ninebolt.onevsone.application.port.PlayerStatsRepository
 import net.ninebolt.onevsone.application.port.warnOnFailure
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
-import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.domain.DefeatOutcome
 import net.ninebolt.onevsone.domain.JoinOutcome
@@ -19,7 +16,7 @@ import net.ninebolt.onevsone.domain.QuitOutcome
 import kotlin.uuid.Uuid
 
 /**
- * Orchestration of join/leave/quit, the defeat entry point, and the lifecycle.
+ * Orchestration of join/leave/quit and the defeat entry point.
  * The progression engine (initial countdown, round transitions, resolution,
  * aborts) is delegated to MatchProgressionService (one-way dependency).
  * Inputs are UUIDs etc.; outputs are results or aggregate snapshots. It takes
@@ -28,7 +25,6 @@ import kotlin.uuid.Uuid
  */
 class ArenaApplicationService(
     private val registry: ArenaRegistry,
-    private val arenas: ArenaRepository,
     private val stats: PlayerStatsRepository,
     private val players: PlayerPort,
     private val recovery: PlayerRecoveryService,
@@ -36,45 +32,6 @@ class ArenaApplicationService(
     private val progression: MatchProgressionService,
     private val sync: MatchStateSync
 ) {
-
-    // ---- Startup & shutdown -------------------------------------------------------
-
-    fun load() {
-        val loaded = try {
-            arenas.loadAll()
-        } catch (e: PersistenceFailure) {
-            failures.warn("arenalist.yml is unreadable; no arenas loaded this session")
-            emptyList()
-        }
-        loaded.forEach { arena ->
-            registry.installArena(arena)
-            failures.warnOnFailure("Could not persist status for arena ${arena.id.name}; continuing startup") {
-                registry.match(arena.id)?.let { sync.saveStatus(it) }
-            }
-            failures.warnOnFailure("Could not update sign for arena ${arena.id.name}; continuing startup") {
-                sync.refreshSign(arena.id, ArenaState.WAITING)
-            }
-        }
-        failures.warnOnFailure("players.yml is unreadable; pending restores unavailable this session") {
-            recovery.loadPersisted()
-        }
-        failures.warnOnFailure("Could not clear stale players.yml registrations") {
-            sync.clearRegistrations()
-        }
-    }
-
-    fun shutdown() {
-        registry.matches().forEach { match ->
-            val arenaId = match.arenaId
-            progression.cancelCountdown(arenaId)
-            val left = registry.transact(arenaId) { it.abort() }?.outcome ?: emptyList()
-            left.forEach { unregister(it) }
-            failures.warnOnFailure("Could not persist shutdown state for arena $arenaId; continuing shutdown") {
-                registry.match(arenaId)?.let { sync.saveStatus(it) }
-            }
-        }
-        recovery.restoreAllOnline()
-    }
 
     // ---- Queries -------------------------------------------------------
 

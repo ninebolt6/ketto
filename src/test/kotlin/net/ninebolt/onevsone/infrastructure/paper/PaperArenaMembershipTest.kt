@@ -142,7 +142,7 @@ class PaperArenaMembershipTest {
         val p3 = env.player("Carol")
         p3.inventory.setItem(0, env.item(Material.COOKED_BEEF))
         env.join(p3, arena)
-        env.service.shutdown()
+        env.lifecycle.shutdown()
         assertEquals(Material.COOKED_BEEF, p3.inventory.contents[0]?.type)
     }
 
@@ -175,7 +175,7 @@ class PaperArenaMembershipTest {
         env.newArena()
         val p1 = env.player("Alice")
         env.join(p1, Arena.Id.new("arena1"))
-        env.service.shutdown()
+        env.lifecycle.shutdown()
         assertTrue(env.service.arena("arena1")!!.enabled)
         assertEquals(ArenaState.WAITING, env.view().state)
         assertTrue(env.view().participants.isEmpty())
@@ -219,7 +219,7 @@ class PaperArenaMembershipTest {
     @Test
     fun `enabled persists across service load`() {
         env.arenaRepo.save(Arena.new(Arena.Id.new("arena1"), enabled = true))
-        env.service.load()
+        env.lifecycle.load()
         assertTrue(env.service.arena("arena1")!!.enabled)
     }
 }

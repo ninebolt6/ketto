@@ -219,7 +219,7 @@ class ArenaApplicationServiceTest {
     fun `shutdown aborts matches and restores online pendings`() {
         val app = TestApp()
         val (p1, _) = app.startMatch()
-        app.service.shutdown()
+        app.lifecycle.shutdown()
         assertEquals(ArenaState.WAITING, app.state())
         assertNull(app.service.arenaIdOf(p1.id))
         // Synchronous restore for both online players

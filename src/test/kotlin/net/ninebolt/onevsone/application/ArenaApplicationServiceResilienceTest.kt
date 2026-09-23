@@ -143,7 +143,7 @@ class ArenaApplicationServiceResilienceTest {
         app.arenas.save(Arena.new(Arena.Id.new("broken")))
         app.arenas.save(Arena.new(Arena.Id.new("healthy")))
         app.matchState.failOnSaveStatusFor += "broken"
-        app.service.load()
+        app.lifecycle.load()
         assertEquals(ArenaState.WAITING, app.service.matchOf("broken")!!.state)
         assertEquals(ArenaState.WAITING, app.service.matchOf("healthy")!!.state)
         assertTrue(app.failures.warnings.any { it.contains("broken") })
@@ -155,7 +155,7 @@ class ArenaApplicationServiceResilienceTest {
         app.startMatch("arena1")
         val (q1, q2) = app.startMatch("arena2")
         app.matchState.failOnSaveStatusFor += "arena1"
-        app.service.shutdown()
+        app.lifecycle.shutdown()
         // After arena1's failure, arena2's unregistration and restore still proceed
         assertNull(app.service.arenaIdOf(q1.id))
         assertNull(app.service.arenaIdOf(q2.id))

@@ -2,6 +2,7 @@ package net.ninebolt.onevsone
 
 import net.ninebolt.onevsone.application.ArenaAdministrationService
 import net.ninebolt.onevsone.application.ArenaApplicationService
+import net.ninebolt.onevsone.application.ArenaLifecycleService
 import net.ninebolt.onevsone.application.ArenaRegistry
 import net.ninebolt.onevsone.application.MatchProgressionService
 import net.ninebolt.onevsone.application.MatchStateSync
@@ -39,6 +40,8 @@ open class OneVsOnePlugin : JavaPlugin() {
 
     lateinit var service: ArenaApplicationService
         private set
+
+    private lateinit var lifecycle: ArenaLifecycleService
 
     override fun onEnable() {
         saveDefaultConfig()
@@ -91,13 +94,20 @@ open class OneVsOnePlugin : JavaPlugin() {
         )
         val service = ArenaApplicationService(
             registry = registry,
-            arenas = arenaRepository,
             stats = stats,
             players = playerPort,
             recovery = recovery,
             failures = failures,
             progression = progression,
             sync = stateSync
+        )
+        lifecycle = ArenaLifecycleService(
+            registry = registry,
+            arenas = arenaRepository,
+            sync = stateSync,
+            recovery = recovery,
+            progression = progression,
+            failures = failures
         )
         val admin = ArenaAdministrationService(
             registry = registry,
@@ -108,7 +118,7 @@ open class OneVsOnePlugin : JavaPlugin() {
             presentation = presentation,
             progression = progression
         )
-        service.load()
+        lifecycle.load()
         this.service = service
 
         val executor = OneVsOneCommand(
@@ -129,6 +139,6 @@ open class OneVsOnePlugin : JavaPlugin() {
     }
 
     override fun onDisable() {
-        if (::service.isInitialized) service.shutdown()
+        if (::lifecycle.isInitialized) lifecycle.shutdown()
     }
 }

@@ -7,6 +7,7 @@ import io.papermc.paper.threadedregions.scheduler.AsyncScheduler
 import io.papermc.paper.threadedregions.scheduler.ScheduledTask
 import net.ninebolt.onevsone.application.ArenaAdministrationService
 import net.ninebolt.onevsone.application.ArenaApplicationService
+import net.ninebolt.onevsone.application.ArenaLifecycleService
 import net.ninebolt.onevsone.application.ArenaRegistry
 import net.ninebolt.onevsone.application.JoinReply
 import net.ninebolt.onevsone.application.LeaveReply
@@ -140,6 +141,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         val recovery: PlayerRecoveryService,
         val progression: MatchProgressionService,
         val service: ArenaApplicationService,
+        val lifecycle: ArenaLifecycleService,
         val admin: ArenaAdministrationService,
         val signListener: ArenaSignListener,
         val command: OneVsOneCommand
@@ -168,6 +170,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     val recovery get() = deps.recovery
     val progression get() = deps.progression
     val service get() = deps.service
+    val lifecycle get() = deps.lifecycle
     val admin get() = deps.admin
     val signListener get() = deps.signListener
     val command get() = deps.command
@@ -191,13 +194,16 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
             equipment, playerPort, schedulerPort, presentation, recovery, failures
         )
         val service = ArenaApplicationService(
-            registry, arenaRepo, statsRepo, playerPort,
+            registry, statsRepo, playerPort,
             recovery, failures, progression, MatchStateSync(matchStateRepo, presentation)
+        )
+        val lifecycle = ArenaLifecycleService(
+            registry, arenaRepo, MatchStateSync(matchStateRepo, presentation), recovery, progression, failures
         )
         val admin = ArenaAdministrationService(registry, arenaRepo, signRepo, lobbyRepo, equipment, presentation, progression)
         return Deps(
             store, backupStore, kitStore, arenaRepo, lobbyRepo, signRepo, matchStateRepo, statsRepo,
-            equipment, presentation, registry, recovery, progression, service, admin,
+            equipment, presentation, registry, recovery, progression, service, lifecycle, admin,
             ArenaSignListener(service, admin, messenger),
             OneVsOneCommand(service, admin, playerPort, failures, messenger)
         )

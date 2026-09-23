@@ -2,6 +2,7 @@ package net.ninebolt.onevsone.application.fixtures
 
 import net.ninebolt.onevsone.application.ArenaAdministrationService
 import net.ninebolt.onevsone.application.ArenaApplicationService
+import net.ninebolt.onevsone.application.ArenaLifecycleService
 import net.ninebolt.onevsone.application.ArenaRegistry
 import net.ninebolt.onevsone.application.JoinReply
 import net.ninebolt.onevsone.application.MatchProgressionService
@@ -28,8 +29,9 @@ class TestApp(val requiredWins: Int = 3) {
         registry, stateSync, stats, equipment, players, scheduler, presentation, recovery, failures
     )
     val service = ArenaApplicationService(
-        registry, arenas, stats, players, recovery, failures, progression, stateSync
+        registry, stats, players, recovery, failures, progression, stateSync
     )
+    val lifecycle = ArenaLifecycleService(registry, arenas, stateSync, recovery, progression, failures)
     val admin = ArenaAdministrationService(registry, arenas, arenas, arenas, equipment, presentation, progression)
 
     fun newArena(name: String = "arena1", enabled: Boolean = true): Arena.Id {

@@ -119,7 +119,7 @@ class PaperInventoryRecoveryTest {
         env.matchStateRepo.registerParticipant(participant, Arena.Id.new("a1"))
         env.backupStore.saveBackups(listOf(PersistedBackup(ref, PaperInventorySnapshot())))
         env.matchStateRepo.clearRegistrations()
-        env.service.load()
+        env.lifecycle.load()
 
         p.reconnect()
         assertNull(p.inventory.contents[0])
@@ -163,7 +163,7 @@ class PaperInventoryRecoveryTest {
         env.tick(6)
 
         p2.simulateDamage(100.0, genericDamage())
-        env.service.shutdown()
+        env.lifecycle.shutdown()
 
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
         assertEquals(p2.uniqueId.toString(), env.playersYaml().getString("inv.Bob.uuid"))

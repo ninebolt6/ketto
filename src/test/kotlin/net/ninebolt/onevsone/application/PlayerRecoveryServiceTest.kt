@@ -206,7 +206,7 @@ class PlayerRecoveryServiceTest {
         val app = TestApp()
         val (p1, p2) = app.startMatch()
         p2.dead = true
-        app.service.shutdown()
+        app.lifecycle.shutdown()
         // The survivor is restored + acknowledged; the dead player is restored but the record remains
         assertTrue(app.equipment.restored.any { it.playerId == p1.id })
         assertTrue(app.equipment.restored.any { it.playerId == p2.id })
