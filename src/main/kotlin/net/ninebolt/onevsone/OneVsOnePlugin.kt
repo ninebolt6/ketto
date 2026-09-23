@@ -92,10 +92,8 @@ open class OneVsOnePlugin : JavaPlugin() {
         val service = ArenaApplicationService(
             registry = registry,
             arenas = arenaRepository,
-            matchState = matchState,
             stats = stats,
             players = playerPort,
-            presentation = presentation,
             recovery = recovery,
             failures = failures,
             progression = progression,

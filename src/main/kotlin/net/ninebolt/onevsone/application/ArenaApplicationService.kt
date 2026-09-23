@@ -2,8 +2,6 @@ package net.ninebolt.onevsone.application
 
 import net.ninebolt.onevsone.application.port.ArenaRepository
 import net.ninebolt.onevsone.application.port.FailureReporter
-import net.ninebolt.onevsone.application.port.MatchPresentationPort
-import net.ninebolt.onevsone.application.port.MatchStateRepository
 import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.application.port.PlayerPort
 import net.ninebolt.onevsone.application.port.PlayerStatsRepository
@@ -31,10 +29,8 @@ import kotlin.uuid.Uuid
 class ArenaApplicationService(
     private val registry: ArenaRegistry,
     private val arenas: ArenaRepository,
-    private val matchState: MatchStateRepository,
     private val stats: PlayerStatsRepository,
     private val players: PlayerPort,
-    private val presentation: MatchPresentationPort,
     private val recovery: PlayerRecoveryService,
     private val failures: FailureReporter,
     private val progression: MatchProgressionService,
@@ -53,17 +49,17 @@ class ArenaApplicationService(
         loaded.forEach { arena ->
             registry.installArena(arena)
             failures.warnOnFailure("Could not persist status for arena ${arena.id.name}; continuing startup") {
-                registry.match(arena.id)?.let { matchState.saveStatus(it) }
+                registry.match(arena.id)?.let { sync.saveStatus(it) }
             }
             failures.warnOnFailure("Could not update sign for arena ${arena.id.name}; continuing startup") {
-                presentation.updateSign(arena.id, ArenaState.WAITING)
+                sync.refreshSign(arena.id, ArenaState.WAITING)
             }
         }
         failures.warnOnFailure("players.yml is unreadable; pending restores unavailable this session") {
             recovery.loadPersisted()
         }
         failures.warnOnFailure("Could not clear stale players.yml registrations") {
-            matchState.clearRegistrations()
+            sync.clearRegistrations()
         }
     }
 
@@ -74,7 +70,7 @@ class ArenaApplicationService(
             val left = registry.transact(arenaId) { it.abort() }?.outcome ?: emptyList()
             left.forEach { unregister(it) }
             failures.warnOnFailure("Could not persist shutdown state for arena $arenaId; continuing shutdown") {
-                registry.match(arenaId)?.let { matchState.saveStatus(it) }
+                registry.match(arenaId)?.let { sync.saveStatus(it) }
             }
         }
         recovery.restoreAllOnline()
@@ -128,7 +124,7 @@ class ArenaApplicationService(
 
         // Membership registration. On failure we are still pre-commit,
         // so the exception propagates with nothing changed.
-        matchState.registerParticipant(participant, arenaId)
+        sync.register(participant, arenaId)
         registry.putMatch(step.match)
         if (step.outcome == JoinOutcome.MatchReady) progression.startInitialCountdown(arenaId)
         sync.publish(step.match)

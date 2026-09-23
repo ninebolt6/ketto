@@ -28,7 +28,7 @@ class TestApp(val requiredWins: Int = 3) {
         registry, stateSync, stats, equipment, players, scheduler, presentation, recovery, failures
     )
     val service = ArenaApplicationService(
-        registry, arenas, matchState, stats, players, presentation, recovery, failures, progression, stateSync
+        registry, arenas, stats, players, recovery, failures, progression, stateSync
     )
     val admin = ArenaAdministrationService(registry, arenas, arenas, arenas, equipment, presentation, progression)
 

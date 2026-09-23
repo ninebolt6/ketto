@@ -191,8 +191,8 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
             equipment, playerPort, schedulerPort, presentation, recovery, failures
         )
         val service = ArenaApplicationService(
-            registry, arenaRepo, matchStateRepo, statsRepo, playerPort,
-            presentation, recovery, failures, progression, MatchStateSync(matchStateRepo, presentation)
+            registry, arenaRepo, statsRepo, playerPort,
+            recovery, failures, progression, MatchStateSync(matchStateRepo, presentation)
         )
         val admin = ArenaAdministrationService(registry, arenaRepo, signRepo, lobbyRepo, equipment, presentation, progression)
         return Deps(
