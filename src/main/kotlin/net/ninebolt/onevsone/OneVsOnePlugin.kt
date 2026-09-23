@@ -41,12 +41,7 @@ import org.bukkit.plugin.java.JavaPlugin
 // open is required because MockBukkit generates a proxy subclass at load time
 open class OneVsOnePlugin : JavaPlugin() {
 
-    lateinit var service: ArenaApplicationService
-        private set
-
-    private lateinit var lifecycle: ArenaLifecycleService
-
-    private lateinit var sqliteStore: SqliteStore
+    private lateinit var module: PluginModule
 
     override fun onEnable() {
         saveDefaultConfig()
@@ -59,95 +54,119 @@ open class OneVsOnePlugin : JavaPlugin() {
             language = settings.language,
             logger = logger
         )
-
         val failures = PluginFailureReporter { logger }
+
+        // the store is created outside the module so it can be closed if wiring fails midway
         val store = SqliteStore(dataFolder, logger)
-        sqliteStore = store
-        val arenaRepository = SqliteArenaRepository(store, logger)
-        val lobbyRepository = SqliteLobbyRepository(store)
-        val signRepository = SqliteArenaSignRepository(store)
-        val matchState = SqliteMatchStateRepository(store)
-        val stats = SqlitePlayerStatsRepository(store)
+        try {
+            module = PluginModule(this, store, settings.requiredWins, messenger, failures)
+        } catch (e: Throwable) {
+            runCatching { store.close() }
+            throw e
+        }
+    }
 
-        val lookup = PaperPlayerLookup(server)
-        val playerPort = PaperPlayerAdapter(lookup = lookup, server = server, plugin = this, failures = failures)
-        val equipment = PaperEquipmentAdapter(
-            backups = SqliteBackupStore(store),
-            kitStore = SqliteKitStore(store),
-            lookup = lookup
-        )
-        val presentation = PaperPresentation(server = server, messenger = messenger, failures = failures)
+    override fun onDisable() {
+        if (::module.isInitialized) {
+            module.lifecycle.shutdown()
+            module.store.close()
+        }
+    }
+}
 
-        val registry = ArenaRegistry(settings.requiredWins, failures)
-        val signs = ArenaSignService(registry = registry, signs = signRepository, presentation = presentation)
-        val recovery = PlayerRecoveryService(
-            backups = equipment,
-            players = playerPort,
-            lobby = lobbyRepository,
-            presentation = presentation,
-            failures = failures
-        )
-        val stateSync = MatchStateSync(matchState = matchState, signs = signs)
-        val progression = MatchProgressionService(
-            registry = registry,
-            sync = stateSync,
-            stats = stats,
-            kit = equipment,
-            players = playerPort,
-            scheduler = PaperScheduler(this),
-            presentation = presentation,
-            recovery = recovery,
-            failures = failures
-        )
-        val service = ArenaApplicationService(
-            registry = registry,
-            players = playerPort,
-            recovery = recovery,
-            progression = progression,
-            sync = stateSync
-        )
-        lifecycle = ArenaLifecycleService(
-            registry = registry,
-            arenas = arenaRepository,
-            sync = stateSync,
-            recovery = recovery,
-            progression = progression,
-            failures = failures
-        )
-        val admin = ArenaAdministrationService(
-            registry = registry,
-            arenas = arenaRepository,
-            signs = signRepository,
-            kit = equipment,
-            progression = progression
-        )
-        val lobby = LobbyService(lobby = lobbyRepository)
-        val statsService = PlayerStatsService(stats = stats)
+/** The dependency graph for one plugin lifetime: built, loaded, and exposed here. */
+private class PluginModule(
+    private val plugin: OneVsOnePlugin,
+    val store: SqliteStore,
+    requiredWins: Int,
+    private val messenger: Messenger,
+    private val failures: PluginFailureReporter
+) {
+    private val arenaRepository = SqliteArenaRepository(store, plugin.logger)
+    private val lobbyRepository = SqliteLobbyRepository(store)
+    private val signRepository = SqliteArenaSignRepository(store)
+    private val matchState = SqliteMatchStateRepository(store)
+    private val stats = SqlitePlayerStatsRepository(store)
+
+    private val lookup = PaperPlayerLookup(plugin.server)
+    private val players = PaperPlayerAdapter(lookup = lookup, server = plugin.server, plugin = plugin, failures = failures)
+    private val equipment = PaperEquipmentAdapter(
+        backups = SqliteBackupStore(store),
+        kitStore = SqliteKitStore(store),
+        lookup = lookup
+    )
+    private val presentation = PaperPresentation(server = plugin.server, messenger = messenger, failures = failures)
+
+    private val registry = ArenaRegistry(requiredWins, failures)
+    private val signs = ArenaSignService(registry = registry, signs = signRepository, presentation = presentation)
+    private val recovery = PlayerRecoveryService(
+        backups = equipment,
+        players = players,
+        lobby = lobbyRepository,
+        presentation = presentation,
+        failures = failures
+    )
+    private val stateSync = MatchStateSync(matchState = matchState, signs = signs)
+    private val progression = MatchProgressionService(
+        registry = registry,
+        sync = stateSync,
+        stats = stats,
+        kit = equipment,
+        players = players,
+        scheduler = PaperScheduler(plugin),
+        presentation = presentation,
+        recovery = recovery,
+        failures = failures
+    )
+    private val service = ArenaApplicationService(
+        registry = registry,
+        players = players,
+        recovery = recovery,
+        progression = progression,
+        sync = stateSync
+    )
+    val lifecycle = ArenaLifecycleService(
+        registry = registry,
+        arenas = arenaRepository,
+        sync = stateSync,
+        recovery = recovery,
+        progression = progression,
+        failures = failures
+    )
+    private val admin = ArenaAdministrationService(
+        registry = registry,
+        arenas = arenaRepository,
+        signs = signRepository,
+        kit = equipment,
+        progression = progression
+    )
+    private val lobby = LobbyService(lobby = lobbyRepository)
+    private val statsService = PlayerStatsService(stats = stats)
+
+    init {
         lifecycle.load()
-        this.service = service
+        registerEntrypoints()
+    }
 
+    private fun registerEntrypoints() {
         val executor = OneVsOneCommand(
             service = service,
             admin = admin,
             statsService = statsService,
             signs = signs,
             lobby = lobby,
-            players = playerPort,
+            players = players,
             failures = failures,
             messenger = messenger
         )
-        val command = getCommand("1vs1") ?: error("1vs1 command missing from plugin.yml")
+        val command = plugin.getCommand("1vs1") ?: error("1vs1 command missing from plugin.yml")
         @Suppress("UsePropertyAccessSyntax") // the setter takes @Nullable, so executor stays a val-style property access
         command.setExecutor(executor)
         command.tabCompleter = executor
-        server.pluginManager.registerEvents(ArenaMatchListener(service, lookup, messenger), this)
-        server.pluginManager.registerEvents(ArenaGuardListener(service), this)
-        server.pluginManager.registerEvents(ArenaTeleportListener(service, lookup), this)
-        server.pluginManager.registerEvents(ArenaSignListener(service, signs, messenger), this)
-    }
-
-    override fun onDisable() {
-        if (::lifecycle.isInitialized) lifecycle.shutdown()
-        if (::sqliteStore.isInitialized) sqliteStore.close()
+        val manager = plugin.server.pluginManager
+        manager.registerEvents(ArenaMatchListener(service, lookup, messenger), plugin)
+        manager.registerEvents(ArenaGuardListener(service), plugin)
+        manager.registerEvents(ArenaTeleportListener(service, lookup), plugin)
+        manager.registerEvents(ArenaSignListener(service, signs, messenger), plugin)
     }
 }

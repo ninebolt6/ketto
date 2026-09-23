@@ -10,7 +10,6 @@ import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.vehicle.VehicleEnterEvent
 import org.junit.jupiter.api.AfterEach
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -42,7 +41,6 @@ class OneVsOnePluginTest {
         val plugin = MockBukkit.load(OneVsOnePlugin::class.java)
 
         assertTrue(plugin.isEnabled)
-        assertNotNull(plugin.service)
         assertTrue(plugin.getCommand("1vs1")?.executor is OneVsOneCommand)
 
         // Verify registration via the HandlerList of each listener's own event
