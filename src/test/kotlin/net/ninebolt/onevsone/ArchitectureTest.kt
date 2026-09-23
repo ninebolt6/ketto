@@ -55,6 +55,26 @@ class ArchitectureTest {
     }
 
     @Test
+    fun `infrastructure only references repository ports it implements`() {
+        // Repositories are the persistence seam: application services consume
+        // them and adapters implement them; other infrastructure must not.
+        val offenders = classes
+            .filter { it.packageName.startsWith("net.ninebolt.onevsone.infrastructure") }
+            .flatMap { clazz ->
+                val implemented = clazz.allRawInterfaces.map { it.name }.toSet()
+                clazz.directDependenciesFromSelf
+                    .map { it.targetClass }
+                    .filter {
+                        it.packageName == "net.ninebolt.onevsone.application.port" &&
+                            it.simpleName.endsWith("Repository") &&
+                            it.name !in implemented
+                    }
+                    .map { "${clazz.name} -> ${it.name}" }
+            }
+        assertTrue(offenders.isEmpty(), "repository ports consumed without implementing them: $offenders")
+    }
+
+    @Test
     fun `domain and application tests stay independent of infrastructure and platform APIs`() {
         noClasses().that().resideInAnyPackage(
             "net.ninebolt.onevsone.domain..",
