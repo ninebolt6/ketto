@@ -11,6 +11,8 @@ internal object LanguageFiles {
     /** Languages shipped in the jar; additional languages come from dataFolder/messages/<lang>.yaml. */
     val BUNDLED_LANGS = listOf("ja", "en")
 
+    fun dir(dataFolder: File): File = File(dataFolder, "messages")
+
     private fun bundledYaml(lang: String): YamlConfiguration? =
         LanguageFiles::class.java.getResourceAsStream("/messages/$lang.yaml")
             ?.bufferedReader()?.use { YamlConfiguration.loadConfiguration(it) }

@@ -19,6 +19,7 @@ import net.ninebolt.onevsone.infrastructure.paper.PaperPlayerAdapter
 import net.ninebolt.onevsone.infrastructure.paper.PaperPlayerLookup
 import net.ninebolt.onevsone.infrastructure.paper.PaperScheduler
 import net.ninebolt.onevsone.infrastructure.paper.PluginFailureReporter
+import net.ninebolt.onevsone.infrastructure.paper.PluginSettings
 import net.ninebolt.onevsone.infrastructure.persistence.YamlArenaRepository
 import net.ninebolt.onevsone.infrastructure.persistence.YamlBackupStore
 import net.ninebolt.onevsone.infrastructure.persistence.YamlKitStore
@@ -28,7 +29,6 @@ import net.ninebolt.onevsone.infrastructure.persistence.YamlSignRepository
 import net.ninebolt.onevsone.infrastructure.persistence.YamlPlayerStatsRepository
 import net.ninebolt.onevsone.infrastructure.persistence.YamlStore
 import org.bukkit.plugin.java.JavaPlugin
-import java.io.File
 
 /**
  * Composition root. Reads config values, manually instantiates and injects the
@@ -42,11 +42,7 @@ open class OneVsOnePlugin : JavaPlugin() {
 
     override fun onEnable() {
         saveDefaultConfig()
-        val configured = config.getInt("required-wins", 3)
-        if (configured < 1) {
-            logger.warning("required-wins must be >= 1 (was $configured); using 1")
-        }
-        val requiredWins = configured.coerceAtLeast(1)
+        val settings = PluginSettings.load(config, logger)
 
         val failures = PluginFailureReporter { logger }
         val store = YamlStore(dataFolder, logger)
@@ -59,9 +55,9 @@ open class OneVsOnePlugin : JavaPlugin() {
             saveResource(it, false)
         }
         val messenger = Messenger.load(
-            messagesDir = File(dataFolder, "messages"),
-            fallbackLang = config.getString("default-language") ?: "en",
-            language = config.getString("language") ?: "auto",
+            messagesDir = LanguageFiles.dir(dataFolder),
+            fallbackLang = settings.defaultLanguage,
+            language = settings.language,
             logger = logger
         )
 
@@ -71,7 +67,7 @@ open class OneVsOnePlugin : JavaPlugin() {
         val scheduler = PaperScheduler(this)
         val presentation = PaperMatchPresentation(server, messenger, signRepository, failures)
 
-        val registry = ArenaRegistry(requiredWins)
+        val registry = ArenaRegistry(settings.requiredWins)
         val recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepository, presentation, failures, server.onlineMode)
         val stateSync = MatchStateSync(matchState, presentation)
         val progression = MatchProgressionService(
