@@ -7,13 +7,14 @@ import net.ninebolt.onevsone.infrastructure.paper.toWorldPosition
 import org.bukkit.block.Sign
 import org.bukkit.command.CommandSender
 
-internal class ArenaSetSignCommand(
+/** `arena <name> sign set`. Registers the sign the executor is looking at. */
+internal class ArenaSignSetCommand(
     admin: ArenaAdministrationService,
     messages: Messages
 ) : ArenaSubcommand(admin, messages) {
 
     override val requiresPlayer: Boolean = true
-    override val usage: Msg = messages.usageSetSign
+    override val usage: Msg = messages.usageSignSet
 
     override fun executeFor(sender: CommandSender, arenaName: String, rest: List<String>) {
         val player = sender.requirePlayer() ?: return

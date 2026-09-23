@@ -28,13 +28,13 @@ Drop the jar into `plugins/` and restart the server.
 ## Quick setup (OP)
 
 ```
-/1vs1 setlobby                  # where players return after a match
+/1vs1 lobby set                      # where players return after a match
 /1vs1 arena create <arena>
-/1vs1 arena setspawn1 <arena>   # run while standing at spawn 1
-/1vs1 arena setspawn2 <arena>   # run while standing at spawn 2
-/1vs1 arena setInv <arena>      # copies your inventory as the arena kit
-/1vs1 arena setsign <arena>     # while looking at a sign: makes it a join sign
-/1vs1 arena enable <arena>
+/1vs1 arena <arena> spawn set 1      # run while standing at spawn 1
+/1vs1 arena <arena> spawn set 2      # run while standing at spawn 2
+/1vs1 arena <arena> kit set          # copies your inventory as the arena kit
+/1vs1 arena <arena> sign set         # while looking at a sign: makes it a join sign
+/1vs1 arena <arena> enable
 ```
 
 Players then right-click the sign to join. First click waits for an opponent;
@@ -42,19 +42,21 @@ a second player starts the countdown.
 
 ## Commands
 
-| Command                                    | Who    | Description                                        |
-| ------------------------------------------ | ------ | -------------------------------------------------- |
-| `/1vs1 stats [player]`                     | player | Show your own or another player's stats            |
-| `/1vs1 leave`                              | player | Leave while waiting for an opponent                |
-| `/1vs1 arena info [arena]`                 | anyone | Show arena state and current matchup               |
-| `/1vs1 setlobby`                           | OP     | Save your position as the lobby                    |
-| `/1vs1 arena create <arena>`               | OP     | Create an arena                                    |
-| `/1vs1 arena remove <arena>`               | OP     | Remove an arena (aborts any match)                 |
-| `/1vs1 arena setspawn1\|setspawn2 <arena>` | OP     | Save your position as a spawn                      |
-| `/1vs1 arena setInv <arena>`               | OP     | Copy your inventory as the arena kit               |
-| `/1vs1 arena setsign <arena>`              | OP     | Register the sign you're looking at as a join sign |
-| `/1vs1 arena removesign <arena>`           | OP     | Unregister the arena's join sign                   |
-| `/1vs1 arena enable\|disable <arena>`      | OP     | Enable/disable joins (disable aborts a match)      |
+| Command                                | Who    | Description                                        |
+| -------------------------------------- | ------ | -------------------------------------------------- |
+| `/1vs1 stats [player]`                 | player | Show your own or another player's stats            |
+| `/1vs1 leave`                          | player | Leave while waiting for an opponent                |
+| `/1vs1 arena <arena> [info]`           | anyone | Show arena state and current matchup               |
+| `/1vs1 lobby set`                      | OP     | Save your position as the lobby                    |
+| `/1vs1 arena create <arena>`           | OP     | Create an arena                                    |
+| `/1vs1 arena <arena> remove`           | OP     | Remove an arena (aborts any match)                 |
+| `/1vs1 arena <arena> spawn set <1\|2>` | OP     | Save your position as a spawn                      |
+| `/1vs1 arena <arena> kit set`          | OP     | Copy your inventory as the arena kit               |
+| `/1vs1 arena <arena> sign set`         | OP     | Register the sign you're looking at as a join sign |
+| `/1vs1 arena <arena> sign remove`      | OP     | Unregister the arena's join sign                   |
+| `/1vs1 arena <arena> enable\|disable`  | OP     | Enable/disable joins (disable aborts a match)      |
+
+`create` is a reserved word and cannot be used as an arena name.
 
 ## Configuration (`config.yml`)
 

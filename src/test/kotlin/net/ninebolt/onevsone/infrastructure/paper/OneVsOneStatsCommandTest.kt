@@ -53,7 +53,7 @@ class OneVsOneStatsCommandTest {
     fun `non op management commands denied`() {
         val p = env.player("Alice")
         p.isOp = false
-        env.run(p, "setlobby")
+        env.run(p, "lobby", "set")
         assertTrue(p.drainMessages().any { it.contains("権限がありません！") })
         env.run(p, "arena", "create", "x")
         assertTrue(p.drainMessages().any { it.contains("権限がありません！") })
@@ -146,7 +146,10 @@ class OneVsOneStatsCommandTest {
         val p = env.player("Alice")
         env.run(p, "bogus")
         assertTrue(p.drainMessages().any { it.contains("/1vs1 stats [player] | /1vs1 leave") })
+        // Under the arena namespace an unknown name is an arena lookup; an unknown op shows usage
         env.run(p, "arena", "bogus")
-        assertTrue(p.drainMessages().any { it.contains("/1vs1 arena info [arena]") })
+        assertTrue(p.drainMessages().any { it.contains("そのアリーナは存在しません") })
+        env.run(p, "arena", "bogus", "bogus")
+        assertTrue(p.drainMessages().any { it.contains("/1vs1 arena <arena>") })
     }
 }

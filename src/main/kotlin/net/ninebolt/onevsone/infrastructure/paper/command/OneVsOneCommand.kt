@@ -11,7 +11,7 @@ import org.bukkit.command.TabExecutor
 
 /**
  * TabExecutor for /1vs1. This is the only registration point from plugin.yml;
- * actual work routes to each subcommand via CommandGroup.
+ * actual work routes to each subcommand via CommandGroup/ArenaGroup.
  */
 class OneVsOneCommand(
     service: ArenaApplicationService,
@@ -21,23 +21,45 @@ class OneVsOneCommand(
     private val messages: Messages
 ) : TabExecutor {
 
-    private val root = CommandGroup(messages.usageRoot, messages, mapOf(
-        "stats" to StatsCommand(service, players, failures, messages),
-        "leave" to LeaveCommand(service, messages),
-        "setlobby" to SetLobbyCommand(admin, messages),
-        "arena" to CommandGroup(messages.usageArena, messages, mapOf(
-            "info" to ArenaInfoCommand(service, admin, messages),
-            "create" to ArenaCreateCommand(admin, messages),
-            "remove" to ArenaRemoveCommand(admin, messages),
-            "setspawn1" to ArenaSetSpawnCommand(1, admin, messages),
-            "setspawn2" to ArenaSetSpawnCommand(2, admin, messages),
-            "enable" to ArenaSetEnabledCommand(true, admin, messages),
-            "disable" to ArenaSetEnabledCommand(false, admin, messages),
-            "setInv" to ArenaSetInventoryCommand(admin, messages),
-            "setsign" to ArenaSetSignCommand(admin, messages),
-            "removesign" to ArenaRemoveSignCommand(admin, messages)
+    private val root = run {
+        val arenaInfo = ArenaInfoCommand(service, admin, messages)
+        CommandGroup(messages.usageRoot, messages, mapOf(
+            "stats" to StatsCommand(service, players, failures, messages),
+            "leave" to LeaveCommand(service, messages),
+            "lobby" to CommandGroup(messages.usageLobby, messages, mapOf(
+                "set" to SetLobbyCommand(admin, messages)
+            )),
+            "arena" to ArenaGroup(
+                messages.usageArena, messages.usageArenaOps, messages, admin,
+                ArenaCreateCommand(admin, messages),
+                ArenaScopedGroup(
+                    messages.usageArena, messages.usageArenaOps, messages, admin, mapOf(
+                        "info" to arenaInfo,
+                        "remove" to ArenaRemoveCommand(admin, messages),
+                        "enable" to ArenaSetEnabledCommand(true, admin, messages),
+                        "disable" to ArenaSetEnabledCommand(false, admin, messages),
+                        "spawn" to ArenaScopedGroup(
+                            messages.noPermission, messages.usageSpawn, messages, admin, mapOf(
+                                "set" to ArenaSpawnSetCommand(admin, messages)
+                            )
+                        ),
+                        "kit" to ArenaScopedGroup(
+                            messages.noPermission, messages.usageKit, messages, admin, mapOf(
+                                "set" to ArenaKitSetCommand(admin, messages)
+                            )
+                        ),
+                        "sign" to ArenaScopedGroup(
+                            messages.noPermission, messages.usageSign, messages, admin, mapOf(
+                                "set" to ArenaSignSetCommand(admin, messages),
+                                "remove" to ArenaSignRemoveCommand(admin, messages)
+                            )
+                        )
+                    ),
+                    defaultOp = arenaInfo
+                )
+            )
         ))
-    ))
+    }
 
     override fun onCommand(sender: CommandSender, command: Command, label: String, args: Array<String>): Boolean {
         root.execute(sender, args.toList())

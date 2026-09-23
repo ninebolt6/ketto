@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
-/** Verifies the /1vs1 arena * and setlobby admin commands. */
+/** Verifies the /1vs1 arena and lobby admin commands. */
 class OneVsOneAdminCommandTest {
 
     @TempDir
@@ -40,10 +40,10 @@ class OneVsOneAdminCommandTest {
     }
 
     @Test
-    fun `setlobby writes config`() {
+    fun `lobby set writes config`() {
         val p = env.opPlayer("Alice")
         p.setLocation(Location(env.world(), 7.5, 64.0, -2.5, 90f, 0f))
-        env.run(p, "setlobby")
+        env.run(p, "lobby", "set")
         assertTrue(p.drainMessages().any { it.contains("ロビーを設定しました") })
         val lobby = env.lobbyRepo.lobby()!!
         assertEquals(7.5, lobby.x)
@@ -53,7 +53,7 @@ class OneVsOneAdminCommandTest {
     @Test
     fun `arena info shows state and players during match`() {
         val viewer = env.player("Viewer")
-        env.run(viewer, "arena", "info", "missing")
+        env.run(viewer, "arena", "missing")
         assertTrue(viewer.drainMessages().any { it.contains("そのアリーナは存在しません") })
 
         val arena = env.newArena()
@@ -64,7 +64,7 @@ class OneVsOneAdminCommandTest {
         env.tick(6)
         fallIntoVoid(p2)
 
-        env.run(viewer, "arena", "info", "arena1")
+        env.run(viewer, "arena", "arena1", "info")
         val msgs = viewer.drainMessages()
         assertTrue(msgs.any { it.contains("=== Arena[arena1] ===") })
         assertTrue(msgs.any { it.contains("状態: Ingame") })
@@ -82,11 +82,11 @@ class OneVsOneAdminCommandTest {
         env.run(op, "arena", "create", "newarena")
         assertTrue(op.drainMessages().any { it.contains("そのアリーナはすでに存在しています") })
 
-        env.run(op, "arena", "remove", "newarena")
+        env.run(op, "arena", "newarena", "remove")
         assertTrue(op.drainMessages().any { it.contains("アリーナ: newarena を削除しました") })
         assertNull(env.service.arena("newarena"))
 
-        env.run(op, "arena", "remove", "newarena")
+        env.run(op, "arena", "newarena", "remove")
         assertTrue(op.drainMessages().any { it.contains("そのアリーナは存在しません") })
     }
 
@@ -94,23 +94,23 @@ class OneVsOneAdminCommandTest {
     fun `arena enable disable`() {
         val op = env.opPlayer("Op")
         env.newArena("a2", enabled = false)
-        env.run(op, "arena", "enable", "a2")
+        env.run(op, "arena", "a2", "enable")
         assertTrue(op.drainMessages().any { it.contains("を有効にしました") })
-        env.run(op, "arena", "enable", "a2")
+        env.run(op, "arena", "a2", "enable")
         assertTrue(op.drainMessages().any { it.contains("そのアリーナはすでに有効になっています！") })
-        env.run(op, "arena", "disable", "a2")
+        env.run(op, "arena", "a2", "disable")
         assertTrue(op.drainMessages().any { it.contains("を無効にしました") })
-        env.run(op, "arena", "disable", "a2")
+        env.run(op, "arena", "a2", "disable")
         assertTrue(op.drainMessages().any { it.contains("そのアリーナはすでに無効です！") })
         assertEquals(false, env.service.arena("a2")!!.enabled)
     }
 
     @Test
-    fun `arena setspawn saves fractional location`() {
+    fun `arena spawn set saves fractional location`() {
         val op = env.opPlayer("Op")
         env.newArena()
         op.setLocation(Location(env.world(), 1.5, 65.25, -3.0, 33.3f, 12.5f))
-        env.run(op, "arena", "setspawn1", "arena1")
+        env.run(op, "arena", "arena1", "spawn", "set", "1")
         assertTrue(op.drainMessages().any { it.contains("のスポーン1を設定しました") })
         val spawn1 = env.arenaRepo.find("arena1")!!.spawn1!!
         assertEquals(33.3f, spawn1.yaw, 0.001f)
@@ -118,26 +118,26 @@ class OneVsOneAdminCommandTest {
     }
 
     @Test
-    fun `arena setInv saves kit`() {
+    fun `arena kit set saves kit`() {
         val op = env.opPlayer("Op")
         env.newArena()
         op.inventory.setItem(0, env.item(Material.DIAMOND_SWORD))
-        env.run(op, "arena", "setInv", "arena1")
+        env.run(op, "arena", "arena1", "kit", "set")
         assertTrue(op.drainMessages().any { it.contains("のインベントリを設定しました") })
         assertEquals(Material.DIAMOND_SWORD, env.equipment.kitOf(Arena.Id.new("arena1"))?.items?.get(0)?.type)
     }
 
     @Test
-    fun `arena setsign requires looking at sign`() {
+    fun `arena sign set requires looking at sign`() {
         val op = env.opPlayer("Op")
         env.newArena()
         // targetBlock unset = looking at nothing
-        env.run(op, "arena", "setsign", "arena1")
+        env.run(op, "arena", "arena1", "sign", "set")
         assertTrue(op.drainMessages().any { it.contains("看板を見て実行してください") })
     }
 
     @Test
-    fun `arena setsign registers sign and reports taken`() {
+    fun `arena sign set registers sign and reports taken`() {
         val op = env.opPlayer("Op")
         val second = env.opPlayer("Op2")
         env.newArena("arena1")
@@ -147,28 +147,28 @@ class OneVsOneAdminCommandTest {
         op.targetBlock = sign
         second.targetBlock = sign
 
-        env.run(op, "arena", "setsign", "arena1")
+        env.run(op, "arena", "arena1", "sign", "set")
         assertEquals("arena1", env.signRepo.signOwner("world", 4, 64, 4))
 
-        env.run(second, "arena", "setsign", "arena2")
+        env.run(second, "arena", "arena2", "sign", "set")
         assertTrue(second.drainMessages().any { it.contains("その看板はすでに登録されています") })
     }
 
     @Test
-    fun `arena removesign unregisters sign`() {
+    fun `arena sign remove unregisters sign`() {
         val op = env.opPlayer("Op")
         env.newArena()
         env.signRepo.setSign("arena1", WorldPosition.new("world", 4.0, 64.0, 4.0))
 
-        env.run(op, "arena", "removesign", "arena1")
+        env.run(op, "arena", "arena1", "sign", "remove")
         assertTrue(op.drainMessages().any { it.contains("の看板登録を解除しました") })
         assertNull(env.signRepo.signOwner("world", 4, 64, 4))
         assertNull(env.signRepo.signLocation("arena1"))
 
-        env.run(op, "arena", "removesign", "arena1")
+        env.run(op, "arena", "arena1", "sign", "remove")
         assertTrue(op.drainMessages().any { it.contains("そのアリーナには看板が登録されていません") })
 
-        env.run(op, "arena", "removesign", "missing")
+        env.run(op, "arena", "missing", "sign", "remove")
         assertTrue(op.drainMessages().any { it.contains("そのアリーナは存在しません") })
     }
 
@@ -176,9 +176,11 @@ class OneVsOneAdminCommandTest {
     fun `missing arg shows red usage`() {
         val op = env.opPlayer("Op")
         env.run(op, "arena", "create")
-        assertTrue(op.drainMessages().any { it.contains("/1vs1 arena create [arena]") })
-        env.run(op, "arena", "setsign")
-        assertTrue(op.drainMessages().any { it.contains("/1vs1 arena setsign [arena]") })
+        assertTrue(op.drainMessages().any { it.contains("/1vs1 arena create <arena>") })
+        env.run(op, "arena", "x", "spawn", "set")
+        assertTrue(op.drainMessages().any { it.contains("/1vs1 arena <arena> spawn set <1|2>") })
+        env.run(op, "arena", "x", "sign")
+        assertTrue(op.drainMessages().any { it.contains("/1vs1 arena <arena> sign <set|remove>") })
     }
 
     @Test
@@ -186,8 +188,8 @@ class OneVsOneAdminCommandTest {
         val op = env.opPlayer("Op")
         env.newArena()
         env.run(op, "arena", "create", "other", "extra")
-        assertTrue(op.drainMessages().any { it.contains("/1vs1 arena create [arena]") })
-        env.run(op, "arena", "info", "arena1", "extra")
+        assertTrue(op.drainMessages().any { it.contains("/1vs1 arena create <arena>") })
+        env.run(op, "arena", "arena1", "info", "extra")
         assertTrue(op.drainMessages().any { it.contains("Arena[arena1]") })
     }
 
@@ -195,9 +197,24 @@ class OneVsOneAdminCommandTest {
     fun `tab completion keeps the registered name case`() {
         val op = env.opPlayer("Op")
         env.newArena("Arena1")
-        assertTrue(env.tab(op, "").containsAll(listOf("stats", "leave", "setlobby", "arena")))
-        assertEquals(listOf("setInv"), env.tab(op, "arena", "seti"))
-        assertEquals(listOf("Arena1"), env.tab(op, "arena", "info", "arena"))
+        assertTrue(env.tab(op, "").containsAll(listOf("stats", "leave", "lobby", "arena")))
+        assertEquals(listOf("Arena1", "create").sorted(), env.tab(op, "arena", "").sorted())
+        assertEquals(listOf("Arena1"), env.tab(op, "arena", "arena"))
+        assertEquals(
+            listOf("info", "remove", "enable", "disable", "spawn", "kit", "sign"),
+            env.tab(op, "arena", "Arena1", "")
+        )
+        assertEquals(listOf("spawn", "sign"), env.tab(op, "arena", "Arena1", "s"))
+        assertEquals(listOf("1", "2"), env.tab(op, "arena", "Arena1", "spawn", "set", ""))
+    }
+
+    @Test
+    fun `tab completion hides ops-only namespaces from non ops`() {
+        val p = env.player("Alice")
+        env.newArena("Arena1")
+        assertTrue(env.tab(p, "").none { it == "lobby" })
+        assertEquals(listOf("Arena1"), env.tab(p, "arena", ""))
+        assertEquals(listOf("info"), env.tab(p, "arena", "Arena1", ""))
     }
 
     @Test
@@ -205,7 +222,7 @@ class OneVsOneAdminCommandTest {
         val console = env.server.consoleSender
         env.run(console, "arena", "create", "consolearena")
         assertTrue(console.drainMessages().any { it.contains("アリーナ: consolearena を作成しました") })
-        env.run(console, "arena", "setspawn1", "consolearena")
+        env.run(console, "arena", "consolearena", "spawn", "set", "1")
         assertTrue(console.drainMessages().any { it.contains("このコマンドはプレイヤーのみ実行可能です") })
     }
 }

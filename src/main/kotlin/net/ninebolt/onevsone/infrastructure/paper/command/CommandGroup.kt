@@ -18,8 +18,9 @@ internal class CommandGroup(
         { it.key to it.value }
     )
 
-    // The namespace itself is always visible; visibility of children is up to each child's visibleTo
-    override fun visibleTo(sender: CommandSender): Boolean = true
+    // A namespace shows up only when it has at least one visible child
+    override fun visibleTo(sender: CommandSender): Boolean =
+        byName.values.any { (_, sub) -> sub.visibleTo(sender) }
 
     override fun execute(sender: CommandSender, args: List<String>) {
         val sub = args.firstOrNull()?.let { byName[it.lowercase(Locale.ROOT)] }?.second

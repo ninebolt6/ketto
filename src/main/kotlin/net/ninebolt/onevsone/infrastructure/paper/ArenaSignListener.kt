@@ -47,7 +47,7 @@ class ArenaSignListener(
         renderJoin(event.player, name, reply)
     }
 
-    /** Nobody can break a registered sign. Removal is only via /1vs1 arena removesign or arena remove. */
+    /** Nobody can break a registered sign. Removal is only via /1vs1 arena <name> sign remove or arena <name> remove. */
     @EventHandler
     fun onBreak(event: BlockBreakEvent) {
         if (isRegisteredSign(event.block)) {

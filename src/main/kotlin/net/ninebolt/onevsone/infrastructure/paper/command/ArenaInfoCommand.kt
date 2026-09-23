@@ -6,7 +6,7 @@ import net.ninebolt.onevsone.infrastructure.paper.Messages
 import net.ninebolt.onevsone.infrastructure.paper.Msg
 import org.bukkit.command.CommandSender
 
-/** /1vs1 arena info. The only arena subcommand available to non-OP users. */
+/** /1vs1 arena <name> info. The only arena op available to non-OP users; also the default for bare `arena <name>`. */
 internal class ArenaInfoCommand(
     private val service: ArenaApplicationService,
     admin: ArenaAdministrationService,

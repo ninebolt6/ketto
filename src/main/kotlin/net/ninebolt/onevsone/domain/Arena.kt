@@ -27,14 +27,17 @@ data class Arena private constructor(
             /**
              * Arena-name acceptance rules. The name maps directly to a
              * persistence file name, so path-unsafe characters, surrounding
-             * whitespace, and the reserved name (players) are rejected.
+             * whitespace, and reserved names are rejected: "players" and the
+             * command keyword "create" (which would collide with
+             * `/1vs1 arena create`).
              */
             private fun isValidName(name: String): Boolean =
                 name.isNotBlank() &&
                     name.length <= 64 &&
                     name.trim() == name &&
                     name.none { it == '/' || it == '\\' || it == '.' || it == ':' || it.isISOControl() } &&
-                    !name.equals("players", ignoreCase = true)
+                    !name.equals("players", ignoreCase = true) &&
+                    !name.equals("create", ignoreCase = true)
 
             /** Conversion from external input such as command args or persisted data. Invalid names yield null. */
             fun of(name: String): Id? = if (isValidName(name)) Id(name) else null

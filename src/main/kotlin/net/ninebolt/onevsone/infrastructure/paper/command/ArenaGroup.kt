@@ -1,0 +1,55 @@
+package net.ninebolt.onevsone.infrastructure.paper.command
+
+import net.ninebolt.onevsone.application.ArenaAdministrationService
+import net.ninebolt.onevsone.infrastructure.paper.Messages
+import net.ninebolt.onevsone.infrastructure.paper.Msg
+import org.bukkit.command.CommandSender
+import org.bukkit.util.StringUtil
+
+/**
+ * The /1vs1 arena namespace. "create" is a collection-level op; any other
+ * first argument is an arena name and dispatches to the scoped ops.
+ * "create" is a reserved arena name (Arena.Id) so the two never collide.
+ */
+internal class ArenaGroup(
+    private val usage: Msg,
+    private val opsUsage: Msg,
+    private val messages: Messages,
+    private val admin: ArenaAdministrationService,
+    private val create: Subcommand,
+    private val ops: Subcommand
+) : Subcommand {
+
+    override fun visibleTo(sender: CommandSender): Boolean =
+        create.visibleTo(sender) || ops.visibleTo(sender)
+
+    override fun execute(sender: CommandSender, args: List<String>) {
+        if (args.isEmpty()) {
+            sendUsage(sender)
+            return
+        }
+        if (args[0].equals(CREATE, ignoreCase = true)) {
+            create.execute(sender, args.drop(1))
+            return
+        }
+        ops.execute(sender, args)
+    }
+
+    override fun tabComplete(sender: CommandSender, args: List<String>): List<String> {
+        if (args.size == 1) {
+            val candidates = admin.arenaNames() + listOfNotNull(CREATE.takeIf { create.visibleTo(sender) })
+            return StringUtil.copyPartialMatches(args[0], candidates, mutableListOf())
+        }
+        if (args[0].equals(CREATE, ignoreCase = true)) {
+            return create.tabComplete(sender, args.drop(1))
+        }
+        return ops.tabComplete(sender, args)
+    }
+
+    private fun sendUsage(sender: CommandSender) =
+        messages.send(sender, if (sender.isOp) opsUsage else usage)
+
+    private companion object {
+        const val CREATE = "create"
+    }
+}
