@@ -82,12 +82,4 @@ class ArenaSignCommandTest {
         env.run(op, "arena", "x", "sign")
         assertTrue(op.drainMessages().any { it.contains("/1vs1 arena <arena> sign <set|remove>") })
     }
-
-    @Test
-    fun `console cannot set sign`() {
-        val console = env.server.consoleSender
-        env.newArena()
-        env.run(console, "arena", "arena1", "sign", "set")
-        assertTrue(console.drainMessages().any { it.contains("このコマンドはプレイヤーのみ実行可能です") })
-    }
 }

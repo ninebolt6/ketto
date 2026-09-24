@@ -46,21 +46,6 @@ class ArenaListenerRestrictionTest {
     }
 
     @Test
-    fun `commands blocked except in ONEMORE`() {
-        val arena = env.newArena()
-        val p1 = env.player("Alice")
-
-        assertCommandBlocked(p1, blocked = false)
-
-        env.join(p1, arena)
-        assertCommandBlocked(p1, blocked = false)
-
-        val p2 = env.player("Bob")
-        env.join(p2, arena)
-        assertCommandBlocked(p1, blocked = true)
-    }
-
-    @Test
     fun `item drop cancelled only while equipped`() {
         val arena = env.newArena()
         val p1 = env.player("Alice")
@@ -122,7 +107,6 @@ class ArenaListenerRestrictionTest {
     fun `restriction matrix follows live state transitions`() {
         val arena = env.newArena()
         val p1 = env.player("Alice")
-        env.join(p1, arena)
         val sim = p1.simulation()
         var breakZ = 20
 
@@ -136,6 +120,9 @@ class ArenaListenerRestrictionTest {
             assertCommandBlocked(p1, commandBlocked)
         }
 
+        assertState(damageCancelled = false, breakCancelled = false, commandBlocked = false)
+
+        env.join(p1, arena)
         assertState(damageCancelled = false, breakCancelled = false, commandBlocked = false)
 
         val p2 = env.player("Bob")

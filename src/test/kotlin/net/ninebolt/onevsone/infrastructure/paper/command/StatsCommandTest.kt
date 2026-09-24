@@ -69,6 +69,7 @@ class StatsCommandTest {
     fun `stats of offline cached player resolves uuid`() {
         val viewer = env.player("Viewer")
         val ghost = env.player("Ghost")
+        ghost.disconnect()
         env.writeStats(ghost.uuid, 5, 5)
         env.run(viewer, "stats", "Ghost")
         assertTrue(viewer.drainMessages().any { it.contains("W/L(勝率): 1.00") })

@@ -214,6 +214,7 @@ class ArenaApplicationServiceTest {
         val (p1, _) = app.startMatch()
         app.lifecycle.shutdown()
         assertEquals(ArenaState.WAITING, app.state())
+        assertTrue(app.service.arena("arena1")!!.enabled)
         assertNull(app.service.arenaIdOf(p1.id))
         assertEquals(2, app.equipment.restored.size)
         assertTrue(app.matchState.registrations.isEmpty())

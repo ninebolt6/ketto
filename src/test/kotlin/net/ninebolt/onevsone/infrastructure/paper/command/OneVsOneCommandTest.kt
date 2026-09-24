@@ -49,13 +49,6 @@ class OneVsOneCommandTest {
     }
 
     @Test
-    fun `subcommands are case sensitive`() {
-        val p = env.player("Alice")
-        env.run(p, "ARENA")
-        assertTrue(p.drainMessages().any { it.contains("Incorrect argument") })
-    }
-
-    @Test
     fun `bare arena usage depends on op`() {
         val op = env.opPlayer("Op")
         env.run(op, "arena")

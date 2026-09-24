@@ -15,7 +15,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNotSame
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -195,28 +194,5 @@ class PaperMatchProgressionTest {
         assertEquals(20.0, p2.health)
         assertNotSame(ingameBoard, p1.scoreboard)
         assertNotSame(ingameBoard, p2.scoreboard)
-    }
-
-    @Test
-    fun `quit during countdown stops start without changing either inventory`() {
-        val arena = env.newArena()
-        env.setKit(arena, PaperInventorySnapshot(items = listOf(env.item(Material.IRON_SWORD))))
-        val p1 = env.player("Alice")
-        val p2 = env.player("Bob")
-        p1.inventory.setItem(0, env.item(Material.BREAD))
-        p2.inventory.setItem(0, env.item(Material.APPLE))
-        env.join(p1, arena)
-        env.join(p2, arena)
-        env.tick(5)
-
-        p2.disconnect()
-        env.tick()
-        assertEquals(ArenaState.ONEMORE, env.view().state)
-        assertEquals(arena, env.service.arenaIdOf(p1.uuid))
-        assertNull(env.service.arenaIdOf(p2.uuid))
-        assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
-        assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
-        assertFalse(p1.hasTeleported())
-        assertFalse(p2.hasTeleported())
     }
 }

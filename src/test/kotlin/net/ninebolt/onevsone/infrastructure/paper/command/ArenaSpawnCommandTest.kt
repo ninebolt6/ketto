@@ -53,12 +53,4 @@ class ArenaSpawnCommandTest {
         env.run(op, "arena", "arena1", "spawn", "set", "1", "extra")
         assertTrue(op.drainMessages().any { it.contains("Incorrect argument") })
     }
-
-    @Test
-    fun `console cannot set spawn`() {
-        val console = env.server.consoleSender
-        env.newArena()
-        env.run(console, "arena", "arena1", "spawn", "set", "1")
-        assertTrue(console.drainMessages().any { it.contains("このコマンドはプレイヤーのみ実行可能です") })
-    }
 }

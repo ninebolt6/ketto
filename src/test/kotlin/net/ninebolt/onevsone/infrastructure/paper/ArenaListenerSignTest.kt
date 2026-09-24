@@ -10,7 +10,6 @@ import net.ninebolt.onevsone.infrastructure.paper.fixtures.nonPlayer
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.plainBlock
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.signBlock
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.simulation
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.twoPlayerIngame
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import org.bukkit.ExplosionResult
 import org.bukkit.block.Sign
@@ -166,14 +165,5 @@ class ArenaListenerSignTest {
 
         env.join(env.player("Alice"))
         assertTrue(lines()[3].contains("1 More"))
-    }
-
-    @Test
-    fun `join event triggers pending restore`() {
-        val (_, p2) = env.twoPlayerIngame()
-        p2.disconnect()
-
-        p2.reconnect()
-        assertNull(p2.inventory.contents[0])
     }
 }

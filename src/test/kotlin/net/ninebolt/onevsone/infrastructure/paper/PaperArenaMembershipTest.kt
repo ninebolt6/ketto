@@ -1,15 +1,13 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
-import net.ninebolt.onevsone.application.LeaveError
-import net.ninebolt.onevsone.application.ToggleError
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.backupByName
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.fallIntoVoid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.lastBroadcast
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.registrations
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.run
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.view
 import org.bukkit.Material
@@ -63,21 +61,6 @@ class PaperArenaMembershipTest {
     }
 
     @Test
-    fun `leave only allowed in ONEMORE`() {
-        val arena = env.newArena()
-        val p1 = env.player("Alice")
-        val p2 = env.player("Bob")
-        assertEquals(LeaveError.NotJoined, env.leave(p1))
-        assertTrue(p1.drainMessages().any { it.contains("あなたはアリーナに参加していません！") })
-
-        env.join(p1, arena)
-        env.join(p2, arena)
-        assertEquals(LeaveError.NotWaiting, env.leave(p1))
-        assertTrue(p1.drainMessages().any { it.contains("カウントダウン中はアリーナから退出できません！") })
-        assertEquals(arena, env.service.arenaIdOf(p1.uuid))
-    }
-
-    @Test
     fun `abort clears sidebar`() {
         val arena = env.newArena()
         val p1 = env.player("Alice")
@@ -111,13 +94,13 @@ class PaperArenaMembershipTest {
         p1.inventory.setItem(0, env.item(Material.DIAMOND))
         env.join(p1, arena)
         p1.inventory.setItem(0, null)
-        env.leave(p1)
+        env.run(p1, "leave")
         assertNull(p1.inventory.contents[0])
 
         val p2 = env.player("Bob")
         env.join(p2, arena)
         p2.inventory.setItem(0, env.item(Material.APPLE))
-        env.leave(p2)
+        env.run(p2, "leave")
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
     }
 
@@ -166,6 +149,11 @@ class PaperArenaMembershipTest {
         assertNull(env.statsRepo.find(p1.uuid))
         assertNull(env.backupByName("Alice"))
         assertNull(env.backupByName("Bob"))
+
+        env.tick(6)
+        assertEquals(ArenaState.ONEMORE, env.view().state)
+        assertFalse(p1.hasTeleported())
+        assertFalse(p2.hasTeleported())
     }
 
     @Test
@@ -184,6 +172,8 @@ class PaperArenaMembershipTest {
         assertEquals(ArenaState.ROUNDCOUNTDOWN, env.view().state)
 
         p1.disconnect()
+        assertNull(env.service.pendingRestore(p1.uuid))
+        assertNull(env.backupByName("Alice"))
         assertEquals(ArenaState.WAITING, env.view().state)
         assertTrue(env.view().participants.isEmpty())
         assertNull(env.service.arenaIdOf(p1.uuid))
@@ -199,36 +189,6 @@ class PaperArenaMembershipTest {
         // The round-resume timer was still pending at the quit and must not restart the finished match
         env.tick(8)
         assertEquals(ArenaState.WAITING, env.view().state)
-    }
-
-    @Test
-    fun `shutdown preserves enabled and clears state`() {
-        env.newArena()
-        val p1 = env.player("Alice")
-        env.join(p1, Arena.Id.new("arena1"))
-        env.lifecycle.shutdown()
-        assertTrue(env.service.arena("arena1")!!.enabled)
-        assertEquals(ArenaState.WAITING, env.view().state)
-        assertTrue(env.view().participants.isEmpty())
-        assertNull(env.service.arenaIdOf(p1.uuid))
-    }
-
-    @Test
-    fun `disable aborts and clears registration while persisting disabled`() {
-        val arena = env.newArena()
-        val p1 = env.player("Alice")
-        val p2 = env.player("Bob")
-        env.join(p1, arena)
-        env.join(p2, arena)
-        assertNull(env.admin.setEnabled("arena1", false))
-        assertFalse(env.service.arena("arena1")!!.enabled)
-        assertEquals(ArenaState.WAITING, env.view().state)
-        assertNull(env.service.arenaIdOf(p1.uuid))
-        assertNull(env.service.arenaIdOf(p2.uuid))
-        env.tick(6)
-        assertFalse(p1.hasTeleported())
-        val reloaded = env.arenaRepo.find("arena1")!!
-        assertFalse(reloaded.enabled)
     }
 
     @Test

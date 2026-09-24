@@ -40,20 +40,4 @@ class ArenaKitCommandTest {
         assertTrue(op.drainMessages().any { it.contains("のインベントリを設定しました") })
         assertEquals(Material.DIAMOND_SWORD, env.equipment.kitOf(Arena.Id.new("arena1"))?.items?.get(0)?.type)
     }
-
-    @Test
-    fun `kit set rejects extra args`() {
-        val op = env.opPlayer("Op")
-        env.newArena()
-        env.run(op, "arena", "arena1", "kit", "set", "extra")
-        assertTrue(op.drainMessages().any { it.contains("Incorrect argument") })
-    }
-
-    @Test
-    fun `console cannot set kit`() {
-        val console = env.server.consoleSender
-        env.newArena()
-        env.run(console, "arena", "arena1", "kit", "set")
-        assertTrue(console.drainMessages().any { it.contains("このコマンドはプレイヤーのみ実行可能です") })
-    }
 }

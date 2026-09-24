@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -61,6 +62,7 @@ class ArenaLifecycleCommandTest {
         env.run(op, "arena", "a2", "disable")
         assertTrue(op.drainMessages().any { it.contains("そのアリーナはすでに無効です！") })
         assertEquals(false, env.service.arena("a2")!!.enabled)
+        assertFalse(env.arenaRepo.find("a2")!!.enabled)
     }
 
     @Test

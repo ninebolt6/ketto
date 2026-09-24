@@ -42,24 +42,6 @@ class PaperInventoryRecoveryTest {
     }
 
     @Test
-    fun `abort during countdown stops task and leaves waiting inventories untouched`() {
-        val arena = env.newArena()
-        env.setKit(arena, PaperInventorySnapshot(items = listOf(env.item(Material.IRON_SWORD))))
-        val p1 = env.player("Alice")
-        val p2 = env.player("Bob")
-        env.join(p1, arena)
-        env.join(p2, arena)
-        env.tick(2)
-        env.service.abort(arena)
-        assertEquals(ArenaState.WAITING, env.view().state)
-        assertTrue(env.view().participants.isEmpty())
-        env.tick(6)
-        assertFalse(p1.hasTeleported())
-        assertFalse(p2.hasTeleported())
-        assertNull(p1.inventory.contents[0])
-    }
-
-    @Test
     fun `final death restores original inventory after respawn`() {
         env.close()
         env = TestEnv(folder, requiredWins = 1)
@@ -85,18 +67,6 @@ class PaperInventoryRecoveryTest {
     }
 
     @Test
-    fun `empty snapshot restores to empty inventory`() {
-        val arena = env.newArena()
-        val p1 = env.player("Alice")
-        val p2 = env.player("Bob")
-        env.join(p1, arena)
-        env.join(p2, arena)
-        env.tick(6)
-        p1.disconnect()
-        assertNull(p1.inventory.contents[0])
-    }
-
-    @Test
     fun `empty kit does not grant lobby items`() {
         val arena = env.newArena()
         val p1 = env.player("Alice")
@@ -104,6 +74,7 @@ class PaperInventoryRecoveryTest {
         env.join(p1, arena)
         env.join(p2, arena)
         env.tick(6)
+        assertEquals(ArenaState.INGAME, env.view().state)
         assertNull(p1.inventory.contents[0])
     }
 
@@ -183,47 +154,6 @@ class PaperInventoryRecoveryTest {
 
         env.runOneShots()
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
-    }
-
-    @Test
-    fun `abort dead player restores on next tick and stale callback cannot reapply kit`() {
-        val arena = env.newArena()
-        env.setKit(arena, PaperInventorySnapshot(items = listOf(env.item(Material.IRON_SWORD))))
-        val p1 = env.player("Alice")
-        val p2 = env.player("Bob")
-        p2.inventory.setItem(0, env.item(Material.APPLE))
-        env.join(p1, arena)
-        env.join(p2, arena)
-        env.tick(6)
-
-        p2.simulateDamage(100.0, genericDamage())
-        env.service.abort(arena)
-        env.runOneShots()
-        assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
-
-        env.join(p2, arena)
-        assertEquals(arena, env.service.arenaIdOf(p2.uuid))
-        assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
-    }
-
-    @Test
-    fun `abort retains pending restore for offline participant`() {
-        val arena = env.newArena()
-        val p1 = env.player("Alice")
-        val p2 = env.player("Bob")
-        p2.inventory.setItem(0, env.item(Material.APPLE))
-        env.join(p1, arena)
-        env.join(p2, arena)
-        env.tick(6)
-
-        env.disconnectWithoutQuitHandler(p2)
-        env.service.abort(arena)
-
-        assertEquals(p2.uniqueId.toString(), env.backupByName("Bob")!!.playerUuid)
-
-        p2.reconnect()
-        assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
-        assertNull(env.backupByName("Bob"))
     }
 
     @Test

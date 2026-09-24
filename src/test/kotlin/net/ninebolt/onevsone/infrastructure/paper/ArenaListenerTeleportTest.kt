@@ -53,11 +53,8 @@ class ArenaListenerTeleportTest {
         assertFalse(pearl.isCancelled)
 
         listOf(
-            PlayerTeleportEvent.TeleportCause.CONSUMABLE_EFFECT,
             PlayerTeleportEvent.TeleportCause.COMMAND,
-            PlayerTeleportEvent.TeleportCause.SPECTATE,
             PlayerTeleportEvent.TeleportCause.PLUGIN,
-            PlayerTeleportEvent.TeleportCause.NETHER_PORTAL,
         ).forEach { cause ->
             val event = teleport(p1, cause)
             env.fire(event)

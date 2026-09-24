@@ -6,7 +6,6 @@ import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.attackDamage
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.interact
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.signBlock
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.twoPlayerIngame
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import org.bukkit.Material
 import org.junit.jupiter.api.AfterEach
@@ -57,34 +56,6 @@ class MatchScenarioTest {
         assertEquals(ArenaState.WAITING, env.state())
         assertEquals(1, env.statsRepo.find(p1.uuid)!!.wins)
         assertEquals(1, env.statsRepo.find(p2.uuid)!!.losses)
-        assertNull(p1.inventory.contents[0])
-    }
-
-    @Test
-    fun `countdown disconnect unregisters only`() {
-        val arena = env.newArena()
-        val p1 = env.player("Alice")
-        val p2 = env.player("Bob")
-        env.join(p1, arena)
-        env.join(p2, arena)
-        assertEquals(ArenaState.COUNTDOWN, env.state())
-
-        p2.disconnect()
-        assertEquals(ArenaState.ONEMORE, env.state())
-        assertNull(env.service.arenaIdOf(p2.uuid))
-        assertNull(env.statsRepo.find(p1.uuid))
-        assertNull(env.statsRepo.find(p2.uuid))
-    }
-
-    @Test
-    fun `ingame disconnect forfeits and reconnect restores inventory`() {
-        val (p1, p2) = env.twoPlayerIngame()
-        p1.disconnect()
-        assertEquals(ArenaState.WAITING, env.state())
-        assertEquals(1, env.statsRepo.find(p2.uuid)!!.wins)
-        assertEquals(1, env.statsRepo.find(p1.uuid)!!.losses)
-
-        p1.reconnect()
         assertNull(p1.inventory.contents[0])
     }
 }

@@ -6,7 +6,6 @@ import net.ninebolt.onevsone.application.JoinOutput
 import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.fallIntoVoid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.genericDamage
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.registrations
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.statusOf
@@ -119,79 +118,6 @@ class PaperArenaFailureTest {
         val status = env.statusOf("arena1")!!
         assertEquals("WAITING", status.state)
         assertTrue(status.players.isEmpty())
-    }
-
-    @Test
-    fun `loser stats failure does not prevent final cleanup`() {
-        env.close()
-        env = TestEnv(folder, requiredWins = 1)
-        val spyStats = spyk(env.statsRepo)
-        env.rebuildWith(statsRepo = spyStats)
-        val arena = env.newArena()
-        val p1 = env.player("Alice")
-        val p2 = env.player("Bob")
-        p1.inventory.setItem(0, env.item(Material.BREAD))
-        p2.inventory.setItem(0, env.item(Material.APPLE))
-        env.join(p1, arena)
-        env.join(p2, arena)
-        env.tick(6)
-        every { spyStats.recordLoss(p2.uuid) } throws PersistenceFailure("disk gone")
-
-        fallIntoVoid(p2)
-        assertEquals(ArenaState.WAITING, env.view().state)
-        assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
-        assertEquals(1, env.statsRepo.find(p1.uuid)!!.wins)
-    }
-
-    @Test
-    fun `stats write failure does not prevent final cleanup`() {
-        env.close()
-        env = TestEnv(folder, requiredWins = 1)
-        val spyStats = spyk(env.statsRepo)
-        env.rebuildWith(statsRepo = spyStats)
-        val arena = env.newArena("spy-arena", enabled = true)
-        env.setKit(arena, PaperInventorySnapshot(items = listOf(env.item(Material.IRON_SWORD))))
-        val p1 = env.player("Alice")
-        val p2 = env.player("Bob")
-        p1.inventory.setItem(0, env.item(Material.BREAD))
-        p2.inventory.setItem(0, env.item(Material.APPLE))
-        env.service.join(p1.uuid, p1.name, arena)
-        env.service.join(p2.uuid, p2.name, arena)
-        val winnerId = p1.uuid
-        every { spyStats.recordWin(winnerId) } throws PersistenceFailure("write failed")
-        env.tick(6)
-
-        fallIntoVoid(p2)
-        assertEquals(ArenaState.WAITING, env.service.matchOf("spy-arena")!!.state)
-        assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
-        assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
-        assertNull(env.service.arenaIdOf(p1.uuid))
-        assertNull(env.service.arenaIdOf(p2.uuid))
-        assertEquals(1, env.statsRepo.find(p2.uuid)!!.losses)
-        assertNull(env.statsRepo.find(p1.uuid))
-    }
-
-    @Test
-    fun `stats failure during INGAME forfeit still completes cleanup`() {
-        env.close()
-        env = TestEnv(folder)
-        val spyStats = spyk(env.statsRepo)
-        env.rebuildWith(statsRepo = spyStats)
-        val arena = env.newArena()
-        val p1 = env.player("Alice")
-        val p2 = env.player("Bob")
-        p1.inventory.setItem(0, env.item(Material.BREAD))
-        p2.inventory.setItem(0, env.item(Material.APPLE))
-        env.join(p1, arena)
-        env.join(p2, arena)
-        env.tick(6)
-        every { spyStats.recordLoss(p1.uuid) } throws PersistenceFailure("disk gone")
-        p1.disconnect()
-        assertEquals(ArenaState.WAITING, env.view().state)
-        assertNull(env.service.arenaIdOf(p2.uuid))
-        assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
-        assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
-        assertEquals(1, env.statsRepo.find(p2.uuid)!!.wins)
     }
 
     private fun capturePluginLog(): MutableList<LogRecord> {

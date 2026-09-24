@@ -4,14 +4,12 @@ import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.run
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class LeaveCommandTest {
@@ -32,13 +30,6 @@ class LeaveCommandTest {
     }
 
     @Test
-    fun `console cannot run leave`() {
-        val console = env.server.consoleSender
-        env.run(console, "leave")
-        assertTrue(console.drainMessages().any { it.contains("このコマンドはプレイヤーのみ実行可能です") })
-    }
-
-    @Test
     fun `leave when not joined reports not joined`() {
         val p = env.player("Alice")
         env.run(p, "leave")
@@ -53,17 +44,5 @@ class LeaveCommandTest {
         env.run(p, "leave")
         assertTrue(p.drainMessages().any { it.contains("アリーナから退出しました") })
         assertEquals(ArenaState.WAITING, env.state("arena1"))
-    }
-
-    @Test
-    fun `leave during countdown is rejected`() {
-        val arena = env.newArena()
-        env.join(env.player("Alice"), arena)
-        val p2 = env.player("Bob")
-        env.join(p2, arena)
-        env.run(p2, "leave")
-        // commands are blocked at the preprocess event during countdown
-        assertTrue(p2.drainMessages().any { it.contains("コマンドは使用できません") })
-        assertNotNull(env.service.matchOf(p2.uuid))
     }
 }

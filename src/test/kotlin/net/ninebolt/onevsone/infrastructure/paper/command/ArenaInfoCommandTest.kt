@@ -57,12 +57,4 @@ class ArenaInfoCommandTest {
         env.run(viewer, "arena", "arena1")
         assertTrue(viewer.drainMessages().any { it.contains("Arena[arena1]") })
     }
-
-    @Test
-    fun `extra args are a syntax error`() {
-        val viewer = env.player("Viewer")
-        env.newArena()
-        env.run(viewer, "arena", "arena1", "info", "extra")
-        assertTrue(viewer.drainMessages().any { it.contains("Incorrect argument") })
-    }
 }

@@ -13,7 +13,6 @@ import net.ninebolt.onevsone.application.ArenaLifecycleService
 import net.ninebolt.onevsone.application.ArenaRegistry
 import net.ninebolt.onevsone.application.ArenaSignService
 import net.ninebolt.onevsone.application.JoinOutput
-import net.ninebolt.onevsone.application.LeaveError
 import net.ninebolt.onevsone.application.LobbyService
 import net.ninebolt.onevsone.application.MatchProgressionService
 import net.ninebolt.onevsone.application.MatchStateSync
@@ -34,7 +33,6 @@ import net.ninebolt.onevsone.infrastructure.paper.PaperPlayerLookup
 import net.ninebolt.onevsone.infrastructure.paper.PaperPresentation
 import net.ninebolt.onevsone.infrastructure.paper.PaperScheduler
 import net.ninebolt.onevsone.infrastructure.paper.command.OneVsOneCommand
-import net.ninebolt.onevsone.infrastructure.paper.message.Message
 import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import net.ninebolt.onevsone.infrastructure.persistence.SqliteArenaRepository
 import net.ninebolt.onevsone.infrastructure.persistence.SqliteArenaSignRepository
@@ -303,16 +301,6 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     fun join(player: Player, arena: Arena.Id = Arena.Id.new("arena1")): JoinOutput {
         val output = service.join(player.uuid, player.name, arena)
         signListener.renderJoin(player, arena.name, output)
-        return output
-    }
-
-    fun leave(player: Player): LeaveError? {
-        val output = service.leave(player.uuid)
-        when (output) {
-            null -> messenger.send(player, Message.MatchLeft)
-            LeaveError.NotWaiting -> messenger.send(player, Message.MatchCannotLeave)
-            LeaveError.NotJoined -> messenger.send(player, Message.MatchNotJoined)
-        }
         return output
     }
 

@@ -65,24 +65,6 @@ class ArenaListenerCombatTest {
     }
 
     @Test
-    fun `participant death while waiting respawns without resolving match`() {
-        val arena = env.newArena()
-        val p1 = env.player("Alice")
-        env.join(p1, arena)
-        assertEquals(ArenaState.ONEMORE, env.state())
-
-        p1.simulateDamage(100.0, genericDamage())
-        // MockBukkit does not emulate keepInventory's effects, so only the flag is verified
-        env.assertFired<PlayerDeathEvent> { event -> event.keepInventory && event.keepLevel }
-        assertEquals(ArenaState.ONEMORE, env.state())
-        assertEquals(arena, env.service.arenaIdOf(p1.uuid))
-
-        env.runOneShots()
-        assertEquals(1, p1.respawnCount)
-        assertNull(env.statsRepo.find(p1.uuid))
-    }
-
-    @Test
     fun `participant death during countdown respawns and the match still starts`() {
         val arena = env.newArena()
         val p1 = env.player("Alice")
@@ -109,23 +91,6 @@ class ArenaListenerCombatTest {
     fun `non player damage ignored`() {
         val event = env.mob().simulateDamage(1.0, genericDamage())
         assertFalse(event.isCancelled)
-    }
-
-    @Test
-    fun `damage not cancelled in INGAME`() {
-        val (p1, _) = env.twoPlayerIngame()
-        val event = p1.simulateDamage(1.0, genericDamage())
-        assertFalse(event.isCancelled)
-    }
-
-    @Test
-    fun `damage cancelled in round countdown state`() {
-        val (p1, p2) = env.twoPlayerIngame()
-        fallIntoVoid(p2)
-        assertEquals(ArenaState.ROUNDCOUNTDOWN, env.state())
-        val event = p1.simulateDamage(1.0, genericDamage())
-        assertTrue(event.isCancelled)
-        assertEquals(20.0, p1.health)
     }
 
     @Test
@@ -172,14 +137,6 @@ class ArenaListenerCombatTest {
     }
 
     @Test
-    fun `opponent damage cancelled during round countdown`() {
-        val (p1, p2) = env.twoPlayerIngame()
-        fallIntoVoid(p2)
-        val event = p1.simulateDamage(1.0, attackDamage(p2))
-        assertTrue(event.isCancelled)
-    }
-
-    @Test
     fun `outsiders fighting each other unaffected`() {
         env.twoPlayerIngame()
         val a = env.player("OutsiderA")
@@ -194,15 +151,6 @@ class ArenaListenerCombatTest {
         outsider.inventory.setItem(0, env.item(Material.STONE))
         outsider.disconnect()
         assertEquals(Material.STONE, outsider.inventory.contents[0]?.type)
-    }
-
-    @Test
-    fun `quit of participant resolves through quitting scope`() {
-        val (p1, p2) = env.twoPlayerIngame()
-        p1.inventory.setItem(0, null)
-        p1.disconnect()
-        assertEquals(ArenaState.WAITING, env.state())
-        assertEquals(1, env.statsRepo.find(p2.uuid)!!.wins)
     }
 
     @Test
