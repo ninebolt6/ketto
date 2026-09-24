@@ -14,6 +14,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockbukkit.mockbukkit.MockBukkit
 import org.mockbukkit.mockbukkit.ServerMock
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class OneVsOnePluginTest {
@@ -38,7 +39,7 @@ class OneVsOnePluginTest {
 
         val player = server.addPlayer()
         player.performCommand("1vs1")
-        assertTrue(server.commandMap.getCommand("1vs1") != null)
+        assertNotNull(server.commandMap.getCommand("1vs1"))
         assertTrue(player.drainMessages().any { it.contains("/1vs1 stats") })
 
         assertTrue(PlayerDeathEvent.getHandlerList().registeredListeners.any { it.listener is ArenaMatchListener && it.plugin === plugin })

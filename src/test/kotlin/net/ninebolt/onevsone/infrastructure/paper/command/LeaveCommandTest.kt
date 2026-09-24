@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class LeaveCommandTest {
@@ -63,6 +64,6 @@ class LeaveCommandTest {
         env.run(p2, "leave")
         // commands are blocked at the preprocess event during countdown
         assertTrue(p2.drainMessages().any { it.contains("コマンドは使用できません") })
-        assertTrue(env.service.matchOf(p2.uuid) != null)
+        assertNotNull(env.service.matchOf(p2.uuid))
     }
 }

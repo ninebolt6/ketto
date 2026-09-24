@@ -7,6 +7,7 @@ import net.ninebolt.onevsone.domain.DefeatCause
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -91,8 +92,8 @@ class ArenaApplicationServiceTest {
         assertTrue(p1.events.contains("teleport"))
         assertTrue(p2.events.contains("teleport"))
         assertEquals(2, app.matchState.registrations.size)
-        assertTrue(app.service.pendingRestore(p1.id) != null)
-        assertTrue(app.service.pendingRestore(p2.id) != null)
+        assertNotNull(app.service.pendingRestore(p1.id))
+        assertNotNull(app.service.pendingRestore(p2.id))
     }
 
     @Test
