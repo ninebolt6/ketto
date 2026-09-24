@@ -1,5 +1,6 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.ArenaPlayerMock
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.breakBlock
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
@@ -12,8 +13,6 @@ import net.ninebolt.onevsone.infrastructure.paper.fixtures.simulation
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import org.bukkit.Location
 import org.bukkit.Material
-import org.bukkit.entity.Player
-import org.bukkit.event.player.PlayerCommandPreprocessEvent
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -40,11 +39,10 @@ class ArenaListenerRestrictionTest {
         env.close()
     }
 
-    // MockBukkit's performCommand never fires the preprocess event, so dispatch a real one
-    private fun assertCommandBlocked(player: Player, blocked: Boolean) {
-        val event = PlayerCommandPreprocessEvent(player, "/spawn")
-        env.fire(event)
-        assertEquals(blocked, event.isCancelled)
+    private fun assertCommandBlocked(player: ArenaPlayerMock, blocked: Boolean) {
+        player.drainMessages()
+        player.performCommand("1vs1")
+        assertEquals(blocked, player.drainMessages().any { it.contains("コマンドは使用できません") })
     }
 
     @Test
@@ -60,7 +58,6 @@ class ArenaListenerRestrictionTest {
         val p2 = env.player("Bob")
         env.join(p2, arena)
         assertCommandBlocked(p1, blocked = true)
-        assertTrue(p1.drainMessages().any { it.contains("コマンドは使用できません！") })
     }
 
     @Test

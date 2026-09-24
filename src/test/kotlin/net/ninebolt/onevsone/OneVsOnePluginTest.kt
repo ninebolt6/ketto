@@ -4,7 +4,7 @@ import net.ninebolt.onevsone.infrastructure.paper.ArenaGuardListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaMatchListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaSignListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaTeleportListener
-import net.ninebolt.onevsone.infrastructure.paper.command.OneVsOneCommand
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import org.bukkit.event.entity.EntityExplodeEvent
 import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.inventory.InventoryClickEvent
@@ -35,7 +35,11 @@ class OneVsOnePluginTest {
         val plugin = MockBukkit.load(OneVsOnePlugin::class.java)
 
         assertTrue(plugin.isEnabled)
-        assertTrue(plugin.getCommand("1vs1")?.executor is OneVsOneCommand)
+
+        val player = server.addPlayer()
+        player.performCommand("1vs1")
+        assertTrue(server.commandMap.getCommand("1vs1") != null)
+        assertTrue(player.drainMessages().any { it.contains("/1vs1 stats") })
 
         assertTrue(PlayerDeathEvent.getHandlerList().registeredListeners.any { it.listener is ArenaMatchListener && it.plugin === plugin })
         assertTrue(InventoryClickEvent.getHandlerList().registeredListeners.any { it.listener is ArenaGuardListener && it.plugin === plugin })

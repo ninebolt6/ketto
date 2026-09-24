@@ -6,33 +6,25 @@ import net.ninebolt.onevsone.infrastructure.paper.message.Message
 import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import net.ninebolt.onevsone.infrastructure.paper.toBlockPosition
 import org.bukkit.block.Sign
-import org.bukkit.command.CommandSender
+import org.bukkit.entity.Player
 
 internal class ArenaSignSetCommand(
-    admin: ArenaAdministrationService,
+    private val admin: ArenaAdministrationService,
     private val signs: ArenaSignService,
-    messenger: Messenger,
-) : ArenaSubcommand(admin, messenger) {
+    private val messenger: Messenger,
+) {
 
-    override val requiresPlayer: Boolean = true
-    override val usage: Message = Message.UsageSignSet
-
-    override fun executeFor(sender: CommandSender, arenaName: String, rest: List<String>) {
-        val player = sender.requirePlayer() ?: return
-        if (rest.isNotEmpty()) {
-            messenger.send(sender, usage)
-            return
-        }
-        val arena = arenaOrWarn(sender, arenaName) ?: return
+    fun execute(player: Player, arenaName: String) {
+        val arena = arenaOrWarn(admin, messenger, player, arenaName) ?: return
         val target = player.getTargetBlockExact(10)
         if (target == null || target.state !is Sign) {
-            messenger.send(sender, Message.SignLookAt)
+            messenger.send(player, Message.SignLookAt)
             return
         }
         val position = target.toBlockPosition()
         val existing = signs.signOwner(position)
         if (existing != null && existing != arena.name) {
-            messenger.send(sender, Message.SignTaken)
+            messenger.send(player, Message.SignTaken)
             return
         }
         signs.setSign(arena.name, position)

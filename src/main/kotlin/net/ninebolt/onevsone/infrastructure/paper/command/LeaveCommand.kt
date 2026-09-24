@@ -4,18 +4,15 @@ import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.application.LeaveError
 import net.ninebolt.onevsone.infrastructure.paper.message.Message
 import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
-import org.bukkit.command.CommandSender
+import org.bukkit.entity.Player
 import kotlin.uuid.toKotlinUuid
 
 internal class LeaveCommand(
     private val service: ArenaApplicationService,
-    messenger: Messenger,
-) : AbstractSubcommand(messenger) {
+    private val messenger: Messenger,
+) {
 
-    override fun visibleTo(sender: CommandSender): Boolean = true
-
-    override fun execute(sender: CommandSender, args: List<String>) {
-        val player = sender.requirePlayer() ?: return
+    fun execute(player: Player) {
         when (service.leave(player.uniqueId.toKotlinUuid())) {
             null -> messenger.send(player, Message.MatchLeft)
             LeaveError.NotWaiting -> messenger.send(player, Message.MatchCannotLeave)

@@ -3,6 +3,7 @@ package net.ninebolt.onevsone.infrastructure.paper.fixtures
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
+import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents
 import io.papermc.paper.threadedregions.scheduler.AsyncScheduler
 import io.papermc.paper.threadedregions.scheduler.ScheduledTask
 import net.kyori.adventure.text.Component
@@ -77,7 +78,18 @@ import kotlin.uuid.toKotlinUuid
 class TestEnv(val folder: File, val requiredWins: Int = 3) {
     // spyk is used only for fault injection; unstubbed calls delegate to real behavior
     val server: ServerMock = spyk(MockBukkit.mock())
-    val plugin: PluginMock = spyk(MockBukkit.createMockPlugin())
+
+    // Lifecycle registration is only allowed inside onEnable, so the handler is attached via the builder's enable callback.
+    // COMMANDS fires once per server: after the first dispatch the tree is frozen to the deps that were current then.
+    val plugin: PluginMock = spyk(
+        PluginMock.builder()
+            .withOnEnable { host ->
+                host.lifecycleManager.registerEventHandler(LifecycleEvents.COMMANDS) { event ->
+                    event.registrar().register(deps.command.node(), "1vs1 arena command")
+                }
+            }
+            .build(),
+    )
     val asyncScheduler: AsyncScheduler = mockk(relaxed = true)
 
     // ScoreMock.customName is unimplemented in MockBukkit 4.15, so only the scoreboard boundary is a narrow stub

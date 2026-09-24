@@ -1,6 +1,5 @@
 package net.ninebolt.onevsone.infrastructure.paper.command
 
-import net.ninebolt.onevsone.application.ArenaAdministrationService
 import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.infrastructure.paper.message.Message
 import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
@@ -8,16 +7,10 @@ import org.bukkit.command.CommandSender
 
 internal class ArenaInfoCommand(
     private val service: ArenaApplicationService,
-    admin: ArenaAdministrationService,
-    messenger: Messenger,
-) : ArenaSubcommand(admin, messenger) {
+    private val messenger: Messenger,
+) {
 
-    override val usage: Message = Message.UsageArena
-    override fun denied(sender: CommandSender): Boolean = false
-
-    override fun visibleTo(sender: CommandSender): Boolean = true
-
-    override fun executeFor(sender: CommandSender, arenaName: String, rest: List<String>) {
+    fun execute(sender: CommandSender, arenaName: String) {
         val match = service.matchOf(arenaName) ?: run {
             messenger.send(sender, Message.ArenaNotFound)
             return

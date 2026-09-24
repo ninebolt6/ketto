@@ -49,9 +49,9 @@ class ArenaSpawnCommandTest {
         env.run(op, "arena", "arena1", "spawn", "set")
         assertTrue(op.drainMessages().any { it.contains("/1vs1 arena <arena> spawn set <1|2>") })
         env.run(op, "arena", "arena1", "spawn", "set", "3")
-        assertTrue(op.drainMessages().any { it.contains("/1vs1 arena <arena> spawn set <1|2>") })
+        assertTrue(op.drainMessages().any { it.contains("must not be more than 2") })
         env.run(op, "arena", "arena1", "spawn", "set", "1", "extra")
-        assertTrue(op.drainMessages().any { it.contains("/1vs1 arena <arena> spawn set <1|2>") })
+        assertTrue(op.drainMessages().any { it.contains("Incorrect argument") })
     }
 
     @Test

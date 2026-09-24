@@ -4,6 +4,7 @@ version: "${version}"
 main: net.ninebolt.onevsone.OneVsOnePlugin
 api-version: "${apiVersion}"
 
-commands:
-  1vs1:
-    description: 1vs1 arena command
+permissions:
+  1vs1.admin:
+    description: Administrative 1vs1 commands
+    default: op

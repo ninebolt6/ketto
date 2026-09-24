@@ -8,17 +8,11 @@ import org.bukkit.command.CommandSender
 
 internal class ArenaSetEnabledCommand(
     private val enabled: Boolean,
-    admin: ArenaAdministrationService,
-    messenger: Messenger,
-) : ArenaSubcommand(admin, messenger) {
+    private val admin: ArenaAdministrationService,
+    private val messenger: Messenger,
+) {
 
-    override val usage: Message get() = if (enabled) Message.UsageEnable else Message.UsageDisable
-
-    override fun executeFor(sender: CommandSender, arenaName: String, rest: List<String>) {
-        if (rest.isNotEmpty()) {
-            messenger.send(sender, usage)
-            return
-        }
+    fun execute(sender: CommandSender, arenaName: String) {
         when (admin.setEnabled(arenaName, enabled)) {
             null -> messenger.send(sender, if (enabled) Message.ArenaEnabled(arenaName) else Message.ArenaDisabled(arenaName))
             ToggleError.NotFound -> messenger.send(sender, Message.ArenaNotFound)

@@ -21,16 +21,10 @@ sealed class Message(val key: MessageKey, vararg val args: Arg) {
     data object UsageArenaOps : Message(MessageKey.USAGE_ARENA_OPS)
     data object UsageLobby : Message(MessageKey.USAGE_LOBBY)
     data object UsageCreate : Message(MessageKey.USAGE_CREATE)
-    data object UsageRemove : Message(MessageKey.USAGE_REMOVE)
     data object UsageSpawn : Message(MessageKey.USAGE_SPAWN)
-    data object UsageEnable : Message(MessageKey.USAGE_ENABLE)
-    data object UsageDisable : Message(MessageKey.USAGE_DISABLE)
     data object UsageKit : Message(MessageKey.USAGE_KIT)
     data object UsageSign : Message(MessageKey.USAGE_SIGN)
-    data object UsageSignSet : Message(MessageKey.USAGE_SIGN_SET)
-    data object UsageSignRemove : Message(MessageKey.USAGE_SIGN_REMOVE)
 
-    data object CommandNoPermission : Message(MessageKey.COMMAND_NO_PERMISSION)
     data object CommandPlayerOnly : Message(MessageKey.COMMAND_PLAYER_ONLY)
     data object CommandBlocked : Message(MessageKey.COMMAND_BLOCKED)
 
@@ -104,16 +98,10 @@ enum class MessageKey {
     USAGE_ARENA_OPS,
     USAGE_LOBBY,
     USAGE_CREATE,
-    USAGE_REMOVE,
     USAGE_SPAWN,
-    USAGE_ENABLE,
-    USAGE_DISABLE,
     USAGE_KIT,
     USAGE_SIGN,
-    USAGE_SIGN_SET,
-    USAGE_SIGN_REMOVE,
 
-    COMMAND_NO_PERMISSION,
     COMMAND_PLAYER_ONLY,
     COMMAND_BLOCKED,
 

@@ -1,15 +1,19 @@
 package net.ninebolt.onevsone.infrastructure.paper.fixtures
 
-import io.mockk.mockk
 import org.bukkit.Server
-import org.bukkit.command.Command
 import org.bukkit.command.CommandSender
 import kotlin.uuid.Uuid
 import kotlin.uuid.toKotlinUuid
 
-internal fun TestEnv.run(sender: CommandSender, vararg args: String) = command.onCommand(sender, mockk<Command>(relaxed = true), "1vs1", arrayOf(*args))
+internal fun TestEnv.run(sender: CommandSender, vararg args: String) = server.dispatchCommand(sender, (listOf("1vs1") + args).joinToString(" "))
 
-internal fun TestEnv.tab(sender: CommandSender, vararg args: String) = command.onTabComplete(sender, mockk<Command>(relaxed = true), "1vs1", arrayOf(*args))
+// getCommandTabComplete does not trigger lifecycle initialization, so dispatch once first
+internal fun TestEnv.tab(sender: CommandSender, vararg args: String): List<String> {
+    if (server.commandMap.getCommand("1vs1") == null) {
+        server.dispatchCommand(server.consoleSender, "1vs1")
+    }
+    return server.getCommandTabComplete(sender, (listOf("1vs1") + args).joinToString(" "))
+}
 
 internal fun TestEnv.writeStats(uuid: Uuid, win: Int, lose: Int) {
     repeat(win) { statsRepo.recordWin(uuid) }

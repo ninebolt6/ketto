@@ -46,7 +46,7 @@ class ArenaKitCommandTest {
         val op = env.opPlayer("Op")
         env.newArena()
         env.run(op, "arena", "arena1", "kit", "set", "extra")
-        assertTrue(op.drainMessages().any { it.contains("/1vs1 arena <arena> kit set") })
+        assertTrue(op.drainMessages().any { it.contains("Incorrect argument") })
     }
 
     @Test

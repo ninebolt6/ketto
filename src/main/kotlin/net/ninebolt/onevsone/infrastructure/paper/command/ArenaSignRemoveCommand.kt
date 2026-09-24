@@ -7,19 +7,13 @@ import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import org.bukkit.command.CommandSender
 
 internal class ArenaSignRemoveCommand(
-    admin: ArenaAdministrationService,
+    private val admin: ArenaAdministrationService,
     private val signs: ArenaSignService,
-    messenger: Messenger,
-) : ArenaSubcommand(admin, messenger) {
+    private val messenger: Messenger,
+) {
 
-    override val usage: Message = Message.UsageSignRemove
-
-    override fun executeFor(sender: CommandSender, arenaName: String, rest: List<String>) {
-        if (rest.isNotEmpty()) {
-            messenger.send(sender, usage)
-            return
-        }
-        val arena = arenaOrWarn(sender, arenaName) ?: return
+    fun execute(sender: CommandSender, arenaName: String) {
+        val arena = arenaOrWarn(admin, messenger, sender, arenaName) ?: return
         if (signs.signLocation(arena.name) == null) {
             messenger.send(sender, Message.SignNotRegistered)
             return

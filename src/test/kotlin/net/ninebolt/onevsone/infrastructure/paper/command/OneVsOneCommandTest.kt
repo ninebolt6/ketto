@@ -38,14 +38,21 @@ class OneVsOneCommandTest {
     }
 
     @Test
-    fun `unknown subcommand falls back to usage`() {
+    fun `unknown input is a syntax error`() {
         val p = env.player("Alice")
         env.run(p, "bogus")
-        assertTrue(p.drainMessages().any { it.contains("/1vs1 stats [player] | /1vs1 leave") })
+        assertTrue(p.drainMessages().any { it.contains("Incorrect argument") })
         env.run(p, "arena", "bogus")
         assertTrue(p.drainMessages().any { it.contains("そのアリーナは存在しません") })
         env.run(p, "arena", "bogus", "bogus")
-        assertTrue(p.drainMessages().any { it.contains("/1vs1 arena <arena>") })
+        assertTrue(p.drainMessages().any { it.contains("Incorrect argument") })
+    }
+
+    @Test
+    fun `subcommands are case sensitive`() {
+        val p = env.player("Alice")
+        env.run(p, "ARENA")
+        assertTrue(p.drainMessages().any { it.contains("Incorrect argument") })
     }
 
     @Test
@@ -66,15 +73,34 @@ class OneVsOneCommandTest {
         val p = env.player("Alice")
         env.newArena()
         env.run(p, "lobby", "set")
-        assertTrue(p.drainMessages().any { it.contains("権限がありません！") })
+        assertTrue(p.drainMessages().any { it.contains("Incorrect argument") })
         env.run(p, "arena", "create", "x")
-        assertTrue(p.drainMessages().any { it.contains("権限がありません！") })
+        assertTrue(p.drainMessages().any { it.contains("Incorrect argument") })
         env.run(p, "arena", "arena1", "spawn", "set", "1")
-        assertTrue(p.drainMessages().any { it.contains("権限がありません！") })
+        assertTrue(p.drainMessages().any { it.contains("Incorrect argument") })
         env.run(p, "arena", "arena1", "sign")
-        assertTrue(p.drainMessages().any { it.contains("権限がありません！") })
+        assertTrue(p.drainMessages().any { it.contains("Incorrect argument") })
         env.run(p, "arena", "arena1", "remove")
-        assertTrue(p.drainMessages().any { it.contains("権限がありません！") })
+        assertTrue(p.drainMessages().any { it.contains("Incorrect argument") })
+    }
+
+    @Test
+    fun `explicit permission grants admin ops to non op`() {
+        val p = env.player("Alice")
+        p.addAttachment(env.plugin, ADMIN_PERMISSION, true)
+        env.newArena()
+        env.run(p, "arena", "arena1", "enable")
+        assertTrue(p.drainMessages().any { it.contains("すでに有効") })
+    }
+
+    @Test
+    fun `non ascii and quoted arena names are accepted`() {
+        val op = env.opPlayer("Op")
+        env.run(op, "arena", "create", "闘技場")
+        assertTrue(op.drainMessages().any { it.contains("闘技場 を作成しました") })
+        env.run(op, "arena", "create", "\"my arena\"")
+        assertTrue(op.drainMessages().any { it.contains("my arena を作成しました") })
+        assertTrue(env.admin.arenaNames().containsAll(listOf("闘技場", "my arena")))
     }
 
     @Test

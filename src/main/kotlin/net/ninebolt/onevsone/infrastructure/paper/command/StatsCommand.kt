@@ -6,6 +6,7 @@ import net.ninebolt.onevsone.application.port.PlayerPort
 import net.ninebolt.onevsone.infrastructure.paper.message.Message
 import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import org.bukkit.command.CommandSender
+import org.bukkit.entity.Player
 import java.util.logging.Logger
 import kotlin.uuid.Uuid
 import kotlin.uuid.toKotlinUuid
@@ -14,15 +15,12 @@ internal class StatsCommand(
     private val statsService: PlayerStatsService,
     private val players: PlayerPort,
     private val logger: Logger,
-    messenger: Messenger,
-) : AbstractSubcommand(messenger) {
+    private val messenger: Messenger,
+) {
 
-    override fun visibleTo(sender: CommandSender): Boolean = true
-
-    override fun execute(sender: CommandSender, args: List<String>) {
-        val player = sender.requirePlayer() ?: return
+    fun execute(player: Player, targetName: String?) {
         val playerId = player.uniqueId.toKotlinUuid()
-        if (args.isEmpty()) {
+        if (targetName == null) {
             showStats(player, playerId)
             return
         }
@@ -31,7 +29,7 @@ internal class StatsCommand(
             messenger.send(player, Message.StatsCooldown)
             return
         }
-        players.resolveOfflineId(args[0]) { uuid ->
+        players.resolveOfflineId(targetName) { uuid ->
             if (player.isOnline) {
                 if (uuid == null) messenger.send(player, Message.StatsNone) else showStats(player, uuid)
             }

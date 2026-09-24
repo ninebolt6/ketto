@@ -1,5 +1,6 @@
 package net.ninebolt.onevsone
 
+import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents
 import net.ninebolt.onevsone.application.ArenaAdministrationService
 import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.application.ArenaLifecycleService
@@ -140,7 +141,7 @@ private class PluginModule(
     }
 
     private fun registerEntrypoints() {
-        val executor = OneVsOneCommand(
+        val commands = OneVsOneCommand(
             service = service,
             admin = admin,
             statsService = statsService,
@@ -150,10 +151,9 @@ private class PluginModule(
             logger = plugin.logger,
             messenger = messenger,
         )
-        val command = plugin.getCommand("1vs1") ?: error("1vs1 command missing from plugin.yml")
-        @Suppress("UsePropertyAccessSyntax") // the setter takes @Nullable, so executor stays a val-style property access
-        command.setExecutor(executor)
-        command.tabCompleter = executor
+        plugin.lifecycleManager.registerEventHandler(LifecycleEvents.COMMANDS) { event ->
+            event.registrar().register(commands.node(), "1vs1 arena command")
+        }
         val manager = plugin.server.pluginManager
         manager.registerEvents(ArenaMatchListener(service, lookup, messenger), plugin)
         manager.registerEvents(ArenaGuardListener(service), plugin)

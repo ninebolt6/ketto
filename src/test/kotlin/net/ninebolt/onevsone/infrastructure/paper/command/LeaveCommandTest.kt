@@ -4,6 +4,7 @@ import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.run
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -60,6 +61,8 @@ class LeaveCommandTest {
         val p2 = env.player("Bob")
         env.join(p2, arena)
         env.run(p2, "leave")
-        assertTrue(p2.drainMessages().any { it.contains("カウントダウン中はアリーナから退出できません！") })
+        // commands are blocked at the preprocess event during countdown
+        assertTrue(p2.drainMessages().any { it.contains("コマンドは使用できません") })
+        assertTrue(env.service.matchOf(p2.uuid) != null)
     }
 }

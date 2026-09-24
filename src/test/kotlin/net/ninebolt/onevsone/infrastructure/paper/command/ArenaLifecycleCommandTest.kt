@@ -69,7 +69,7 @@ class ArenaLifecycleCommandTest {
         env.run(op, "arena", "create")
         assertTrue(op.drainMessages().any { it.contains("/1vs1 arena create <arena>") })
         env.run(op, "arena", "create", "other", "extra")
-        assertTrue(op.drainMessages().any { it.contains("/1vs1 arena create <arena>") })
+        assertTrue(op.drainMessages().any { it.contains("Incorrect argument") })
     }
 
     @Test
