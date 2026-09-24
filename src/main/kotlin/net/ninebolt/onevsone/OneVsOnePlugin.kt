@@ -50,10 +50,13 @@ open class OneVsOnePlugin : JavaPlugin() {
             language = settings.language,
             logger = logger,
         )
+
         // the store is created outside the module so it can be closed if wiring fails midway
         val store = SqliteStore(dataFolder, logger)
         try {
             module = PluginModule(this, store, settings.requiredWins, messenger)
+            module.registerCommands()
+            module.registerListeners()
         } catch (e: Throwable) {
             runCatching { store.close() }
             throw e
@@ -137,10 +140,9 @@ private class PluginModule(
 
     init {
         lifecycle.load()
-        registerEntrypoints()
     }
 
-    private fun registerEntrypoints() {
+    fun registerCommands() {
         val commands = OneVsOneCommand(
             service = service,
             admin = admin,
@@ -154,6 +156,9 @@ private class PluginModule(
         plugin.lifecycleManager.registerEventHandler(LifecycleEvents.COMMANDS) { event ->
             event.registrar().register(commands.node(), "1vs1 arena command")
         }
+    }
+
+    fun registerListeners() {
         val manager = plugin.server.pluginManager
         manager.registerEvents(ArenaMatchListener(service, lookup, messenger), plugin)
         manager.registerEvents(ArenaGuardListener(service), plugin)
