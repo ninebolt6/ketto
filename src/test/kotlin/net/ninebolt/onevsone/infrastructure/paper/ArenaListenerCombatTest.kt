@@ -83,6 +83,29 @@ class ArenaListenerCombatTest {
     }
 
     @Test
+    fun `participant death during countdown respawns and the match still starts`() {
+        val arena = env.newArena()
+        val p1 = env.player("Alice")
+        val p2 = env.player("Bob")
+        env.join(p1, arena)
+        env.join(p2, arena)
+        assertEquals(ArenaState.COUNTDOWN, env.state())
+
+        p1.simulateDamage(100.0, genericDamage())
+        env.assertFired<PlayerDeathEvent> { event -> event.keepInventory && event.keepLevel }
+        assertEquals(ArenaState.COUNTDOWN, env.state())
+        assertEquals(arena, env.service.arenaIdOf(p1.uuid))
+
+        env.tick(6)
+        assertEquals(ArenaState.INGAME, env.state())
+        assertEquals(1, p1.respawnCount)
+        assertTrue(p1.hasTeleported())
+        assertTrue(p2.hasTeleported())
+        assertNull(env.statsRepo.find(p1.uuid))
+        assertNull(env.statsRepo.find(p2.uuid))
+    }
+
+    @Test
     fun `non player damage ignored`() {
         val event = env.mob().simulateDamage(1.0, genericDamage())
         assertFalse(event.isCancelled)

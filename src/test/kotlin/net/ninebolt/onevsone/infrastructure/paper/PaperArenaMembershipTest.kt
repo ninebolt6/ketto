@@ -7,6 +7,7 @@ import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.backupByName
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.fallIntoVoid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.lastBroadcast
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.registrations
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
@@ -165,6 +166,39 @@ class PaperArenaMembershipTest {
         assertNull(env.statsRepo.find(p1.uuid))
         assertNull(env.backupByName("Alice"))
         assertNull(env.backupByName("Bob"))
+    }
+
+    @Test
+    fun `quit during ROUNDCOUNTDOWN forfeits and the round resume never fires`() {
+        val arena = env.newArena()
+        env.setKit(arena, PaperInventorySnapshot(items = listOf(env.item(Material.IRON_SWORD))))
+        val p1 = env.player("Alice")
+        val p2 = env.player("Bob")
+        p1.inventory.setItem(0, env.item(Material.BREAD))
+        p2.inventory.setItem(0, env.item(Material.APPLE))
+        env.join(p1, arena)
+        env.join(p2, arena)
+        env.tick(6)
+
+        fallIntoVoid(p2)
+        assertEquals(ArenaState.ROUNDCOUNTDOWN, env.view().state)
+
+        p1.disconnect()
+        assertEquals(ArenaState.WAITING, env.view().state)
+        assertTrue(env.view().participants.isEmpty())
+        assertNull(env.service.arenaIdOf(p1.uuid))
+        assertNull(env.service.arenaIdOf(p2.uuid))
+        assertEquals(1, env.statsRepo.find(p2.uuid)!!.wins)
+        assertEquals(1, env.statsRepo.find(p1.uuid)!!.losses)
+        assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
+        assertTrue(env.lastBroadcast().contains("Bob"))
+
+        p1.reconnect()
+        assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
+
+        // The round-resume timer was still pending at the quit and must not restart the finished match
+        env.tick(8)
+        assertEquals(ArenaState.WAITING, env.view().state)
     }
 
     @Test
