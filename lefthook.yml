@@ -1,0 +1,6 @@
+pre-commit:
+  commands:
+    ktlint:
+      glob: "*.{kt,kts}"
+      run: ./gradlew -q ktlintFormat
+      stage_fixed: true

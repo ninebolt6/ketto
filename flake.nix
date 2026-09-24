@@ -22,7 +22,11 @@
             packages = [
               pkgs.${"temurin-bin-${javaMajor}"}
               actrun.packages.${system}.default
+              pkgs.lefthook
             ];
+            shellHook = ''
+              lefthook install || true
+            '';
           };
         });
     };

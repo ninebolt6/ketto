@@ -59,6 +59,7 @@
 
 ## Style
 
+- Formatting is enforced by ktlint (`.editorconfig`); `./gradlew ktlintFormat` fixes violations
 - Write no comments or KDoc. The only exception is a single line stating a
   constraint the code cannot express — e.g. imposed by an external system or
   ordering that looks arbitrary. If a comment would describe what the
