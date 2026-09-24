@@ -5,7 +5,6 @@ import kotlin.test.assertTrue
 import kotlin.uuid.Uuid
 import org.junit.jupiter.api.Test
 
-/** Unit tests for the per-requester acquisition window. */
 class RequestThrottleTest {
 
     private val throttle = RequestThrottle(windowNanos = 100L)

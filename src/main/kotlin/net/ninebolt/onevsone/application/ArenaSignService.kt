@@ -6,12 +6,6 @@ import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.BlockPosition
 
-/**
- * Join sign management: coordinate persistence via ArenaSignRepository and
- * sign display refresh via PresentationPort.
- * Calls are serialized by the main thread; each repository call is one
- * atomic persistence unit.
- */
 class ArenaSignService(
     private val registry: ArenaRegistry,
     private val signs: ArenaSignRepository,
@@ -29,13 +23,11 @@ class ArenaSignService(
         return null
     }
 
-    /** Repaints the join sign with the given state. Does nothing when no sign is registered. */
     fun refreshSign(arena: Arena.Id, state: ArenaState) {
         val position = signs.signLocation(arena.name) ?: return
         presentation.updateSign(arena, position, state)
     }
 
-    /** Unregisters only the sign. The sign block itself remains and becomes breakable. */
     fun clearSign(name: String): ClearSignError? {
         val arena = arena(name) ?: return ClearSignError.NotFound
         signs.clearSign(arena.name)
@@ -44,8 +36,6 @@ class ArenaSignService(
 
     private fun arena(name: String): Arena? = registry.resolveArenaId(name)?.let { registry.arena(it) }
 }
-
-// ---- Use-case rejection reasons; `null` return means success ----------------
 
 sealed interface SetSignError {
     data object NotFound : SetSignError

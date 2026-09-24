@@ -14,7 +14,6 @@ import kotlin.test.assertSame
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 
-/** Verifies join, leave, start, abort, and immutability. */
 class ArenaMatchTest {
 
     @Test
@@ -58,7 +57,6 @@ class ArenaMatchTest {
         var m = match()
         m = m.join(alice).match
         m = m.join(bob).match
-        // Leaving is not allowed during COUNTDOWN
         assertEquals(LeaveOutcome.NotWaiting, m.leaveWaiting(alice.id).outcome)
         assertEquals(2, m.participants.size)
 
@@ -103,7 +101,6 @@ class ArenaMatchTest {
         val step = countdown.forfeit(alice.id)
         assertTrue(step.outcome is QuitOutcome.WaitingExit)
         assertEquals(alice, step.outcome.participant)
-        // The remaining player keeps waiting at ONEMORE (rejoinable). The in-flight countdown is invalidated by epoch
         assertEquals(ArenaState.ONEMORE, step.match.state)
         assertEquals(listOf(bob), step.match.participants)
         assertTrue(step.match.epoch > countdown.epoch)
@@ -148,7 +145,6 @@ class ArenaMatchTest {
     fun `held snapshot is not mutated by later transitions`() {
         val snapshot = startedMatch()
         val after = snapshot.recordDefeat(bob.id, DefeatCause.FALL).match
-        // An already-taken snapshot is unaffected by later transitions
         assertEquals(ArenaState.INGAME, snapshot.state)
         assertEquals(0, snapshot.winsOf(alice.id))
         assertEquals(2, snapshot.participants.size)
@@ -272,21 +268,18 @@ class ArenaMatchTest {
         assertFailsWith<IllegalArgumentException> {
             ArenaMatch.new(Arena.Id.new("a1"), 0)
         }
-        // Mismatch between state and participant count
         assertFailsWith<IllegalArgumentException> {
             ArenaMatch.restored(Arena.Id.new("a1"), 3, ArenaState.WAITING, listOf(alice), emptyMap())
         }
         assertFailsWith<IllegalArgumentException> {
             ArenaMatch.restored(Arena.Id.new("a1"), 3, ArenaState.INGAME, listOf(alice), emptyMap())
         }
-        // Awarding points to a non-participant
         assertFailsWith<IllegalArgumentException> {
             ArenaMatch.restored(
                 Arena.Id.new("a1"), 3, ArenaState.INGAME, listOf(alice, bob),
                 wins = mapOf(carol.id to 1)
             )
         }
-        // resolving is only valid in ROUNDCOUNTDOWN
         assertFailsWith<IllegalArgumentException> {
             ArenaMatch.restored(
                 Arena.Id.new("a1"), 3, ArenaState.INGAME, listOf(alice, bob),

@@ -3,27 +3,11 @@ package net.ninebolt.onevsone.application.port
 import net.ninebolt.onevsone.domain.WorldPosition
 import kotlin.uuid.Uuid
 
-/**
- * Limited operations on online (or disconnecting) players.
- * Equipment and display are not included. No entity references are returned;
- * callers resolve by UUID to check liveness/position and request match-state
- * changes, teleports, and respawns.
- */
 interface PlayerPort {
-    /**
-     * Operation handle for a player. Returns online players and disconnecting
-     * players the adapter registered while processing QuitEvent. null
-     * otherwise.
-     */
+    // also returns disconnecting players, which the adapter registers while processing QuitEvent
     fun handle(playerId: Uuid): PlayerHandle?
 
-    /**
-     * Resolves a UUID from a name. Immediate for online/cached players;
-     * uncached names go through blocking resolution offloaded to the adapter's
-     * async path. callback is invoked on the main thread and is not invoked
-     * after the plugin is disabled. The callback must check whether the target
-     * player is still around.
-     */
+    // the callback runs on the main thread, never fires after plugin disable, and must re-check the player is still around
     fun resolveOfflineId(name: String, callback: (Uuid?) -> Unit)
 }
 
@@ -33,12 +17,10 @@ interface PlayerHandle {
     val online: Boolean
     val dead: Boolean
     fun position(): WorldPosition?
-    /** Respawns immediately if dead. */
     fun respawn()
-    /** Fire ticks 0, full health, food level 20. Does nothing while dead. */
+    // no-op while dead
     fun resetVitals()
-    /** SURVIVAL, no flight, plus resetVitals. */
     fun prepareForMatch()
-    /** The adapter warns on failure such as an unloaded world. */
+    // failures (e.g. an unloaded world) only warn in the adapter
     fun teleport(position: WorldPosition)
 }

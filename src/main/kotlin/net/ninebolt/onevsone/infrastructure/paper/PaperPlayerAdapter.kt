@@ -16,16 +16,11 @@ import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
 import kotlin.uuid.toKotlinUuid
 
-/**
- * Resolution of online players. Disconnecting players can no longer be fetched
- * from Server during QuitEvent, so this provides a scope in which the event's
- * Player can be referenced briefly.
- */
+// A disconnecting player can no longer be fetched from Server during QuitEvent
 class PaperPlayerLookup(private val server: Server) {
     private val quitting = HashMap<Uuid, Player>()
     private val pluginTeleports = HashSet<Uuid>()
 
-    /** Makes the QuitEvent's Player resolvable by UUID for the duration of synchronous handling. */
     fun <R> scopeQuitting(player: Player, block: () -> R): R {
         val id = player.uniqueId.toKotlinUuid()
         quitting[id] = player
@@ -36,11 +31,7 @@ class PaperPlayerLookup(private val server: Server) {
         }
     }
 
-    /**
-     * PlayerTeleportEvent fires synchronously inside teleport(), so wrapping
-     * the call in a scope lets us distinguish our own teleports from other
-     * plugins'.
-     */
+    // PlayerTeleportEvent fires synchronously inside teleport()
     fun <R> scopePluginTeleport(playerId: Uuid, block: () -> R): R {
         pluginTeleports += playerId
         try {
@@ -126,8 +117,6 @@ private class PaperPlayerHandle(
             logger.warning("World '${position.world}' is not loaded; skipping teleport")
             return
         }
-        // Participant teleport restriction exempts "the plugin's own teleports", so
-        // both the cause and a marker are attached to identify the synchronously fired PlayerTeleportEvent
         lookup.scopePluginTeleport(id) {
             player.teleport(
                 Location(world, position.x, position.y, position.z, position.yaw, position.pitch),

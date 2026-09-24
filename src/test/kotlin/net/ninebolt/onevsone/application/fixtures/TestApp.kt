@@ -54,7 +54,6 @@ class TestApp(val requiredWins: Int = 3) {
         return id
     }
 
-    /** Joins Alice/Bob into arena1 and advances to COUNTDOWN. */
     fun joinedTwo(arenaName: String = "arena1"): Pair<FakePlayers.FakeHandle, FakePlayers.FakeHandle> {
         newArena(arenaName)
         val p1 = players.add("Alice")
@@ -64,7 +63,6 @@ class TestApp(val requiredWins: Int = 3) {
         return p1 to p2
     }
 
-    /** joinedTwo plus draining the initial countdown to reach INGAME. */
     fun startMatch(arenaName: String = "arena1"): Pair<FakePlayers.FakeHandle, FakePlayers.FakeHandle> {
         val pair = joinedTwo(arenaName)
         scheduler.tick(6)

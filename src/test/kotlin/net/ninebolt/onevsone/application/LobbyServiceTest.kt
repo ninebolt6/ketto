@@ -5,7 +5,6 @@ import net.ninebolt.onevsone.domain.WorldPosition
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
 
-/** Server-wide lobby persistence. */
 class LobbyServiceTest {
 
     @Test

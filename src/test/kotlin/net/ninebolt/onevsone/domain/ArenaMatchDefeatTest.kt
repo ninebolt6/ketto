@@ -11,7 +11,6 @@ import kotlin.test.assertSame
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 
-/** Verifies defeat notification, round transitions, and the resolution guard (generation). */
 class ArenaMatchDefeatTest {
 
     @Test
@@ -88,7 +87,6 @@ class ArenaMatchDefeatTest {
         var m = startedMatch()
         var step = m.recordDefeat(bob.id, DefeatCause.FALL)
         m = step.match.releaseResolution(step.match.epoch)
-        // During ROUNDCOUNTDOWN: falls are accepted, deaths are rejected
         step = m.recordDefeat(bob.id, DefeatCause.FALL)
         assertTrue(step.outcome is DefeatOutcome.RoundWon)
         m = step.match.releaseResolution(step.match.epoch)
@@ -113,14 +111,12 @@ class ArenaMatchDefeatTest {
         assertTrue(step.outcome is DefeatOutcome.RoundWon)
         m = step.match
         assertTrue(m.resolving)
-        // A release request issued after the generation advanced is inert (stale generation)
         val after = ArenaMatch.restored(
             m.arenaId, m.requiredWins, m.state, m.participants, m.wins,
             resolving = true, epoch = m.epoch + 1
         )
         assertSame(after, after.releaseResolution(m.epoch))
         assertTrue(after.resolving)
-        // The right generation does release
         assertFalse(m.releaseResolution(m.epoch).resolving)
     }
 
@@ -132,7 +128,6 @@ class ArenaMatchDefeatTest {
         assertTrue(resumed.outcome)
         m = resumed.match
         assertEquals(ArenaState.INGAME, m.state)
-        // The resolution guard is released, so the next defeat is accepted
         assertTrue(m.recordDefeat(bob.id, DefeatCause.DEATH).outcome is DefeatOutcome.RoundWon)
     }
 

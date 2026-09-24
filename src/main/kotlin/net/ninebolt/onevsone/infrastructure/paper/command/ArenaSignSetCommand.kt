@@ -8,7 +8,6 @@ import net.ninebolt.onevsone.infrastructure.paper.toBlockPosition
 import org.bukkit.block.Sign
 import org.bukkit.command.CommandSender
 
-/** `arena <name> sign set`. Registers the sign the executor is looking at. */
 internal class ArenaSignSetCommand(
     admin: ArenaAdministrationService,
     private val signs: ArenaSignService,

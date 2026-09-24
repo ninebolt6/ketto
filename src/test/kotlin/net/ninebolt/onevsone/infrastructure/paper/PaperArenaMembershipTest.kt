@@ -23,7 +23,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
-/** Scenarios for leaving, disconnecting, enable/disable, and membership registration. */
 class PaperArenaMembershipTest {
 
     @TempDir
@@ -85,7 +84,6 @@ class PaperArenaMembershipTest {
         env.join(p1, arena)
         env.join(p2, arena)
         env.tick(6)
-        // A sidebar board must be assigned during INGAME
         val ingameBoard = p1.scoreboard
         assertTrue(env.boards.contains(ingameBoard))
         env.service.abort(arena)
@@ -158,7 +156,6 @@ class PaperArenaMembershipTest {
         env.join(p1, arena)
         env.join(p2, arena)
         p1.disconnect()
-        // A disconnect before match start only unregisters: the remaining participant keeps waiting at ONEMORE
         assertEquals(ArenaState.ONEMORE, env.view().state)
         assertNull(env.service.arenaIdOf(p1.uuid))
         assertEquals(arena, env.service.arenaIdOf(p2.uuid))

@@ -7,13 +7,6 @@ import org.bukkit.command.CommandSender
 import org.bukkit.util.StringUtil
 import java.util.Locale
 
-/**
- * Namespace bound to an arena: args[0] is the arena name and args[1] selects
- * the op. Children keep the ArenaSubcommand contract, so the bound name is
- * passed back as their first argument. defaultOp answers the bare
- * `arena <name>` form. For ops-only namespaces, passing a denial message as
- * `usage` keeps non-OP replies consistent with leaf denial.
- */
 internal class ArenaScopedGroup(
     private val usage: Message,
     private val opsUsage: Message,
@@ -23,13 +16,11 @@ internal class ArenaScopedGroup(
     private val defaultOp: Subcommand? = null
 ) : Subcommand {
 
-    /** lowercase name -> (registered name, op). Completion returns names with their registered case. */
     private val byName: Map<String, Pair<String, Subcommand>> = ops.entries.associateBy(
         { it.key.lowercase(Locale.ROOT) },
         { it.key to it.value }
     )
 
-    // Visible only when at least one child op is (nested namespaces hide their ops-only groups from non-OPs)
     override fun visibleTo(sender: CommandSender): Boolean =
         byName.values.any { (_, op) -> op.visibleTo(sender) }
 

@@ -15,7 +15,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
-/** Verifies /1vs1 arena <name> sign set|remove. */
 class ArenaSignCommandTest {
 
     @TempDir
@@ -37,7 +36,6 @@ class ArenaSignCommandTest {
     fun `arena sign set requires looking at sign`() {
         val op = env.opPlayer("Op")
         env.newArena()
-        // targetBlock unset = looking at nothing
         env.run(op, "arena", "arena1", "sign", "set")
         assertTrue(op.drainMessages().any { it.contains("看板を見て実行してください") })
     }

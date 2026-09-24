@@ -5,10 +5,8 @@ import java.io.File
 import java.util.Locale
 import java.util.logging.Logger
 
-/** Language files under dataFolder/messages/: bundled-file provisioning and bundle loading. */
 internal object LanguageFiles {
 
-    /** Languages shipped in the jar; additional languages come from dataFolder/messages/<lang>.yaml. */
     val BUNDLED_LANGS = listOf("ja", "en")
 
     fun dir(dataFolder: File): File = File(dataFolder, "messages")
@@ -17,10 +15,6 @@ internal object LanguageFiles {
         LanguageFiles::class.java.getResourceAsStream("/messages/$lang.yaml")
             ?.bufferedReader()?.use { YamlConfiguration.loadConfiguration(it) }
 
-    /**
-     * Writes bundled files when absent (via saveResource) and backfills
-     * keys added by plugin updates into existing files.
-     */
     fun syncBundled(dataFolder: File, logger: Logger, saveResource: (String) -> Unit) {
         BUNDLED_LANGS.forEach { lang ->
             val path = "messages/$lang.yaml"
@@ -31,11 +25,6 @@ internal object LanguageFiles {
         }
     }
 
-    /**
-     * Reads messagesDir/<lang>.{yaml,yml} merged over the bundled languages
-     * (.yaml wins when both exist). Warns once per key a non-fallback
-     * language lacks.
-     */
     fun loadBundles(messagesDir: File, fallbackLang: String, logger: Logger): Map<String, Map<String, String>> {
         val bundled = BUNDLED_LANGS.mapNotNull { lang ->
             bundledYaml(lang)?.let { lang to flatten(it) }
@@ -56,7 +45,6 @@ internal object LanguageFiles {
         return bundles
     }
 
-    /** Appends bundled keys missing from an existing file without rewriting its content. */
     fun backfill(file: File, bundled: YamlConfiguration): Int {
         val existing = YamlConfiguration.loadConfiguration(file)
         val patch = YamlConfiguration()
@@ -68,7 +56,6 @@ internal object LanguageFiles {
         return added
     }
 
-    /** Nested YAML keys become dot-separated (a.b.c) template keys. */
     private fun flatten(config: YamlConfiguration): Map<String, String> =
         config.getKeys(true).mapNotNull { key -> config.getString(key)?.let { key to it } }.toMap()
 }

@@ -2,10 +2,7 @@ package net.ninebolt.onevsone.infrastructure.persistence
 
 import net.ninebolt.onevsone.infrastructure.paper.PaperInventorySnapshot
 
-/**
- * Arena kit payloads in the arena_kits table (arena-owned: deleted by the
- * arena's cascade). A missing row is an empty kit.
- */
+// rows are deleted by the arena's cascade
 class SqliteKitStore(private val store: SqliteStore) {
 
     fun loadArenaKit(arenaName: String): PaperInventorySnapshot =
@@ -20,7 +17,7 @@ class SqliteKitStore(private val store: SqliteStore) {
         )
     }
 
-    /** Redundant with the arena's cascade, but harmless for explicit cleanup. */
+    // redundant with the arena's cascade but kept for explicit cleanup
     fun deleteArenaKit(arenaName: String) {
         store.exec("DELETE FROM arena_kits WHERE arena_name = ?", arenaName)
     }

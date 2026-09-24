@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
-/** Verifies /1vs1 leave reply paths driven through the command. */
 class LeaveCommandTest {
 
     @TempDir

@@ -3,10 +3,7 @@ package net.ninebolt.onevsone.application.port
 import net.ninebolt.onevsone.domain.PlayerStats
 import kotlin.uuid.Uuid
 
-/**
- * Stats persistence. A missing file yields null; corruption and I/O errors are
- * PersistenceFailure.
- */
+// a missing file yields null; corruption and I/O errors throw PersistenceFailure
 interface PlayerStatsRepository {
     fun find(playerId: Uuid): PlayerStats?
     fun recordWin(playerId: Uuid)

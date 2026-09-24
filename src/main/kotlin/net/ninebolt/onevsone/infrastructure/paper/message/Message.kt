@@ -4,13 +4,6 @@ import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.PlayerStats
 import java.util.Locale
 
-/**
- * Lazily rendered message. Each nested subtype is one message in the catalog:
- * arg-free messages are objects, arg-carrying ones classes. key names an entry
- * in the language files (messages/<lang>.yaml); args are Str (plain text;
- * `<` etc. are never parsed as tags) or Nested (another Message rendered in the
- * same locale), rendered by Messenger.render into the recipient's locale.
- */
 sealed class Message(val key: MessageKey, vararg val args: Arg) {
 
     sealed interface Arg {
@@ -107,7 +100,6 @@ sealed class Message(val key: MessageKey, vararg val args: Arg) {
     class ScoreboardEntry(name: String) : Message(MessageKey.SCOREBOARD_ENTRY, Str("name", name))
 }
 
-/** All keys in the language files. Each entry's name is the YAML key. */
 enum class MessageKey {
     PREFIX,
 

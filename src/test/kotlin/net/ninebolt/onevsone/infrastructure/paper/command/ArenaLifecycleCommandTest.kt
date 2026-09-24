@@ -13,7 +13,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
-/** Verifies the arena lifecycle ops: create, remove, enable, disable. */
 class ArenaLifecycleCommandTest {
 
     @TempDir

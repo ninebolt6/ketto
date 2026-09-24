@@ -4,8 +4,6 @@ import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.Participant
 
-/** Participants are immutable, so the same instances are shared across tests. */
-
 internal val alice = Participant.new("Alice")
 internal val bob = Participant.new("Bob")
 internal val carol = Participant.new("Carol")

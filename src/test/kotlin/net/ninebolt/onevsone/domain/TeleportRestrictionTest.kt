@@ -4,7 +4,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 
-/** Per-state teleport permission matrix. Causes are classified by TeleportTrigger. */
 class TeleportRestrictionTest {
 
     @Test

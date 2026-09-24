@@ -3,11 +3,8 @@ package net.ninebolt.onevsone.infrastructure.paper.fixtures
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import org.mockbukkit.mockbukkit.command.MessageTarget
 
-/** Observation helpers for TestEnv. Only collects reads of already-sent messages. */
-
 private val plain = PlainTextComponentSerializer.plainText()
 
-/** Reads out all sent messages. The queue is consumed, so later calls see only new ones. */
 internal fun MessageTarget.drainMessages(): List<String> =
     generateSequence { nextComponentMessage() }.map(plain::serialize).toList()
 
@@ -15,8 +12,6 @@ internal fun TestEnv.lastBroadcast(): String =
     server.consoleSender.drainMessages().lastOrNull() ?: error("no broadcast captured")
 
 internal fun TestEnv.view(name: String = "arena1") = service.matchOf(name)!!
-
-// ---- Database assertions ----------------------------------------------------
 
 internal data class RegistrationRow(val playerUuid: String, val playerName: String, val arenaName: String)
 

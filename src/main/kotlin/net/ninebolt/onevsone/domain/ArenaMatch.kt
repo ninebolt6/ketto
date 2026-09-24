@@ -2,24 +2,12 @@ package net.ninebolt.onevsone.domain
 
 import kotlin.uuid.Uuid
 
-/**
- * Aggregate owning the participants and progression state of one arena.
- * Immutable: every operation returns a Transition carrying the new state; this
- * instance never changes. Holds no Bukkit, scheduler, or persistence — it only
- * advances a generation (epoch) for timing control.
- * participants order = join order = spawn slot number.
- */
 data class ArenaMatch private constructor(
     val arenaId: Arena.Id,
     val requiredWins: Int,
     val state: ArenaState = ArenaState.WAITING,
     val participants: List<Participant> = emptyList(),
     val wins: Map<Uuid, Int> = emptyMap(),
-    /**
-     * Duplicate-resolution guard held until the defeat resolution
-     * (respawn/re-equip) completes. Prevents double scoring within the same
-     * resolution window.
-     */
     val resolving: Boolean = false,
     val epoch: Long = 0L
 ) {
@@ -27,18 +15,11 @@ data class ArenaMatch private constructor(
         // participants[i] teleports to the spawn slot with index i, so capacity equals the spawn slot count
         val MAX_PARTICIPANTS = SpawnSlot.entries.size
 
-        /** A fresh aggregate (WAITING, 0 participants). */
         fun new(arenaId: Arena.Id, requiredWins: Int): ArenaMatch {
             require(requiredWins >= 1) { "requiredWins must be >= 1 (was $requiredWins)" }
             return ArenaMatch(arenaId, requiredWins)
         }
 
-        /**
-         * Full-state reconstruction from a snapshot etc. The invariants the
-         * transition functions maintain (state<->participant count, unique
-         * participants, wins only for participants, resolving only in
-         * ROUNDCOUNTDOWN) are validated here.
-         */
         fun restored(
             arenaId: Arena.Id,
             requiredWins: Int,
@@ -75,7 +56,6 @@ data class ArenaMatch private constructor(
 
     val full: Boolean get() = participants.size == MAX_PARTICIPANTS
 
-    /** Whether a fall at/below the world minimum height resolves as a defeat (a fall-accepting state with 2 participants). */
     val resolvesVoidFall: Boolean
         get() = state.acceptsDefeat(DefeatCause.FALL) && full
 
@@ -83,17 +63,14 @@ data class ArenaMatch private constructor(
 
     val canResumeRound: Boolean get() = state == ArenaState.ROUNDCOUNTDOWN && full
 
-    /** A match is in progress (ROUNDCOUNTDOWN/INGAME with both participants). Used for matchup display etc. */
     val inProgress: Boolean get() =
         (state == ArenaState.INGAME || state == ArenaState.ROUNDCOUNTDOWN) && full
 
-    /** The two opponents in join order, present only while the match is in progress. */
     fun matchup(): Pair<Participant, Participant>? =
         if (inProgress) participants[SpawnSlot.FIRST.index] to participants[SpawnSlot.SECOND.index] else null
 
     fun participant(id: Uuid): Participant? = participants.firstOrNull { it.id == id }
 
-    /** A participant's spawn slot (join order). null if not participating. */
     fun slotOf(id: Uuid): SpawnSlot? =
         SpawnSlot.ofIndex(participants.indexOfFirst { it.id == id })
 
@@ -113,7 +90,6 @@ data class ArenaMatch private constructor(
         }
     }
 
-    /** Leaving does not touch the inventory (the match has not started). */
     fun leaveWaiting(id: Uuid): Transition<LeaveOutcome> {
         if (state != ArenaState.ONEMORE) return Transition(this, LeaveOutcome.NotWaiting)
         val participant = participant(id) ?: return Transition(this, LeaveOutcome.NotWaiting)
@@ -127,12 +103,7 @@ data class ArenaMatch private constructor(
         )
     }
 
-    /**
-     * Before the match starts this only unregisters; in progress it ends the
-     * match as a forfeit with the opponent as winner. The initial COUNTDOWN is
-     * pre-match (no teleport, backup, or scoring), so it does not become a
-     * forfeit — the remaining player keeps waiting in ONEMORE.
-     */
+    // COUNTDOWN is still pre-match (no teleport, backup, or scoring), so quitting unregisters instead of forfeiting.
     fun forfeit(id: Uuid): Transition<QuitOutcome> {
         val participant = participant(id) ?: return Transition(this, QuitOutcome.NotParticipant)
         if (state == ArenaState.ONEMORE || state == ArenaState.WAITING || state == ArenaState.COUNTDOWN || !full) {
@@ -150,11 +121,6 @@ data class ArenaMatch private constructor(
         return Transition(finished(), QuitOutcome.MatchEnded(winner, participant))
     }
 
-    /**
-     * Defeat notification for death/fall. If accepted, yields RoundWon or
-     * MatchFinished. Keeps the current behavior: death is accepted only in
-     * INGAME; falls are accepted in INGAME/ROUNDCOUNTDOWN.
-     */
     fun recordDefeat(id: Uuid, cause: DefeatCause): Transition<DefeatOutcome> {
         if (!state.acceptsDefeat(cause)) return Transition(this, DefeatOutcome.Rejected)
         if (!full || resolving) return Transition(this, DefeatOutcome.Rejected)
@@ -180,7 +146,6 @@ data class ArenaMatch private constructor(
         )
     }
 
-    /** outcome is true when accepted. */
     fun beginMatch(): Transition<Boolean> =
         if (canBeginMatch) {
             Transition(copy(state = ArenaState.INGAME), true)
@@ -188,7 +153,6 @@ data class ArenaMatch private constructor(
             Transition(this, false)
         }
 
-    /** Returns to INGAME when ROUNDCOUNTDOWN completes. The resolution guard is also released here. */
     fun resumeRound(): Transition<Boolean> =
         if (state == ArenaState.ROUNDCOUNTDOWN) {
             Transition(copy(state = ArenaState.INGAME, resolving = false), true)
@@ -196,16 +160,11 @@ data class ArenaMatch private constructor(
             Transition(this, false)
         }
 
-    /**
-     * End of the defeat-resolution window (post-respawn re-equip complete, or
-     * the next tick of a non-death round). The guard is released only when the
-     * epoch matches the one at RoundWon issuance. A generation mismatch
-     * (aborted, next round already progressed, etc.) is a no-op.
-     */
+    // A release callback is stale once the match has advanced, so an epoch mismatch must be a no-op.
     fun releaseResolution(epoch: Long): ArenaMatch =
         if (this.epoch == epoch) copy(resolving = false) else this
 
-    /** Running countdowns and pending resolution callbacks are invalidated by the generation advance. */
+    // Advancing the epoch invalidates running countdowns and pending resolution callbacks.
     fun abort(): Transition<List<Participant>> =
         Transition(
             copy(

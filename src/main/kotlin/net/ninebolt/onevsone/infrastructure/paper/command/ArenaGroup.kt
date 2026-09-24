@@ -6,11 +6,7 @@ import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import org.bukkit.command.CommandSender
 import org.bukkit.util.StringUtil
 
-/**
- * The /1vs1 arena namespace. "create" is a collection-level op; any other
- * first argument is an arena name and dispatches to the scoped ops.
- * "create" is a reserved arena name (Arena.Id) so the two never collide.
- */
+// "create" is a reserved arena name, so it cannot collide with a real arena in first-argument dispatch
 internal class ArenaGroup(
     private val usage: Message,
     private val opsUsage: Message,

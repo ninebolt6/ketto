@@ -18,12 +18,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
-/**
- * End-to-end verification of user journeys (sign join -> finish,
- * disconnect -> rejoin) through real actions. requiredWins=1 shortens matches
- * to a single round; exhaustive coverage of each mechanism lives in the
- * listener tests.
- */
 class MatchScenarioTest {
 
     @TempDir
@@ -63,7 +57,6 @@ class MatchScenarioTest {
         assertEquals(ArenaState.WAITING, env.state())
         assertEquals(1, env.statsRepo.find(p1.uuid)!!.wins)
         assertEquals(1, env.statsRepo.find(p2.uuid)!!.losses)
-        // Match end restores the pre-join empty inventory
         assertNull(p1.inventory.contents[0])
     }
 
@@ -77,7 +70,6 @@ class MatchScenarioTest {
         assertEquals(ArenaState.COUNTDOWN, env.state())
 
         p2.disconnect()
-        // A pre-start disconnect unregisters rather than defeats; the other participant returns to waiting, no stats recorded
         assertEquals(ArenaState.ONEMORE, env.state())
         assertNull(env.service.arenaIdOf(p2.uuid))
         assertNull(env.statsRepo.find(p1.uuid))

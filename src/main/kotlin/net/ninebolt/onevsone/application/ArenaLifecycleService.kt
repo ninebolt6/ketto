@@ -6,16 +6,6 @@ import net.ninebolt.onevsone.application.port.warnOnFailure
 import net.ninebolt.onevsone.domain.ArenaState
 import java.util.logging.Logger
 
-/**
- * Startup and shutdown processing: installs persisted arenas into the
- * registry with their status and sign refreshed, and on shutdown aborts every
- * running match and restores online pending restores.
- *
- * Startup persistence work is isolated per item under warnOnFailure so one
- * bad record cannot break the rest of the load. Shutdown aborts commit
- * through the registry persist hook, so the ledger and status projection are
- * rewritten in the same step that clears the match.
- */
 class ArenaLifecycleService(
     private val registry: ArenaRegistry,
     private val arenas: ArenaRepository,
@@ -33,7 +23,7 @@ class ArenaLifecycleService(
             emptyList()
         }
         loaded.forEach { arena ->
-            // The definition is already persisted; only the projection and sign are refreshed
+            // Loaded definitions are already persisted, so install saves nothing
             registry.installArena(arena, persist = {})
             logger.warnOnFailure("Could not persist status for arena ${arena.id.name}; continuing startup") {
                 registry.match(arena.id)?.let { sync.saveStatus(it) }

@@ -33,10 +33,6 @@ import net.ninebolt.onevsone.infrastructure.persistence.SqlitePlayerStatsReposit
 import net.ninebolt.onevsone.infrastructure.persistence.SqliteStore
 import org.bukkit.plugin.java.JavaPlugin
 
-/**
- * Composition root. Reads config values, manually instantiates and injects the
- * implementations, and registers events and commands. The main FQCN is kept.
- */
 // open is required because MockBukkit generates a proxy subclass at load time
 open class OneVsOnePlugin : JavaPlugin() {
 
@@ -71,7 +67,6 @@ open class OneVsOnePlugin : JavaPlugin() {
     }
 }
 
-/** The dependency graph for one plugin lifetime: built, loaded, and exposed here. */
 private class PluginModule(
     private val plugin: OneVsOnePlugin,
     val store: SqliteStore,

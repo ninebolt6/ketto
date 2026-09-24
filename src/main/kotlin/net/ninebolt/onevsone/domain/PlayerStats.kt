@@ -1,8 +1,6 @@
 package net.ninebolt.onevsone.domain
 
-/** Win-rate arithmetic is centralized here. Display formatting is the caller's job. */
 data class PlayerStats private constructor(val wins: Int, val losses: Int) {
-    /** win/lose. Computed as win / 1 when lose == 0. */
     val ratio: Double
         get() = wins.toDouble() / losses.coerceAtLeast(1)
 

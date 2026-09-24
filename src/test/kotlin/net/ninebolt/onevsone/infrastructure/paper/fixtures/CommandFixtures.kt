@@ -20,7 +20,6 @@ internal fun TestEnv.writeStats(uuid: Uuid, win: Int, lose: Int) {
 
 internal fun TestEnv.opPlayer(name: String): ArenaPlayerMock = player(name).also { it.isOp = true }
 
-// The @Deprecated on getOfflinePlayer(name) comes from upstream Bukkit; Paper has removed it.
-// ServerMock still carries the upstream annotation, so call it through the Server type
+// ServerMock carries the upstream @Deprecated on getOfflinePlayer(name) that Paper removed, so call it through the Server type
 internal fun TestEnv.offlineId(name: String): Uuid =
     (server as Server).getOfflinePlayer(name).uniqueId.toKotlinUuid()

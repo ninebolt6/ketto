@@ -11,7 +11,6 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 
-/** Verifies resilience in abnormal paths: aborts, disconnects, and persistence failures. */
 class ArenaApplicationServiceResilienceTest {
 
     @Test
@@ -49,13 +48,11 @@ class ArenaApplicationServiceResilienceTest {
     @Test
     fun `equipment apply failure after backup aborts and restores`() {
         val app = TestApp()
-        // Fail on the second applyKit
         app.equipment.failOnApplyAt = 2
         val (p1, _) = app.joinedTwo()
         app.scheduler.tick(6)
         assertEquals(ArenaState.WAITING, app.state())
         assertNull(app.service.arenaIdOf(p1.id))
-        // Both are restored from the already-captured backups
         assertEquals(2, app.equipment.restored.size)
         assertTrue(app.logger.reports.any { it.message.contains("Could not apply equipment") })
     }
@@ -64,7 +61,6 @@ class ArenaApplicationServiceResilienceTest {
     fun `round end failure aborts instead of stalling in round countdown`() {
         val app = TestApp()
         val (p1, p2) = app.startMatch()
-        // Fail the round-end re-equip (the third apply, after the two at start)
         app.equipment.failOnApplyAt = app.equipment.applyCalls + 1
 
         assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
@@ -94,7 +90,6 @@ class ArenaApplicationServiceResilienceTest {
         app.scheduler.tick(2)
         app.players.disconnect(p2)
         app.scheduler.tick()
-        // The next timer run detects the absence and aborts
         assertEquals(ArenaState.WAITING, app.state())
         assertTrue(app.equipment.kitApplies.isEmpty())
     }
@@ -106,7 +101,6 @@ class ArenaApplicationServiceResilienceTest {
         app.stats.failOnWin = PersistenceFailure("write failed")
         assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
         assertEquals(ArenaState.WAITING, app.state())
-        // The loser's record still goes through
         assertEquals(1, app.stats.stats[p2.id]?.losses)
         assertNull(app.stats.stats[p1.id])
         assertEquals(2, app.equipment.restored.size)
@@ -129,10 +123,8 @@ class ArenaApplicationServiceResilienceTest {
         val (p1, _) = app.startMatch()
         app.matchState.failOnPersist = true
         app.service.abort(Arena.Id.new("arena1"))
-        // The ledger row was left behind by the failed projection, but the commit still ran
         assertNull(app.service.arenaIdOf(p1.id))
         assertTrue(app.logger.reports.any { it.message.contains("match projection") })
-        // A successful next projection converges the stale row
         app.matchState.failOnPersist = false
         app.matchState.persistMatch(app.service.matchOf("arena1")!!)
         assertTrue(app.matchState.registrations.isEmpty())
@@ -157,7 +149,6 @@ class ArenaApplicationServiceResilienceTest {
         val (q1, q2) = app.startMatch("arena2")
         app.matchState.failOnSaveStatusFor += "arena1"
         app.lifecycle.shutdown()
-        // After arena1's failure, arena2's unregistration and restore still proceed
         assertNull(app.service.arenaIdOf(q1.id))
         assertNull(app.service.arenaIdOf(q2.id))
         assertEquals(4, app.equipment.restored.size)
@@ -169,11 +160,9 @@ class ArenaApplicationServiceResilienceTest {
         app.joinedTwo()
         val timer = app.scheduler.timers.last()
         app.service.abort(Arena.Id.new("arena1"))
-        // A stale timer firing after the abort only self-cancels
         timer.run()
         assertTrue(timer.cancelled)
         assertTrue(app.equipment.kitApplies.isEmpty())
-        // A fresh join is still possible
         val p3 = app.players.add("Carol")
         assertEquals(JoinOutput.JoinedWaiting, app.service.join(p3.id, p3.name, Arena.Id.new("arena1")))
     }
@@ -185,7 +174,6 @@ class ArenaApplicationServiceResilienceTest {
         app.scheduler.tick(5)
         p2.dead = true
         app.scheduler.tick()
-        // No start while dead, but the countdown continues
         assertEquals(ArenaState.COUNTDOWN, app.state())
         assertEquals(0, app.equipment.backupCalls)
         p2.dead = false

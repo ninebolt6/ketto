@@ -4,18 +4,10 @@ import net.ninebolt.onevsone.application.port.PersistenceFailure
 import java.sql.Connection
 import java.sql.SQLException
 
-/**
- * Schema ownership for data.db. Adding a migration means bumping
- * LATEST_VERSION and dropping a db/migration/V{n}.sql resource; the
- * contiguous version probe makes the file name the registration, so a
- * missing or skipped file fails loudly instead of drifting silently.
- * Each file commits atomically and bumps user_version afterwards, so an
- * interrupted file is retried on next open (all DDL stays idempotent).
- * A database newer than this build is never modified — not even pragmas.
- */
+// add a migration by bumping LATEST_VERSION and dropping a db/migration/V{n}.sql resource
+// migration DDL must be idempotent: an interrupted file is retried on next open
 internal class SqliteMigrations(private val connection: Connection) {
 
-    /** Fail fast on a file newer than this build knows how to read. */
     fun checkSupported() {
         val version = userVersion()
         if (version > LATEST_VERSION) {
@@ -25,7 +17,6 @@ internal class SqliteMigrations(private val connection: Connection) {
         }
     }
 
-    /** Applies pending migration files V{version+1}..V{LATEST_VERSION} in order. */
     fun migrate() {
         var version = userVersion()
         while (version < LATEST_VERSION) {
@@ -36,7 +27,7 @@ internal class SqliteMigrations(private val connection: Connection) {
         }
     }
 
-    /** '--' comment lines are stripped; statements split on ';'. */
+    // migration SQL: '--' lines are stripped and statements are split on ';'
     private fun loadStatements(target: Int): List<String> {
         val text = SqliteMigrations::class.java.getResource("/db/migration/V$target.sql")?.readText()
             ?: throw PersistenceFailure("Migration resource db/migration/V$target.sql is missing")

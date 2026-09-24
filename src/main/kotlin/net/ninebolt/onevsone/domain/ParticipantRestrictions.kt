@@ -1,31 +1,18 @@
 package net.ninebolt.onevsone.domain
 
-/**
- * Pure rules deriving participant restrictions from the arena state.
- * Listeners only convert events; per-state decisions are centralized here.
- * Explicitly out of scope: third-party splash/lingering potion effects,
- * knockback from wind charges (damage is blocked, knockback may remain),
- * unattributable environmental interference such as third-party lava
- * (left to arena enclosure or region protection), and destruction via
- * igniting pre-existing TNT (flint and steel is allowed).
- */
+// Out of scope by design: third-party potion effects, unattributable interference (e.g. third-party lava), and igniting pre-existing TNT; wind-charge knockback can remain though its damage is blocked.
 data class ParticipantRestrictions private constructor(
     val horizontalMoveFrozen: Boolean,
     val damageCancelled: Boolean,
-    /** Limits entity-caused damage to the same-match opponent or self */
     val opponentDamageOnly: Boolean,
-    /** Whether teleports are allowed. Blocks escape routes other than ender pearls */
     val teleportRestriction: TeleportRestriction,
     val blockBreakCancelled: Boolean,
-    /** Placed blocks cannot be removed while breaking is denied; prevents arena pollution and camping */
+    // Placing is cancelled because placed blocks could not be removed while breaking is denied.
     val blockPlaceCancelled: Boolean,
-    /** After the kit swap the inventory is overwritten by the start-of-match backup; prevents carrying items out */
+    // The start-of-match backup overwrites the inventory after the kit swap, so drops could otherwise carry items out.
     val itemDropCancelled: Boolean,
-    /** Blocks inventory<->world transfers: containers, item frames, armor stands, trading, etc. */
     val inventoryTransferCancelled: Boolean,
-    /** Blocks direct acquisition: pickups, harvests, arrow retrieval, dispenser equipment, etc. */
     val itemPickupCancelled: Boolean,
-    /** Commands are allowed only while waiting in ONEMORE */
     val commandsBlocked: Boolean
 ) {
     companion object {
@@ -66,8 +53,7 @@ data class ParticipantRestrictions private constructor(
                 itemPickupCancelled = false,
                 commandsBlocked = true
             )
-            // WAITING / ONEMORE: unrestricted. No path leaves participants in WAITING,
-            // but commands are denied everywhere except ONEMORE, so only ONEMORE allows them.
+            // No transition leaves participants in WAITING; commands are denied in every state except ONEMORE.
             ArenaState.ONEMORE -> ParticipantRestrictions(
                 horizontalMoveFrozen = false,
                 damageCancelled = false,

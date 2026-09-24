@@ -13,39 +13,26 @@ import net.ninebolt.onevsone.infrastructure.persistence.SqliteKitStore
 import org.bukkit.entity.Player
 import kotlin.uuid.Uuid
 
-/**
- * Adapter for inventory payloads. Backup/kit ItemStacks are confined to this
- * layer as PaperInventorySnapshot.
- */
 class PaperEquipmentAdapter(
     private val backups: SqliteBackupStore,
     private val kitStore: SqliteKitStore,
     private val lookup: PaperPlayerLookup
 ) : KitPort, InventoryBackupPort {
 
-    /** In-memory cache of arena kits. */
     private val kits = mutableMapOf<Arena.Id, PaperInventorySnapshot>()
 
-    /** Backup payloads captured/loaded while running (backupId -> snapshot). */
     private val pendingSnapshots = mutableMapOf<Uuid, PaperInventorySnapshot>()
 
-    /** For tests and startup preloading. */
     internal fun putKit(arena: Arena.Id, kit: PaperInventorySnapshot) {
         kits[arena] = kit
     }
 
-    /** The cached arena kit (for test verification. null when unset). */
     internal fun kitOf(arena: Arena.Id): PaperInventorySnapshot? = kits[arena]
 
     override fun forgetKit(arena: Arena.Id) {
         kits.remove(arena)
     }
 
-    /**
-     * Duplicates and bulk-persists both players' inventories. Duplication does
-     * not modify the inventories. If saving fails, throws PersistenceFailure
-     * without changing anyone's inventory.
-     */
     override fun backupBeforeMatch(match: MatchId, participants: List<Participant>): List<BackupRef> {
         val captured = participants.map { participant ->
             val player = lookup.resolve(participant.id)
@@ -64,7 +51,6 @@ class PaperEquipmentAdapter(
         return captured.map { it.ref }
     }
 
-    /** Restores a backup. An empty snapshot simply returns the player to an empty inventory. */
     override fun restore(backup: BackupRef) {
         val snapshot = pendingSnapshots[backup.backupId]
             ?: backups.backupFor(backup)?.snapshot
@@ -77,7 +63,6 @@ class PaperEquipmentAdapter(
     private fun resolve(backup: BackupRef): Player? =
         backup.playerId?.let { lookup.resolve(it) } ?: lookup.resolveByName(backup.playerName)
 
-    /** Deletes only records with a matching backupId. */
     override fun acknowledge(backup: BackupRef) {
         backups.deleteBackup(backup)
         pendingSnapshots.remove(backup.backupId)

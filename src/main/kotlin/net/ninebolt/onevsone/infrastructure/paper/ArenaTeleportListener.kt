@@ -10,10 +10,6 @@ import org.bukkit.event.player.PlayerTeleportEvent
 import org.bukkit.event.vehicle.VehicleEnterEvent
 import kotlin.uuid.toKotlinUuid
 
-/**
- * Input adapter that blocks teleport escapes and vehicle-mount bypasses.
- * Per-state permission decisions are delegated to domain's TeleportRestriction.
- */
 class ArenaTeleportListener(
     private val service: ArenaApplicationService,
     private val lookup: PaperPlayerLookup
@@ -32,7 +28,7 @@ class ArenaTeleportListener(
 
     private fun restrictTeleport(event: PlayerTeleportEvent) {
         val restrictions = service.restrictionsOf(event.player) ?: return
-        // The plugin's own teleports do not always arrive with cause PLUGIN, so the marker is checked first
+        // The plugin's own teleports do not always arrive with cause PLUGIN
         val trigger = when {
             lookup.isPluginTeleport(event.player.uniqueId.toKotlinUuid()) -> TeleportTrigger.INTERNAL
             event.cause == PlayerTeleportEvent.TeleportCause.ENDER_PEARL -> TeleportTrigger.ENDER_PEARL
@@ -41,7 +37,7 @@ class ArenaTeleportListener(
         if (!restrictions.teleportRestriction.allows(trigger)) event.isCancelled = true
     }
 
-    /** Mounting a vehicle bypasses horizontal movement, so it is blocked while movement is frozen. */
+    // Vehicle mounts move the player without firing PlayerMoveEvent
     @EventHandler
     fun onVehicleEnter(event: VehicleEnterEvent) {
         val player = event.entered as? Player ?: return

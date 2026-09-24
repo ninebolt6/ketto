@@ -13,7 +13,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
-/** Verifies /1vs1 arena <name> spawn set. */
 class ArenaSpawnCommandTest {
 
     @TempDir

@@ -19,11 +19,6 @@ import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.event.player.PlayerQuitEvent
 import kotlin.uuid.toKotlinUuid
 
-/**
- * Input adapter for events that drive match progression. Limited to converting
- * events/positions/arguments; per-state restriction decisions are delegated to
- * domain's ParticipantRestrictions.
- */
 class ArenaMatchListener(
     private val service: ArenaApplicationService,
     private val lookup: PaperPlayerLookup,
@@ -37,7 +32,7 @@ class ArenaMatchListener(
         if (service.matchOf(id) == null) return
         event.keepInventory = true
         event.drops.clear()
-        // keepInventory only protects items, so keep experience from dropping as well
+        // keepInventory protects only items, not experience
         event.droppedExp = 0
         event.keepLevel = true
         if (!service.defeat(id, DefeatCause.DEATH)) {
@@ -51,20 +46,12 @@ class ArenaMatchListener(
             onEntityDamage(event)
             return
         }
-        // Environmental damage (fall, fire, lava, etc.) cannot be attributed, so it is accepted as a defeat as before
         val player = event.entity as? Player ?: return
         if (service.restrictionsOf(player)?.damageCancelled == true) {
             event.isCancelled = true
         }
     }
 
-    /**
-     * For entity-caused damage, the responsible party (causingEntity — traces
-     * back to projectile shooters, block placers, etc.) is resolved to a
-     * player; the admission decision is delegated to domain's DamageAdmission.
-     * No early return: even when the victim is not a player, the attacker side
-     * must still be checked.
-     */
     private fun onEntityDamage(event: EntityDamageByEntityEvent) {
         val victim = event.entity as? Player
         val attacker = event.damageSource.causingEntity as? Player
@@ -79,8 +66,7 @@ class ArenaMatchListener(
 
     @EventHandler
     fun onQuit(event: PlayerQuitEvent) {
-        // A disconnecting player can no longer be fetched from Server, so this is
-        // called inside a scope that can resolve the event's Player only during synchronous handling.
+        // A quitting player can no longer be fetched from Server, so the event's Player must be resolved synchronously
         lookup.scopeQuitting(event.player) {
             service.quit(event.player.uniqueId.toKotlinUuid())
         }
@@ -102,7 +88,7 @@ class ArenaMatchListener(
                 event.setTo(from)
             }
         }
-        // 1.18+ worlds can have negative heights, so the void check uses the destination world's min height
+        // Since 1.18 a world's min height can be below y=0
         if (match.resolvesVoidFall && event.to.y <= (event.to.world?.minHeight ?: 0)) {
             service.defeat(event.player.uniqueId.toKotlinUuid(), DefeatCause.FALL)
         }

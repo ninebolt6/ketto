@@ -3,11 +3,6 @@ package net.ninebolt.onevsone.infrastructure.paper
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.PlayerInventory
 
-/**
- * ItemStack-based inventory snapshot.
- * Maintains cloning, the 4 armor slots, offhand (slot 41), and AIR checks.
- * This type is confined to infrastructure and never exposed to inner layers.
- */
 data class PaperInventorySnapshot(
     val armor: List<ItemStack?> = emptyList(),
     val items: List<ItemStack?> = emptyList()

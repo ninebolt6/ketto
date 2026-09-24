@@ -31,7 +31,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
-/** Join-sign clicks and restore via the join event. */
 class ArenaListenerSignTest {
 
     @TempDir
@@ -62,7 +61,6 @@ class ArenaListenerSignTest {
         val registered = interact(p1, env.signBlock(3, 64, 3))
         env.fire(registered)
         assertEquals(arena, env.service.arenaIdOf(p1.uuid))
-        // The vanilla sign edit screen must not open
         assertEquals(Event.Result.DENY, registered.useInteractedBlock())
         assertEquals(Event.Result.DENY, registered.useItemInHand())
         assertNotEquals(Event.Result.DENY, unregistered.useInteractedBlock())
@@ -169,10 +167,8 @@ class ArenaListenerSignTest {
     @Test
     fun `join event triggers pending restore`() {
         val (_, p2) = env.twoPlayerIngame()
-        // A mid-match disconnect fires a real PlayerQuitEvent and ends the match as a defeat; the backup remains
         p2.disconnect()
 
-        // On rejoin, the PlayerJoinEvent path restores (empty backup -> empty inventory)
         p2.reconnect()
         assertNull(p2.inventory.contents[0])
     }

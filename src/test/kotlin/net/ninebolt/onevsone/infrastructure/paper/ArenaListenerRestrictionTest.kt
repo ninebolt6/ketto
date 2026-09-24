@@ -23,7 +23,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
-/** Verifies per-state restrictions (block break/place, item drop, commands) through real actions. */
 class ArenaListenerRestrictionTest {
 
     @TempDir
@@ -41,7 +40,7 @@ class ArenaListenerRestrictionTest {
         env.close()
     }
 
-    /** MockBukkit's performCommand never fires the preprocess event, so dispatch a real one. */
+    // MockBukkit's performCommand never fires the preprocess event, so dispatch a real one
     private fun assertCommandBlocked(player: Player, blocked: Boolean) {
         val event = PlayerCommandPreprocessEvent(player, "/spawn")
         env.fire(event)
@@ -104,22 +103,22 @@ class ArenaListenerRestrictionTest {
         var placeZ = 10
         fun place() = sim.placeBlock(Material.STONE, Location(env.world(), 9.0, 64.0, (placeZ++).toDouble()))
 
-        assertFalse(place().isCancelled) // ONEMORE
+        assertFalse(place().isCancelled)
 
         val p2 = env.player("Bob")
         env.join(p2, arena)
-        assertFalse(place().isCancelled) // COUNTDOWN
+        assertFalse(place().isCancelled)
 
         env.tick(6)
-        assertTrue(place().isCancelled) // INGAME
+        assertTrue(place().isCancelled)
 
-        // Ignition stays allowed. simulateBlockPlace uses the item in hand from the real inventory
+        // simulateBlockPlace uses the item in hand from the real inventory
         p1.inventory.setItem(p1.inventory.heldItemSlot, env.item(Material.FLINT_AND_STEEL))
         assertFalse(place().isCancelled)
         p1.inventory.clear(p1.inventory.heldItemSlot)
 
         fallIntoVoid(p2)
-        assertTrue(place().isCancelled) // ROUNDCOUNTDOWN
+        assertTrue(place().isCancelled)
     }
 
     @Test
@@ -140,16 +139,16 @@ class ArenaListenerRestrictionTest {
             assertCommandBlocked(p1, commandBlocked)
         }
 
-        assertState(damageCancelled = false, breakCancelled = false, commandBlocked = false) // ONEMORE
+        assertState(damageCancelled = false, breakCancelled = false, commandBlocked = false)
 
         val p2 = env.player("Bob")
         env.join(p2, arena)
-        assertState(damageCancelled = false, breakCancelled = false, commandBlocked = true) // COUNTDOWN
+        assertState(damageCancelled = false, breakCancelled = false, commandBlocked = true)
 
         env.tick(6)
-        assertState(damageCancelled = false, breakCancelled = true, commandBlocked = true) // INGAME
+        assertState(damageCancelled = false, breakCancelled = true, commandBlocked = true)
 
         fallIntoVoid(p2)
-        assertState(damageCancelled = true, breakCancelled = true, commandBlocked = true) // ROUNDCOUNTDOWN
+        assertState(damageCancelled = true, breakCancelled = true, commandBlocked = true)
     }
 }

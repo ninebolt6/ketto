@@ -13,10 +13,7 @@ import org.bukkit.command.CommandSender
 import org.bukkit.command.TabExecutor
 import java.util.logging.Logger
 
-/**
- * TabExecutor for /1vs1. This is the only registration point from plugin.yml;
- * actual work routes to each subcommand via CommandGroup/ArenaGroup.
- */
+// plugin.yml registers this class as the sole command executor
 class OneVsOneCommand(
     service: ArenaApplicationService,
     admin: ArenaAdministrationService,

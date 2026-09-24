@@ -9,27 +9,9 @@ import java.sql.ResultSet
 import java.sql.SQLException
 import java.util.logging.Logger
 
-/**
- * The plugin's single SQLite database (data.db). One file per plugin is the
- * ordinary deployment shape: bounded contexts are separated by tables, not
- * files, so cross-table statements and foreign-key cascades stay inside one
- * transactional unit. This class is JDBC plumbing only — schema lives in
- * the db/migration SQL files applied by SqliteMigrations, and payload
- * codecs sit next to their repositories.
- *
- * Transaction boundary = one public repository method = one `atomic` call.
- * Nested `atomic` blocks join the ambient transaction (depth counter); an
- * exception raised by an inner block marks the whole unit rollback-only, so
- * the outermost commit always rolls back — never catch inside an atomic
- * block and keep going.
- *
- * Every exception crossing the store boundary exits as PersistenceFailure:
- * SQL errors, codec failures, and stored-data validation errors alike, so
- * callers degrading on PersistenceFailure cannot be bypassed.
- *
- * WAL mode leaves recent commits in data.db-wal/-shm; back up all three files
- * or copy after a clean shutdown (or after wal_checkpoint).
- */
+// nested atomic joins the ambient transaction and an inner failure marks it rollback-only — never catch inside and continue
+// every exception crossing the store boundary exits as PersistenceFailure so lenient callers cannot be bypassed
+// WAL leaves recent commits in data.db-wal/-shm; back up all three files or copy after a clean shutdown
 class SqliteStore(folder: File, private val logger: Logger) : AutoCloseable {
 
     private val connection: Connection
@@ -52,8 +34,7 @@ class SqliteStore(folder: File, private val logger: Logger) : AutoCloseable {
         try {
             logger.info("SQLite ${connection.metaData.driverVersion} at ${file.name}")
             val migrations = SqliteMigrations(connection)
-            // A newer file must be rejected before pragmas touch it (even
-            // journal_mode=WAL would rewrite the header of an unknown schema).
+            // a newer file must be rejected before pragmas touch it: even journal_mode=WAL rewrites an unknown schema's header
             migrations.checkSupported()
             applyPragmas()
             migrations.migrate()
@@ -65,9 +46,7 @@ class SqliteStore(folder: File, private val logger: Logger) : AutoCloseable {
 
     private fun applyPragmas() {
         connection.createStatement().use { st ->
-            // Readers are not blocked by writers in WAL, and the only plausible
-            // contender is an external sqlite CLI, so keep the busy window short
-            // rather than freezing the main thread for seconds.
+            // the busy window stays short: the only plausible writer contention is an external sqlite CLI
             st.execute("PRAGMA busy_timeout=500")
             st.execute("PRAGMA synchronous=NORMAL")
             st.execute("PRAGMA foreign_keys=ON")
@@ -75,12 +54,6 @@ class SqliteStore(folder: File, private val logger: Logger) : AutoCloseable {
         }
     }
 
-    /**
-     * Runs block inside one transaction. The outermost call commits or rolls
-     * back; nested calls join the ambient transaction, and any exception they
-     * raise marks it rollback-only so the outer commit still discards
-     * everything.
-     */
     internal fun <T> atomic(block: () -> T): T {
         if (txDepth > 0) {
             txDepth++
@@ -99,9 +72,7 @@ class SqliteStore(folder: File, private val logger: Logger) : AutoCloseable {
         try {
             val result = block()
             if (txRollbackOnly) {
-                // An inner block failed and was swallowed by the caller; the
-                // unit still rolls back, and callers must not see a silent
-                // rollback as a successful commit.
+                // a swallowed inner failure must surface as rollback, not a silent successful commit
                 rollbackQuietly()
                 throw PersistenceFailure("Transaction rolled back: an inner operation failed")
             }
@@ -165,13 +136,12 @@ class SqliteStore(folder: File, private val logger: Logger) : AutoCloseable {
         }
     }
 
-    /** Repository implementations never leak non-PersistenceFailure exceptions. */
     private fun asFailure(e: Throwable): Throwable =
         if (e is Exception) e as? PersistenceFailure ?: PersistenceFailure("SQLite operation failed", e) else e
 
     override fun close() {
         try {
-            // Fold the WAL back into the main file so the database directory is self-contained
+            // fold the WAL back so the database directory is self-contained
             connection.createStatement().use { it.execute("PRAGMA wal_checkpoint(TRUNCATE)") }
         } catch (e: SQLException) {
             logger.warning("WAL checkpoint failed on close: ${e.message}")

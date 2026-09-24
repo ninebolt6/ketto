@@ -62,18 +62,12 @@ class InMemoryArenaRepository : ArenaRepository, LobbyRepository, ArenaSignRepos
 
 class InMemoryMatchStateRepository : MatchStateRepository {
     val savedViews = mutableListOf<ArenaMatch>()
-    /** player uuid -> arena, mirroring the ledger the projection writes */
     val registrations = linkedMapOf<Uuid, Arena.Id>()
     var failOnPersist = false
     val failOnPersistFor = mutableSetOf<String>()
     var failOnSaveStatus = false
     val failOnSaveStatusFor = mutableSetOf<String>()
 
-    /**
-     * Mirrors the real projection: registrations pointing at this arena are
-     * rewritten to the current participants (upsert by player id), then the
-     * status snapshot is recorded. A failure leaves earlier writes in place.
-     */
     override fun persistMatch(match: ArenaMatch) {
         if (failOnPersist || match.arenaId.name in failOnPersistFor) {
             throw PersistenceFailure("persist failed")

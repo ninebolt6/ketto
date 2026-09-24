@@ -13,14 +13,7 @@ import java.util.logging.Level
 import java.util.logging.Logger
 import kotlin.uuid.Uuid
 
-/**
- * Manages unrestored backups and restore tokens (RestoreTicket).
- * Handles death-right-after-finish -> disconnect, shutdown, and the next
- * login, independently of whether the player is participating.
- *
- * Deferred callbacks are validated by ticket identity, kept separate from the
- * match generation (ArenaMatch epoch).
- */
+// Deferred callbacks are validated by ticket identity
 class PlayerRecoveryService(
     private val backups: InventoryBackupPort,
     private val players: PlayerPort,
@@ -28,7 +21,6 @@ class PlayerRecoveryService(
     private val presentation: PresentationPort,
     private val logger: Logger
 ) {
-    /** Token for one restore target. Deferred callbacks match it by reference identity. */
     class RestoreTicket(val ref: BackupRef)
 
     private val tickets = mutableMapOf<Uuid, RestoreTicket>()
@@ -37,10 +29,6 @@ class PlayerRecoveryService(
         backups.pendingBackups().forEach(::registerTicket)
     }
 
-    /**
-     * Bulk-saves the participants' inventories and registers the restore
-     * tickets. PersistenceFailure propagates with no tickets registered.
-     */
     fun backupBeforeMatch(participants: List<Participant>) {
         backups.backupBeforeMatch(MatchId.new(), participants).forEach(::registerTicket)
     }
@@ -62,11 +50,6 @@ class PlayerRecoveryService(
     private fun ownedBy(handle: PlayerHandle, ticket: RestoreTicket): Boolean =
         tickets[handle.id] === ticket
 
-    /**
-     * Completes a backup restore (inventory, scoreboard, record close-out).
-     * true when the restore completed; false when the ticket is not owned or
-     * the backup could not be restored.
-     */
     fun restoreNow(handle: PlayerHandle, ticket: RestoreTicket): Boolean {
         if (!ownedBy(handle, ticket)) return false
         try {
@@ -80,16 +63,12 @@ class PlayerRecoveryService(
         try {
             backups.acknowledge(ticket.ref)
         } catch (e: PersistenceFailure) {
-            // On delete failure the on-disk record remains (restored again next startup = safe side)
+            // A failed delete leaves the record on disk; re-restoring on next startup is the safe side
             logger.log(Level.SEVERE, "Could not discard restored backup for ${handle.name} (${handle.id}); record retained", e)
         }
         return true
     }
 
-    /**
-     * Sends the player to the lobby, completing the backup restore first when a
-     * ticket exists. A failed or unowned restore leaves the player in place.
-     */
     fun restoreToLobby(handle: PlayerHandle, ticket: RestoreTicket?) {
         if (ticket != null && !restoreNow(handle, ticket)) return
         teleportLobby(handle)
@@ -108,12 +87,7 @@ class PlayerRecoveryService(
         handle.teleport(lobby)
     }
 
-    /**
-     * Shutdown processing. Synchronously restores online players without
-     * relying on future scheduler runs. Dead players get restore + scoreboard
-     * clear only (the record is kept and restored again on next login).
-     * Incomplete data such as offline players is left in place.
-     */
+    // Shutdown runs no future ticks, so restores are synchronous; dead players cannot be teleported and keep their record for next login
     fun restoreAllOnline() {
         tickets.toList().forEach { (id, ticket) ->
             val handle = players.handle(id) ?: return@forEach

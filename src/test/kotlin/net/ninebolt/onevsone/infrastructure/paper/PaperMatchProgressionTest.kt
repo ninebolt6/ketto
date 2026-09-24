@@ -20,7 +20,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
-/** Happy-path scenarios: join, countdown, round progression, and finish. */
 class PaperMatchProgressionTest {
 
     @TempDir
@@ -168,13 +167,11 @@ class PaperMatchProgressionTest {
         env.join(p1, arena)
         env.join(p2, arena)
         env.tick(6)
-        // Clear the loser's first slot so re-equip is observable in the slot record
         p2.inventory.setItem(0, null)
 
         p2.simulateDamage(100.0, genericDamage())
         env.runOneShots()
         assertEquals(1, p2.respawnCount)
-        // At respawn time the kit is not yet applied (= null); re-equip runs after respawn
         assertNull(p2.slotAtRespawn)
         assertEquals(Material.IRON_SWORD, p2.inventory.contents[0]?.type)
     }
@@ -196,7 +193,6 @@ class PaperMatchProgressionTest {
         assertEquals(20, p1.foodLevel)
         assertEquals(0, p1.fireTicks)
         assertEquals(20.0, p2.health)
-        // A fresh empty board is assigned at match end
         assertNotSame(ingameBoard, p1.scoreboard)
         assertNotSame(ingameBoard, p2.scoreboard)
     }

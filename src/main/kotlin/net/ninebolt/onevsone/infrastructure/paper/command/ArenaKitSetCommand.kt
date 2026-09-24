@@ -6,7 +6,6 @@ import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import org.bukkit.command.CommandSender
 import kotlin.uuid.toKotlinUuid
 
-/** `arena <name> kit set`. Copies the executor's inventory as the arena kit. */
 internal class ArenaKitSetCommand(
     admin: ArenaAdministrationService,
     messenger: Messenger

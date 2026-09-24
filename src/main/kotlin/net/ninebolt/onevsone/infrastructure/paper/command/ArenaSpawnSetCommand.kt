@@ -8,7 +8,6 @@ import net.ninebolt.onevsone.infrastructure.paper.toWorldPosition
 import org.bukkit.command.CommandSender
 import org.bukkit.util.StringUtil
 
-/** `arena <name> spawn set <slot>`. The user-facing 1-based slot arrives as the op argument. */
 internal class ArenaSpawnSetCommand(
     admin: ArenaAdministrationService,
     messenger: Messenger
@@ -25,7 +24,6 @@ internal class ArenaSpawnSetCommand(
             return
         }
         val arena = arenaOrWarn(sender, arenaName) ?: return
-        // Positions without a world skip saving but still report success
         player.location.toWorldPosition()?.let { admin.setSpawn(arena.name, slot, it) }
         messenger.send(sender, Message.ArenaSpawnSet(arena.name, slot.number))
     }

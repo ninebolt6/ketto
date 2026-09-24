@@ -26,7 +26,6 @@ import java.util.logging.Level
 import java.util.logging.LogRecord
 import java.util.logging.Logger
 
-/** Failure-injection scenarios for persistence, stats, and unregistration. */
 class PaperArenaFailureTest {
 
     @TempDir
@@ -57,7 +56,6 @@ class PaperArenaFailureTest {
         val arena = env.newArena()
         val p = env.player("Alice")
         assertEquals(JoinOutput.JoinedWaiting, env.service.join(p.uuid, p.name, arena))
-        // A projection failure never blocks the flow: it is reported and the commit proceeds
         assertEquals(arena, env.service.arenaIdOf(p.uuid))
         assertEquals(ArenaState.ONEMORE, env.view().state)
         assertTrue(records.any { it.message.contains("match projection") && it.thrown is PersistenceFailure })
@@ -77,11 +75,9 @@ class PaperArenaFailureTest {
         val p1 = env.player("Alice")
         val p2 = env.player("Bob")
 
-        // The first join commits in memory only; nothing reaches the ledger
         env.join(p1, arena)
         assertTrue(env.registrations().isEmpty())
 
-        // The next successful projection write converges both participants
         failing = false
         env.join(p2, arena)
         assertEquals(
@@ -198,7 +194,6 @@ class PaperArenaFailureTest {
         assertEquals(1, env.statsRepo.find(p2.uuid)!!.wins)
     }
 
-    /** Records LogRecords published to the plugin logger; detached in tearDown. */
     private fun capturePluginLog(): MutableList<LogRecord> {
         val records = mutableListOf<LogRecord>()
         val logger = env.plugin.logger

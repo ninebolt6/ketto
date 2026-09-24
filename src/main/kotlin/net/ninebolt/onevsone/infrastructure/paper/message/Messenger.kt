@@ -11,13 +11,6 @@ import java.io.File
 import java.util.Locale
 import java.util.logging.Logger
 
-/**
- * Message infrastructure rendering MiniMessage templates from
- * messages/<lang>.yaml. Messages are Message subtypes. send/broadcast render
- * in the recipient's locale (the client setting when language=auto); shared
- * surfaces such as signs, item names, and the scoreboard use render (the
- * server language).
- */
 class Messenger private constructor(
     private val bundles: Map<String, Map<String, String>>,
     private val fallbackLang: String,
@@ -27,7 +20,6 @@ class Messenger private constructor(
     private val mini = MiniMessage.miniMessage()
     private val warnedMissing = mutableSetOf<String>()
 
-    /** Language for shared surfaces and console. The fixed language in fixed mode, the fallback language in auto. */
     private val serverLang = chatLang ?: fallbackLang
 
     private fun localeOf(sender: CommandSender): String {
@@ -49,7 +41,6 @@ class Messenger private constructor(
             key
         }
 
-    /** Renders message. When lang is omitted, uses the server language (for shared surfaces like signs and items). */
     fun render(message: Message, lang: String = serverLang): Component =
         mini.deserialize(template(lang, message.key.name), *message.args.map { arg ->
             when (arg) {
@@ -63,17 +54,12 @@ class Messenger private constructor(
         sender.sendMessage(render(Message.Prefix, lang).append(render(message, lang)))
     }
 
-    /** Players get their own locale; the console gets the server language. */
     fun broadcast(server: Server, message: Message) {
         server.onlinePlayers.forEach { send(it, message) }
         server.consoleSender.sendMessage(render(Message.Prefix).append(render(message)))
     }
 
     companion object {
-        /**
-         * Loads message bundles via LanguageFiles. "auto" renders per
-         * recipient locale; any other value pins all recipients to it.
-         */
         fun load(messagesDir: File, fallbackLang: String, language: String, logger: Logger): Messenger =
             Messenger(
                 LanguageFiles.loadBundles(messagesDir, fallbackLang, logger),

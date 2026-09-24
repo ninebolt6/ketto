@@ -16,11 +16,6 @@ import org.junit.jupiter.api.Test
 import org.mockbukkit.mockbukkit.MockBukkit
 import org.mockbukkit.mockbukkit.ServerMock
 
-/**
- * Smoke test that loads the real composition root and verifies wiring.
- * Catches onEnable registration mistakes that TestEnv's manual mirroring
- * cannot detect.
- */
 class OneVsOnePluginTest {
 
     private lateinit var server: ServerMock
@@ -32,7 +27,6 @@ class OneVsOnePluginTest {
 
     @AfterEach
     fun tearDown() {
-        // Also exercises the real onDisable -> lifecycle.shutdown() path
         MockBukkit.unmock()
     }
 
@@ -43,7 +37,6 @@ class OneVsOnePluginTest {
         assertTrue(plugin.isEnabled)
         assertTrue(plugin.getCommand("1vs1")?.executor is OneVsOneCommand)
 
-        // Verify registration via the HandlerList of each listener's own event
         assertTrue(PlayerDeathEvent.getHandlerList().registeredListeners.any { it.listener is ArenaMatchListener && it.plugin === plugin })
         assertTrue(InventoryClickEvent.getHandlerList().registeredListeners.any { it.listener is ArenaGuardListener && it.plugin === plugin })
         assertTrue(VehicleEnterEvent.getHandlerList().registeredListeners.any { it.listener is ArenaTeleportListener && it.plugin === plugin })

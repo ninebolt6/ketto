@@ -3,12 +3,7 @@ package net.ninebolt.onevsone.infrastructure.persistence
 import net.ninebolt.onevsone.application.port.MatchStateRepository
 import net.ninebolt.onevsone.domain.ArenaMatch
 
-/**
- * The write-only match projection: the participant ledger (registrations)
- * plus the status snapshot (match_status), one transaction per call.
- * Identity in the ledger is the player uuid; the arena's registration rows
- * are rewritten wholesale so a failed call self-heals on the next one.
- */
+// the ledger is rewritten wholesale per call, so a failed call self-heals on the next
 class SqliteMatchStateRepository(private val store: SqliteStore) : MatchStateRepository {
 
     override fun persistMatch(match: ArenaMatch) {
@@ -29,7 +24,7 @@ class SqliteMatchStateRepository(private val store: SqliteStore) : MatchStateRep
     }
 
     private fun writeStatus(match: ArenaMatch) {
-        // Forensic strings only: the projection is never read back at runtime
+        // forensic strings only: this projection is never read back at runtime
         val players = match.participants.joinToString(",") { it.name }
         val wins = match.participants.joinToString(",") { "${it.name}:${match.winsOf(it.id)}" }
         store.exec(
@@ -38,7 +33,7 @@ class SqliteMatchStateRepository(private val store: SqliteStore) : MatchStateRep
         )
     }
 
-    /** Backups are a different context and are deliberately untouched. */
+    // backups are deliberately untouched
     override fun clearRegistrations() {
         store.exec("DELETE FROM registrations")
     }

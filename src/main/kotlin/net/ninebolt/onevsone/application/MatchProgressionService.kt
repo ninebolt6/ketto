@@ -17,21 +17,7 @@ import java.util.logging.Level
 import java.util.logging.Logger
 import kotlin.uuid.Uuid
 
-/**
- * Progression engine for the initial countdown, round transitions, resolution,
- * and aborts. As the delegate of ArenaApplicationService it owns a per-arena
- * timer; deferred callbacks are validated by generation (ArenaMatch.epoch)
- * match and liveness checks.
- *
- * ArenaMatch is immutable: never capture a reference inside a deferred
- * callback — re-read the latest state via registry.match(arenaId).
- *
- * Match commits go through ArenaRegistry with the persist hook: the
- * participant ledger and status projection are written before the in-memory
- * state is replaced. Projection failures degrade to a report and never block
- * the flow; world side effects (teleports, restores, kit swaps) run outside
- * that boundary.
- */
+// ArenaMatch is immutable: never capture it inside a deferred callback — re-read via registry.match(arenaId) and validate by epoch
 class MatchProgressionService(
     private val registry: ArenaRegistry,
     private val sync: MatchStateSync,
@@ -45,14 +31,11 @@ class MatchProgressionService(
 ) {
     private val timers = mutableMapOf<Arena.Id, Cancellation>()
 
-    /** Respawn reservation for a player who died but was not accepted as a defeat. */
     fun requestRespawn(playerId: Uuid) {
         scheduler.schedule(0) {
             players.handle(playerId)?.takeIf { it.dead }?.respawn()
         }
     }
-
-    // ---- Abort ---------------------------------------------------------------
 
     fun abort(arenaId: Arena.Id) {
         cancelCountdown(arenaId)
@@ -67,12 +50,9 @@ class MatchProgressionService(
         sync.refreshSign(step.match)
     }
 
-    /** Stops only the running countdown (for shutdown). */
     internal fun cancelCountdown(arenaId: Arena.Id) {
         timers.remove(arenaId)?.cancel()
     }
-
-    // ---- Rounds & finish -------------------------------------------------------
 
     internal fun endRound(match: ArenaMatch, outcome: DefeatOutcome.RoundWon, death: Boolean) {
         val arenaId = match.arenaId
@@ -92,7 +72,7 @@ class MatchProgressionService(
 
             val loserHandle = players.handle(outcome.loser.id)
             val release = {
-                // resolving is memory-only coordination metadata, so nothing is persisted here
+                // The resolution marker is memory-only coordination metadata, so nothing is persisted
                 registry.updateMatch(arenaId, persist = {}) { it.releaseResolution(gen) }
             }
             if (death) {
@@ -132,7 +112,7 @@ class MatchProgressionService(
         cancelCountdown(arenaId)
         val gen = match.epoch
 
-        // Secure the restore targets first (the participants were already unregistered by the committing transition)
+        // Tickets must be secured first: the committing transition has already unregistered both participants
         val winnerTicket = recovery.pending(winner.id)
         val loserTicket = recovery.pending(loser.id)
 
@@ -156,7 +136,7 @@ class MatchProgressionService(
                 resetAndRestore(h, loserTicket)
             }
         } else {
-            // A non-dead loser is processed immediately. Players who died via quit are included here, so do not defer on a dead check
+            // Losers who died via quit arrive here dead, so do not defer on a dead check
             players.handle(loser.id)?.let { h ->
                 if (forfeit) {
                     loserTicket?.let { recovery.restoreNow(h, it) }
@@ -170,7 +150,7 @@ class MatchProgressionService(
         recordResult(winner, loser)
     }
 
-    /** Stats-update failures are reported independently for winner/loser so neither restore nor the other's record is blocked. */
+    // Stats failures are reported per participant so one failure never blocks the other's record
     private fun recordResult(winner: Participant, loser: Participant) {
         listOf(winner to true, loser to false).forEach { (participant, win) ->
             try {
@@ -186,17 +166,13 @@ class MatchProgressionService(
         }
     }
 
-    // ---- Countdown ---------------------------------------------------------
-
     internal fun startInitialCountdown(arenaId: Arena.Id) {
         runCountdown(arenaId, ticks = 5, stillCounting = { it.canBeginMatch }) {
             if (remaining > 0) {
                 presentation.countdownTick(participantIds, remaining)
                 return@runCountdown false
             }
-            // Re-verify both players' connection and liveness just before starting (postponed while either is dead)
             if (p1.dead || p2.dead) return@runCountdown false
-            // Bulk-save both players' inventories before swapping equipment
             try {
                 recovery.backupBeforeMatch(match.participants)
             } catch (e: PersistenceFailure) {
@@ -216,7 +192,7 @@ class MatchProgressionService(
                     sync.refreshSign(began.match)
                 }
             } catch (e: Exception) {
-                // Failed mid-swap: abort and restore using the backups already taken
+                // Mid-swap failure: abort restores the players from the backups already taken
                 logger.log(Level.SEVERE, "Could not apply equipment before starting arena ${arenaId.name}; match aborted", e)
                 abort(arenaId)
             }
@@ -244,13 +220,6 @@ class MatchProgressionService(
         }
     }
 
-    /**
-     * Shared countdown skeleton. Re-reads the latest match each tick, verifies
-     * the generation token and stillCounting's progression condition, then
-     * resolves both players' handles. If a handle is lost (disconnect), the
-     * task ends and aborts. Ends on the tick where onTick returns true.
-     * remaining counts down from ticks and is still called at 0 or below.
-     */
     private fun runCountdown(
         arenaId: Arena.Id,
         ticks: Int,
@@ -283,7 +252,6 @@ class MatchProgressionService(
         }
     }
 
-    /** Context handed to each runCountdown tick, with match and both handles already resolved. */
     private class CountdownTick(
         val match: ArenaMatch,
         val first: Participant,
@@ -295,26 +263,17 @@ class MatchProgressionService(
         val participantIds: List<Uuid> get() = match.participants.map { it.id }
     }
 
-    // ---- Shared -----------------------------------------------------------------
-
-    /** Prepares health/flight for the match and applies the arena kit. */
     private fun rearm(arenaId: Arena.Id, participant: Participant, handle: PlayerHandle) {
         handle.prepareForMatch()
         kit.applyKit(arenaId, participant.id)
     }
 
-    /** Restores health, restores the backup, and sends the player to the lobby. */
     private fun resetAndRestore(handle: PlayerHandle, ticket: PlayerRecoveryService.RestoreTicket?) {
         handle.resetVitals()
         recovery.restoreToLobby(handle, ticket)
     }
 
-    /**
-     * Dispatches action for a leaving/teardown participant: immediately if
-     * alive, after next tick's respawn if dead. Does nothing when offline (no
-     * handle). The deferred path's validity is ticket identity (preferred), or
-     * valid when there is no ticket.
-     */
+    // A dead player cannot be acted on until it respawns, so dead handles defer to next tick
     private fun runNowOrAfterRespawn(
         playerId: Uuid,
         ticket: PlayerRecoveryService.RestoreTicket?,
@@ -329,12 +288,6 @@ class MatchProgressionService(
         scheduleDeferred(playerId, ticket, valid, action)
     }
 
-    /**
-     * Runs follow-up processing for a dead player on the next tick.
-     * The handle is resolved only if valid still holds at execution time;
-     * respawn is invoked first if the player has not respawned yet, then
-     * action runs. Does nothing if no handle is available (offline etc.).
-     */
     private fun scheduleDeferred(playerId: Uuid, valid: () -> Boolean, action: (PlayerHandle) -> Unit) {
         scheduler.schedule(0) {
             if (!valid()) return@schedule
@@ -344,14 +297,13 @@ class MatchProgressionService(
         }
     }
 
-    /** scheduleDeferred whose validity is the identity of the pending restore ticket. */
+    // A deferred restore is valid only while the exact same ticket is still pending
     private fun scheduleTicketed(
         playerId: Uuid,
         ticket: PlayerRecoveryService.RestoreTicket,
         action: (PlayerHandle) -> Unit
     ) = scheduleDeferred(playerId, { recovery.pending(playerId) === ticket }, action)
 
-    /** scheduleDeferred validating by ticket identity when present, otherwise by valid. */
     private fun scheduleDeferred(
         playerId: Uuid,
         ticket: PlayerRecoveryService.RestoreTicket?,

@@ -10,7 +10,6 @@ import java.util.logging.Logger
 import kotlin.uuid.Uuid
 import kotlin.uuid.toKotlinUuid
 
-/** /1vs1 stats. UUID resolution of offline players is delegated to the PlayerPort async path. */
 internal class StatsCommand(
     private val statsService: PlayerStatsService,
     private val players: PlayerPort,
@@ -40,7 +39,6 @@ internal class StatsCommand(
     }
 
     private fun showStats(sender: CommandSender, uuid: Uuid) {
-        // Treat corrupt stats as "none" after warning
         val stats = try {
             statsService.statsFor(uuid)
         } catch (e: PersistenceFailure) {

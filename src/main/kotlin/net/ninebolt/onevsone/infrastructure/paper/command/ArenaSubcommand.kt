@@ -7,7 +7,6 @@ import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import org.bukkit.command.CommandSender
 import org.bukkit.util.StringUtil
 
-/** Base for /1vs1 arena * commands. Runs the deny -> player -> arity checks, then delegates with the first argument as the arena name. */
 internal abstract class ArenaSubcommand(
     protected val admin: ArenaAdministrationService,
     messenger: Messenger
@@ -16,7 +15,6 @@ internal abstract class ArenaSubcommand(
     protected abstract val usage: Message
     protected open val requiresPlayer: Boolean = false
 
-    /** Reply has been sent when this returns true. Default requires OP. */
     protected open fun denied(sender: CommandSender): Boolean = sender.denyUnlessOp()
 
     final override fun execute(sender: CommandSender, args: List<String>) {

@@ -13,7 +13,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
-/** Verifies the /1vs1 command tree itself: usage fallbacks, permission rules, and tab completion. */
 class OneVsOneCommandTest {
 
     @TempDir
@@ -43,7 +42,6 @@ class OneVsOneCommandTest {
         val p = env.player("Alice")
         env.run(p, "bogus")
         assertTrue(p.drainMessages().any { it.contains("/1vs1 stats [player] | /1vs1 leave") })
-        // Under the arena namespace an unknown name is an arena lookup; an unknown op shows usage
         env.run(p, "arena", "bogus")
         assertTrue(p.drainMessages().any { it.contains("そのアリーナは存在しません") })
         env.run(p, "arena", "bogus", "bogus")

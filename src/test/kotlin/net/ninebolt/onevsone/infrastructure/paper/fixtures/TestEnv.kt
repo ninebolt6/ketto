@@ -74,15 +74,8 @@ import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
 import kotlin.uuid.toKotlinUuid
 
-/**
- * Integration test environment wiring real adapters and real services on
- * MockBukkit. Verifies real state (real inventories, real scheduler, real
- * events) rather than mock calls. Paper dependencies are confined to
- * infrastructure tests.
- */
 class TestEnv(val folder: File, val requiredWins: Int = 3) {
-    // spyk is used only for fault injection/synchronization of offline
-    // resolution, isEnabled, and asyncScheduler; unstubbed calls delegate to real behavior
+    // spyk is used only for fault injection; unstubbed calls delegate to real behavior
     val server: ServerMock = spyk(MockBukkit.mock())
     val plugin: PluginMock = spyk(MockBukkit.createMockPlugin())
     val asyncScheduler: AsyncScheduler = mockk(relaxed = true)
@@ -93,7 +86,6 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     init {
         // ItemStack.of returns ItemStackMock, so registration is needed for round-trips through YamlConfiguration
         ConfigurationSerialization.registerClass(ItemStackMock::class.java)
-        // Async resolution collapses to immediate execution; the reply side's runTask is drained via the real scheduler by runOneShots
         every { server.asyncScheduler } returns asyncScheduler
         every { asyncScheduler.runNow(any(), any<Consumer<ScheduledTask>>()) } answers {
             arg<Consumer<ScheduledTask>>(1).accept(mockk(relaxed = true))
@@ -101,9 +93,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         }
         every { server.scoreboardManager } returns scoreboardManager
         every { scoreboardManager.newScoreboard } answers {
-            // The Scoreboard itself stays real. Since ScoreMock.customName is
-            // unimplemented, objective/score are swapped for anonymous
-            // subclasses that never call validate
+            // ScoreMock.customName is unimplemented in MockBukkit, so objective/score are anonymous subclasses that never call validate
             val board = spyk(ScoreboardMock())
             every { board.registerNewObjective(any<String>(), any<Criteria>(), any<Component>()) } answers {
                 object : ObjectiveMock(board, arg(0), arg(2), arg(1), RenderType.INTEGER) {
@@ -127,7 +117,6 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     val playerPort = PaperPlayerAdapter(lookup, server, plugin, logger)
     val schedulerPort = PaperScheduler(plugin)
 
-    /** Dependencies torn down and rebuilt together by rebuildWith. Access always resolves the current generation. */
     private class Deps(
         val store: SqliteStore,
         val backupStore: SqliteBackupStore,
@@ -221,7 +210,6 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         )
     }
 
-    /** Rebuilds all dependencies with the store or individual ports swapped out (for fault injection). */
     fun rebuildWith(
         newStore: SqliteStore = deps.store,
         backupStore: SqliteBackupStore = SqliteBackupStore(newStore),
@@ -232,12 +220,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         registerListeners()
     }
 
-    /**
-     * Registers listeners through the real dispatch path. To prevent
-     * re-registration after rebuildWith from leaving handlers holding the old
-     * service, registered handlers are unregistered first and recreated from
-     * the current dependencies.
-     */
+    // Registration must unregister first, or rebuildWith would leave handlers holding the old service
     private fun registerListeners() {
         HandlerList.unregisterAll(plugin)
         server.pluginManager.registerEvents(ArenaMatchListener(service, lookup, messenger), plugin)
@@ -246,7 +229,6 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         server.pluginManager.registerEvents(ArenaSignListener(service, signs, messenger), plugin)
     }
 
-    /** Fires an event through the real dispatch path of the registered listeners. */
     fun fire(event: Event) {
         server.pluginManager.callEvent(event)
     }
@@ -265,7 +247,6 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
 
     fun item(type: Material): ItemStack = ItemStack.of(type)
 
-    /** Models a connection loss before this plugin can process its quit event. */
     fun disconnectWithoutQuitHandler(player: ArenaPlayerMock) {
         HandlerList.unregisterAll(plugin)
         try {
@@ -275,12 +256,10 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         }
     }
 
-    /** Advances time enough to fire the countdown timer (period=20 ticks) n times. */
     fun tick(times: Int = 1) {
         server.scheduler.performTicks(20L * times)
     }
 
-    /** Drains delay-0 one-shots (deferred callbacks) without firing periodic timers. */
     fun runOneShots() {
         server.scheduler.waitAsyncTasksFinished()
         server.scheduler.performTicks(1)
@@ -302,14 +281,12 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
 
     fun setKit(arena: Arena.Id, snapshot: PaperInventorySnapshot) = equipment.putKit(arena, snapshot)
 
-    /** Joins via the same path as sign-join and also delivers the output messages. */
     fun join(player: Player, arena: Arena.Id = Arena.Id.new("arena1")): JoinOutput {
         val output = service.join(player.uuid, player.name, arena)
         signListener.renderJoin(player, arena.name, output)
         return output
     }
 
-    /** Delivers output messages, same as /1vs1 leave. */
     fun leave(player: Player): LeaveError? {
         val output = service.leave(player.uuid)
         when (output) {
@@ -328,21 +305,15 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     }
 }
 
-/**
- * `Player.Spigot.respawn()` throws UnsupportedOperationException from the
- * paper-api default implementation, and MockBukkit's PlayerSpigotMock is also
- * unimplemented, so this inserts an implementation delegating to
- * PlayerMock.respawn().
- */
+// Player.Spigot.respawn() is unimplemented in both paper-api's default and MockBukkit's PlayerSpigotMock, so a delegating stub is inserted
 class ArenaPlayerMock(server: ServerMock, name: String, uuid: UUID) : PlayerMock(server, name, uuid) {
-    /** The looked-at block. getTargetBlockExact is unimplemented in MockBukkit, so this stub returns it. */
+    // getTargetBlockExact is unimplemented in MockBukkit, so this stub returns the looked-at block
     var targetBlock: Block? = null
 
     override fun getTargetBlockExact(maxDistance: Int): Block? = targetBlock
 
     private val testSpigot = object : Player.Spigot() {
         var respawnCount = 0
-        /** The first slot at the moment respawn runs. For verifying the respawn -> restore ordering. */
         var slotAtRespawn: ItemStack? = null
 
         override fun respawn() {

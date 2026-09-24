@@ -7,11 +7,6 @@ import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 import java.io.File
 
-/**
- * Static checks over compiled production and test bytecode. Inner-layer rules
- * use a whitelist so new external dependencies are caught; test rules protect
- * the same boundaries at the test seam.
- */
 class ArchitectureTest {
 
     private val classes by lazy {
@@ -56,9 +51,7 @@ class ArchitectureTest {
 
     @Test
     fun `inner layers do not touch jdbc or sqlite`() {
-        // java.sql sits inside the jdk whitelist, so the database boundary is
-        // enforced by a dedicated rule: storage details belong to
-        // infrastructure.persistence only.
+        // java.sql sits inside the jdk whitelist, so the database boundary needs a dedicated rule
         noClasses().that()
             .resideInAnyPackage("net.ninebolt.onevsone.domain..", "net.ninebolt.onevsone.application..")
             .should().dependOnClassesThat().resideInAnyPackage("java.sql..", "javax.sql..", "org.sqlite..")
@@ -67,8 +60,6 @@ class ArchitectureTest {
 
     @Test
     fun `infrastructure only references repository ports it implements`() {
-        // Repositories are the persistence seam: application services consume
-        // them and adapters implement them; other infrastructure must not.
         val offenders = classes
             .filter { it.packageName.startsWith("net.ninebolt.onevsone.infrastructure") }
             .flatMap { clazz ->

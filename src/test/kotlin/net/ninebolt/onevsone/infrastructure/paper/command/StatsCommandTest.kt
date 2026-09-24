@@ -15,7 +15,6 @@ import org.bukkit.Server
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
-/** Verifies /1vs1 stats: own/other player lookups, offline resolution, and rate limiting. */
 class StatsCommandTest {
 
     @TempDir
@@ -69,7 +68,6 @@ class StatsCommandTest {
     @Test
     fun `stats of offline cached player resolves uuid`() {
         val viewer = env.player("Viewer")
-        // Online and disconnected players go through the cache-hit path
         val ghost = env.player("Ghost")
         env.writeStats(ghost.uuid, 5, 5)
         env.run(viewer, "stats", "Ghost")
@@ -79,7 +77,7 @@ class StatsCommandTest {
     @Test
     fun `stats offline uncached resolves through async scheduler on main thread`() {
         val viewer = env.player("Viewer")
-        // For uncached names, getOfflinePlayer produces a deterministic OfflinePlayerMock
+        // getOfflinePlayer produces a deterministic OfflinePlayerMock for uncached names
         val uuid = env.offlineId("Ghost")
         env.writeStats(uuid, 2, 1)
         env.run(viewer, "stats", "Ghost")
@@ -117,7 +115,6 @@ class StatsCommandTest {
         env.run(viewer, "stats", "Target")
         assertTrue(viewer.drainMessages().any { it.contains("連続で実行できません") })
 
-        // Viewing oneself involves no resolution, so it is not rate-limited
         env.run(viewer, "stats")
         assertTrue(viewer.drainMessages().any { it.contains("Statsが存在しません") })
     }

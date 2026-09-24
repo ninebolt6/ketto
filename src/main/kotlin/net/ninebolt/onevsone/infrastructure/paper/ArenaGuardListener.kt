@@ -35,12 +35,6 @@ import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerPickupArrowEvent
 import org.bukkit.inventory.InventoryHolder
 
-/**
- * Input adapter that blocks arena modification and kit items leaking into the
- * world while a match is running. Extends the invariant guarded by
- * itemDropCancelled — "no items other than the start-of-match backup remain" —
- * to non-drop routes (containers, item frames, trading, pickups).
- */
 class ArenaGuardListener(
     private val service: ArenaApplicationService
 ) : Listener {
@@ -56,8 +50,7 @@ class ArenaGuardListener(
     fun onPlace(event: BlockPlaceEvent) {
         val restrictions = service.restrictionsOf(event.player) ?: return
         if (!restrictions.blockPlaceCancelled) return
-        // Flint and steel is allowed as ignition rather than placement (it normally
-        // does not fire BlockPlaceEvent, but keep ignition allowed on implementations that do)
+        // Flint and steel normally fires no BlockPlaceEvent, but some implementations do
         if (event.itemInHand.type == Material.FLINT_AND_STEEL) return
         event.isCancelled = true
     }
@@ -79,12 +72,6 @@ class ArenaGuardListener(
         if (foreignInventoryRestricted(event)) event.isCancelled = true
     }
 
-    /**
-     * Blocks all operations while anything other than the player's own
-     * inventory screen (CRAFTING/PLAYER) is open. Foreign inventories are also
-     * blocked on the interact side; this is a second-line defense for ones
-     * opened by plugins etc.
-     */
     private fun foreignInventoryRestricted(event: InventoryInteractEvent): Boolean {
         val top = event.view.topInventory.type
         if (top == InventoryType.CRAFTING || top == InventoryType.PLAYER) return false
@@ -107,12 +94,7 @@ class ArenaGuardListener(
         }
     }
 
-    /**
-     * Blocks that can hold deposited items. Containers are caught wholesale via
-     * the BlockState's InventoryHolder; blocks without one — ender chests and
-     * the respawn-point-changing beds/respawn anchors, plus flower pots — are
-     * listed explicitly.
-     */
+    // Ender chests, beds, respawn anchors and flower pots hold items but have no InventoryHolder block state
     private fun storesItems(block: Block): Boolean {
         if (block.state is InventoryHolder) return true
         val type = block.type
@@ -124,7 +106,7 @@ class ArenaGuardListener(
     fun onInteractEntity(event: PlayerInteractEntityEvent) {
         if (service.restrictionsOf(event.player)?.inventoryTransferCancelled != true) return
         val entity = event.rightClicked
-        // InventoryHolder: chest minecarts/boats, villagers (never open the trading UI), Allays, etc.
+        // Villagers are InventoryHolders too, so cancelling also suppresses the trading UI
         if (entity is InventoryHolder || entity is ItemFrame || entity is ArmorStand) {
             event.isCancelled = true
         }
@@ -190,7 +172,6 @@ class ArenaGuardListener(
 
     @EventHandler
     fun onPickupArrow(event: PlayerPickupArrowEvent) {
-        // Also blocks the smuggling route where a participant retrieves arrows/tridents shot in by spectators
         if (service.restrictionsOf(event.player)?.itemPickupCancelled == true) event.isCancelled = true
     }
 
@@ -208,14 +189,14 @@ class ArenaGuardListener(
 
     @EventHandler
     fun onFertilize(event: BlockFertilizeEvent) {
-        // Bone-meal growth of trees/crops is the same kind of arena modification as placing blocks
+        // Bone meal grows trees and crops, modifying arena blocks
         val player = event.player ?: return
         if (service.restrictionsOf(player)?.blockPlaceCancelled == true) event.isCancelled = true
     }
 
     @EventHandler
     fun onSignChange(event: SignChangeEvent) {
-        // Anyone can rewrite an unwaxed sign, so it is guarded by the same restriction as block placement
+        // Anyone can rewrite an unwaxed sign
         if (service.restrictionsOf(event.player)?.blockPlaceCancelled == true) event.isCancelled = true
     }
 

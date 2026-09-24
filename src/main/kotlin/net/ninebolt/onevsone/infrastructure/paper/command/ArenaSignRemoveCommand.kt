@@ -6,7 +6,6 @@ import net.ninebolt.onevsone.infrastructure.paper.message.Message
 import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import org.bukkit.command.CommandSender
 
-/** `arena <name> sign remove`. Unregisters the arena's join sign. */
 internal class ArenaSignRemoveCommand(
     admin: ArenaAdministrationService,
     private val signs: ArenaSignService,

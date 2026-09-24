@@ -16,7 +16,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
-/** Unit tests for language-bundle completeness, rendering, and locale resolution. */
 class MessengerTest {
 
     @TempDir
@@ -28,7 +27,6 @@ class MessengerTest {
     private fun load(language: String = "auto", logger: Logger = this.logger) =
         Messenger.load(File(folder, "messages"), "ja", language, logger)
 
-    /** Extracts the set of leaf keys from a bundled resource. */
     private fun bundledKeys(lang: String): Set<String> {
         val config = javaClass.getResourceAsStream("/messages/$lang.yaml")!!
             .reader().use(YamlConfiguration::loadConfiguration)
@@ -59,7 +57,6 @@ class MessengerTest {
     @Test
     fun `render substitutes unparsed placeholder literally`() {
         val messenger = load()
-        // <name> is unparsed, so tag-like strings pass through literally
         val text = plain.serialize(messenger.render(Message.MatchJoined("<b>x</b>"), "ja"))
         assertTrue(text.contains("アリーナ: <b>x</b> に参加しました"))
     }

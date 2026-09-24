@@ -5,7 +5,6 @@ import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 
-/** Base collecting canned denial replies. The checks themselves are up to each handler. */
 internal abstract class AbstractSubcommand(
     protected val messenger: Messenger
 ) : Subcommand {

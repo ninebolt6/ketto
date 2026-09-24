@@ -6,11 +6,7 @@ import net.ninebolt.onevsone.domain.WorldPosition
 import java.sql.ResultSet
 import java.util.logging.Logger
 
-/**
- * Arena definitions in the arenas table. Registration order is kept in the
- * seq column, assigned on first insert. Delete cascades to kit, sign, and
- * match-status rows owned by the arena.
- */
+// delete cascades to the arena's kit, sign, and match-status rows
 class SqliteArenaRepository(
     private val store: SqliteStore,
     private val logger: Logger = Logger.getLogger(SqliteArenaRepository::class.java.name)
@@ -30,17 +26,12 @@ class SqliteArenaRepository(
             }
         }.filterNotNull()
 
-    /** Invalid names yield null. A name without a row returns a default arena. */
     override fun find(name: String): Arena? {
         val id = Arena.Id.of(name) ?: return null
         return store.queryOne("SELECT * FROM arenas WHERE name = ?", name) { toArena(it) } ?: Arena.new(id)
     }
 
-    /**
-     * Upserts the definition. seq is assigned only on first insert so updates
-     * keep the original registration slot; the stored (canonical) name casing
-     * is likewise kept.
-     */
+    // seq is assigned only on first insert so updates keep the registration slot and stored casing
     override fun save(arena: Arena) {
         store.exec(
             """
@@ -63,12 +54,11 @@ class SqliteArenaRepository(
         )
     }
 
-    /** Kit, sign, and match-status rows follow the arena via ON DELETE CASCADE. */
     override fun delete(name: String) {
         store.exec("DELETE FROM arenas WHERE name = ?", name)
     }
 
-    /** A corrupt row is skippable on load; direct reads let the store wrap the failure. */
+    // corrupt rows are skipped on load; direct reads let the store wrap the failure
     private fun decode(row: ResultSet): Arena? = try {
         toArena(row)
     } catch (e: IllegalArgumentException) {

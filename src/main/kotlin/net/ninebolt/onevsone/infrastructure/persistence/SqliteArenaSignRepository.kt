@@ -3,12 +3,8 @@ package net.ninebolt.onevsone.infrastructure.persistence
 import net.ninebolt.onevsone.application.port.ArenaSignRepository
 import net.ninebolt.onevsone.domain.BlockPosition
 
-/**
- * Sign registrations in the arena_signs table (arena-owned: deleted by the
- * arena's cascade). The position -> arena-name reverse lookup keeps an
- * in-memory index loaded on first access so sign clicks and break checks do
- * not query per event; setSign/clearSign keep it in sync.
- */
+// rows are deleted by the arena's cascade
+// the in-memory index avoids a query per sign-click event; setSign/clearSign keep it in sync
 class SqliteArenaSignRepository(private val store: SqliteStore) : ArenaSignRepository {
 
     private val index: MutableMap<BlockPosition, String> by lazy { scan() }

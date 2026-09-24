@@ -1,9 +1,5 @@
 package net.ninebolt.onevsone.domain
 
-/**
- * Integer block coordinates (a sign block etc.). Distinct from WorldPosition,
- * which is an exact entity position with yaw/pitch.
- */
 data class BlockPosition private constructor(
     val world: String,
     val x: Int,

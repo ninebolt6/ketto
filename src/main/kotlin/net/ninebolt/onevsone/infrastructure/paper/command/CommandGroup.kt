@@ -6,19 +6,16 @@ import org.bukkit.command.CommandSender
 import org.bukkit.util.StringUtil
 import java.util.Locale
 
-/** Namespace that routes by subcommand name. Shared by the root and arena groups. */
 internal class CommandGroup(
     private val usage: Message,
     private val messenger: Messenger,
     subs: Map<String, Subcommand>
 ) : Subcommand {
-    /** lowercase name -> (registered name, subcommand). Completion returns names with their registered case. */
     private val byName: Map<String, Pair<String, Subcommand>> = subs.entries.associateBy(
         { it.key.lowercase(Locale.ROOT) },
         { it.key to it.value }
     )
 
-    // A namespace shows up only when it has at least one visible child
     override fun visibleTo(sender: CommandSender): Boolean =
         byName.values.any { (_, sub) -> sub.visibleTo(sender) }
 

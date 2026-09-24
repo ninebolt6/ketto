@@ -10,7 +10,6 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 
-/** Happy-path flow: join, leave, countdown, rounds, and finish. */
 class ArenaApplicationServiceTest {
 
     @Test
@@ -69,7 +68,6 @@ class ArenaApplicationServiceTest {
         app.service.join(p2.id, p2.name, Arena.Id.new("arena1"))
         app.scheduler.tick(5)
         assertEquals(ArenaState.COUNTDOWN, app.state())
-        // Before start: neither backup nor kit application has run
         assertEquals(0, app.equipment.backupCalls)
         assertTrue(app.equipment.kitApplies.isEmpty())
     }
@@ -87,14 +85,12 @@ class ArenaApplicationServiceTest {
 
         app.scheduler.tick()
         assertEquals(ArenaState.INGAME, app.state())
-        // Order: batch backup -> kit apply -> state setup -> teleport
         assertEquals(1, app.equipment.backupCalls)
         assertEquals(2, app.equipment.kitApplies.size)
         assertEquals(1, app.presentation.matchStarts.size)
         assertTrue(p1.events.contains("teleport"))
         assertTrue(p2.events.contains("teleport"))
         assertEquals(2, app.matchState.registrations.size)
-        // The backups are registered in the restore ledger
         assertTrue(app.service.pendingRestore(p1.id) != null)
         assertTrue(app.service.pendingRestore(p2.id) != null)
     }
@@ -125,7 +121,6 @@ class ArenaApplicationServiceTest {
         assertEquals(1, app.presentation.roundWins.size)
         assertEquals(Triple(listOf(p1.id, p2.id), 1, "Alice"), app.presentation.roundWins.last())
 
-        // Non-fatal fall: the next tick's one-shot releases the resolution guard
         assertFalse(app.service.defeat(p2.id, DefeatCause.FALL))
         app.scheduler.runOneShots()
         assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
@@ -143,7 +138,6 @@ class ArenaApplicationServiceTest {
         assertEquals(listOf(Arena.Id.new("arena1") to "Alice"), app.presentation.champions)
         assertEquals(1, app.stats.stats[p1.id]?.wins)
         assertEquals(1, app.stats.stats[p2.id]?.losses)
-        // Both backups restored + lobby transfer + acknowledge
         assertEquals(2, app.equipment.restored.size)
         assertEquals(2, app.equipment.acknowledged.size)
         assertTrue(app.equipment.storedBackups.isEmpty())
@@ -158,7 +152,6 @@ class ArenaApplicationServiceTest {
         app.players.quittingScope(p1) {
             app.service.quit(p1.id)
         }
-        // A disconnect before match start only unregisters: no stats, champion broadcast, or restore
         assertEquals(ArenaState.ONEMORE, app.state())
         assertNull(app.service.arenaIdOf(p1.id))
         assertEquals(Arena.Id.new("arena1"), app.service.arenaIdOf(p2.id))
@@ -167,7 +160,6 @@ class ArenaApplicationServiceTest {
         assertTrue(app.stats.stats.isEmpty())
         assertTrue(app.equipment.restored.isEmpty())
         assertTrue(app.presentation.champions.isEmpty())
-        // The leaver's countdown is invalidated by generation and never resumes
         app.scheduler.tick(6)
         assertEquals(ArenaState.ONEMORE, app.state())
     }
@@ -222,7 +214,6 @@ class ArenaApplicationServiceTest {
         app.lifecycle.shutdown()
         assertEquals(ArenaState.WAITING, app.state())
         assertNull(app.service.arenaIdOf(p1.id))
-        // Synchronous restore for both online players
         assertEquals(2, app.equipment.restored.size)
         assertTrue(app.matchState.registrations.isEmpty())
     }
@@ -232,9 +223,8 @@ class ArenaApplicationServiceTest {
         val app = TestApp()
         val (_, p2) = app.startMatch()
         app.service.defeat(p2.id, DefeatCause.FALL)
-        // tick7: re-equip / tick50+: 5->1 / tick150: resume
-        app.scheduler.tick()   // remaining 7: kit reapply
-        app.scheduler.tick()   // remaining 6: nothing
+        app.scheduler.tick()
+        app.scheduler.tick()
         (5 downTo 1).forEach { n ->
             app.scheduler.tick()
             assertEquals(n, app.presentation.roundCountdownTicks.last().seconds)
@@ -243,7 +233,6 @@ class ArenaApplicationServiceTest {
         app.scheduler.tick()
         assertEquals(ArenaState.INGAME, app.state())
         assertEquals(1, app.presentation.roundStarts.size)
-        // The resolution guard has been released
         assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
     }
 

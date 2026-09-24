@@ -6,7 +6,6 @@ import net.ninebolt.onevsone.infrastructure.paper.message.Message
 import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import org.bukkit.command.CommandSender
 
-/** enable / disable. `enabled` switches the usage and reply messages. */
 internal class ArenaSetEnabledCommand(
     private val enabled: Boolean,
     admin: ArenaAdministrationService,

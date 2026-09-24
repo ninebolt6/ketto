@@ -24,19 +24,12 @@ import org.mockbukkit.mockbukkit.entity.LivingEntityMock
 import org.mockbukkit.mockbukkit.entity.PlayerMock
 import org.mockbukkit.mockbukkit.simulate.entity.PlayerSimulation
 
-/** Real-event construction and two-player match start fixtures for arena listener tests. */
-
-/** Environmental damage (fall equivalent). A real DamageSource with no causingEntity. */
 internal fun genericDamage(): DamageSource = DamageSource.builder(DamageType.GENERIC).build()
 
-/**
- * An attack via a real DamageSource. With directEntity non-null, simulateDamage
- * fires EntityDamageByEntityEvent and attribution is judged by causingEntity.
- */
+// simulateDamage fires EntityDamageByEntityEvent only with a non-null directEntity; attribution is judged by causingEntity
 internal fun attackDamage(attacker: Entity, type: DamageType = DamageType.PLAYER_ATTACK): DamageSource =
     DamageSource.builder(type).withDirectEntity(attacker).withCausingEntity(attacker).build()
 
-/** Real DamageSource for projectiles where direct (arrow) and causing (shooter) differ. */
 internal fun projectileDamage(direct: Entity, causing: Entity): DamageSource =
     DamageSource.builder(DamageType.GENERIC).withDirectEntity(direct).withCausingEntity(causing).build()
 
@@ -47,7 +40,6 @@ internal inline fun <reified T : Event> TestEnv.assertFired(noinline predicate: 
     assertTrue(fired.any(predicate), "no fired ${T::class.simpleName} matched; fired=$fired")
 }
 
-/** Turns the null-on-unmet-precondition return (air blocks etc.) into a non-null one for tests. */
 internal fun PlayerSimulation.breakBlock(block: Block): BlockBreakEvent =
     simulateBlockBreak(block) ?: error("simulateBlockBreak returned null")
 
@@ -69,7 +61,6 @@ internal fun fallIntoVoid(player: ArenaPlayerMock) {
     player.simulation().simulatePlayerMove(target)
 }
 
-/** Turns a real block into a sign and returns it. Later getBlockAt calls return the same state. */
 internal fun TestEnv.signBlock(x: Int, y: Int, z: Int): Block =
     world().getBlockAt(x, y, z).also { it.type = Material.OAK_SIGN }
 
@@ -81,11 +72,9 @@ internal fun interact(
     item: ItemStack? = null
 ) = PlayerInteractEvent(player, action, item, block, BlockFace.SELF, hand)
 
-/** Drops a real item entity to build a drop event. */
 internal fun TestEnv.dropEvent(player: Player): PlayerDropItemEvent =
     PlayerDropItemEvent(player, world().dropItem(player.location, item(Material.STONE)))
 
-/** A real block of the given type. Reproduces BlockState checks like containers on MockBukkit. */
 internal fun TestEnv.blockOf(type: Material, x: Int = 8, y: Int = 64, z: Int = 8): Block =
     world().getBlockAt(x, y, z).also { it.type = type }
 
@@ -95,7 +84,6 @@ internal fun TestEnv.itemEntity(): Item =
 internal fun TestEnv.spawn(type: EntityType) =
     world().spawnEntity(Location(world(), 0.0, 64.0, 0.0), type)
 
-/** A LivingEntityMock mob, which supports simulateDamage. */
 internal fun TestEnv.mob(): LivingEntityMock =
     world().spawn(Location(world(), 0.0, 64.0, 0.0), Zombie::class.java) as LivingEntityMock
 

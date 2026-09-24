@@ -3,7 +3,7 @@ package net.ninebolt.onevsone.infrastructure.persistence
 import net.ninebolt.onevsone.application.port.LobbyRepository
 import net.ninebolt.onevsone.domain.WorldPosition
 
-/** The lobby is a single-row table (id = 1). */
+// the lobby is a single-row table (id = 1)
 class SqliteLobbyRepository(private val store: SqliteStore) : LobbyRepository {
 
     override fun lobby(): WorldPosition? =

@@ -24,7 +24,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
-/** Scenarios for capturing, restoring, and retaining inventory backups. */
 class PaperInventoryRecoveryTest {
 
     @TempDir
@@ -79,7 +78,6 @@ class PaperInventoryRecoveryTest {
         assertEquals(ArenaState.WAITING, env.view().state)
         env.runOneShots()
         assertEquals(1, p2.respawnCount)
-        // At respawn time the original inventory is not yet restored (still the kit) = restore runs after respawn
         assertNotEquals(Material.APPLE, p2.slotAtRespawn?.type)
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
         assertEquals(1, env.statsRepo.find(p1.uuid)!!.wins)

@@ -156,7 +156,7 @@ class SqlitePersistenceTest {
     fun `persistMatch writes uuid keyed registrations`() = withStore { store ->
         SqliteArenaRepository(store).save(Arena.new(Arena.Id.new("a1")))
         val p1 = Participant.new("Alice")
-        val p2 = Participant.new("Alice") // same name, different identity
+        val p2 = Participant.new("Alice")
         val match = ArenaMatch.restored(
             Arena.Id.new("a1"), requiredWins = 3, state = ArenaState.COUNTDOWN,
             participants = listOf(p1, p2), wins = emptyMap()
@@ -172,8 +172,6 @@ class SqlitePersistenceTest {
     @Test
     fun `persistMatch converges rows left behind by a failed call`() = withStore { store ->
         SqliteArenaRepository(store).save(Arena.new(Arena.Id.new("a1")))
-        // A previous lenient failure left a stale row for this arena and one
-        // that re-pointed another arena's player at a1
         store.exec("INSERT INTO registrations(player_uuid, player_name, arena_name) VALUES (?, ?, ?)", "stale-uuid", "Stale", "a1")
 
         val p = Participant.new("Alice")
@@ -197,7 +195,6 @@ class SqlitePersistenceTest {
         repo.persistMatch(
             ArenaMatch.restored(Arena.Id.new("a1"), 3, ArenaState.ONEMORE, listOf(p), emptyMap())
         )
-        // The same uuid rejoins elsewhere: the uuid PK moves the row
         repo.persistMatch(
             ArenaMatch.restored(Arena.Id.new("a2"), 3, ArenaState.ONEMORE, listOf(p), emptyMap())
         )
@@ -232,7 +229,6 @@ class SqlitePersistenceTest {
         val ref = BackupRef.new(MatchId.new(), p.id, p.name)
         backups.saveBackups(listOf(PersistedBackup(ref, PaperInventorySnapshot(items = listOf(null)))))
 
-        // A mismatched ref never deletes someone else's backup
         backups.deleteBackup(BackupRef.new(MatchId.new(), p.id, p.name))
         assertEquals(1, backups.persistedBackups().size)
 
@@ -287,7 +283,6 @@ class SqlitePersistenceTest {
                 try {
                     store.atomic { store.exec("INSERT INTO definitely_not_a_table VALUES (1)") }
                 } catch (e: PersistenceFailure) {
-                    // Caller continues; the unit must still roll back.
                 }
             }
         }
@@ -326,7 +321,6 @@ class SqlitePersistenceTest {
             "INSERT INTO arenas(name, enabled, spawn1_world, spawn1_x, spawn1_y, spawn1_z, seq) VALUES ('a1', 1, '', 0, 0, 0, 1)"
         )
         assertFailsWith<PersistenceFailure> { SqliteArenaRepository(store).find("a1") }
-        // loadAll skips the corrupt row instead of failing the whole startup
         assertEquals(emptyList(), SqliteArenaRepository(store).loadAll())
     }
 
@@ -355,7 +349,6 @@ class SqlitePersistenceTest {
     fun `sign index is rebuilt from the table by a new instance`() = withStore { store ->
         SqliteArenaRepository(store).save(Arena.new(Arena.Id.new("a1")))
         SqliteArenaSignRepository(store).setSign("a1", BlockPosition.new("world", 5, 64, 5))
-        // A separate instance has no index yet, so it scans the table once
         val fresh = SqliteArenaSignRepository(store)
         assertEquals("a1", fresh.signOwner(BlockPosition.new("world", 5, 64, 5)))
         assertEquals(5, fresh.signLocation("a1")!!.x)

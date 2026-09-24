@@ -15,7 +15,6 @@ import kotlin.test.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
-/** Unit tests for admin operations (create/remove/enable/spawn/kit). */
 class ArenaAdministrationServiceTest {
 
     private lateinit var app: TestApp
@@ -49,7 +48,6 @@ class ArenaAdministrationServiceTest {
         assertNull(app.signs.signLocation("arena1"))
         assertNull(app.arenas.signs["arena1"])
         assertFalse(app.arenas.names.contains("arena1"))
-        // The kit cache is dropped so recreating under the same name cannot apply the old kit
         assertEquals(listOf(arena), app.equipment.forgottenKits)
 
         assertEquals(RemoveError.NotFound, app.admin.remove("arena1"))
@@ -122,7 +120,6 @@ class ArenaAdministrationServiceTest {
         assertNull(app.admin.remove("arena1"))
         assertNull(app.service.arenaIdOf(p1.id))
         assertNull(app.service.arenaIdOf(p2.id))
-        // The loser's stats are already settled; the point is that no registrations remain after remove aborts
         assertNull(app.matchState.registrations[p1.id])
         assertNull(app.matchState.registrations[p2.id])
     }

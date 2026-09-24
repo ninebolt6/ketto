@@ -8,10 +8,6 @@ import net.ninebolt.onevsone.domain.SpawnSlot
 import net.ninebolt.onevsone.domain.WorldPosition
 import kotlin.uuid.Uuid
 
-/**
- * Admin operations: create/remove/enable/disable and spawn/kit settings.
- * Any needed abort is requested to MatchProgressionService.
- */
 class ArenaAdministrationService(
     private val registry: ArenaRegistry,
     private val arenas: ArenaRepository,
@@ -19,7 +15,6 @@ class ArenaAdministrationService(
     private val kit: KitPort,
     private val progression: MatchProgressionService
 ) {
-    /** Arena names in registration order (for tab completion). */
     fun arenaNames(): List<String> = registry.arenaIds().map { it.name }
 
     fun arena(name: String): Arena? = registry.resolveArenaId(name)?.let { registry.arena(it) }
@@ -37,7 +32,6 @@ class ArenaAdministrationService(
         val arena = arena(name) ?: return RemoveError.NotFound
         progression.abort(arena.id)
         registry.removeArena(arena.id, persist = { arenas.delete(it.name) })
-        // clearSign also keeps the position index in sync; forgetKit clears the kit cache
         signs.clearSign(arena.name)
         kit.forgetKit(arena.id)
         return null
@@ -62,7 +56,6 @@ class ArenaAdministrationService(
         return null
     }
 
-    /** Saves the executor's current equipment as the arena kit. */
     fun setKit(name: String, playerId: Uuid): SetKitError? {
         val arena = arena(name) ?: return SetKitError.NotFound
         kit.saveKit(arena.id, playerId)
@@ -70,13 +63,8 @@ class ArenaAdministrationService(
     }
 }
 
-// ---- Use-case rejection reasons; `null` return means success. Conversion to
-// message text happens on the caller's side (infrastructure) ------------------
-
 sealed interface CreateError {
-    /** A registered arena already uses this name (case-insensitive). */
     data object AlreadyExists : CreateError
-    /** The name violates the arena-name acceptance rules (Arena.Id.of). */
     data object InvalidName : CreateError
 }
 

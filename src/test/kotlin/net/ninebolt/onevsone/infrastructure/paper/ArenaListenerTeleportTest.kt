@@ -22,7 +22,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
-/** Verifies teleport restriction (per-state allowed causes, plugin-teleport marker) and vehicle-entry freezing. */
 class ArenaListenerTeleportTest {
 
     @TempDir
@@ -97,7 +96,7 @@ class ArenaListenerTeleportTest {
 
     @Test
     fun `marker takes precedence over non plugin cause`() {
-        // Plugin teleports can arrive with a cause other than PLUGIN, so the marker identifies them first
+        // Plugin teleports can arrive with a cause other than PLUGIN
         val (p1, _) = env.twoPlayerIngame()
         val event = teleport(p1, PlayerTeleportEvent.TeleportCause.COMMAND)
         env.lookup.scopePluginTeleport(p1.uuid) {
@@ -129,25 +128,21 @@ class ArenaListenerTeleportTest {
         env.join(p1, arena)
         env.join(p2, arena)
 
-        // The spawn teleport at COUNTDOWN end is allowed as plugin-issued
         env.tick(6)
         assertEquals(ArenaState.INGAME, env.state())
         assertTrue(p1.hasTeleported())
         assertTrue(p2.hasTeleported())
 
-        // An external teleport without the marker is blocked
         p1.clearTeleported()
         p1.teleport(Location(env.world(), 50.0, 64.0, 50.0))
         assertFalse(p1.hasTeleported())
 
-        // Ender pearls are allowed
         p1.teleport(
             Location(env.world(), 3.0, 64.0, 3.0),
             PlayerTeleportEvent.TeleportCause.ENDER_PEARL
         )
         assertTrue(p1.hasTeleported())
 
-        // Teleports through the handle pass via the marker
         p1.clearTeleported()
         env.playerPort.handle(p1.uuid)!!.teleport(WorldPosition.new("world", 7.0, 64.0, 7.0))
         assertTrue(p1.hasTeleported())

@@ -4,7 +4,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import org.junit.jupiter.api.Test
 
-/** Verifies the index <-> number mapping boundaries of SpawnSlot. */
 class SpawnSlotTest {
 
     @Test

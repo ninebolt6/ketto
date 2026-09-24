@@ -19,12 +19,6 @@ import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.inventory.EquipmentSlot
 import kotlin.uuid.toKotlinUuid
 
-/**
- * Event side of join signs: joining via clicks and protecting registered signs
- * from destruction. Registration and display updates are ArenaSignService's
- * job. Destruction of the supporting block and changes by server commands or
- * other plugins are out of scope.
- */
 class ArenaSignListener(
     private val service: ArenaApplicationService,
     private val signs: ArenaSignService,
@@ -38,17 +32,14 @@ class ArenaSignListener(
         val block = event.clickedBlock ?: return
         if (block.state !is Sign) return
         val name = signs.signOwner(block.toBlockPosition()) ?: return
-        // A handled click denies both block interaction and item use, because anyone can
-        // open the edit screen by right-clicking an unwaxed sign in vanilla
+        // Vanilla lets anyone open the sign edit screen by right-clicking an unwaxed sign
         event.denyUse()
-        // No joinable pre-check; leave the outcome to join's rejection result rendering (InMatch etc.)
         val output = Arena.Id.of(name)
             ?.let { service.join(event.player.uniqueId.toKotlinUuid(), event.player.name, it) }
             ?: JoinOutput.NotFound
         renderJoin(event.player, name, output)
     }
 
-    /** Nobody can break a registered sign. Removal is only via /1vs1 arena <name> sign remove or arena <name> remove. */
     @EventHandler
     fun onBreak(event: BlockBreakEvent) {
         if (isRegisteredSign(event.block)) {
@@ -69,7 +60,6 @@ class ArenaSignListener(
     private fun isRegisteredSign(block: Block): Boolean =
         block.state is Sign && signs.signOwner(block.toBlockPosition()) != null
 
-    /** Maps the join use-case result to message text. Shared by the sign-join path. */
     fun renderJoin(player: Player, arenaName: String, output: JoinOutput) {
         when (output) {
             JoinOutput.JoinedWaiting -> {

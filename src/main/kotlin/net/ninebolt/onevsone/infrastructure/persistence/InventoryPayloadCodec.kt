@@ -5,11 +5,6 @@ import net.ninebolt.onevsone.infrastructure.paper.PaperInventorySnapshot
 import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.inventory.ItemStack
 
-/**
- * Serialization of inventory payloads for the payload TEXT columns. Stored as
- * a YAML string so ItemStack codecs stay on Bukkit's serializer; the column
- * itself never exposes ItemStack types.
- */
 internal object InventoryPayloadCodec {
 
     fun encode(snapshot: PaperInventorySnapshot): String {
@@ -19,7 +14,7 @@ internal object InventoryPayloadCodec {
         return yaml.saveToString()
     }
 
-    /** Stored payloads are untrusted data: any decode problem is a PersistenceFailure. */
+    // stored payloads are untrusted: any decode problem exits as PersistenceFailure
     fun decode(payload: String): PaperInventorySnapshot {
         try {
             val yaml = YamlConfiguration()
