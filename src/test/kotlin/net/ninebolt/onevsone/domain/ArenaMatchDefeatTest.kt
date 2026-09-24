@@ -5,11 +5,11 @@ import net.ninebolt.onevsone.domain.fixtures.bob
 import net.ninebolt.onevsone.domain.fixtures.carol
 import net.ninebolt.onevsone.domain.fixtures.match
 import net.ninebolt.onevsone.domain.fixtures.startedMatch
+import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
-import org.junit.jupiter.api.Test
 
 class ArenaMatchDefeatTest {
 
@@ -112,8 +112,13 @@ class ArenaMatchDefeatTest {
         m = step.match
         assertTrue(m.resolving)
         val after = ArenaMatch.restored(
-            m.arenaId, m.requiredWins, m.state, m.participants, m.wins,
-            resolving = true, epoch = m.epoch + 1
+            m.arenaId,
+            m.requiredWins,
+            m.state,
+            m.participants,
+            m.wins,
+            resolving = true,
+            epoch = m.epoch + 1,
         )
         assertSame(after, after.releaseResolution(m.epoch))
         assertTrue(after.resolving)

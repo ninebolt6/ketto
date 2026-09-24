@@ -21,7 +21,7 @@ class PaperScheduler(private val plugin: JavaPlugin) : SchedulerPort {
             plugin,
             Runnable { action(cancellation) },
             initialDelayTicks,
-            periodTicks
+            periodTicks,
         )
         return cancellation
     }

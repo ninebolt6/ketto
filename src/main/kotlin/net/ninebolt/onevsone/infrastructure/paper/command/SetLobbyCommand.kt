@@ -8,7 +8,7 @@ import org.bukkit.command.CommandSender
 
 internal class SetLobbyCommand(
     private val lobby: LobbyService,
-    messenger: Messenger
+    messenger: Messenger,
 ) : AbstractSubcommand(messenger) {
 
     override fun execute(sender: CommandSender, args: List<String>) {

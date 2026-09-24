@@ -7,13 +7,13 @@ import net.ninebolt.onevsone.domain.BlockPosition
 import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.domain.SpawnSlot
 import net.ninebolt.onevsone.domain.WorldPosition
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
 
 class ArenaAdministrationServiceTest {
 

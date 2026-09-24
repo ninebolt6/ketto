@@ -3,13 +3,13 @@ package net.ninebolt.onevsone.infrastructure.paper
 import org.bukkit.Material
 import org.bukkit.inventory.ItemStack
 import org.junit.jupiter.api.AfterEach
-import kotlin.test.assertEquals
-import kotlin.test.assertNotSame
-import kotlin.test.assertNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockbukkit.mockbukkit.MockBukkit
 import org.mockbukkit.mockbukkit.ServerMock
+import kotlin.test.assertEquals
+import kotlin.test.assertNotSame
+import kotlin.test.assertNull
 
 class PaperInventorySnapshotTest {
 
@@ -48,7 +48,7 @@ class PaperInventorySnapshotTest {
         val bread = ItemStack.of(Material.BREAD)
         PaperInventorySnapshot(
             armor = listOf(helmet, null, null, null),
-            items = listOf(bread)
+            items = listOf(bread),
         ).apply(inv)
         assertEquals(Material.BREAD, inv.contents[0]?.type)
         assertNull(inv.contents[1])

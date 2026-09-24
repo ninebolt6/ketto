@@ -5,7 +5,7 @@ sealed interface DefeatOutcome {
     data class RoundWon(
         val round: Int,
         val winner: Participant,
-        val loser: Participant
+        val loser: Participant,
     ) : DefeatOutcome
     data class MatchFinished(val winner: Participant, val loser: Participant) : DefeatOutcome
 }

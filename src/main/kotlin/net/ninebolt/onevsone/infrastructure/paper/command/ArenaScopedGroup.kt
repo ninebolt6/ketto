@@ -13,16 +13,15 @@ internal class ArenaScopedGroup(
     private val messenger: Messenger,
     private val admin: ArenaAdministrationService,
     ops: Map<String, Subcommand>,
-    private val defaultOp: Subcommand? = null
+    private val defaultOp: Subcommand? = null,
 ) : Subcommand {
 
     private val byName: Map<String, Pair<String, Subcommand>> = ops.entries.associateBy(
         { it.key.lowercase(Locale.ROOT) },
-        { it.key to it.value }
+        { it.key to it.value },
     )
 
-    override fun visibleTo(sender: CommandSender): Boolean =
-        byName.values.any { (_, op) -> op.visibleTo(sender) }
+    override fun visibleTo(sender: CommandSender): Boolean = byName.values.any { (_, op) -> op.visibleTo(sender) }
 
     override fun execute(sender: CommandSender, args: List<String>) {
         val op = when {
@@ -39,14 +38,15 @@ internal class ArenaScopedGroup(
 
     override fun tabComplete(sender: CommandSender, args: List<String>): List<String> = when (args.size) {
         1 -> StringUtil.copyPartialMatches(args[0], admin.arenaNames(), mutableListOf())
+
         2 -> {
             val visible = byName.values.filter { (_, op) -> op.visibleTo(sender) }.map { (name, _) -> name }
             StringUtil.copyPartialMatches(args[1], visible, mutableListOf())
         }
+
         else -> byName[args.getOrNull(1)?.lowercase(Locale.ROOT)]?.second
             ?.tabComplete(sender, listOf(args[0]) + args.drop(2)) ?: emptyList()
     }
 
-    private fun sendUsage(sender: CommandSender) =
-        messenger.send(sender, if (sender.isOp) opsUsage else usage)
+    private fun sendUsage(sender: CommandSender) = messenger.send(sender, if (sender.isOp) opsUsage else usage)
 }

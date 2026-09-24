@@ -1,13 +1,13 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.fallIntoVoid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.breakBlock
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.dropEvent
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.fallIntoVoid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.genericDamage
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.plainBlock
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.placeBlock
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.plainBlock
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.simulation
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import org.bukkit.Location
@@ -15,13 +15,13 @@ import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.event.player.PlayerCommandPreprocessEvent
 import org.junit.jupiter.api.AfterEach
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class ArenaListenerRestrictionTest {
 

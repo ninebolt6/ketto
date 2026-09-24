@@ -5,7 +5,8 @@ enum class ArenaState {
     ONEMORE,
     COUNTDOWN,
     ROUNDCOUNTDOWN,
-    INGAME;
+    INGAME,
+    ;
 
     fun isJoinable(): Boolean = this == WAITING || this == ONEMORE
 

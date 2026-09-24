@@ -30,10 +30,14 @@ class TestApp(val requiredWins: Int = 3) {
     val signs = ArenaSignService(registry, arenas, presentation)
     val stateSync = MatchStateSync(matchState, signs)
     val progression = MatchProgressionService(
-        registry, stateSync, stats, equipment, players, scheduler, presentation, recovery, logger
+        registry, stateSync, stats, equipment, players, scheduler, presentation, recovery, logger,
     )
     val service = ArenaApplicationService(
-        registry, players, recovery, progression, stateSync
+        registry,
+        players,
+        recovery,
+        progression,
+        stateSync,
     )
     val lifecycle = ArenaLifecycleService(registry, arenas, stateSync, recovery, progression, logger)
     val admin = ArenaAdministrationService(registry, arenas, arenas, equipment, progression)
@@ -47,9 +51,9 @@ class TestApp(val requiredWins: Int = 3) {
                 id,
                 enabled = enabled,
                 spawn1 = WorldPosition.new("world", 1.0, 64.0, 1.0),
-                spawn2 = WorldPosition.new("world", 2.0, 64.0, 2.0)
+                spawn2 = WorldPosition.new("world", 2.0, 64.0, 2.0),
             ),
-            persist = {}
+            persist = {},
         )
         return id
     }

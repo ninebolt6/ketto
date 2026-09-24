@@ -1,9 +1,9 @@
 package net.ninebolt.onevsone.domain
 
+import org.junit.jupiter.api.Test
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
-import org.junit.jupiter.api.Test
 
 class ArenaIdTest {
 

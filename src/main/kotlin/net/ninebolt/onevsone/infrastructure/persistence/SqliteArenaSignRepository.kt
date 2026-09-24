@@ -9,19 +9,21 @@ class SqliteArenaSignRepository(private val store: SqliteStore) : ArenaSignRepos
 
     private val index: MutableMap<BlockPosition, String> by lazy { scan() }
 
-    private fun scan(): MutableMap<BlockPosition, String> =
-        store.query("SELECT arena_name, world, x, y, z FROM arena_signs") { row ->
-            BlockPosition.new(row.getString("world"), row.getInt("x"), row.getInt("y"), row.getInt("z")) to
-                row.getString("arena_name")
-        }.toMap().toMutableMap()
+    private fun scan(): MutableMap<BlockPosition, String> = store.query("SELECT arena_name, world, x, y, z FROM arena_signs") { row ->
+        BlockPosition.new(row.getString("world"), row.getInt("x"), row.getInt("y"), row.getInt("z")) to
+            row.getString("arena_name")
+    }.toMap().toMutableMap()
 
-    override fun signLocation(arenaName: String): BlockPosition? =
-        index.entries.firstOrNull { it.value == arenaName }?.key
+    override fun signLocation(arenaName: String): BlockPosition? = index.entries.firstOrNull { it.value == arenaName }?.key
 
     override fun setSign(arenaName: String, position: BlockPosition) {
         store.exec(
             "INSERT OR REPLACE INTO arena_signs(arena_name, world, x, y, z) VALUES (?, ?, ?, ?, ?)",
-            arenaName, position.world, position.x, position.y, position.z
+            arenaName,
+            position.world,
+            position.x,
+            position.y,
+            position.z,
         )
         index.values.remove(arenaName)
         index[position] = arenaName

@@ -10,17 +10,17 @@ import net.ninebolt.onevsone.domain.MatchId
 import net.ninebolt.onevsone.domain.Participant
 import net.ninebolt.onevsone.domain.WorldPosition
 import net.ninebolt.onevsone.infrastructure.paper.PaperInventorySnapshot
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import java.io.File
 import java.sql.DriverManager
+import java.util.logging.Logger
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.io.TempDir
-import java.io.File
-import java.util.logging.Logger
 import kotlin.uuid.Uuid
 
 class SqlitePersistenceTest {
@@ -32,8 +32,7 @@ class SqlitePersistenceTest {
 
     private fun <T> withStore(block: (SqliteStore) -> T): T = store().use(block)
 
-    private fun count(store: SqliteStore, table: String, where: String = "", vararg params: Any?): Int =
-        store.queryOne("SELECT COUNT(*) AS c FROM $table $where", *params) { it.getInt("c") }!!
+    private fun count(store: SqliteStore, table: String, where: String = "", vararg params: Any?): Int = store.queryOne("SELECT COUNT(*) AS c FROM $table $where", *params) { it.getInt("c") }!!
 
     @Test
     fun `database file and schema are created`() = withStore { store ->
@@ -41,8 +40,8 @@ class SqlitePersistenceTest {
         val tables = store.query("SELECT name FROM sqlite_master WHERE type = 'table'") { it.getString(1) }
         assertTrue(
             tables.containsAll(
-                listOf("arenas", "arena_kits", "arena_signs", "match_status", "lobby", "registrations", "backups", "player_stats")
-            )
+                listOf("arenas", "arena_kits", "arena_signs", "match_status", "lobby", "registrations", "backups", "player_stats"),
+            ),
         )
         assertEquals("wal", store.queryOne("PRAGMA journal_mode") { it.getString(1) })
     }
@@ -53,7 +52,7 @@ class SqlitePersistenceTest {
         val def = Arena.new(
             Arena.Id.new("a1"),
             enabled = true,
-            spawn1 = WorldPosition.new("world", 1.5, 64.25, -3.75, 12.34f, -56.78f)
+            spawn1 = WorldPosition.new("world", 1.5, 64.25, -3.75, 12.34f, -56.78f),
         )
         repo.save(def)
 
@@ -106,7 +105,9 @@ class SqlitePersistenceTest {
         SqliteMatchStateRepository(store).saveStatus(ArenaMatch.new(Arena.Id.new("a1"), requiredWins = 3))
         store.exec(
             "INSERT INTO registrations(player_uuid, player_name, arena_name) VALUES (?, ?, ?)",
-            Uuid.random().toString(), "Alice", "a1"
+            Uuid.random().toString(),
+            "Alice",
+            "a1",
         )
 
         arenas.delete("a1")
@@ -140,7 +141,7 @@ class SqlitePersistenceTest {
             requiredWins = 3,
             state = ArenaState.INGAME,
             participants = listOf(p1, p2),
-            wins = mapOf(p1.id to 2)
+            wins = mapOf(p1.id to 2),
         )
         SqliteMatchStateRepository(store).saveStatus(match)
 
@@ -158,8 +159,11 @@ class SqlitePersistenceTest {
         val p1 = Participant.new("Alice")
         val p2 = Participant.new("Alice")
         val match = ArenaMatch.restored(
-            Arena.Id.new("a1"), requiredWins = 3, state = ArenaState.COUNTDOWN,
-            participants = listOf(p1, p2), wins = emptyMap()
+            Arena.Id.new("a1"),
+            requiredWins = 3,
+            state = ArenaState.COUNTDOWN,
+            participants = listOf(p1, p2),
+            wins = emptyMap(),
         )
         SqliteMatchStateRepository(store).persistMatch(match)
 
@@ -176,8 +180,11 @@ class SqlitePersistenceTest {
 
         val p = Participant.new("Alice")
         val match = ArenaMatch.restored(
-            Arena.Id.new("a1"), requiredWins = 3, state = ArenaState.ONEMORE,
-            participants = listOf(p), wins = emptyMap()
+            Arena.Id.new("a1"),
+            requiredWins = 3,
+            state = ArenaState.ONEMORE,
+            participants = listOf(p),
+            wins = emptyMap(),
         )
         SqliteMatchStateRepository(store).persistMatch(match)
 
@@ -193,10 +200,10 @@ class SqlitePersistenceTest {
         val repo = SqliteMatchStateRepository(store)
         val p = Participant.new("Alice")
         repo.persistMatch(
-            ArenaMatch.restored(Arena.Id.new("a1"), 3, ArenaState.ONEMORE, listOf(p), emptyMap())
+            ArenaMatch.restored(Arena.Id.new("a1"), 3, ArenaState.ONEMORE, listOf(p), emptyMap()),
         )
         repo.persistMatch(
-            ArenaMatch.restored(Arena.Id.new("a2"), 3, ArenaState.ONEMORE, listOf(p), emptyMap())
+            ArenaMatch.restored(Arena.Id.new("a2"), 3, ArenaState.ONEMORE, listOf(p), emptyMap()),
         )
         val rows = store.query("SELECT arena_name FROM registrations WHERE player_uuid = ?", p.id.toString()) {
             it.getString(1)
@@ -246,8 +253,8 @@ class SqlitePersistenceTest {
         backups.saveBackups(
             listOf(
                 PersistedBackup(BackupRef.new(match, first.id, first.name), PaperInventorySnapshot()),
-                PersistedBackup(BackupRef.new(match, second.id, second.name), PaperInventorySnapshot())
-            )
+                PersistedBackup(BackupRef.new(match, second.id, second.name), PaperInventorySnapshot()),
+            ),
         )
         assertEquals(2, backups.persistedBackups().size)
     }
@@ -310,7 +317,11 @@ class SqlitePersistenceTest {
     fun `codec failure surfaces as PersistenceFailure`() = withStore { store ->
         store.exec(
             "INSERT INTO backups(backup_id, match_id, player_uuid, player_name, payload) VALUES (?, ?, ?, ?, ?)",
-            Uuid.random().toString(), Uuid.random().toString(), null, "Alice", "not: [valid"
+            Uuid.random().toString(),
+            Uuid.random().toString(),
+            null,
+            "Alice",
+            "not: [valid",
         )
         assertFailsWith<PersistenceFailure> { SqliteBackupStore(store).persistedBackups() }
     }
@@ -318,7 +329,7 @@ class SqlitePersistenceTest {
     @Test
     fun `corrupt arena row surfaces as PersistenceFailure`() = withStore { store ->
         store.exec(
-            "INSERT INTO arenas(name, enabled, spawn1_world, spawn1_x, spawn1_y, spawn1_z, seq) VALUES ('a1', 1, '', 0, 0, 0, 1)"
+            "INSERT INTO arenas(name, enabled, spawn1_world, spawn1_x, spawn1_y, spawn1_z, seq) VALUES ('a1', 1, '', 0, 0, 0, 1)",
         )
         assertFailsWith<PersistenceFailure> { SqliteArenaRepository(store).find("a1") }
         assertEquals(emptyList(), SqliteArenaRepository(store).loadAll())

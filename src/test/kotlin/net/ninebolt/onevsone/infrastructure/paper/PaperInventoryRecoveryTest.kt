@@ -13,16 +13,16 @@ import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.view
 import net.ninebolt.onevsone.infrastructure.persistence.PersistedBackup
 import org.bukkit.Material
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNotEquals
-import kotlin.test.assertNull
 import org.junit.jupiter.api.AfterEach
-import kotlin.test.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class PaperInventoryRecoveryTest {
 
@@ -122,8 +122,8 @@ class PaperInventoryRecoveryTest {
                 requiredWins = 3,
                 state = ArenaState.ONEMORE,
                 participants = listOf(participant),
-                wins = emptyMap()
-            )
+                wins = emptyMap(),
+            ),
         )
         env.backupStore.saveBackups(listOf(PersistedBackup(ref, PaperInventorySnapshot())))
         env.matchStateRepo.clearRegistrations()

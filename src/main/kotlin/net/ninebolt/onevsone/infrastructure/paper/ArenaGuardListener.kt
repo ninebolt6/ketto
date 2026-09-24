@@ -36,7 +36,7 @@ import org.bukkit.event.player.PlayerPickupArrowEvent
 import org.bukkit.inventory.InventoryHolder
 
 class ArenaGuardListener(
-    private val service: ArenaApplicationService
+    private val service: ArenaApplicationService,
 ) : Listener {
 
     @EventHandler
@@ -199,6 +199,4 @@ class ArenaGuardListener(
         // Anyone can rewrite an unwaxed sign
         if (service.restrictionsOf(event.player)?.blockPlaceCancelled == true) event.isCancelled = true
     }
-
 }
-

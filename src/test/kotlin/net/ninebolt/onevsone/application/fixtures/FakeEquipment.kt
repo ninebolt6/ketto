@@ -9,7 +9,9 @@ import net.ninebolt.onevsone.domain.MatchId
 import net.ninebolt.onevsone.domain.Participant
 import kotlin.uuid.Uuid
 
-class FakeEquipment(var players: FakePlayers? = null) : KitPort, InventoryBackupPort {
+class FakeEquipment(var players: FakePlayers? = null) :
+    KitPort,
+    InventoryBackupPort {
     val storedBackups = linkedMapOf<Uuid, BackupRef>()
     val restored = mutableListOf<BackupRef>()
     val acknowledged = mutableListOf<BackupRef>()

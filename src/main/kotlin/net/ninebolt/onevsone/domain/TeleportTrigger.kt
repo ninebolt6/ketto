@@ -6,5 +6,5 @@ enum class TeleportTrigger {
 
     ENDER_PEARL,
 
-    EXTERNAL
+    EXTERNAL,
 }

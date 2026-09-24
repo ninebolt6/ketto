@@ -6,9 +6,9 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.RecordingLogger
 import org.bukkit.configuration.file.YamlConfiguration
-import org.mockbukkit.mockbukkit.MockBukkit
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.mockbukkit.mockbukkit.MockBukkit
 import java.io.File
 import java.util.Locale
 import java.util.logging.Logger
@@ -24,8 +24,7 @@ class MessengerTest {
     private val logger = Logger.getLogger("messages-test")
     private val plain = PlainTextComponentSerializer.plainText()
 
-    private fun load(language: String = "auto", logger: Logger = this.logger) =
-        Messenger.load(File(folder, "messages"), "ja", language, logger)
+    private fun load(language: String = "auto", logger: Logger = this.logger) = Messenger.load(File(folder, "messages"), "ja", language, logger)
 
     private fun bundledKeys(lang: String): Set<String> {
         val config = javaClass.getResourceAsStream("/messages/$lang.yaml")!!
@@ -66,11 +65,11 @@ class MessengerTest {
         val messenger = load()
         assertEquals(
             "状態: Ingame",
-            plain.serialize(messenger.render(Message.ArenaInfoState(ArenaState.INGAME), "ja"))
+            plain.serialize(messenger.render(Message.ArenaInfoState(ArenaState.INGAME), "ja")),
         )
         assertEquals(
             "State: Ingame",
-            plain.serialize(messenger.render(Message.ArenaInfoState(ArenaState.INGAME), "en"))
+            plain.serialize(messenger.render(Message.ArenaInfoState(ArenaState.INGAME), "en")),
         )
     }
 
@@ -79,7 +78,7 @@ class MessengerTest {
         val messenger = load()
         assertEquals(
             plain.serialize(messenger.render(Message.MatchGameStart, "ja")),
-            plain.serialize(messenger.render(Message.MatchGameStart, "fr"))
+            plain.serialize(messenger.render(Message.MatchGameStart, "fr")),
         )
     }
 
@@ -135,7 +134,7 @@ class MessengerTest {
         assertTrue(recording.warnings.any { "missing key" in it })
         assertEquals(
             "Beigetreten: a1",
-            plain.serialize(messenger.render(Message.MatchJoined("a1"), "de"))
+            plain.serialize(messenger.render(Message.MatchJoined("a1"), "de")),
         )
     }
 
@@ -146,7 +145,7 @@ class MessengerTest {
         val messenger = load()
         assertEquals(
             "Beigetreten: a1",
-            plain.serialize(messenger.render(Message.MatchJoined("a1"), "de"))
+            plain.serialize(messenger.render(Message.MatchJoined("a1"), "de")),
         )
     }
 
@@ -158,7 +157,7 @@ class MessengerTest {
         val messenger = load()
         assertEquals(
             "yaml a1",
-            plain.serialize(messenger.render(Message.MatchJoined("a1"), "de"))
+            plain.serialize(messenger.render(Message.MatchJoined("a1"), "de")),
         )
     }
 

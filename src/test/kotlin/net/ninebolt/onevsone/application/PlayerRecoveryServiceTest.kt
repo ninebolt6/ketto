@@ -6,17 +6,16 @@ import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.domain.MatchId
+import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import org.junit.jupiter.api.Test
 import kotlin.uuid.Uuid
 
 class PlayerRecoveryServiceTest {
 
-    private fun backupRef(id: Uuid, name: String, match: MatchId = MatchId.new()) =
-        BackupRef.new(match, id, name)
+    private fun backupRef(id: Uuid, name: String, match: MatchId = MatchId.new()) = BackupRef.new(match, id, name)
 
     @Test
     fun `persisted backups load into tickets on startup`() {

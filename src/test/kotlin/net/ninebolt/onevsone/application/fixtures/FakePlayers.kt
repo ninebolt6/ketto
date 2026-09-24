@@ -8,7 +8,7 @@ import kotlin.uuid.Uuid
 class FakePlayers : PlayerPort {
     class FakeHandle(
         override val id: Uuid,
-        override val name: String
+        override val name: String,
     ) : PlayerHandle {
         override var online = true
         override var dead = false
@@ -42,15 +42,13 @@ class FakePlayers : PlayerPort {
     val players = mutableMapOf<Uuid, FakeHandle>()
     val offlineIds = mutableMapOf<String, Uuid>()
 
-    override fun handle(playerId: Uuid): PlayerHandle? =
-        players[playerId]?.takeIf { it.online || it.quitting }
+    override fun handle(playerId: Uuid): PlayerHandle? = players[playerId]?.takeIf { it.online || it.quitting }
 
     override fun resolveOfflineId(name: String, callback: (Uuid?) -> Unit) {
         callback(offlineIds[name])
     }
 
-    fun add(name: String, id: Uuid = Uuid.random()): FakeHandle =
-        FakeHandle(id, name).also { players[id] = it }
+    fun add(name: String, id: Uuid = Uuid.random()): FakeHandle = FakeHandle(id, name).also { players[id] = it }
 
     fun disconnect(handle: FakeHandle) {
         handle.online = false

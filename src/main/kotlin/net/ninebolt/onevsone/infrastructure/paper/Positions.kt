@@ -10,5 +10,4 @@ internal fun Location.toWorldPosition(): WorldPosition? {
     return WorldPosition.new(world.name, x, y, z, yaw, pitch)
 }
 
-internal fun Block.toBlockPosition(): BlockPosition =
-    BlockPosition.new(world.name, x, y, z)
+internal fun Block.toBlockPosition(): BlockPosition = BlockPosition.new(world.name, x, y, z)

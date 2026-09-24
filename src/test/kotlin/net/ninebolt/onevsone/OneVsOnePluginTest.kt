@@ -10,11 +10,11 @@ import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.vehicle.VehicleEnterEvent
 import org.junit.jupiter.api.AfterEach
-import kotlin.test.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockbukkit.mockbukkit.MockBukkit
 import org.mockbukkit.mockbukkit.ServerMock
+import kotlin.test.assertTrue
 
 class OneVsOnePluginTest {
 

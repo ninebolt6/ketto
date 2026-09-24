@@ -13,11 +13,10 @@ internal class ArenaGroup(
     private val messenger: Messenger,
     private val admin: ArenaAdministrationService,
     private val create: Subcommand,
-    private val ops: Subcommand
+    private val ops: Subcommand,
 ) : Subcommand {
 
-    override fun visibleTo(sender: CommandSender): Boolean =
-        create.visibleTo(sender) || ops.visibleTo(sender)
+    override fun visibleTo(sender: CommandSender): Boolean = create.visibleTo(sender) || ops.visibleTo(sender)
 
     override fun execute(sender: CommandSender, args: List<String>) {
         if (args.isEmpty()) {
@@ -42,8 +41,7 @@ internal class ArenaGroup(
         return ops.tabComplete(sender, args)
     }
 
-    private fun sendUsage(sender: CommandSender) =
-        messenger.send(sender, if (sender.isOp) opsUsage else usage)
+    private fun sendUsage(sender: CommandSender) = messenger.send(sender, if (sender.isOp) opsUsage else usage)
 
     private companion object {
         const val CREATE = "create"

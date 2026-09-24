@@ -7,7 +7,7 @@ import net.ninebolt.onevsone.domain.ArenaState
 
 class MatchStateSync(
     private val matchState: MatchStateRepository,
-    private val signs: ArenaSignService
+    private val signs: ArenaSignService,
 ) {
     fun persistMatch(match: ArenaMatch) {
         matchState.persistMatch(match)

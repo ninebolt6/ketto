@@ -12,7 +12,7 @@ import kotlin.uuid.toKotlinUuid
 
 class ArenaTeleportListener(
     private val service: ArenaApplicationService,
-    private val lookup: PaperPlayerLookup
+    private val lookup: PaperPlayerLookup,
 ) : Listener {
 
     @EventHandler
@@ -43,6 +43,4 @@ class ArenaTeleportListener(
         val player = event.entered as? Player ?: return
         if (service.restrictionsOf(player)?.horizontalMoveFrozen == true) event.isCancelled = true
     }
-
 }
-

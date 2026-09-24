@@ -2,8 +2,8 @@ package net.ninebolt.onevsone.application
 
 import net.ninebolt.onevsone.application.fixtures.TestApp
 import net.ninebolt.onevsone.domain.WorldPosition
-import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
+import kotlin.test.assertEquals
 
 class LobbyServiceTest {
 

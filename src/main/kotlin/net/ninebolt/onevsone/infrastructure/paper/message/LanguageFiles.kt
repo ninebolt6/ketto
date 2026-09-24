@@ -11,9 +11,8 @@ internal object LanguageFiles {
 
     fun dir(dataFolder: File): File = File(dataFolder, "messages")
 
-    private fun bundledYaml(lang: String): YamlConfiguration? =
-        LanguageFiles::class.java.getResourceAsStream("/messages/$lang.yaml")
-            ?.bufferedReader()?.use { YamlConfiguration.loadConfiguration(it) }
+    private fun bundledYaml(lang: String): YamlConfiguration? = LanguageFiles::class.java.getResourceAsStream("/messages/$lang.yaml")
+        ?.bufferedReader()?.use { YamlConfiguration.loadConfiguration(it) }
 
     fun syncBundled(dataFolder: File, logger: Logger, saveResource: (String) -> Unit) {
         BUNDLED_LANGS.forEach { lang ->
@@ -32,8 +31,7 @@ internal object LanguageFiles {
         val overrides = messagesDir.listFiles { f -> f.name.matches(Regex(".+\\.ya?ml")) }
             ?.groupBy { it.nameWithoutExtension.lowercase(Locale.ROOT) }
             ?.mapValues { (_, files) ->
-                flatten(YamlConfiguration.loadConfiguration(
-                    files.firstOrNull { it.extension == "yaml" } ?: files.first()))
+                flatten(YamlConfiguration.loadConfiguration(files.firstOrNull { it.extension == "yaml" } ?: files.first()))
             } ?: emptyMap()
         val bundles = (bundled.keys + overrides.keys)
             .associateWith { (bundled[it] ?: emptyMap()) + (overrides[it] ?: emptyMap()) }
@@ -56,6 +54,5 @@ internal object LanguageFiles {
         return added
     }
 
-    private fun flatten(config: YamlConfiguration): Map<String, String> =
-        config.getKeys(true).mapNotNull { key -> config.getString(key)?.let { key to it } }.toMap()
+    private fun flatten(config: YamlConfiguration): Map<String, String> = config.getKeys(true).mapNotNull { key -> config.getString(key)?.let { key to it } }.toMap()
 }

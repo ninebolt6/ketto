@@ -1,14 +1,14 @@
 package net.ninebolt.onevsone.application.fixtures
 
-import java.util.logging.Level
-import java.util.logging.LogRecord
-import java.util.logging.Logger
 import net.ninebolt.onevsone.application.port.PresentationPort
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.BlockPosition
 import net.ninebolt.onevsone.domain.WorldPosition
+import java.util.logging.Level
+import java.util.logging.LogRecord
+import java.util.logging.Logger
 import kotlin.uuid.Uuid
 
 class RecordingPresentation : PresentationPort {

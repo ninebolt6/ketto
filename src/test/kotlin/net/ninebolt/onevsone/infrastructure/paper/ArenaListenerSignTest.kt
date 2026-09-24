@@ -20,16 +20,16 @@ import org.bukkit.event.block.Action
 import org.bukkit.event.block.BlockExplodeEvent
 import org.bukkit.event.entity.EntityExplodeEvent
 import org.bukkit.inventory.EquipmentSlot
-import kotlin.test.assertEquals
-import kotlin.test.assertNotEquals
-import kotlin.test.assertNull
 import org.junit.jupiter.api.AfterEach
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class ArenaListenerSignTest {
 
@@ -125,7 +125,11 @@ class ArenaListenerSignTest {
         val plain = env.plainBlock(9, 64, 9)
 
         val explode = EntityExplodeEvent(
-            env.nonPlayer(), sign.location, mutableListOf(sign, plain), 0f, ExplosionResult.DESTROY
+            env.nonPlayer(),
+            sign.location,
+            mutableListOf(sign, plain),
+            0f,
+            ExplosionResult.DESTROY,
         )
         env.fire(explode)
         assertEquals(listOf(plain), explode.blockList())

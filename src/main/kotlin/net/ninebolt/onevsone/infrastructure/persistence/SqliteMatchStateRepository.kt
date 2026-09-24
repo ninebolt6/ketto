@@ -12,7 +12,9 @@ class SqliteMatchStateRepository(private val store: SqliteStore) : MatchStateRep
             match.participants.forEach { participant ->
                 store.exec(
                     "INSERT OR REPLACE INTO registrations(player_uuid, player_name, arena_name) VALUES (?, ?, ?)",
-                    participant.id.toString(), participant.name, match.arenaId.name
+                    participant.id.toString(),
+                    participant.name,
+                    match.arenaId.name,
                 )
             }
             writeStatus(match)
@@ -29,7 +31,10 @@ class SqliteMatchStateRepository(private val store: SqliteStore) : MatchStateRep
         val wins = match.participants.joinToString(",") { "${it.name}:${match.winsOf(it.id)}" }
         store.exec(
             "INSERT OR REPLACE INTO match_status(arena_name, state, players, wins) VALUES (?, ?, ?, ?)",
-            match.arenaId.name, match.state.name, players, wins
+            match.arenaId.name,
+            match.state.name,
+            players,
+            wins,
         )
     }
 

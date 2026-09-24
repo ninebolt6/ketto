@@ -2,9 +2,9 @@ package net.ninebolt.onevsone.infrastructure.paper
 
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.fallIntoVoid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.assertFired
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.attackDamage
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.fallIntoVoid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.genericDamage
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.mob
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.projectileDamage
@@ -18,16 +18,16 @@ import org.bukkit.block.Biome
 import org.bukkit.damage.DamageType
 import org.bukkit.entity.EntityType
 import org.bukkit.event.entity.PlayerDeathEvent
-import org.mockbukkit.mockbukkit.world.WorldMock
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNull
 import org.junit.jupiter.api.AfterEach
-import kotlin.test.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.mockbukkit.mockbukkit.world.WorldMock
 import java.io.File
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class ArenaListenerCombatTest {
 

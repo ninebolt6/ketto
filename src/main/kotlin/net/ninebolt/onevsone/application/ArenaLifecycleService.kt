@@ -12,7 +12,7 @@ class ArenaLifecycleService(
     private val sync: MatchStateSync,
     private val recovery: PlayerRecoveryService,
     private val progression: MatchProgressionService,
-    private val logger: Logger
+    private val logger: Logger,
 ) {
 
     fun load() {

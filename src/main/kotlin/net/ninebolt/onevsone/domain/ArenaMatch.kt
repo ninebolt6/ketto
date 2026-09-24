@@ -9,7 +9,7 @@ data class ArenaMatch private constructor(
     val participants: List<Participant> = emptyList(),
     val wins: Map<Uuid, Int> = emptyMap(),
     val resolving: Boolean = false,
-    val epoch: Long = 0L
+    val epoch: Long = 0L,
 ) {
     companion object {
         // participants[i] teleports to the spawn slot with index i, so capacity equals the spawn slot count
@@ -27,7 +27,7 @@ data class ArenaMatch private constructor(
             participants: List<Participant>,
             wins: Map<Uuid, Int>,
             resolving: Boolean = false,
-            epoch: Long = 0L
+            epoch: Long = 0L,
         ): ArenaMatch {
             require(requiredWins >= 1) { "requiredWins must be >= 1 (was $requiredWins)" }
             require(participants.size == expectedParticipants(state)) {
@@ -66,13 +66,11 @@ data class ArenaMatch private constructor(
     val inProgress: Boolean get() =
         (state == ArenaState.INGAME || state == ArenaState.ROUNDCOUNTDOWN) && full
 
-    fun matchup(): Pair<Participant, Participant>? =
-        if (inProgress) participants[SpawnSlot.FIRST.index] to participants[SpawnSlot.SECOND.index] else null
+    fun matchup(): Pair<Participant, Participant>? = if (inProgress) participants[SpawnSlot.FIRST.index] to participants[SpawnSlot.SECOND.index] else null
 
     fun participant(id: Uuid): Participant? = participants.firstOrNull { it.id == id }
 
-    fun slotOf(id: Uuid): SpawnSlot? =
-        SpawnSlot.ofIndex(participants.indexOfFirst { it.id == id })
+    fun slotOf(id: Uuid): SpawnSlot? = SpawnSlot.ofIndex(participants.indexOfFirst { it.id == id })
 
     fun participantAt(slot: SpawnSlot): Participant? = participants.getOrNull(slot.index)
 
@@ -97,9 +95,9 @@ data class ArenaMatch private constructor(
             copy(
                 participants = participants.filterNot { it.id == id },
                 state = ArenaState.WAITING,
-                epoch = epoch + 1
+                epoch = epoch + 1,
             ),
-            LeaveOutcome.Left(participant)
+            LeaveOutcome.Left(participant),
         )
     }
 
@@ -112,9 +110,9 @@ data class ArenaMatch private constructor(
                 copy(
                     participants = remaining,
                     state = if (remaining.isEmpty()) ArenaState.WAITING else ArenaState.ONEMORE,
-                    epoch = epoch + 1
+                    epoch = epoch + 1,
                 ),
-                QuitOutcome.WaitingExit(participant)
+                QuitOutcome.WaitingExit(participant),
             )
         }
         val winner = participants.first { it.id != id }
@@ -134,55 +132,50 @@ data class ArenaMatch private constructor(
             state = ArenaState.ROUNDCOUNTDOWN,
             resolving = true,
             epoch = epoch + 1,
-            wins = wins + (winner.id to winsOf(winner.id) + 1)
+            wins = wins + (winner.id to winsOf(winner.id) + 1),
         )
         return Transition(
             next,
             DefeatOutcome.RoundWon(
                 round = next.wins.values.sum(),
                 winner = winner,
-                loser = loser
-            )
+                loser = loser,
+            ),
         )
     }
 
-    fun beginMatch(): Transition<Boolean> =
-        if (canBeginMatch) {
-            Transition(copy(state = ArenaState.INGAME), true)
-        } else {
-            Transition(this, false)
-        }
+    fun beginMatch(): Transition<Boolean> = if (canBeginMatch) {
+        Transition(copy(state = ArenaState.INGAME), true)
+    } else {
+        Transition(this, false)
+    }
 
-    fun resumeRound(): Transition<Boolean> =
-        if (state == ArenaState.ROUNDCOUNTDOWN) {
-            Transition(copy(state = ArenaState.INGAME, resolving = false), true)
-        } else {
-            Transition(this, false)
-        }
+    fun resumeRound(): Transition<Boolean> = if (state == ArenaState.ROUNDCOUNTDOWN) {
+        Transition(copy(state = ArenaState.INGAME, resolving = false), true)
+    } else {
+        Transition(this, false)
+    }
 
     // A release callback is stale once the match has advanced, so an epoch mismatch must be a no-op.
-    fun releaseResolution(epoch: Long): ArenaMatch =
-        if (this.epoch == epoch) copy(resolving = false) else this
+    fun releaseResolution(epoch: Long): ArenaMatch = if (this.epoch == epoch) copy(resolving = false) else this
 
     // Advancing the epoch invalidates running countdowns and pending resolution callbacks.
-    fun abort(): Transition<List<Participant>> =
-        Transition(
-            copy(
-                state = ArenaState.WAITING,
-                participants = emptyList(),
-                wins = emptyMap(),
-                resolving = false,
-                epoch = epoch + 1
-            ),
-            participants
-        )
-
-    private fun finished(): ArenaMatch =
+    fun abort(): Transition<List<Participant>> = Transition(
         copy(
             state = ArenaState.WAITING,
             participants = emptyList(),
             wins = emptyMap(),
             resolving = false,
-            epoch = epoch + 1
-        )
+            epoch = epoch + 1,
+        ),
+        participants,
+    )
+
+    private fun finished(): ArenaMatch = copy(
+        state = ArenaState.WAITING,
+        participants = emptyList(),
+        wins = emptyMap(),
+        resolving = false,
+        epoch = epoch + 1,
+    )
 }

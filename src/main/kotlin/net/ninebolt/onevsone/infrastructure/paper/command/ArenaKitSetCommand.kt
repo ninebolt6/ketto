@@ -8,7 +8,7 @@ import kotlin.uuid.toKotlinUuid
 
 internal class ArenaKitSetCommand(
     admin: ArenaAdministrationService,
-    messenger: Messenger
+    messenger: Messenger,
 ) : ArenaSubcommand(admin, messenger) {
 
     override val requiresPlayer: Boolean = true

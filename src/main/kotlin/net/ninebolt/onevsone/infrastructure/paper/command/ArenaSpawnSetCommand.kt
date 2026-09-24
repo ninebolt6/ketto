@@ -10,7 +10,7 @@ import org.bukkit.util.StringUtil
 
 internal class ArenaSpawnSetCommand(
     admin: ArenaAdministrationService,
-    messenger: Messenger
+    messenger: Messenger,
 ) : ArenaSubcommand(admin, messenger) {
 
     override val requiresPlayer: Boolean = true
@@ -28,9 +28,11 @@ internal class ArenaSpawnSetCommand(
         messenger.send(sender, Message.ArenaSpawnSet(arena.name, slot.number))
     }
 
-    override fun tabComplete(sender: CommandSender, args: List<String>): List<String> =
-        if (args.size == 2) StringUtil.copyPartialMatches(args[1], SLOTS, mutableListOf())
-        else super.tabComplete(sender, args)
+    override fun tabComplete(sender: CommandSender, args: List<String>): List<String> = if (args.size == 2) {
+        StringUtil.copyPartialMatches(args[1], SLOTS, mutableListOf())
+    } else {
+        super.tabComplete(sender, args)
+    }
 
     private companion object {
         val SLOTS: List<String> = SpawnSlot.entries.map { it.number.toString() }

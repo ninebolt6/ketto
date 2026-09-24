@@ -5,7 +5,7 @@ import org.bukkit.inventory.PlayerInventory
 
 data class PaperInventorySnapshot(
     val armor: List<ItemStack?> = emptyList(),
-    val items: List<ItemStack?> = emptyList()
+    val items: List<ItemStack?> = emptyList(),
 ) {
     fun apply(inventory: PlayerInventory) {
         inventory.clear()
@@ -16,7 +16,7 @@ data class PaperInventorySnapshot(
     companion object {
         fun capture(inventory: PlayerInventory): PaperInventorySnapshot = PaperInventorySnapshot(
             armor = inventory.armorContents.map { it?.clone() },
-            items = inventory.contents.map { it?.clone() }
+            items = inventory.contents.map { it?.clone() },
         )
     }
 }

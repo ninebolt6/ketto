@@ -18,9 +18,11 @@ interface PlayerHandle {
     val dead: Boolean
     fun position(): WorldPosition?
     fun respawn()
+
     // no-op while dead
     fun resetVitals()
     fun prepareForMatch()
+
     // failures (e.g. an unloaded world) only warn in the adapter
     fun teleport(position: WorldPosition)
 }

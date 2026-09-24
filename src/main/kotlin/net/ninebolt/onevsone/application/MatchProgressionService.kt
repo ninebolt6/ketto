@@ -2,11 +2,11 @@ package net.ninebolt.onevsone.application
 
 import net.ninebolt.onevsone.application.port.Cancellation
 import net.ninebolt.onevsone.application.port.KitPort
-import net.ninebolt.onevsone.application.port.PresentationPort
 import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.application.port.PlayerHandle
 import net.ninebolt.onevsone.application.port.PlayerPort
 import net.ninebolt.onevsone.application.port.PlayerStatsRepository
+import net.ninebolt.onevsone.application.port.PresentationPort
 import net.ninebolt.onevsone.application.port.SchedulerPort
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
@@ -27,7 +27,7 @@ class MatchProgressionService(
     private val scheduler: SchedulerPort,
     private val presentation: PresentationPort,
     private val recovery: PlayerRecoveryService,
-    private val logger: Logger
+    private val logger: Logger,
 ) {
     private val timers = mutableMapOf<Arena.Id, Cancellation>()
 
@@ -106,7 +106,7 @@ class MatchProgressionService(
         winner: Participant,
         loser: Participant,
         forfeit: Boolean,
-        death: Boolean
+        death: Boolean,
     ) {
         val arenaId = match.arenaId
         cancelCountdown(arenaId)
@@ -121,7 +121,7 @@ class MatchProgressionService(
         runNowOrAfterRespawn(
             winner.id,
             winnerTicket,
-            valid = { registry.match(arenaId)?.epoch == gen && registry.arenaOf(winner.id) == null }
+            valid = { registry.match(arenaId)?.epoch == gen && registry.arenaOf(winner.id) == null },
         ) { h ->
             resetAndRestore(h, winnerTicket)
             if (!forfeit) presentation.championFirework(winner.id)
@@ -131,7 +131,7 @@ class MatchProgressionService(
             scheduleDeferred(
                 loser.id,
                 loserTicket,
-                valid = { registry.match(arenaId)?.epoch == gen && registry.arenaOf(loser.id) == null }
+                valid = { registry.match(arenaId)?.epoch == gen && registry.arenaOf(loser.id) == null },
             ) { h ->
                 resetAndRestore(h, loserTicket)
             }
@@ -160,7 +160,7 @@ class MatchProgressionService(
                     Level.SEVERE,
                     "Failed to record ${if (win) "win" else "loss"} for ${participant.name} (${participant.id}); " +
                         "arena cleanup completed, statistics require manual recovery",
-                    e
+                    e,
                 )
             }
         }
@@ -207,7 +207,9 @@ class MatchProgressionService(
                     rearm(arenaId, first, p1)
                     rearm(arenaId, second, p2)
                 }
+
                 in 1..5 -> presentation.roundCountdownTick(participantIds, remaining)
+
                 0 -> {
                     presentation.roundStart(participantIds)
                     val resumed = registry.transact(arenaId, persist = sync::persistMatch) { it.resumeRound() }
@@ -224,7 +226,7 @@ class MatchProgressionService(
         arenaId: Arena.Id,
         ticks: Int,
         stillCounting: (ArenaMatch) -> Boolean,
-        onTick: CountdownTick.() -> Boolean
+        onTick: CountdownTick.() -> Boolean,
     ) {
         val gen = registry.match(arenaId)?.epoch ?: return
         var remaining = ticks
@@ -258,7 +260,7 @@ class MatchProgressionService(
         val second: Participant,
         val p1: PlayerHandle,
         val p2: PlayerHandle,
-        val remaining: Int
+        val remaining: Int,
     ) {
         val participantIds: List<Uuid> get() = match.participants.map { it.id }
     }
@@ -278,7 +280,7 @@ class MatchProgressionService(
         playerId: Uuid,
         ticket: PlayerRecoveryService.RestoreTicket?,
         valid: () -> Boolean = { true },
-        action: (PlayerHandle) -> Unit
+        action: (PlayerHandle) -> Unit,
     ) {
         val handle = players.handle(playerId) ?: return
         if (!handle.dead) {
@@ -301,14 +303,14 @@ class MatchProgressionService(
     private fun scheduleTicketed(
         playerId: Uuid,
         ticket: PlayerRecoveryService.RestoreTicket,
-        action: (PlayerHandle) -> Unit
+        action: (PlayerHandle) -> Unit,
     ) = scheduleDeferred(playerId, { recovery.pending(playerId) === ticket }, action)
 
     private fun scheduleDeferred(
         playerId: Uuid,
         ticket: PlayerRecoveryService.RestoreTicket?,
         valid: () -> Boolean,
-        action: (PlayerHandle) -> Unit
+        action: (PlayerHandle) -> Unit,
     ) = if (ticket != null) {
         scheduleTicketed(playerId, ticket, action)
     } else {

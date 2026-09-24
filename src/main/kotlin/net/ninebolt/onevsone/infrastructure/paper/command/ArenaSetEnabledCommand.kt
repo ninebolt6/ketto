@@ -9,7 +9,7 @@ import org.bukkit.command.CommandSender
 internal class ArenaSetEnabledCommand(
     private val enabled: Boolean,
     admin: ArenaAdministrationService,
-    messenger: Messenger
+    messenger: Messenger,
 ) : ArenaSubcommand(admin, messenger) {
 
     override val usage: Message get() = if (enabled) Message.UsageEnable else Message.UsageDisable

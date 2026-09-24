@@ -8,7 +8,7 @@ import org.bukkit.command.CommandSender
 
 internal class ArenaCreateCommand(
     admin: ArenaAdministrationService,
-    messenger: Messenger
+    messenger: Messenger,
 ) : ArenaSubcommand(admin, messenger) {
 
     override val usage: Message = Message.UsageCreate

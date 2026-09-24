@@ -13,7 +13,7 @@ data class ParticipantRestrictions private constructor(
     val itemDropCancelled: Boolean,
     val inventoryTransferCancelled: Boolean,
     val itemPickupCancelled: Boolean,
-    val commandsBlocked: Boolean
+    val commandsBlocked: Boolean,
 ) {
     companion object {
         fun forState(state: ArenaState): ParticipantRestrictions = when (state) {
@@ -27,8 +27,9 @@ data class ParticipantRestrictions private constructor(
                 itemDropCancelled = true,
                 inventoryTransferCancelled = true,
                 itemPickupCancelled = true,
-                commandsBlocked = true
+                commandsBlocked = true,
             )
+
             ArenaState.INGAME -> ParticipantRestrictions(
                 horizontalMoveFrozen = false,
                 damageCancelled = false,
@@ -39,8 +40,9 @@ data class ParticipantRestrictions private constructor(
                 itemDropCancelled = true,
                 inventoryTransferCancelled = true,
                 itemPickupCancelled = true,
-                commandsBlocked = true
+                commandsBlocked = true,
             )
+
             ArenaState.COUNTDOWN -> ParticipantRestrictions(
                 horizontalMoveFrozen = false,
                 damageCancelled = false,
@@ -51,8 +53,9 @@ data class ParticipantRestrictions private constructor(
                 itemDropCancelled = false,
                 inventoryTransferCancelled = false,
                 itemPickupCancelled = false,
-                commandsBlocked = true
+                commandsBlocked = true,
             )
+
             // No transition leaves participants in WAITING; commands are denied in every state except ONEMORE.
             ArenaState.ONEMORE -> ParticipantRestrictions(
                 horizontalMoveFrozen = false,
@@ -64,8 +67,9 @@ data class ParticipantRestrictions private constructor(
                 itemDropCancelled = false,
                 inventoryTransferCancelled = false,
                 itemPickupCancelled = false,
-                commandsBlocked = false
+                commandsBlocked = false,
             )
+
             ArenaState.WAITING -> ParticipantRestrictions(
                 horizontalMoveFrozen = false,
                 damageCancelled = false,
@@ -76,7 +80,7 @@ data class ParticipantRestrictions private constructor(
                 itemDropCancelled = false,
                 inventoryTransferCancelled = false,
                 itemPickupCancelled = false,
-                commandsBlocked = true
+                commandsBlocked = true,
             )
         }
     }

@@ -6,7 +6,7 @@ data class WorldPosition private constructor(
     val y: Double,
     val z: Double,
     val yaw: Float = 0f,
-    val pitch: Float = 0f
+    val pitch: Float = 0f,
 ) {
     companion object {
         fun new(
@@ -15,7 +15,7 @@ data class WorldPosition private constructor(
             y: Double,
             z: Double,
             yaw: Float = 0f,
-            pitch: Float = 0f
+            pitch: Float = 0f,
         ): WorldPosition {
             require(world.isNotBlank()) { "world name must not be blank" }
             require(x.isFinite() && y.isFinite() && z.isFinite()) {

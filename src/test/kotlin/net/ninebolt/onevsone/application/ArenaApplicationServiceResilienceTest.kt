@@ -5,11 +5,11 @@ import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatCause
+import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import org.junit.jupiter.api.Test
 
 class ArenaApplicationServiceResilienceTest {
 

@@ -7,16 +7,13 @@ import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.fallIntoVoid
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.registrations
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.genericDamage
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.registrations
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.statusOf
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.view
 import org.bukkit.Material
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
 import org.junit.jupiter.api.AfterEach
-import kotlin.test.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -25,6 +22,9 @@ import java.util.logging.Handler
 import java.util.logging.Level
 import java.util.logging.LogRecord
 import java.util.logging.Logger
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class PaperArenaFailureTest {
 
@@ -82,7 +82,7 @@ class PaperArenaFailureTest {
         env.join(p2, arena)
         assertEquals(
             setOf(p1.uniqueId.toString() to "Alice", p2.uniqueId.toString() to "Bob"),
-            env.registrations().map { it.playerUuid to it.playerName }.toSet()
+            env.registrations().map { it.playerUuid to it.playerName }.toSet(),
         )
     }
 

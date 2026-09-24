@@ -9,15 +9,14 @@ import java.util.Locale
 internal class CommandGroup(
     private val usage: Message,
     private val messenger: Messenger,
-    subs: Map<String, Subcommand>
+    subs: Map<String, Subcommand>,
 ) : Subcommand {
     private val byName: Map<String, Pair<String, Subcommand>> = subs.entries.associateBy(
         { it.key.lowercase(Locale.ROOT) },
-        { it.key to it.value }
+        { it.key to it.value },
     )
 
-    override fun visibleTo(sender: CommandSender): Boolean =
-        byName.values.any { (_, sub) -> sub.visibleTo(sender) }
+    override fun visibleTo(sender: CommandSender): Boolean = byName.values.any { (_, sub) -> sub.visibleTo(sender) }
 
     override fun execute(sender: CommandSender, args: List<String>) {
         val sub = args.firstOrNull()?.let { byName[it.lowercase(Locale.ROOT)] }?.second

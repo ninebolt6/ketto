@@ -6,10 +6,9 @@ import kotlin.uuid.Uuid
 
 class SqlitePlayerStatsRepository(private val store: SqliteStore) : PlayerStatsRepository {
 
-    override fun find(playerId: Uuid): PlayerStats? =
-        store.queryOne("SELECT wins, losses FROM player_stats WHERE player_uuid = ?", playerId.toString()) { row ->
-            PlayerStats.new(wins = row.getInt("wins"), losses = row.getInt("losses"))
-        }
+    override fun find(playerId: Uuid): PlayerStats? = store.queryOne("SELECT wins, losses FROM player_stats WHERE player_uuid = ?", playerId.toString()) { row ->
+        PlayerStats.new(wins = row.getInt("wins"), losses = row.getInt("losses"))
+    }
 
     override fun recordWin(playerId: Uuid) = write(playerId, winDelta = 1, loseDelta = 0)
 
@@ -23,7 +22,9 @@ class SqlitePlayerStatsRepository(private val store: SqliteStore) : PlayerStatsR
               wins = wins + excluded.wins,
               losses = losses + excluded.losses
             """.trimIndent(),
-            playerId.toString(), winDelta, loseDelta
+            playerId.toString(),
+            winDelta,
+            loseDelta,
         )
     }
 }

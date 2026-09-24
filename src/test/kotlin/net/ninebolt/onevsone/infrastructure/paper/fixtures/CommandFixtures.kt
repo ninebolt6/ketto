@@ -7,11 +7,9 @@ import org.bukkit.command.CommandSender
 import kotlin.uuid.Uuid
 import kotlin.uuid.toKotlinUuid
 
-internal fun TestEnv.run(sender: CommandSender, vararg args: String) =
-    command.onCommand(sender, mockk<Command>(relaxed = true), "1vs1", arrayOf(*args))
+internal fun TestEnv.run(sender: CommandSender, vararg args: String) = command.onCommand(sender, mockk<Command>(relaxed = true), "1vs1", arrayOf(*args))
 
-internal fun TestEnv.tab(sender: CommandSender, vararg args: String) =
-    command.onTabComplete(sender, mockk<Command>(relaxed = true), "1vs1", arrayOf(*args))
+internal fun TestEnv.tab(sender: CommandSender, vararg args: String) = command.onTabComplete(sender, mockk<Command>(relaxed = true), "1vs1", arrayOf(*args))
 
 internal fun TestEnv.writeStats(uuid: Uuid, win: Int, lose: Int) {
     repeat(win) { statsRepo.recordWin(uuid) }
@@ -21,5 +19,4 @@ internal fun TestEnv.writeStats(uuid: Uuid, win: Int, lose: Int) {
 internal fun TestEnv.opPlayer(name: String): ArenaPlayerMock = player(name).also { it.isOp = true }
 
 // ServerMock carries the upstream @Deprecated on getOfflinePlayer(name) that Paper removed, so call it through the Server type
-internal fun TestEnv.offlineId(name: String): Uuid =
-    (server as Server).getOfflinePlayer(name).uniqueId.toKotlinUuid()
+internal fun TestEnv.offlineId(name: String): Uuid = (server as Server).getOfflinePlayer(name).uniqueId.toKotlinUuid()

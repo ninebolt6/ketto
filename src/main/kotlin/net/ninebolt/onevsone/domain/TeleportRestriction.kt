@@ -5,7 +5,9 @@ enum class TeleportRestriction {
 
     ENDER_PEARL_ONLY,
 
-    PLUGIN_ONLY;
+    PLUGIN_ONLY,
+
+    ;
 
     fun allows(trigger: TeleportTrigger): Boolean = when (this) {
         UNRESTRICTED -> true

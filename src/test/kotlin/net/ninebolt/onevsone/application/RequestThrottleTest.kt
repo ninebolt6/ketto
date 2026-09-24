@@ -1,9 +1,9 @@
 package net.ninebolt.onevsone.application
 
+import org.junit.jupiter.api.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.uuid.Uuid
-import org.junit.jupiter.api.Test
 
 class RequestThrottleTest {
 

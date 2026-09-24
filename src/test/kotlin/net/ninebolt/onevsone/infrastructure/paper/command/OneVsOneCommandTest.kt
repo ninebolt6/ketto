@@ -6,12 +6,12 @@ import net.ninebolt.onevsone.infrastructure.paper.fixtures.opPlayer
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.run
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.tab
 import org.junit.jupiter.api.AfterEach
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class OneVsOneCommandTest {
 
@@ -86,7 +86,7 @@ class OneVsOneCommandTest {
         assertEquals(listOf("Arena1"), env.tab(op, "arena", "arena"))
         assertEquals(
             listOf("info", "remove", "enable", "disable", "spawn", "kit", "sign"),
-            env.tab(op, "arena", "Arena1", "")
+            env.tab(op, "arena", "Arena1", ""),
         )
         assertEquals(listOf("spawn", "sign"), env.tab(op, "arena", "Arena1", "s"))
         assertEquals(listOf("1", "2"), env.tab(op, "arena", "Arena1", "spawn", "set", ""))

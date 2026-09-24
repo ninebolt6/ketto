@@ -5,23 +5,23 @@ import net.ninebolt.onevsone.application.ToggleError
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.backupByName
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.lastBroadcast
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.backupByName
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.registrations
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.view
 import org.bukkit.Material
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNotSame
-import kotlin.test.assertNull
 import org.junit.jupiter.api.AfterEach
-import kotlin.test.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotSame
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class PaperArenaMembershipTest {
 

@@ -9,7 +9,7 @@ import kotlin.uuid.toKotlinUuid
 
 internal class LeaveCommand(
     private val service: ArenaApplicationService,
-    messenger: Messenger
+    messenger: Messenger,
 ) : AbstractSubcommand(messenger) {
 
     override fun visibleTo(sender: CommandSender): Boolean = true

@@ -16,13 +16,12 @@ class ArenaApplicationService(
     private val players: PlayerPort,
     private val recovery: PlayerRecoveryService,
     private val progression: MatchProgressionService,
-    private val sync: MatchStateSync
+    private val sync: MatchStateSync,
 ) {
 
     fun arenaIdOf(playerId: Uuid): Arena.Id? = registry.arenaOf(playerId)
 
-    fun matchOf(playerId: Uuid): ArenaMatch? =
-        registry.arenaOf(playerId)?.let { registry.match(it) }
+    fun matchOf(playerId: Uuid): ArenaMatch? = registry.arenaOf(playerId)?.let { registry.match(it) }
 
     fun arena(name: String): Arena? = registry.resolveArenaId(name)?.let { registry.arena(it) }
 
@@ -62,6 +61,7 @@ class ArenaApplicationService(
             ?: return LeaveError.NotJoined
         when (val outcome = step.outcome) {
             LeaveOutcome.NotWaiting -> return LeaveError.NotWaiting
+
             is LeaveOutcome.Left -> {
                 sync.refreshSign(step.match)
                 return null
@@ -85,9 +85,11 @@ class ArenaApplicationService(
             is QuitOutcome.WaitingExit -> {
                 sync.refreshSign(step.match)
             }
+
             is QuitOutcome.MatchEnded -> {
                 progression.finishMatch(step.match, outcome.winner, outcome.loser, forfeit = true, death = false)
             }
+
             QuitOutcome.NotParticipant -> Unit
         }
     }
@@ -107,10 +109,12 @@ class ArenaApplicationService(
             ?: return false
         return when (val outcome = step.outcome) {
             DefeatOutcome.Rejected -> false
+
             is DefeatOutcome.RoundWon -> {
                 progression.endRound(step.match, outcome, death = cause == DefeatCause.DEATH)
                 true
             }
+
             is DefeatOutcome.MatchFinished -> {
                 progression.finishMatch(step.match, outcome.winner, outcome.loser, forfeit = false, death = cause == DefeatCause.DEATH)
                 true

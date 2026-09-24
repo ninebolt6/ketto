@@ -9,7 +9,7 @@ import org.bukkit.command.CommandSender
 internal class ArenaInfoCommand(
     private val service: ArenaApplicationService,
     admin: ArenaAdministrationService,
-    messenger: Messenger
+    messenger: Messenger,
 ) : ArenaSubcommand(admin, messenger) {
 
     override val usage: Message = Message.UsageArena

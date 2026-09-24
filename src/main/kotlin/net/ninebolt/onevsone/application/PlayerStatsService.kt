@@ -12,8 +12,7 @@ class PlayerStatsService(private val stats: PlayerStatsRepository) {
     // Named-stats lookups resolve uncached names through an external call, hence the cooldown
     private val statsLookupThrottle = RequestThrottle(STATS_LOOKUP_COOLDOWN_NANOS)
 
-    fun tryAcquireStatsLookup(playerId: Uuid, nowNanos: Long): Boolean =
-        statsLookupThrottle.tryAcquire(playerId, nowNanos)
+    fun tryAcquireStatsLookup(playerId: Uuid, nowNanos: Long): Boolean = statsLookupThrottle.tryAcquire(playerId, nowNanos)
 
     private companion object {
         const val STATS_LOOKUP_COOLDOWN_NANOS = 3_000_000_000L

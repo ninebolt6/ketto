@@ -38,14 +38,14 @@ import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
 import org.bukkit.util.Vector
 import org.junit.jupiter.api.AfterEach
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNotEquals
-import kotlin.test.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 
 class ArenaListenerItemGuardTest {
 
@@ -95,7 +95,7 @@ class ArenaListenerItemGuardTest {
             Material.WHITE_BED,
             Material.RESPAWN_ANCHOR,
             Material.FLOWER_POT,
-            Material.POTTED_OAK_SAPLING
+            Material.POTTED_OAK_SAPLING,
         ).forEachIndexed { i, type ->
             val event = interact(p1, env.blockOf(type, x = 8, z = 20 + i))
             env.fire(event)
@@ -136,8 +136,11 @@ class ArenaListenerItemGuardTest {
         assertTrue(foreign.isCancelled)
 
         val drag = InventoryDragEvent(
-            chestView, null, env.item(Material.STONE), false,
-            mapOf(0 to env.item(Material.STONE))
+            chestView,
+            null,
+            env.item(Material.STONE),
+            false,
+            mapOf(0 to env.item(Material.STONE)),
         )
         env.fire(drag)
         assertTrue(drag.isCancelled)
@@ -150,7 +153,7 @@ class ArenaListenerItemGuardTest {
         listOf(
             EntityType.ITEM_FRAME,
             EntityType.ARMOR_STAND,
-            EntityType.CHEST_MINECART
+            EntityType.CHEST_MINECART,
         ).forEach { type ->
             val entity = env.spawn(type)
             val event = PlayerInteractEntityEvent(p1, entity)
@@ -169,7 +172,10 @@ class ArenaListenerItemGuardTest {
         val (p1, _) = env.twoPlayerIngame()
         val frame = env.spawn(EntityType.ITEM_FRAME)
         val event = PlayerInteractAtEntityEvent(
-            p1, frame, Vector(0.5, 1.0, 0.5), EquipmentSlot.HAND
+            p1,
+            frame,
+            Vector(0.5, 1.0, 0.5),
+            EquipmentSlot.HAND,
         )
         env.fire(event)
         assertTrue(event.isCancelled)
@@ -180,8 +186,12 @@ class ArenaListenerItemGuardTest {
         val (p1, _) = env.twoPlayerIngame()
         val stand = env.spawn(EntityType.ARMOR_STAND) as ArmorStand
         val event = PlayerArmorStandManipulateEvent(
-            p1, stand, env.item(Material.IRON_CHESTPLATE), ItemStack.empty(),
-            EquipmentSlot.HAND, EquipmentSlot.HAND
+            p1,
+            stand,
+            env.item(Material.IRON_CHESTPLATE),
+            ItemStack.empty(),
+            EquipmentSlot.HAND,
+            EquipmentSlot.HAND,
         )
         env.fire(event)
         assertTrue(event.isCancelled)
@@ -197,29 +207,46 @@ class ArenaListenerItemGuardTest {
         assertTrue(place.isCancelled)
 
         val hanging = HangingPlaceEvent(
-            env.spawn(EntityType.ITEM_FRAME) as ItemFrame, p1, block,
-            BlockFace.EAST, EquipmentSlot.HAND, env.item(Material.ITEM_FRAME)
+            env.spawn(EntityType.ITEM_FRAME) as ItemFrame,
+            p1,
+            block,
+            BlockFace.EAST,
+            EquipmentSlot.HAND,
+            env.item(Material.ITEM_FRAME),
         )
         env.fire(hanging)
         assertTrue(hanging.isCancelled)
 
         val bucketEmpty = PlayerBucketEmptyEvent(
-            p1, block, block, BlockFace.UP, Material.WATER_BUCKET,
-            env.item(Material.WATER_BUCKET), EquipmentSlot.HAND
+            p1,
+            block,
+            block,
+            BlockFace.UP,
+            Material.WATER_BUCKET,
+            env.item(Material.WATER_BUCKET),
+            EquipmentSlot.HAND,
         )
         env.fire(bucketEmpty)
         assertTrue(bucketEmpty.isCancelled)
 
         val bucketFill = PlayerBucketFillEvent(
-            p1, block, block, BlockFace.UP, Material.BUCKET,
-            env.item(Material.BUCKET), EquipmentSlot.HAND
+            p1,
+            block,
+            block,
+            BlockFace.UP,
+            Material.BUCKET,
+            env.item(Material.BUCKET),
+            EquipmentSlot.HAND,
         )
         env.fire(bucketFill)
         assertTrue(bucketFill.isCancelled)
 
         val bucketEntity = PlayerBucketEntityEvent(
-            p1, env.spawn(EntityType.COD), env.item(Material.WATER_BUCKET),
-            env.item(Material.COD_BUCKET), EquipmentSlot.HAND
+            p1,
+            env.spawn(EntityType.COD),
+            env.item(Material.WATER_BUCKET),
+            env.item(Material.COD_BUCKET),
+            EquipmentSlot.HAND,
         )
         env.fire(bucketEntity)
         assertTrue(bucketEntity.isCancelled)
@@ -239,13 +266,18 @@ class ArenaListenerItemGuardTest {
         assertTrue(attempt.isCancelled)
 
         val arrowPickup = PlayerPickupArrowEvent(
-            p1, env.itemEntity(), env.spawn(EntityType.ARROW) as AbstractArrow
+            p1,
+            env.itemEntity(),
+            env.spawn(EntityType.ARROW) as AbstractArrow,
         )
         env.fire(arrowPickup)
         assertTrue(arrowPickup.isCancelled)
 
         val harvest = PlayerHarvestBlockEvent(
-            p1, env.plainBlock(), EquipmentSlot.HAND, mutableListOf(env.item(Material.SWEET_BERRIES))
+            p1,
+            env.plainBlock(),
+            EquipmentSlot.HAND,
+            mutableListOf(env.item(Material.SWEET_BERRIES)),
         )
         env.fire(harvest)
         assertTrue(harvest.isCancelled)

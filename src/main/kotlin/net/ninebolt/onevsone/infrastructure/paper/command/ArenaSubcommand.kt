@@ -9,7 +9,7 @@ import org.bukkit.util.StringUtil
 
 internal abstract class ArenaSubcommand(
     protected val admin: ArenaAdministrationService,
-    messenger: Messenger
+    messenger: Messenger,
 ) : AbstractSubcommand(messenger) {
 
     protected abstract val usage: Message
@@ -29,12 +29,10 @@ internal abstract class ArenaSubcommand(
 
     protected abstract fun executeFor(sender: CommandSender, arenaName: String, rest: List<String>)
 
-    override fun tabComplete(sender: CommandSender, args: List<String>): List<String> =
-        if (args.size == 1) StringUtil.copyPartialMatches(args[0], admin.arenaNames(), mutableListOf()) else emptyList()
+    override fun tabComplete(sender: CommandSender, args: List<String>): List<String> = if (args.size == 1) StringUtil.copyPartialMatches(args[0], admin.arenaNames(), mutableListOf()) else emptyList()
 
-    protected fun arenaOrWarn(sender: CommandSender, name: String): Arena? =
-        admin.arena(name) ?: run {
-            messenger.send(sender, Message.ArenaNotFound)
-            null
-        }
+    protected fun arenaOrWarn(sender: CommandSender, name: String): Arena? = admin.arena(name) ?: run {
+        messenger.send(sender, Message.ArenaNotFound)
+        null
+    }
 }

@@ -12,7 +12,7 @@ internal class SqliteMigrations(private val connection: Connection) {
         val version = userVersion()
         if (version > LATEST_VERSION) {
             throw PersistenceFailure(
-                "data.db has schema version $version, newer than supported $LATEST_VERSION; not modifying it"
+                "data.db has schema version $version, newer than supported $LATEST_VERSION; not modifying it",
             )
         }
     }
@@ -63,13 +63,12 @@ internal class SqliteMigrations(private val connection: Connection) {
         }
     }
 
-    private fun userVersion(): Int =
-        connection.createStatement().use { st ->
-            st.executeQuery("PRAGMA user_version").use { rs ->
-                rs.next()
-                rs.getInt(1)
-            }
+    private fun userVersion(): Int = connection.createStatement().use { st ->
+        st.executeQuery("PRAGMA user_version").use { rs ->
+            rs.next()
+            rs.getInt(1)
         }
+    }
 
     private companion object {
         const val LATEST_VERSION = 1

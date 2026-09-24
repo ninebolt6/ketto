@@ -6,7 +6,7 @@ import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 
 internal abstract class AbstractSubcommand(
-    protected val messenger: Messenger
+    protected val messenger: Messenger,
 ) : Subcommand {
 
     protected fun CommandSender.denyUnlessOp(): Boolean {
@@ -15,9 +15,8 @@ internal abstract class AbstractSubcommand(
         return true
     }
 
-    protected fun CommandSender.requirePlayer(): Player? =
-        this as? Player ?: run {
-            messenger.send(this, Message.CommandPlayerOnly)
-            null
-        }
+    protected fun CommandSender.requirePlayer(): Player? = this as? Player ?: run {
+        messenger.send(this, Message.CommandPlayerOnly)
+        null
+    }
 }

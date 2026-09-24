@@ -5,11 +5,11 @@ import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.fallIntoVoid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.run
 import org.junit.jupiter.api.AfterEach
-import kotlin.test.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
+import kotlin.test.assertTrue
 
 class ArenaInfoCommandTest {
 

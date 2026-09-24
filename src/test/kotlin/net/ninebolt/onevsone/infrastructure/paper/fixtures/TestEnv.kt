@@ -5,6 +5,7 @@ import io.mockk.mockk
 import io.mockk.spyk
 import io.papermc.paper.threadedregions.scheduler.AsyncScheduler
 import io.papermc.paper.threadedregions.scheduler.ScheduledTask
+import net.kyori.adventure.text.Component
 import net.ninebolt.onevsone.application.ArenaAdministrationService
 import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.application.ArenaLifecycleService
@@ -25,15 +26,15 @@ import net.ninebolt.onevsone.infrastructure.paper.ArenaGuardListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaMatchListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaSignListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaTeleportListener
-import net.ninebolt.onevsone.infrastructure.paper.message.Message
-import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
-import net.ninebolt.onevsone.infrastructure.paper.command.OneVsOneCommand
 import net.ninebolt.onevsone.infrastructure.paper.PaperEquipmentAdapter
 import net.ninebolt.onevsone.infrastructure.paper.PaperInventorySnapshot
-import net.ninebolt.onevsone.infrastructure.paper.PaperPresentation
 import net.ninebolt.onevsone.infrastructure.paper.PaperPlayerAdapter
 import net.ninebolt.onevsone.infrastructure.paper.PaperPlayerLookup
+import net.ninebolt.onevsone.infrastructure.paper.PaperPresentation
 import net.ninebolt.onevsone.infrastructure.paper.PaperScheduler
+import net.ninebolt.onevsone.infrastructure.paper.command.OneVsOneCommand
+import net.ninebolt.onevsone.infrastructure.paper.message.Message
+import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import net.ninebolt.onevsone.infrastructure.persistence.SqliteArenaRepository
 import net.ninebolt.onevsone.infrastructure.persistence.SqliteArenaSignRepository
 import net.ninebolt.onevsone.infrastructure.persistence.SqliteBackupStore
@@ -42,33 +43,32 @@ import net.ninebolt.onevsone.infrastructure.persistence.SqliteLobbyRepository
 import net.ninebolt.onevsone.infrastructure.persistence.SqliteMatchStateRepository
 import net.ninebolt.onevsone.infrastructure.persistence.SqlitePlayerStatsRepository
 import net.ninebolt.onevsone.infrastructure.persistence.SqliteStore
-import net.kyori.adventure.text.Component
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.block.Block
+import org.bukkit.configuration.serialization.ConfigurationSerialization
 import org.bukkit.entity.Player
 import org.bukkit.event.Event
 import org.bukkit.event.HandlerList
 import org.bukkit.inventory.ItemStack
-import org.bukkit.configuration.serialization.ConfigurationSerialization
 import org.bukkit.scoreboard.Criteria
 import org.bukkit.scoreboard.DisplaySlot
 import org.bukkit.scoreboard.RenderType
 import org.bukkit.scoreboard.Scoreboard
+import org.mockbukkit.mockbukkit.MockBukkit
+import org.mockbukkit.mockbukkit.ServerMock
+import org.mockbukkit.mockbukkit.entity.PlayerMock
 import org.mockbukkit.mockbukkit.inventory.ItemStackMock
+import org.mockbukkit.mockbukkit.plugin.PluginMock
 import org.mockbukkit.mockbukkit.scoreboard.ObjectiveMock
 import org.mockbukkit.mockbukkit.scoreboard.ScoreMock
 import org.mockbukkit.mockbukkit.scoreboard.ScoreboardManagerMock
 import org.mockbukkit.mockbukkit.scoreboard.ScoreboardMock
-import org.mockbukkit.mockbukkit.MockBukkit
-import org.mockbukkit.mockbukkit.ServerMock
-import org.mockbukkit.mockbukkit.entity.PlayerMock
-import org.mockbukkit.mockbukkit.plugin.PluginMock
 import org.mockbukkit.mockbukkit.world.WorldMock
 import java.io.File
-import java.util.function.Consumer
 import java.util.Locale
 import java.util.UUID
+import java.util.function.Consumer
 import java.util.logging.Logger
 import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
@@ -79,6 +79,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     val server: ServerMock = spyk(MockBukkit.mock())
     val plugin: PluginMock = spyk(MockBukkit.createMockPlugin())
     val asyncScheduler: AsyncScheduler = mockk(relaxed = true)
+
     // ScoreMock.customName is unimplemented in MockBukkit 4.15, so only the scoreboard boundary is a narrow stub
     val scoreboardManager: ScoreboardManagerMock = mockk(relaxed = true)
     val boards = mutableListOf<Scoreboard>()
@@ -98,11 +99,10 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
             every { board.registerNewObjective(any<String>(), any<Criteria>(), any<Component>()) } answers {
                 object : ObjectiveMock(board, arg(0), arg(2), arg(1), RenderType.INTEGER) {
                     override fun setDisplaySlot(slot: DisplaySlot?) {}
-                    override fun getScore(entry: String): ScoreMock =
-                        object : ScoreMock(this, entry) {
-                            override fun customName(customName: Component?) {}
-                            override fun setScore(score: Int) {}
-                        }
+                    override fun getScore(entry: String): ScoreMock = object : ScoreMock(this, entry) {
+                        override fun customName(customName: Component?) {}
+                        override fun setScore(score: Int) {}
+                    }
                 }
             }
             boards += board
@@ -138,7 +138,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         val signs: ArenaSignService,
         val lobby: LobbyService,
         val signListener: ArenaSignListener,
-        val command: OneVsOneCommand
+        val command: OneVsOneCommand,
     )
 
     private var deps = run {
@@ -176,7 +176,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         store: SqliteStore,
         backupStore: SqliteBackupStore,
         matchStateRepo: MatchStateRepository,
-        statsRepo: PlayerStatsRepository
+        statsRepo: PlayerStatsRepository,
     ): Deps {
         val kitStore = SqliteKitStore(store)
         val arenaRepo = SqliteArenaRepository(store)
@@ -189,14 +189,22 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         val recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepo, presentation, logger)
         val progression = MatchProgressionService(
             registry, MatchStateSync(matchStateRepo, signs), statsRepo,
-            equipment, playerPort, schedulerPort, presentation, recovery, logger
+            equipment, playerPort, schedulerPort, presentation, recovery, logger,
         )
         val service = ArenaApplicationService(
-            registry, playerPort,
-            recovery, progression, MatchStateSync(matchStateRepo, signs)
+            registry,
+            playerPort,
+            recovery,
+            progression,
+            MatchStateSync(matchStateRepo, signs),
         )
         val lifecycle = ArenaLifecycleService(
-            registry, arenaRepo, MatchStateSync(matchStateRepo, signs), recovery, progression, logger
+            registry,
+            arenaRepo,
+            MatchStateSync(matchStateRepo, signs),
+            recovery,
+            progression,
+            logger,
         )
         val admin = ArenaAdministrationService(registry, arenaRepo, signRepo, equipment, progression)
         val statsService = PlayerStatsService(statsRepo)
@@ -206,7 +214,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
             equipment, presentation, registry, recovery, progression, service, lifecycle, admin,
             statsService, signs, lobby,
             ArenaSignListener(service, signs, messenger),
-            OneVsOneCommand(service, admin, statsService, signs, lobby, playerPort, logger, messenger)
+            OneVsOneCommand(service, admin, statsService, signs, lobby, playerPort, logger, messenger),
         )
     }
 
@@ -214,7 +222,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         newStore: SqliteStore = deps.store,
         backupStore: SqliteBackupStore = SqliteBackupStore(newStore),
         matchState: MatchStateRepository = SqliteMatchStateRepository(newStore),
-        statsRepo: PlayerStatsRepository = SqlitePlayerStatsRepository(newStore)
+        statsRepo: PlayerStatsRepository = SqlitePlayerStatsRepository(newStore),
     ) {
         deps = makeDeps(newStore, backupStore, matchState, statsRepo)
         registerListeners()
@@ -233,8 +241,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         server.pluginManager.callEvent(event)
     }
 
-    fun world(name: String = "world"): WorldMock =
-        server.getWorld(name) as? WorldMock ?: server.addSimpleWorld(name)
+    fun world(name: String = "world"): WorldMock = server.getWorld(name) as? WorldMock ?: server.addSimpleWorld(name)
 
     fun player(name: String, uuid: Uuid = Uuid.random(), worldName: String = "world"): ArenaPlayerMock {
         val w = world(worldName)
@@ -272,9 +279,9 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
                 id,
                 enabled = enabled,
                 spawn1 = WorldPosition.new("world", 1.0, 64.0, 1.0),
-                spawn2 = WorldPosition.new("world", 2.0, 64.0, 2.0)
+                spawn2 = WorldPosition.new("world", 2.0, 64.0, 2.0),
             ),
-            persist = arenaRepo::save
+            persist = arenaRepo::save,
         )
         return id
     }

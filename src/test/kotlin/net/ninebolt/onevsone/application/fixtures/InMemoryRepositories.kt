@@ -14,7 +14,10 @@ import net.ninebolt.onevsone.domain.WorldPosition
 import java.util.Locale
 import kotlin.uuid.Uuid
 
-class InMemoryArenaRepository : ArenaRepository, LobbyRepository, ArenaSignRepository {
+class InMemoryArenaRepository :
+    ArenaRepository,
+    LobbyRepository,
+    ArenaSignRepository {
     val names = mutableListOf<String>()
     val definitions = mutableMapOf<String, Arena>()
     var lobbyPosition: WorldPosition? = null
@@ -28,8 +31,7 @@ class InMemoryArenaRepository : ArenaRepository, LobbyRepository, ArenaSignRepos
         }
     }
 
-    override fun find(name: String): Arena =
-        definitions[name] ?: Arena.new(Arena.Id.new(name))
+    override fun find(name: String): Arena = definitions[name] ?: Arena.new(Arena.Id.new(name))
 
     override fun save(arena: Arena) {
         if (failOnSave) throw PersistenceFailure("save failed")
@@ -56,8 +58,7 @@ class InMemoryArenaRepository : ArenaRepository, LobbyRepository, ArenaSignRepos
         signs.remove(arenaName)
     }
 
-    override fun signOwner(position: BlockPosition): String? =
-        signs.entries.firstOrNull { (_, pos) -> pos == position }?.key
+    override fun signOwner(position: BlockPosition): String? = signs.entries.firstOrNull { (_, pos) -> pos == position }?.key
 }
 
 class InMemoryMatchStateRepository : MatchStateRepository {

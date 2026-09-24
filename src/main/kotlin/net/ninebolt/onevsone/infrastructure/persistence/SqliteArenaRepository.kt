@@ -9,22 +9,21 @@ import java.util.logging.Logger
 // delete cascades to the arena's kit, sign, and match-status rows
 class SqliteArenaRepository(
     private val store: SqliteStore,
-    private val logger: Logger = Logger.getLogger(SqliteArenaRepository::class.java.name)
+    private val logger: Logger = Logger.getLogger(SqliteArenaRepository::class.java.name),
 ) : ArenaRepository {
 
-    override fun loadAll(): List<Arena> =
-        store.query("SELECT * FROM arenas ORDER BY seq") { row ->
-            val name = row.getString("name")
-            if (Arena.Id.of(name) == null) {
-                logger.warning("Ignoring invalid arena name '$name' in arenas table")
+    override fun loadAll(): List<Arena> = store.query("SELECT * FROM arenas ORDER BY seq") { row ->
+        val name = row.getString("name")
+        if (Arena.Id.of(name) == null) {
+            logger.warning("Ignoring invalid arena name '$name' in arenas table")
+            null
+        } else {
+            decode(row) ?: run {
+                logger.warning("Arena '$name' could not be loaded; skipping")
                 null
-            } else {
-                decode(row) ?: run {
-                    logger.warning("Arena '$name' could not be loaded; skipping")
-                    null
-                }
             }
-        }.filterNotNull()
+        }
+    }.filterNotNull()
 
     override fun find(name: String): Arena? {
         val id = Arena.Id.of(name) ?: return null
@@ -49,8 +48,10 @@ class SqliteArenaRepository(
               spawn2_y = excluded.spawn2_y, spawn2_z = excluded.spawn2_z,
               spawn2_yaw = excluded.spawn2_yaw, spawn2_pitch = excluded.spawn2_pitch
             """.trimIndent(),
-            arena.name, arena.enabled,
-            *locationParams(arena.spawn1), *locationParams(arena.spawn2)
+            arena.name,
+            arena.enabled,
+            *locationParams(arena.spawn1),
+            *locationParams(arena.spawn2),
         )
     }
 
@@ -65,13 +66,12 @@ class SqliteArenaRepository(
         null
     }
 
-    private fun toArena(row: ResultSet): Arena =
-        Arena.new(
-            id = Arena.Id.new(row.getString("name")),
-            enabled = row.getInt("enabled") != 0,
-            spawn1 = readLocation(row, "spawn1"),
-            spawn2 = readLocation(row, "spawn2")
-        )
+    private fun toArena(row: ResultSet): Arena = Arena.new(
+        id = Arena.Id.new(row.getString("name")),
+        enabled = row.getInt("enabled") != 0,
+        spawn1 = readLocation(row, "spawn1"),
+        spawn2 = readLocation(row, "spawn2"),
+    )
 
     private fun readLocation(row: ResultSet, prefix: String): WorldPosition? {
         val world = row.getString("${prefix}_world") ?: return null
@@ -81,14 +81,13 @@ class SqliteArenaRepository(
             y = row.getDouble("${prefix}_y"),
             z = row.getDouble("${prefix}_z"),
             yaw = row.getDouble("${prefix}_yaw").toFloat(),
-            pitch = row.getDouble("${prefix}_pitch").toFloat()
+            pitch = row.getDouble("${prefix}_pitch").toFloat(),
         )
     }
 
-    private fun locationParams(loc: WorldPosition?): Array<Any?> =
-        if (loc == null) {
-            arrayOf(null, null, null, null, null, null)
-        } else {
-            arrayOf(loc.world, loc.x, loc.y, loc.z, loc.yaw, loc.pitch)
-        }
+    private fun locationParams(loc: WorldPosition?): Array<Any?> = if (loc == null) {
+        arrayOf(null, null, null, null, null, null)
+    } else {
+        arrayOf(loc.world, loc.x, loc.y, loc.z, loc.yaw, loc.pitch)
+    }
 }

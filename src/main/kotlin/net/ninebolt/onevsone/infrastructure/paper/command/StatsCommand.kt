@@ -14,7 +14,7 @@ internal class StatsCommand(
     private val statsService: PlayerStatsService,
     private val players: PlayerPort,
     private val logger: Logger,
-    messenger: Messenger
+    messenger: Messenger,
 ) : AbstractSubcommand(messenger) {
 
     override fun visibleTo(sender: CommandSender): Boolean = true

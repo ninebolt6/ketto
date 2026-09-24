@@ -117,8 +117,7 @@ class SqliteStore(folder: File, private val logger: Logger) : AutoCloseable {
         }
     }
 
-    internal fun <T> queryOne(sql: String, vararg params: Any?, map: (ResultSet) -> T): T? =
-        query(sql, *params, map = map).firstOrNull()
+    internal fun <T> queryOne(sql: String, vararg params: Any?, map: (ResultSet) -> T): T? = query(sql, *params, map = map).firstOrNull()
 
     private fun bind(ps: PreparedStatement, params: Array<out Any?>) {
         params.forEachIndexed { i, value ->
@@ -136,8 +135,7 @@ class SqliteStore(folder: File, private val logger: Logger) : AutoCloseable {
         }
     }
 
-    private fun asFailure(e: Throwable): Throwable =
-        if (e is Exception) e as? PersistenceFailure ?: PersistenceFailure("SQLite operation failed", e) else e
+    private fun asFailure(e: Throwable): Throwable = if (e is Exception) e as? PersistenceFailure ?: PersistenceFailure("SQLite operation failed", e) else e
 
     override fun close() {
         try {

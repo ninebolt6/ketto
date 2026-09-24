@@ -9,7 +9,7 @@ import org.bukkit.command.CommandSender
 internal class ArenaSignRemoveCommand(
     admin: ArenaAdministrationService,
     private val signs: ArenaSignService,
-    messenger: Messenger
+    messenger: Messenger,
 ) : ArenaSubcommand(admin, messenger) {
 
     override val usage: Message = Message.UsageSignRemove

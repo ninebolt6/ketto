@@ -22,7 +22,7 @@ import kotlin.uuid.toKotlinUuid
 class ArenaMatchListener(
     private val service: ArenaApplicationService,
     private val lookup: PaperPlayerLookup,
-    private val messenger: Messenger
+    private val messenger: Messenger,
 ) : Listener {
 
     @EventHandler(priority = EventPriority.HIGH)
@@ -59,7 +59,7 @@ class ArenaMatchListener(
             victimId = victim?.uniqueId?.toKotlinUuid(),
             attackerId = attacker?.uniqueId?.toKotlinUuid(),
             victimMatch = victim?.let { service.matchOf(it.uniqueId.toKotlinUuid()) },
-            attackerMatch = attacker?.let { service.matchOf(it.uniqueId.toKotlinUuid()) }
+            attackerMatch = attacker?.let { service.matchOf(it.uniqueId.toKotlinUuid()) },
         )
         if (!allowed) event.isCancelled = true
     }

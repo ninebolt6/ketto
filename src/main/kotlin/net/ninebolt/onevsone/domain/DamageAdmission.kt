@@ -9,7 +9,7 @@ object DamageAdmission {
         victimId: Uuid?,
         attackerId: Uuid?,
         victimMatch: ArenaMatch?,
-        attackerMatch: ArenaMatch?
+        attackerMatch: ArenaMatch?,
     ): Boolean {
         fun limits(match: ArenaMatch?) = match?.let {
             ParticipantRestrictions.forState(it.state).let { r -> r.damageCancelled || r.opponentDamageOnly }

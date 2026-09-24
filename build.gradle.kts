@@ -3,6 +3,7 @@ import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.power.assert)
+    alias(libs.plugins.ktlint.gradle)
 }
 
 group = "net.ninebolt"
@@ -47,6 +48,10 @@ kotlin {
     }
 }
 
+ktlint {
+    version.set(libs.versions.ktlint.engine.get())
+}
+
 @OptIn(ExperimentalKotlinGradlePluginApi::class)
 powerAssert {
     functions = listOf(
@@ -80,8 +85,10 @@ tasks.processResources {
 
 tasks.jar {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    from(configurations.runtimeClasspath.get().map {
-        if (it.isDirectory) it else zipTree(it)
-    })
+    from(
+        configurations.runtimeClasspath.get().map {
+            if (it.isDirectory) it else zipTree(it)
+        },
+    )
     exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
 }

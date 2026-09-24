@@ -40,8 +40,7 @@ sealed class Message(val key: MessageKey, vararg val args: Arg) {
     data object ArenaNotFound : Message(MessageKey.ARENA_NOT_FOUND)
     class ArenaCreated(name: String) : Message(MessageKey.ARENA_CREATED, Str("name", name))
     class ArenaRemoved(name: String) : Message(MessageKey.ARENA_REMOVED, Str("name", name))
-    class ArenaSpawnSet(name: String, slot: Int) :
-        Message(MessageKey.ARENA_SPAWN_SET, Str("name", name), Str("slot", "$slot"))
+    class ArenaSpawnSet(name: String, slot: Int) : Message(MessageKey.ARENA_SPAWN_SET, Str("name", name), Str("slot", "$slot"))
     class ArenaEnabled(name: String) : Message(MessageKey.ARENA_ENABLED, Str("name", name))
     data object ArenaAlreadyEnabled : Message(MessageKey.ARENA_ALREADY_ENABLED)
     class ArenaDisabled(name: String) : Message(MessageKey.ARENA_DISABLED, Str("name", name))
@@ -50,12 +49,9 @@ sealed class Message(val key: MessageKey, vararg val args: Arg) {
     data object ArenaNotEnabled : Message(MessageKey.ARENA_NOT_ENABLED)
 
     class ArenaInfoHeader(name: String) : Message(MessageKey.ARENA_INFO_HEADER, Str("name", name))
-    class ArenaInfoState(state: ArenaState) :
-        Message(MessageKey.ARENA_INFO_STATE, Nested("display", StateDisplay(state)))
-    class ArenaInfoVersus(name1: String, name2: String) :
-        Message(MessageKey.ARENA_INFO_VERSUS, Str("name1", name1), Str("name2", name2))
-    class ArenaInfoWinCount(wins1: Int, wins2: Int) :
-        Message(MessageKey.ARENA_INFO_WIN_COUNT, Str("wins1", "$wins1"), Str("wins2", "$wins2"))
+    class ArenaInfoState(state: ArenaState) : Message(MessageKey.ARENA_INFO_STATE, Nested("display", StateDisplay(state)))
+    class ArenaInfoVersus(name1: String, name2: String) : Message(MessageKey.ARENA_INFO_VERSUS, Str("name1", name1), Str("name2", name2))
+    class ArenaInfoWinCount(wins1: Int, wins2: Int) : Message(MessageKey.ARENA_INFO_WIN_COUNT, Str("wins1", "$wins1"), Str("wins2", "$wins2"))
 
     class MatchJoined(name: String) : Message(MessageKey.MATCH_JOINED, Str("name", name))
     data object MatchWaitOneMore : Message(MessageKey.MATCH_WAIT_ONE_MORE)
@@ -68,15 +64,12 @@ sealed class Message(val key: MessageKey, vararg val args: Arg) {
     data object MatchGameStart : Message(MessageKey.MATCH_GAME_START)
     class MatchStartIn(n: Int) : Message(MessageKey.MATCH_START_IN, Str("n", "$n"))
     data object MatchRoundStart : Message(MessageKey.MATCH_ROUND_START)
-    class MatchRoundWinner(round: Int, name: String) :
-        Message(MessageKey.MATCH_ROUND_WINNER, Str("round", "$round"), Str("name", name))
-    class MatchChampion(arena: String, name: String) :
-        Message(MessageKey.MATCH_CHAMPION, Str("arena", arena), Str("name", name))
+    class MatchRoundWinner(round: Int, name: String) : Message(MessageKey.MATCH_ROUND_WINNER, Str("round", "$round"), Str("name", name))
+    class MatchChampion(arena: String, name: String) : Message(MessageKey.MATCH_CHAMPION, Str("arena", arena), Str("name", name))
 
     class StatsWin(wins: Int) : Message(MessageKey.STATS_WIN, Str("wins", "$wins"))
     class StatsLose(losses: Int) : Message(MessageKey.STATS_LOSE, Str("losses", "$losses"))
-    class StatsRatio(stats: PlayerStats) :
-        Message(MessageKey.STATS_RATIO, Str("ratio", "%.2f".format(Locale.ROOT, stats.ratio)))
+    class StatsRatio(stats: PlayerStats) : Message(MessageKey.STATS_RATIO, Str("ratio", "%.2f".format(Locale.ROOT, stats.ratio)))
     data object StatsNone : Message(MessageKey.STATS_NONE)
     data object StatsCooldown : Message(MessageKey.STATS_COOLDOWN)
 
@@ -89,12 +82,15 @@ sealed class Message(val key: MessageKey, vararg val args: Arg) {
     data object SignJoin : Message(MessageKey.SIGN_JOIN)
     data object SignCannotJoin : Message(MessageKey.SIGN_CANNOT_JOIN)
 
-    class StateDisplay(state: ArenaState) : Message(when (state) {
-        ArenaState.WAITING -> MessageKey.STATE_WAITING
-        ArenaState.ONEMORE -> MessageKey.STATE_ONEMORE
-        ArenaState.COUNTDOWN -> MessageKey.STATE_COUNTDOWN
-        ArenaState.ROUNDCOUNTDOWN, ArenaState.INGAME -> MessageKey.STATE_INGAME
-    })
+    class StateDisplay(state: ArenaState) :
+        Message(
+            when (state) {
+                ArenaState.WAITING -> MessageKey.STATE_WAITING
+                ArenaState.ONEMORE -> MessageKey.STATE_ONEMORE
+                ArenaState.COUNTDOWN -> MessageKey.STATE_COUNTDOWN
+                ArenaState.ROUNDCOUNTDOWN, ArenaState.INGAME -> MessageKey.STATE_INGAME
+            },
+        )
 
     class ScoreboardTitle(arena: String) : Message(MessageKey.SCOREBOARD_TITLE, Str("arena", arena))
     class ScoreboardEntry(name: String) : Message(MessageKey.SCOREBOARD_ENTRY, Str("name", name))

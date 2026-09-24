@@ -6,7 +6,7 @@ import java.util.logging.Logger
 internal class PluginSettings private constructor(
     val requiredWins: Int,
     val defaultLanguage: String,
-    val language: String
+    val language: String,
 ) {
     companion object {
         fun load(config: FileConfiguration, logger: Logger): PluginSettings {
@@ -15,7 +15,7 @@ internal class PluginSettings private constructor(
             return PluginSettings(
                 requiredWins = wins.coerceAtLeast(1),
                 defaultLanguage = config.getString("default-language") ?: "en",
-                language = config.getString("language") ?: "auto"
+                language = config.getString("language") ?: "auto",
             )
         }
     }

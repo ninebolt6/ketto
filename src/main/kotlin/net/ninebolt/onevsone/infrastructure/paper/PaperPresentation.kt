@@ -27,7 +27,7 @@ import kotlin.uuid.toJavaUuid
 class PaperPresentation(
     private val server: Server,
     private val messenger: Messenger,
-    private val logger: Logger
+    private val logger: Logger,
 ) : PresentationPort {
 
     private fun player(id: Uuid): Player? = server.getPlayer(id.toJavaUuid())
@@ -100,7 +100,7 @@ class PaperPresentation(
                 .withColor(Color.RED)
                 .withFade(Color.BLUE)
                 .with(FireworkEffect.Type.CREEPER)
-                .build()
+                .build(),
         )
         firework.fireworkMeta = meta
     }
@@ -111,7 +111,7 @@ class PaperPresentation(
         val objective = board.registerNewObjective(
             "1vs1",
             Criteria.DUMMY,
-            messenger.render(Message.ScoreboardTitle(match.arenaId.name))
+            messenger.render(Message.ScoreboardTitle(match.arenaId.name)),
         )
         objective.displaySlot = DisplaySlot.SIDEBAR
         match.participants.forEach { (id, name) ->

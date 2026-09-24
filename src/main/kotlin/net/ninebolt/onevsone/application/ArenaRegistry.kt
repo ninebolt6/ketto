@@ -11,7 +11,7 @@ import kotlin.uuid.Uuid
 // Ordering contract: each mutator's persist hook runs before the in-memory write and touches persistence only; arena persist failures propagate, match persist failures are only reported
 class ArenaRegistry(
     private val requiredWins: Int,
-    private val logger: Logger
+    private val logger: Logger,
 ) {
 
     private data class Slot(val arena: Arena, val match: ArenaMatch)
@@ -22,9 +22,8 @@ class ArenaRegistry(
     fun arena(id: Arena.Id): Arena? = slots[id]?.arena
 
     // Case-insensitive fallback is unambiguous because create rejects case-insensitive duplicate names
-    fun resolveArenaId(name: String): Arena.Id? =
-        Arena.Id.of(name)?.takeIf { slots.containsKey(it) }
-            ?: slots.keys.firstOrNull { it.name.equals(name, ignoreCase = true) }
+    fun resolveArenaId(name: String): Arena.Id? = Arena.Id.of(name)?.takeIf { slots.containsKey(it) }
+        ?: slots.keys.firstOrNull { it.name.equals(name, ignoreCase = true) }
 
     fun arenaIds(): List<Arena.Id> = slots.keys.toList()
 
@@ -64,7 +63,7 @@ class ArenaRegistry(
     fun updateMatch(
         id: Arena.Id,
         persist: (ArenaMatch) -> Unit,
-        transform: (ArenaMatch) -> ArenaMatch
+        transform: (ArenaMatch) -> ArenaMatch,
     ): ArenaMatch? {
         val slot = slots[id] ?: return null
         val next = transform(slot.match)
@@ -78,7 +77,7 @@ class ArenaRegistry(
     fun <O> transact(
         id: Arena.Id,
         persist: (ArenaMatch) -> Unit,
-        operation: (ArenaMatch) -> Transition<O>
+        operation: (ArenaMatch) -> Transition<O>,
     ): Transition<O>? {
         val slot = slots[id] ?: return null
         val transition = operation(slot.match)
@@ -96,7 +95,7 @@ class ArenaRegistry(
             logger.log(
                 Level.SEVERE,
                 "Could not persist match projection for arena ${id.name}; in-memory state committed",
-                e
+                e,
             )
         }
     }

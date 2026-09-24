@@ -9,7 +9,7 @@ import net.ninebolt.onevsone.domain.BlockPosition
 class ArenaSignService(
     private val registry: ArenaRegistry,
     private val signs: ArenaSignRepository,
-    private val presentation: PresentationPort
+    private val presentation: PresentationPort,
 ) {
     fun signLocation(arenaName: String): BlockPosition? = signs.signLocation(arenaName)
 

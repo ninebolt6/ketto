@@ -5,6 +5,7 @@ import net.ninebolt.onevsone.domain.fixtures.bob
 import net.ninebolt.onevsone.domain.fixtures.carol
 import net.ninebolt.onevsone.domain.fixtures.match
 import net.ninebolt.onevsone.domain.fixtures.startedMatch
+import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -12,7 +13,6 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
-import org.junit.jupiter.api.Test
 
 class ArenaMatchTest {
 
@@ -178,7 +178,7 @@ class ArenaMatchTest {
             itemDropCancelled: Boolean,
             inventoryTransferCancelled: Boolean,
             itemPickupCancelled: Boolean,
-            commandsBlocked: Boolean
+            commandsBlocked: Boolean,
         ) {
             val r = ParticipantRestrictions.forState(state)
             assertEquals(horizontalMoveFrozen, r.horizontalMoveFrozen, "$state.horizontalMoveFrozen")
@@ -189,8 +189,9 @@ class ArenaMatchTest {
             assertEquals(blockPlaceCancelled, r.blockPlaceCancelled, "$state.blockPlaceCancelled")
             assertEquals(itemDropCancelled, r.itemDropCancelled, "$state.itemDropCancelled")
             assertEquals(
-                inventoryTransferCancelled, r.inventoryTransferCancelled,
-                "$state.inventoryTransferCancelled"
+                inventoryTransferCancelled,
+                r.inventoryTransferCancelled,
+                "$state.inventoryTransferCancelled",
             )
             assertEquals(itemPickupCancelled, r.itemPickupCancelled, "$state.itemPickupCancelled")
             assertEquals(commandsBlocked, r.commandsBlocked, "$state.commandsBlocked")
@@ -207,7 +208,7 @@ class ArenaMatchTest {
             itemDropCancelled = false,
             inventoryTransferCancelled = false,
             itemPickupCancelled = false,
-            commandsBlocked = true
+            commandsBlocked = true,
         )
         assertRestrictions(
             ArenaState.ONEMORE,
@@ -220,7 +221,7 @@ class ArenaMatchTest {
             itemDropCancelled = false,
             inventoryTransferCancelled = false,
             itemPickupCancelled = false,
-            commandsBlocked = false
+            commandsBlocked = false,
         )
         assertRestrictions(
             ArenaState.COUNTDOWN,
@@ -233,7 +234,7 @@ class ArenaMatchTest {
             itemDropCancelled = false,
             inventoryTransferCancelled = false,
             itemPickupCancelled = false,
-            commandsBlocked = true
+            commandsBlocked = true,
         )
         assertRestrictions(
             ArenaState.ROUNDCOUNTDOWN,
@@ -246,7 +247,7 @@ class ArenaMatchTest {
             itemDropCancelled = true,
             inventoryTransferCancelled = true,
             itemPickupCancelled = true,
-            commandsBlocked = true
+            commandsBlocked = true,
         )
         assertRestrictions(
             ArenaState.INGAME,
@@ -259,7 +260,7 @@ class ArenaMatchTest {
             itemDropCancelled = true,
             inventoryTransferCancelled = true,
             itemPickupCancelled = true,
-            commandsBlocked = true
+            commandsBlocked = true,
         )
     }
 
@@ -276,14 +277,21 @@ class ArenaMatchTest {
         }
         assertFailsWith<IllegalArgumentException> {
             ArenaMatch.restored(
-                Arena.Id.new("a1"), 3, ArenaState.INGAME, listOf(alice, bob),
-                wins = mapOf(carol.id to 1)
+                Arena.Id.new("a1"),
+                3,
+                ArenaState.INGAME,
+                listOf(alice, bob),
+                wins = mapOf(carol.id to 1),
             )
         }
         assertFailsWith<IllegalArgumentException> {
             ArenaMatch.restored(
-                Arena.Id.new("a1"), 3, ArenaState.INGAME, listOf(alice, bob),
-                wins = emptyMap(), resolving = true
+                Arena.Id.new("a1"),
+                3,
+                ArenaState.INGAME,
+                listOf(alice, bob),
+                wins = emptyMap(),
+                resolving = true,
             )
         }
     }

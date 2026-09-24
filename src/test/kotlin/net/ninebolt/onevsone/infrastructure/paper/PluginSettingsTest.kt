@@ -10,8 +10,7 @@ class PluginSettingsTest {
 
     private val logger = RecordingLogger()
 
-    private fun load(yaml: String = ""): PluginSettings =
-        PluginSettings.load(YamlConfiguration().apply { loadFromString(yaml) }, logger)
+    private fun load(yaml: String = ""): PluginSettings = PluginSettings.load(YamlConfiguration().apply { loadFromString(yaml) }, logger)
 
     @Test
     fun `defaults apply when keys are absent`() {

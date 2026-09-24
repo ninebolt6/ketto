@@ -45,18 +45,16 @@ class PaperPlayerLookup(private val server: Server) {
 
     fun resolve(id: Uuid): Player? = quitting[id] ?: server.getPlayer(id.toJavaUuid())
 
-    fun resolveByName(name: String): Player? =
-        quitting.values.firstOrNull { it.name == name } ?: server.getPlayerExact(name)
+    fun resolveByName(name: String): Player? = quitting.values.firstOrNull { it.name == name } ?: server.getPlayerExact(name)
 }
 
 class PaperPlayerAdapter(
     private val lookup: PaperPlayerLookup,
     private val server: Server,
     private val plugin: JavaPlugin,
-    private val logger: Logger
+    private val logger: Logger,
 ) : PlayerPort {
-    override fun handle(playerId: Uuid): PlayerHandle? =
-        lookup.resolve(playerId)?.let { PaperPlayerHandle(it, server, logger, lookup) }
+    override fun handle(playerId: Uuid): PlayerHandle? = lookup.resolve(playerId)?.let { PaperPlayerHandle(it, server, logger, lookup) }
 
     override fun resolveOfflineId(name: String, callback: (Uuid?) -> Unit) {
         val known = server.getPlayerExact(name) ?: server.getOfflinePlayerIfCached(name)
@@ -81,7 +79,7 @@ private class PaperPlayerHandle(
     private val player: Player,
     private val server: Server,
     private val logger: Logger,
-    private val lookup: PaperPlayerLookup
+    private val lookup: PaperPlayerLookup,
 ) : PlayerHandle {
     override val id: Uuid get() = player.uniqueId.toKotlinUuid()
     override val name: String get() = player.name
@@ -120,7 +118,7 @@ private class PaperPlayerHandle(
         lookup.scopePluginTeleport(id) {
             player.teleport(
                 Location(world, position.x, position.y, position.z, position.yaw, position.pitch),
-                PlayerTeleportEvent.TeleportCause.PLUGIN
+                PlayerTeleportEvent.TeleportCause.PLUGIN,
             )
         }
     }

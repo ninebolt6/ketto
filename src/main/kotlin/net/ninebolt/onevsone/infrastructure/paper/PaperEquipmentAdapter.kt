@@ -16,8 +16,9 @@ import kotlin.uuid.Uuid
 class PaperEquipmentAdapter(
     private val backups: SqliteBackupStore,
     private val kitStore: SqliteKitStore,
-    private val lookup: PaperPlayerLookup
-) : KitPort, InventoryBackupPort {
+    private val lookup: PaperPlayerLookup,
+) : KitPort,
+    InventoryBackupPort {
 
     private val kits = mutableMapOf<Arena.Id, PaperInventorySnapshot>()
 
@@ -41,9 +42,9 @@ class PaperEquipmentAdapter(
                 BackupRef.new(
                     matchId = match,
                     playerId = participant.id,
-                    playerName = participant.name
+                    playerName = participant.name,
                 ),
-                PaperInventorySnapshot.capture(player.inventory)
+                PaperInventorySnapshot.capture(player.inventory),
             )
         }
         backups.saveBackups(captured)
@@ -60,16 +61,14 @@ class PaperEquipmentAdapter(
         snapshot.apply(player.inventory)
     }
 
-    private fun resolve(backup: BackupRef): Player? =
-        backup.playerId?.let { lookup.resolve(it) } ?: lookup.resolveByName(backup.playerName)
+    private fun resolve(backup: BackupRef): Player? = backup.playerId?.let { lookup.resolve(it) } ?: lookup.resolveByName(backup.playerName)
 
     override fun acknowledge(backup: BackupRef) {
         backups.deleteBackup(backup)
         pendingSnapshots.remove(backup.backupId)
     }
 
-    override fun pendingBackups(): List<BackupRef> =
-        backups.persistedBackups().onEach { pendingSnapshots[it.ref.backupId] = it.snapshot }.map { it.ref }
+    override fun pendingBackups(): List<BackupRef> = backups.persistedBackups().onEach { pendingSnapshots[it.ref.backupId] = it.snapshot }.map { it.ref }
 
     override fun applyKit(arena: Arena.Id, playerId: Uuid) {
         val player = lookup.resolve(playerId)
@@ -85,6 +84,5 @@ class PaperEquipmentAdapter(
         kits[arena] = kit
     }
 
-    private fun kit(arena: Arena.Id): PaperInventorySnapshot =
-        kits.getOrPut(arena) { kitStore.loadArenaKit(arena.name) }
+    private fun kit(arena: Arena.Id): PaperInventorySnapshot = kits.getOrPut(arena) { kitStore.loadArenaKit(arena.name) }
 }

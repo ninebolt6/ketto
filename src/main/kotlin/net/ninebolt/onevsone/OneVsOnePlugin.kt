@@ -14,15 +14,15 @@ import net.ninebolt.onevsone.infrastructure.paper.ArenaGuardListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaMatchListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaSignListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaTeleportListener
-import net.ninebolt.onevsone.infrastructure.paper.message.LanguageFiles
-import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
-import net.ninebolt.onevsone.infrastructure.paper.command.OneVsOneCommand
 import net.ninebolt.onevsone.infrastructure.paper.PaperEquipmentAdapter
-import net.ninebolt.onevsone.infrastructure.paper.PaperPresentation
 import net.ninebolt.onevsone.infrastructure.paper.PaperPlayerAdapter
 import net.ninebolt.onevsone.infrastructure.paper.PaperPlayerLookup
+import net.ninebolt.onevsone.infrastructure.paper.PaperPresentation
 import net.ninebolt.onevsone.infrastructure.paper.PaperScheduler
 import net.ninebolt.onevsone.infrastructure.paper.PluginSettings
+import net.ninebolt.onevsone.infrastructure.paper.command.OneVsOneCommand
+import net.ninebolt.onevsone.infrastructure.paper.message.LanguageFiles
+import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import net.ninebolt.onevsone.infrastructure.persistence.SqliteArenaRepository
 import net.ninebolt.onevsone.infrastructure.persistence.SqliteArenaSignRepository
 import net.ninebolt.onevsone.infrastructure.persistence.SqliteBackupStore
@@ -47,7 +47,7 @@ open class OneVsOnePlugin : JavaPlugin() {
             messagesDir = LanguageFiles.dir(dataFolder),
             fallbackLang = settings.defaultLanguage,
             language = settings.language,
-            logger = logger
+            logger = logger,
         )
         // the store is created outside the module so it can be closed if wiring fails midway
         val store = SqliteStore(dataFolder, logger)
@@ -71,7 +71,7 @@ private class PluginModule(
     private val plugin: OneVsOnePlugin,
     val store: SqliteStore,
     requiredWins: Int,
-    private val messenger: Messenger
+    private val messenger: Messenger,
 ) {
     private val arenaRepository = SqliteArenaRepository(store, plugin.logger)
     private val lobbyRepository = SqliteLobbyRepository(store)
@@ -84,7 +84,7 @@ private class PluginModule(
     private val equipment = PaperEquipmentAdapter(
         backups = SqliteBackupStore(store),
         kitStore = SqliteKitStore(store),
-        lookup = lookup
+        lookup = lookup,
     )
     private val presentation = PaperPresentation(server = plugin.server, messenger = messenger, logger = plugin.logger)
 
@@ -95,7 +95,7 @@ private class PluginModule(
         players = players,
         lobby = lobbyRepository,
         presentation = presentation,
-        logger = plugin.logger
+        logger = plugin.logger,
     )
     private val stateSync = MatchStateSync(matchState = matchState, signs = signs)
     private val progression = MatchProgressionService(
@@ -107,14 +107,14 @@ private class PluginModule(
         scheduler = PaperScheduler(plugin),
         presentation = presentation,
         recovery = recovery,
-        logger = plugin.logger
+        logger = plugin.logger,
     )
     private val service = ArenaApplicationService(
         registry = registry,
         players = players,
         recovery = recovery,
         progression = progression,
-        sync = stateSync
+        sync = stateSync,
     )
     val lifecycle = ArenaLifecycleService(
         registry = registry,
@@ -122,14 +122,14 @@ private class PluginModule(
         sync = stateSync,
         recovery = recovery,
         progression = progression,
-        logger = plugin.logger
+        logger = plugin.logger,
     )
     private val admin = ArenaAdministrationService(
         registry = registry,
         arenas = arenaRepository,
         signs = signRepository,
         kit = equipment,
-        progression = progression
+        progression = progression,
     )
     private val lobby = LobbyService(lobby = lobbyRepository)
     private val statsService = PlayerStatsService(stats = stats)
@@ -148,7 +148,7 @@ private class PluginModule(
             lobby = lobby,
             players = players,
             logger = plugin.logger,
-            messenger = messenger
+            messenger = messenger,
         )
         val command = plugin.getCommand("1vs1") ?: error("1vs1 command missing from plugin.yml")
         @Suppress("UsePropertyAccessSyntax") // the setter takes @Nullable, so executor stays a val-style property access

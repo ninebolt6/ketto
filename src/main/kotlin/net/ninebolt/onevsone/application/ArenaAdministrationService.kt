@@ -13,7 +13,7 @@ class ArenaAdministrationService(
     private val arenas: ArenaRepository,
     private val signs: ArenaSignRepository,
     private val kit: KitPort,
-    private val progression: MatchProgressionService
+    private val progression: MatchProgressionService,
 ) {
     fun arenaNames(): List<String> = registry.arenaIds().map { it.name }
 

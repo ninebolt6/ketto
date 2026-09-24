@@ -22,47 +22,74 @@ class OneVsOneCommand(
     lobby: LobbyService,
     players: PlayerPort,
     logger: Logger,
-    private val messenger: Messenger
+    private val messenger: Messenger,
 ) : TabExecutor {
 
     private val root = run {
         val arenaInfo = ArenaInfoCommand(service, admin, messenger)
-        CommandGroup(Message.UsageRoot, messenger, mapOf(
-            "stats" to StatsCommand(statsService, players, logger, messenger),
-            "leave" to LeaveCommand(service, messenger),
-            "lobby" to CommandGroup(Message.UsageLobby, messenger, mapOf(
-                "set" to SetLobbyCommand(lobby, messenger)
-            )),
-            "arena" to ArenaGroup(
-                Message.UsageArena, Message.UsageArenaOps, messenger, admin,
-                ArenaCreateCommand(admin, messenger),
-                ArenaScopedGroup(
-                    Message.UsageArena, Message.UsageArenaOps, messenger, admin, mapOf(
-                        "info" to arenaInfo,
-                        "remove" to ArenaRemoveCommand(admin, messenger),
-                        "enable" to ArenaSetEnabledCommand(true, admin, messenger),
-                        "disable" to ArenaSetEnabledCommand(false, admin, messenger),
-                        "spawn" to ArenaScopedGroup(
-                            Message.CommandNoPermission, Message.UsageSpawn, messenger, admin, mapOf(
-                                "set" to ArenaSpawnSetCommand(admin, messenger)
-                            )
-                        ),
-                        "kit" to ArenaScopedGroup(
-                            Message.CommandNoPermission, Message.UsageKit, messenger, admin, mapOf(
-                                "set" to ArenaKitSetCommand(admin, messenger)
-                            )
-                        ),
-                        "sign" to ArenaScopedGroup(
-                            Message.CommandNoPermission, Message.UsageSign, messenger, admin, mapOf(
-                                "set" to ArenaSignSetCommand(admin, signs, messenger),
-                                "remove" to ArenaSignRemoveCommand(admin, signs, messenger)
-                            )
-                        )
+        CommandGroup(
+            Message.UsageRoot,
+            messenger,
+            mapOf(
+                "stats" to StatsCommand(statsService, players, logger, messenger),
+                "leave" to LeaveCommand(service, messenger),
+                "lobby" to CommandGroup(
+                    Message.UsageLobby,
+                    messenger,
+                    mapOf(
+                        "set" to SetLobbyCommand(lobby, messenger),
                     ),
-                    defaultOp = arenaInfo
-                )
-            )
-        ))
+                ),
+                "arena" to ArenaGroup(
+                    Message.UsageArena,
+                    Message.UsageArenaOps,
+                    messenger,
+                    admin,
+                    ArenaCreateCommand(admin, messenger),
+                    ArenaScopedGroup(
+                        Message.UsageArena,
+                        Message.UsageArenaOps,
+                        messenger,
+                        admin,
+                        mapOf(
+                            "info" to arenaInfo,
+                            "remove" to ArenaRemoveCommand(admin, messenger),
+                            "enable" to ArenaSetEnabledCommand(true, admin, messenger),
+                            "disable" to ArenaSetEnabledCommand(false, admin, messenger),
+                            "spawn" to ArenaScopedGroup(
+                                Message.CommandNoPermission,
+                                Message.UsageSpawn,
+                                messenger,
+                                admin,
+                                mapOf(
+                                    "set" to ArenaSpawnSetCommand(admin, messenger),
+                                ),
+                            ),
+                            "kit" to ArenaScopedGroup(
+                                Message.CommandNoPermission,
+                                Message.UsageKit,
+                                messenger,
+                                admin,
+                                mapOf(
+                                    "set" to ArenaKitSetCommand(admin, messenger),
+                                ),
+                            ),
+                            "sign" to ArenaScopedGroup(
+                                Message.CommandNoPermission,
+                                Message.UsageSign,
+                                messenger,
+                                admin,
+                                mapOf(
+                                    "set" to ArenaSignSetCommand(admin, signs, messenger),
+                                    "remove" to ArenaSignRemoveCommand(admin, signs, messenger),
+                                ),
+                            ),
+                        ),
+                        defaultOp = arenaInfo,
+                    ),
+                ),
+            ),
+        )
     }
 
     override fun onCommand(sender: CommandSender, command: Command, label: String, args: Array<String>): Boolean {
@@ -74,6 +101,6 @@ class OneVsOneCommand(
         sender: CommandSender,
         command: Command,
         label: String,
-        args: Array<String>
+        args: Array<String>,
     ): List<String> = root.tabComplete(sender, args.toList())
 }

@@ -14,13 +14,13 @@ import org.bukkit.event.player.PlayerPortalEvent
 import org.bukkit.event.player.PlayerTeleportEvent
 import org.bukkit.event.vehicle.VehicleEnterEvent
 import org.junit.jupiter.api.AfterEach
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class ArenaListenerTeleportTest {
 
@@ -57,7 +57,7 @@ class ArenaListenerTeleportTest {
             PlayerTeleportEvent.TeleportCause.COMMAND,
             PlayerTeleportEvent.TeleportCause.SPECTATE,
             PlayerTeleportEvent.TeleportCause.PLUGIN,
-            PlayerTeleportEvent.TeleportCause.NETHER_PORTAL
+            PlayerTeleportEvent.TeleportCause.NETHER_PORTAL,
         ).forEach { cause ->
             val event = teleport(p1, cause)
             env.fire(event)
@@ -70,8 +70,10 @@ class ArenaListenerTeleportTest {
         val (p1, _) = env.twoPlayerIngame()
         val w = env.world()
         val portal = PlayerPortalEvent(
-            p1, Location(w, 0.0, 64.0, 0.0), Location(w, 10.0, 64.0, 10.0),
-            PlayerTeleportEvent.TeleportCause.NETHER_PORTAL
+            p1,
+            Location(w, 0.0, 64.0, 0.0),
+            Location(w, 10.0, 64.0, 10.0),
+            PlayerTeleportEvent.TeleportCause.NETHER_PORTAL,
         )
         env.fire(portal)
         assertTrue(portal.isCancelled)
@@ -139,7 +141,7 @@ class ArenaListenerTeleportTest {
 
         p1.teleport(
             Location(env.world(), 3.0, 64.0, 3.0),
-            PlayerTeleportEvent.TeleportCause.ENDER_PEARL
+            PlayerTeleportEvent.TeleportCause.ENDER_PEARL,
         )
         assertTrue(p1.hasTeleported())
 

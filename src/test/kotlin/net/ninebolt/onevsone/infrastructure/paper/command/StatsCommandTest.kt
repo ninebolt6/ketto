@@ -7,13 +7,13 @@ import net.ninebolt.onevsone.infrastructure.paper.fixtures.offlineId
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.run
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.writeStats
+import org.bukkit.Server
 import org.junit.jupiter.api.AfterEach
-import kotlin.test.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.bukkit.Server
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
+import kotlin.test.assertTrue
 
 class StatsCommandTest {
 

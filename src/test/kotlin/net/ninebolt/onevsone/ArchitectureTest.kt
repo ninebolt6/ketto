@@ -3,9 +3,9 @@ package net.ninebolt.onevsone
 import com.tngtech.archunit.core.importer.ClassFileImporter
 import com.tngtech.archunit.core.importer.ImportOption
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
-import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 import java.io.File
+import kotlin.test.assertTrue
 
 class ArchitectureTest {
 
@@ -37,7 +37,7 @@ class ArchitectureTest {
             .resideOutsideOfPackages(
                 "net.ninebolt.onevsone.application..",
                 "net.ninebolt.onevsone.domain..",
-                *jdkPackages
+                *jdkPackages,
             ).check(classes)
     }
 
@@ -80,14 +80,14 @@ class ArchitectureTest {
     fun `domain and application tests stay independent of infrastructure and platform APIs`() {
         noClasses().that().resideInAnyPackage(
             "net.ninebolt.onevsone.domain..",
-            "net.ninebolt.onevsone.application.."
+            "net.ninebolt.onevsone.application..",
         ).should().dependOnClassesThat().resideInAnyPackage(
             "net.ninebolt.onevsone.infrastructure..",
             "org.bukkit..",
             "io.papermc.paper..",
             "net.kyori..",
             "org.mockbukkit..",
-            "io.mockk.."
+            "io.mockk..",
         ).check(testClasses)
     }
 
@@ -118,7 +118,7 @@ class ArchitectureTest {
         assertTrue(main.isFile, "OneVsOnePlugin.kt must exist at the root package")
         assertTrue(
             main.readText().contains("class OneVsOnePlugin : JavaPlugin"),
-            "OneVsOnePlugin must remain a JavaPlugin"
+            "OneVsOnePlugin must remain a JavaPlugin",
         )
     }
 }

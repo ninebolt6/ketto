@@ -8,7 +8,7 @@ import org.bukkit.command.CommandSender
 
 internal class ArenaRemoveCommand(
     admin: ArenaAdministrationService,
-    messenger: Messenger
+    messenger: Messenger,
 ) : ArenaSubcommand(admin, messenger) {
 
     override val usage: Message = Message.UsageRemove

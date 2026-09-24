@@ -3,10 +3,10 @@ package net.ninebolt.onevsone.application
 import net.ninebolt.onevsone.application.port.BackupRef
 import net.ninebolt.onevsone.application.port.InventoryBackupPort
 import net.ninebolt.onevsone.application.port.LobbyRepository
-import net.ninebolt.onevsone.application.port.PresentationPort
 import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.application.port.PlayerHandle
 import net.ninebolt.onevsone.application.port.PlayerPort
+import net.ninebolt.onevsone.application.port.PresentationPort
 import net.ninebolt.onevsone.domain.MatchId
 import net.ninebolt.onevsone.domain.Participant
 import java.util.logging.Level
@@ -19,7 +19,7 @@ class PlayerRecoveryService(
     private val players: PlayerPort,
     private val lobby: LobbyRepository,
     private val presentation: PresentationPort,
-    private val logger: Logger
+    private val logger: Logger,
 ) {
     class RestoreTicket(val ref: BackupRef)
 
@@ -38,7 +38,7 @@ class PlayerRecoveryService(
         if (owner == null) {
             logger.warning(
                 "Backup ${ref.backupId} for ${ref.playerName} has no owner uuid and cannot be restored; " +
-                    "remove the stale row from the backups table"
+                    "remove the stale row from the backups table",
             )
             return
         }
@@ -47,8 +47,7 @@ class PlayerRecoveryService(
 
     fun pending(playerId: Uuid): RestoreTicket? = tickets[playerId]
 
-    private fun ownedBy(handle: PlayerHandle, ticket: RestoreTicket): Boolean =
-        tickets[handle.id] === ticket
+    private fun ownedBy(handle: PlayerHandle, ticket: RestoreTicket): Boolean = tickets[handle.id] === ticket
 
     fun restoreNow(handle: PlayerHandle, ticket: RestoreTicket): Boolean {
         if (!ownedBy(handle, ticket)) return false
