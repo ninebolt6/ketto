@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.power.assert)
     alias(libs.plugins.ktlint.gradle)
+    alias(libs.plugins.kover)
 }
 
 group = "net.ninebolt"
@@ -71,6 +72,7 @@ powerAssert {
 
 tasks.test {
     useJUnitPlatform()
+    finalizedBy("koverXmlReport")
 }
 
 tasks.processResources {
