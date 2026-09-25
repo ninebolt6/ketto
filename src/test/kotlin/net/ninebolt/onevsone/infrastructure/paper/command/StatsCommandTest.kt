@@ -106,6 +106,15 @@ class StatsCommandTest {
     }
 
     @Test
+    fun `stats callback is skipped when the requester went offline`() {
+        val viewer = env.player("Viewer")
+        env.runCommand(viewer, "stats", "Ghost")
+        viewer.disconnect()
+        env.runOneShots()
+        assertTrue(viewer.drainMessages().none { it.contains("stats") })
+    }
+
+    @Test
     fun `repeated stats lookup is rate limited`() {
         val viewer = env.player("Viewer")
         val target = env.player("Target")

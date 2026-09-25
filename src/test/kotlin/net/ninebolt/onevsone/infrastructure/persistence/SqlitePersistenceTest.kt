@@ -346,25 +346,33 @@ class SqlitePersistenceTest {
         }
     }
 
-    private fun sabotagedConnection(real: Connection, failingFragment: String): Connection = Proxy.newProxyInstance(
+    private fun sabotagedConnection(
+        real: Connection,
+        failingFragment: String,
+        injected: () -> Throwable = { SQLException("injected migration failure") },
+    ): Connection = Proxy.newProxyInstance(
         javaClass.classLoader,
         arrayOf(Connection::class.java),
     ) { _, method, args ->
         val result = method.invoke(real, *(args ?: emptyArray()))
         if (method.name == "createStatement") {
-            sabotagedStatement(result as Statement, failingFragment)
+            sabotagedStatement(result as Statement, failingFragment, injected)
         } else {
             result
         }
     } as Connection
 
-    private fun sabotagedStatement(real: Statement, failingFragment: String): Statement = Proxy.newProxyInstance(
+    private fun sabotagedStatement(
+        real: Statement,
+        failingFragment: String,
+        injected: () -> Throwable,
+    ): Statement = Proxy.newProxyInstance(
         javaClass.classLoader,
         arrayOf(Statement::class.java),
     ) { _, method, args ->
         val sql = args?.firstOrNull() as? String
         if (method.name == "execute" && sql != null && failingFragment in sql) {
-            throw SQLException("injected migration failure")
+            throw injected()
         }
         method.invoke(real, *(args ?: emptyArray()))
     } as Statement
@@ -389,6 +397,55 @@ class SqlitePersistenceTest {
         )
         assertFailsWith<PersistenceFailure> { SqliteArenaRepository(store).find("a1") }
         assertEquals(emptyList(), SqliteArenaRepository(store).loadAll())
+    }
+
+    @Test
+    fun `loadAll skips an arena row whose name is not a valid id`() = withStore { store ->
+        val repo = SqliteArenaRepository(store)
+        repo.save(Arena.new(Arena.Id.new("a1")))
+        store.exec("UPDATE arenas SET name='create' WHERE name='a1'")
+        assertEquals(emptyList(), repo.loadAll())
+    }
+
+    @Test
+    fun `find returns null for a name that is not a valid arena id`() = withStore { store ->
+        assertNull(SqliteArenaRepository(store).find("create"))
+    }
+
+    @Test
+    fun `backup rows with an unparseable player uuid yield a null player id`() = withStore { store ->
+        store.exec(
+            "INSERT INTO backups(backup_id, match_id, player_uuid, player_name, payload) VALUES (?, ?, ?, ?, ?)",
+            Uuid.random().toString(),
+            Uuid.random().toString(),
+            "not-a-uuid",
+            "Alice",
+            InventoryPayloadCodec.encode(PaperInventorySnapshot()),
+        )
+        assertNull(SqliteBackupStore(store).persistedBackups().single().ref.playerId)
+    }
+
+    @Test
+    fun `a PersistenceFailure inside a migration is rethrown without rewrapping`() {
+        DriverManager.getConnection("jdbc:sqlite:${File(folder, "data.db").absolutePath}").use { real ->
+            val conn = sabotagedConnection(real, "player_stats") { PersistenceFailure("inner failure") }
+            val failure = assertFailsWith<PersistenceFailure> { SqliteMigrations(conn).migrate() }
+            assertEquals("inner failure", failure.message)
+        }
+    }
+
+    @Test
+    fun `codec decodes a payload without item lists as an empty snapshot`() {
+        val snapshot = InventoryPayloadCodec.decode("prefix: value\n")
+        assertTrue(snapshot.items.isEmpty())
+        assertTrue(snapshot.armor.isEmpty())
+    }
+
+    @Test
+    fun `codec tolerates non item entries in the payload lists`() {
+        val snapshot = InventoryPayloadCodec.decode("item:\n- 'not an item'\narmor:\n- 'junk'\n")
+        assertNull(snapshot.items.single())
+        assertNull(snapshot.armor.single())
     }
 
     @Test

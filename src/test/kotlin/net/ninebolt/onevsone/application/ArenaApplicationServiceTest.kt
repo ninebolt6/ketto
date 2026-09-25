@@ -1,15 +1,19 @@
 package net.ninebolt.onevsone.application
 
 import net.ninebolt.onevsone.application.fixtures.TestApp
+import net.ninebolt.onevsone.application.port.BackupRef
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatCause
+import net.ninebolt.onevsone.domain.MatchId
+import net.ninebolt.onevsone.domain.Participant
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.uuid.Uuid
 
 class ArenaApplicationServiceTest {
 
@@ -245,6 +249,75 @@ class ArenaApplicationServiceTest {
         assertEquals(ArenaState.INGAME, app.state())
         assertEquals(1, app.presentation.roundStarts.size)
         assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
+    }
+
+    @Test
+    fun `join while a restore is pending but no handle returns in-match`() {
+        val app = TestApp()
+        app.newArena()
+        val p = app.players.add("Alice")
+        app.equipment.seedBackup(BackupRef.new(MatchId.new(), p.id, p.name))
+        app.recovery.loadPersisted()
+        app.players.disconnect(p)
+
+        assertEquals(JoinOutput.InMatch, app.service.join(p.id, p.name, Arena.Id.new("arena1")))
+        assertNull(app.service.arenaIdOf(p.id))
+        assertTrue(app.equipment.restored.isEmpty())
+    }
+
+    @Test
+    fun `restorePending ignores a joined player`() {
+        val app = TestApp()
+        app.newArena()
+        val p = app.players.add("Alice")
+        app.service.join(p.id, p.name, Arena.Id.new("arena1"))
+        app.recovery.backupBeforeMatch(listOf(Participant.new(p.id, p.name)))
+
+        app.service.restorePending(p.id)
+
+        assertTrue(app.equipment.restored.isEmpty())
+        assertNotNull(app.service.pendingRestore(p.id))
+    }
+
+    @Test
+    fun `restorePending without a ticket does nothing`() {
+        val app = TestApp()
+        val p = app.players.add("Alice")
+        app.service.restorePending(p.id)
+        assertTrue(app.equipment.restored.isEmpty())
+        assertTrue(p.events.isEmpty())
+    }
+
+    @Test
+    fun `restorePending keeps the ticket when no handle exists`() {
+        val app = TestApp()
+        val p = app.players.add("Alice")
+        app.equipment.seedBackup(BackupRef.new(MatchId.new(), p.id, p.name))
+        app.recovery.loadPersisted()
+        app.players.disconnect(p)
+
+        app.service.restorePending(p.id)
+
+        assertTrue(app.equipment.restored.isEmpty())
+        assertNotNull(app.service.pendingRestore(p.id))
+    }
+
+    @Test
+    fun `quit without a match or pending ticket is a no-op`() {
+        val app = TestApp()
+        app.service.quit(Uuid.random())
+        assertTrue(app.equipment.restored.isEmpty())
+        assertTrue(app.logger.records.isEmpty())
+    }
+
+    @Test
+    fun `defeat by a player without a match returns false`() {
+        val app = TestApp()
+        assertFalse(app.service.defeat(Uuid.random(), DefeatCause.DEATH))
+        app.newArena()
+        val p = app.players.add("Alice")
+        app.service.join(p.id, p.name, Arena.Id.new("arena1"))
+        assertFalse(app.service.defeat(p.id, DefeatCause.DEATH))
     }
 
     @Test

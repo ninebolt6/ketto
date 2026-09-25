@@ -223,4 +223,25 @@ class ArenaListenerCombatTest {
         sim.simulatePlayerMove(Location(base.world, base.x, -1.0, base.z))
         assertEquals(ArenaState.WAITING, env.state())
     }
+
+    @Test
+    fun `z only drift is still reset while movement is frozen`() {
+        val (p1, p2) = env.twoPlayerIngame()
+        fallIntoVoid(p2)
+
+        val sim = p1.simulation()
+        val from = p1.location
+        val drifted = sim.simulatePlayerMove(from.clone().add(0.0, 0.0, 1.0))
+        assertEquals(from, drifted.to)
+    }
+
+    @Test
+    fun `move by a non participant is untouched`() {
+        env.twoPlayerIngame()
+        val outsider = env.player("Carol")
+
+        val target = Location(env.world(), 5.0, 64.0, 5.0)
+        val event = outsider.simulation().simulatePlayerMove(target)
+        assertEquals(target, event.to)
+    }
 }

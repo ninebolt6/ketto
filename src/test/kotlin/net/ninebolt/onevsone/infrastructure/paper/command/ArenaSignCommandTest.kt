@@ -4,6 +4,7 @@ import net.ninebolt.onevsone.domain.BlockPosition
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.opPlayer
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.plainBlock
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.runCommand
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.signBlock
 import org.junit.jupiter.api.AfterEach
@@ -56,6 +57,36 @@ class ArenaSignCommandTest {
 
         env.runCommand(second, "arena", "arena2", "sign", "set")
         assertTrue(second.drainMessages().any { it.contains("That sign is already registered") })
+    }
+
+    @Test
+    fun `arena sign set reports not found for an unknown arena`() {
+        val op = env.opPlayer("Op")
+        env.runCommand(op, "arena", "missing", "sign", "set")
+        assertTrue(op.drainMessages().any { it.contains("That arena does not exist") })
+    }
+
+    @Test
+    fun `arena sign set warns when the target is not a sign`() {
+        val op = env.opPlayer("Op")
+        env.newArena()
+        op.targetBlock = env.plainBlock(4, 64, 4)
+
+        env.runCommand(op, "arena", "arena1", "sign", "set")
+        assertTrue(op.drainMessages().any { it.contains("Look at a sign and run the command") })
+    }
+
+    @Test
+    fun `arena sign set on a sign owned by the same arena is allowed`() {
+        val op = env.opPlayer("Op")
+        env.newArena()
+        val sign = env.signBlock(4, 64, 4)
+        env.signRepo.setSign("arena1", BlockPosition.new("world", 4, 64, 4))
+        op.targetBlock = sign
+
+        env.runCommand(op, "arena", "arena1", "sign", "set")
+        assertTrue(op.drainMessages().none { it.contains("already registered") })
+        assertEquals("arena1", env.signRepo.signOwner(BlockPosition.new("world", 4, 64, 4)))
     }
 
     @Test

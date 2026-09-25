@@ -6,9 +6,11 @@ import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.domain.MatchId
+import net.ninebolt.onevsone.domain.Participant
 import net.ninebolt.onevsone.domain.WorldPosition
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -233,6 +235,74 @@ class PlayerRecoveryServiceTest {
         app.equipment.failOnRestore = true
         app.lifecycle.shutdown()
         assertTrue(app.logger.reports.any { it.message.contains("Could not restore inventory") })
+        assertNotNull(app.service.pendingRestore(p2.id))
+    }
+
+    @Test
+    fun `quit by an unjoined player with a pending ticket restores at quit`() {
+        val app = TestApp()
+        val p = app.players.add("Alice")
+        app.equipment.seedBackup(backupRef(p.id, p.name))
+        app.recovery.loadPersisted()
+        app.players.disconnect(p)
+        app.players.quittingScope(p) {
+            app.service.quit(p.id)
+        }
+        assertTrue(app.equipment.restored.any { it.playerId == p.id })
+        assertNull(app.service.pendingRestore(p.id))
+    }
+
+    @Test
+    fun `quit with a pending ticket but no handle keeps the restore`() {
+        val app = TestApp()
+        val p = app.players.add("Alice")
+        app.equipment.seedBackup(backupRef(p.id, p.name))
+        app.recovery.loadPersisted()
+        app.players.disconnect(p)
+
+        app.service.quit(p.id)
+
+        assertTrue(app.equipment.restored.isEmpty())
+        assertNotNull(app.service.pendingRestore(p.id))
+    }
+
+    @Test
+    fun `a stale ticket cannot be restored`() {
+        val app = TestApp()
+        val p = app.players.add("Alice")
+        val participant = Participant.new(p.id, p.name)
+        app.recovery.backupBeforeMatch(listOf(participant))
+        val stale = app.service.pendingRestore(p.id)!!
+        app.recovery.backupBeforeMatch(listOf(participant))
+
+        assertFalse(app.recovery.restoreNow(p, stale))
+
+        assertTrue(app.equipment.restored.isEmpty())
+        assertNotNull(app.service.pendingRestore(p.id))
+    }
+
+    @Test
+    fun `finished match teleports players to the configured lobby`() {
+        val app = TestApp(requiredWins = 1)
+        val lobby = WorldPosition.new("world", 9.0, 64.0, 9.0)
+        app.arenas.lobbyPosition = lobby
+        val (p1, p2) = app.startMatch()
+
+        app.service.defeat(p2.id, DefeatCause.FALL)
+        app.scheduler.runOneShots()
+
+        assertTrue(lobby in p1.teleports)
+        assertTrue(lobby in p2.teleports)
+    }
+
+    @Test
+    fun `shutdown keeps the record for an offline pending player`() {
+        val app = TestApp()
+        val (_, p2) = app.startMatch()
+        app.players.disconnect(p2)
+        app.lifecycle.shutdown()
+        assertTrue(app.equipment.restored.none { it.playerId == p2.id })
+        assertEquals(1, app.equipment.storedBackups.size)
         assertNotNull(app.service.pendingRestore(p2.id))
     }
 

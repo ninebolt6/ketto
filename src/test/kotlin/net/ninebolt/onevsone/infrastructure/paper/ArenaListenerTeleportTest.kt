@@ -4,6 +4,7 @@ import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.WorldPosition
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.fallIntoVoid
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.nonPlayer
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.twoPlayerIngame
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import org.bukkit.Location
@@ -161,5 +162,25 @@ class ArenaListenerTeleportTest {
         val frozen = VehicleEnterEvent(boat, p1)
         env.fire(frozen)
         assertTrue(frozen.isCancelled)
+    }
+
+    @Test
+    fun `vehicle enter by a non player entity is not cancelled`() {
+        env.twoPlayerIngame()
+        val boat = env.world().spawnEntity(Location(env.world(), 0.0, 64.0, 0.0), EntityType.OAK_BOAT) as Boat
+
+        val event = VehicleEnterEvent(boat, env.nonPlayer())
+        env.fire(event)
+        assertFalse(event.isCancelled)
+    }
+
+    @Test
+    fun `vehicle enter by a non participant is not cancelled`() {
+        env.twoPlayerIngame()
+        val boat = env.world().spawnEntity(Location(env.world(), 0.0, 64.0, 0.0), EntityType.OAK_BOAT) as Boat
+
+        val event = VehicleEnterEvent(boat, env.player("Carol"))
+        env.fire(event)
+        assertFalse(event.isCancelled)
     }
 }

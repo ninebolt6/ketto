@@ -10,8 +10,10 @@ import org.junit.jupiter.api.Test
 import java.util.logging.Logger
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.uuid.Uuid
 
 class ArenaRegistryTest {
 
@@ -56,6 +58,71 @@ class ArenaRegistryTest {
 
         registry.transact(Arena.Id.new("a1"), persist = { persists++ }) { it.join(Participant.new("Bob")) }
         assertEquals(1, persists)
+    }
+
+    @Test
+    fun `reads on unknown ids and names return null`() {
+        val registry = ArenaRegistry(3, logger)
+        val id = Arena.Id.new("nope")
+        assertNull(registry.arena(id))
+        assertNull(registry.match(id))
+        assertNull(registry.entry(id))
+        assertNull(registry.resolveArenaId("nope"))
+        assertNull(registry.resolveArena("nope"))
+        assertNull(registry.resolveEntry("nope"))
+        assertNull(registry.arenaOf(Uuid.random()))
+        assertFalse(registry.isJoined(Uuid.random()))
+    }
+
+    @Test
+    fun `mutators on an unknown arena are no-ops`() {
+        val registry = ArenaRegistry(3, logger)
+        val id = Arena.Id.new("nope")
+        var persists = 0
+        registry.removeArena(id, persist = { persists++ })
+        assertNull(registry.updateArena(id, persist = { persists++ }) { it })
+        registry.putMatch(match("nope", ArenaState.WAITING, emptyList()), persist = { persists++ })
+        assertNull(registry.updateMatch(id, persist = { persists++ }) { it })
+        assertNull(registry.transact(id, persist = { persists++ }) { it.abort() })
+        assertEquals(0, persists)
+        assertTrue(registry.arenaIds().isEmpty())
+    }
+
+    @Test
+    fun `putting the identical match instance skips the persist hook`() {
+        val registry = ArenaRegistry(3, logger)
+        registry.install("a1")
+        val current = registry.match(Arena.Id.new("a1"))!!
+        var persists = 0
+        registry.putMatch(current, persist = { persists++ })
+        assertEquals(0, persists)
+    }
+
+    @Test
+    fun `reinstalling an arena resets the match and drops the participant index`() {
+        val registry = ArenaRegistry(3, logger)
+        registry.install("a1")
+        val p = Participant.new("Alice")
+        registry.putMatch(match("a1", ArenaState.ONEMORE, listOf(p)), persist = {})
+
+        registry.install("a1")
+
+        assertFalse(registry.isJoined(p.id))
+        assertEquals(ArenaState.WAITING, registry.match(Arena.Id.new("a1"))!!.state)
+    }
+
+    @Test
+    fun `removing an arena unregisters its participants`() {
+        val registry = ArenaRegistry(3, logger)
+        registry.install("a1")
+        val p = Participant.new("Alice")
+        registry.putMatch(match("a1", ArenaState.ONEMORE, listOf(p)), persist = {})
+
+        registry.removeArena(Arena.Id.new("a1"), persist = {})
+
+        assertNull(registry.arena(Arena.Id.new("a1")))
+        assertFalse(registry.isJoined(p.id))
+        assertNull(registry.arenaOf(p.id))
     }
 
     @Test

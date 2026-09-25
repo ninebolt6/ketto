@@ -53,4 +53,11 @@ class ArenaSpawnCommandTest {
         env.runCommand(op, "arena", "arena1", "spawn", "set", "1", "extra")
         assertTrue(op.drainMessages().any { it.contains("Incorrect argument") })
     }
+
+    @Test
+    fun `spawn set reports not found for an unknown arena`() {
+        val op = env.opPlayer("Op")
+        env.runCommand(op, "arena", "missing", "spawn", "set", "1")
+        assertTrue(op.drainMessages().any { it.contains("That arena does not exist") })
+    }
 }

@@ -40,4 +40,11 @@ class ArenaKitCommandTest {
         assertTrue(op.drainMessages().any { it.contains("Set inventory for arena") })
         assertEquals(Material.DIAMOND_SWORD, env.equipment.kitOf(Arena.Id.new("arena1"))?.items?.get(0)?.type)
     }
+
+    @Test
+    fun `kit set reports not found for an unknown arena`() {
+        val op = env.opPlayer("Op")
+        env.runCommand(op, "arena", "missing", "kit", "set")
+        assertTrue(op.drainMessages().any { it.contains("That arena does not exist") })
+    }
 }

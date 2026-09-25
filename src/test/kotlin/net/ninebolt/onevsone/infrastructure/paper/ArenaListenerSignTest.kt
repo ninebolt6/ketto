@@ -12,12 +12,14 @@ import net.ninebolt.onevsone.infrastructure.paper.fixtures.signBlock
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.simulation
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import org.bukkit.ExplosionResult
+import org.bukkit.block.BlockFace
 import org.bukkit.block.Sign
 import org.bukkit.block.sign.Side
 import org.bukkit.event.Event
 import org.bukkit.event.block.Action
 import org.bukkit.event.block.BlockExplodeEvent
 import org.bukkit.event.entity.EntityExplodeEvent
+import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.inventory.EquipmentSlot
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -146,6 +148,18 @@ class ArenaListenerSignTest {
 
         val event = p1.simulation().breakBlock(env.plainBlock(3, 64, 3))
         assertFalse(event.isCancelled)
+    }
+
+    @Test
+    fun `right click without a clicked block is ignored`() {
+        env.newArena()
+        env.signRepo.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
+        val p1 = env.player("Alice")
+
+        val event = PlayerInteractEvent(p1, Action.RIGHT_CLICK_BLOCK, null, null, BlockFace.SELF, EquipmentSlot.HAND)
+        env.fire(event)
+        assertNull(env.service.arenaIdOf(p1.uuid))
+        assertTrue(p1.drainMessages().isEmpty())
     }
 
     @Test

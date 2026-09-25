@@ -203,6 +203,38 @@ class MessengerTest {
     }
 
     @Test
+    fun `syncBundled writes the bundled language files into the data folder`() {
+        val recording = RecordingLogger()
+        LanguageFiles.syncBundled(folder, recording) { path ->
+            File(folder, path).apply { parentFile?.mkdirs() }
+                .writeText(javaClass.getResourceAsStream("/$path")!!.reader().readText())
+        }
+        LanguageFiles.BUNDLED_LANGS.forEach { lang ->
+            bundledKeys(lang).forEach { key ->
+                assertTrue(
+                    YamlConfiguration.loadConfiguration(File(folder, "messages/$lang.yaml")).isString(key),
+                    "missing key in messages/$lang.yaml: $key",
+                )
+            }
+        }
+        assertEquals(0, recording.warnings.size)
+    }
+
+    @Test
+    fun `syncBundled reports keys appended to an existing file`() {
+        val recording = RecordingLogger()
+        File(folder, "messages").mkdirs()
+        File(folder, "messages/ja.yaml").writeText("MATCH_JOINED: \"<green>CUSTOM <name>\"")
+        LanguageFiles.syncBundled(folder, recording) { path ->
+            val file = File(folder, path)
+            file.parentFile?.mkdirs()
+            if (!file.exists()) file.writeText(javaClass.getResourceAsStream("/$path")!!.reader().readText())
+        }
+        assertTrue(recording.infos.any { it.contains("messages/ja.yaml") })
+        assertEquals("<green>CUSTOM <name>", YamlConfiguration.loadConfiguration(File(folder, "messages/ja.yaml")).getString("MATCH_JOINED"))
+    }
+
+    @Test
     fun `rendered color matches template`() {
         val messenger = load()
         assertEquals(NamedTextColor.RED, messenger.render(Message.StatsNone).color())

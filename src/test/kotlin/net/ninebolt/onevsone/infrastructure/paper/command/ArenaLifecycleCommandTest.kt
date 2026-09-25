@@ -66,6 +66,13 @@ class ArenaLifecycleCommandTest {
     }
 
     @Test
+    fun `enable reports not found for an unknown arena`() {
+        val op = env.opPlayer("Op")
+        env.runCommand(op, "arena", "missing", "enable")
+        assertTrue(op.drainMessages().any { it.contains("That arena does not exist") })
+    }
+
+    @Test
     fun `create requires exactly one name arg`() {
         val op = env.opPlayer("Op")
         env.runCommand(op, "arena", "create")

@@ -100,6 +100,14 @@ class OneVsOneCommandTest {
     }
 
     @Test
+    fun `single quoted arena names are accepted`() {
+        val op = env.opPlayer("Op")
+        env.runCommand(op, "arena", "create", "'sq arena'")
+        assertTrue(op.drainMessages().any { it.contains("Created arena: sq arena") })
+        assertTrue("sq arena" in env.admin.arenaNames())
+    }
+
+    @Test
     fun `tab completion keeps the registered name case`() {
         val op = env.opPlayer("Op")
         env.newArena("Arena1")
