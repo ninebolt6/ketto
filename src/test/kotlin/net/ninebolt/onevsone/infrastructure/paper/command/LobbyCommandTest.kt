@@ -3,7 +3,7 @@ package net.ninebolt.onevsone.infrastructure.paper.command
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.opPlayer
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.run
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.runCommand
 import org.bukkit.Location
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -34,7 +34,7 @@ class LobbyCommandTest {
     fun `lobby set writes config`() {
         val p = env.opPlayer("Alice")
         p.setLocation(Location(env.world(), 7.5, 64.0, -2.5, 90f, 0f))
-        env.run(p, "lobby", "set")
+        env.runCommand(p, "lobby", "set")
         assertTrue(p.drainMessages().any { it.contains("ロビーを設定しました") })
         val lobby = env.lobbyRepo.lobby()!!
         assertEquals(7.5, lobby.x)
@@ -44,7 +44,7 @@ class LobbyCommandTest {
     @Test
     fun `bare lobby shows usage`() {
         val p = env.opPlayer("Alice")
-        env.run(p, "lobby")
+        env.runCommand(p, "lobby")
         assertTrue(p.drainMessages().any { it.contains("/1vs1 lobby set") })
     }
 }

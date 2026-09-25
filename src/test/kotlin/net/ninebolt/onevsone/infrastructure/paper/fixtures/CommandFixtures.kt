@@ -5,10 +5,10 @@ import org.bukkit.command.CommandSender
 import kotlin.uuid.Uuid
 import kotlin.uuid.toKotlinUuid
 
-internal fun TestEnv.run(sender: CommandSender, vararg args: String) = server.dispatchCommand(sender, (listOf("1vs1") + args).joinToString(" "))
+internal fun TestEnv.runCommand(sender: CommandSender, vararg args: String) = server.dispatchCommand(sender, (listOf("1vs1") + args).joinToString(" "))
 
 // getCommandTabComplete does not trigger lifecycle initialization, so dispatch once first
-internal fun TestEnv.tab(sender: CommandSender, vararg args: String): List<String> {
+internal fun TestEnv.tabComplete(sender: CommandSender, vararg args: String): List<String> {
     if (server.commandMap.getCommand("1vs1") == null) {
         server.dispatchCommand(server.consoleSender, "1vs1")
     }

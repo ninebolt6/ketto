@@ -4,7 +4,7 @@ import net.ninebolt.onevsone.domain.BlockPosition
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.opPlayer
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.run
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.runCommand
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.signBlock
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -36,7 +36,7 @@ class ArenaSignCommandTest {
     fun `arena sign set requires looking at sign`() {
         val op = env.opPlayer("Op")
         env.newArena()
-        env.run(op, "arena", "arena1", "sign", "set")
+        env.runCommand(op, "arena", "arena1", "sign", "set")
         assertTrue(op.drainMessages().any { it.contains("看板を見て実行してください") })
     }
 
@@ -51,10 +51,10 @@ class ArenaSignCommandTest {
         op.targetBlock = sign
         second.targetBlock = sign
 
-        env.run(op, "arena", "arena1", "sign", "set")
+        env.runCommand(op, "arena", "arena1", "sign", "set")
         assertEquals("arena1", env.signRepo.signOwner(BlockPosition.new("world", 4, 64, 4)))
 
-        env.run(second, "arena", "arena2", "sign", "set")
+        env.runCommand(second, "arena", "arena2", "sign", "set")
         assertTrue(second.drainMessages().any { it.contains("その看板はすでに登録されています") })
     }
 
@@ -64,22 +64,22 @@ class ArenaSignCommandTest {
         env.newArena()
         env.signRepo.setSign("arena1", BlockPosition.new("world", 4, 64, 4))
 
-        env.run(op, "arena", "arena1", "sign", "remove")
+        env.runCommand(op, "arena", "arena1", "sign", "remove")
         assertTrue(op.drainMessages().any { it.contains("の看板登録を解除しました") })
         assertNull(env.signRepo.signOwner(BlockPosition.new("world", 4, 64, 4)))
         assertNull(env.signRepo.signLocation("arena1"))
 
-        env.run(op, "arena", "arena1", "sign", "remove")
+        env.runCommand(op, "arena", "arena1", "sign", "remove")
         assertTrue(op.drainMessages().any { it.contains("そのアリーナには看板が登録されていません") })
 
-        env.run(op, "arena", "missing", "sign", "remove")
+        env.runCommand(op, "arena", "missing", "sign", "remove")
         assertTrue(op.drainMessages().any { it.contains("そのアリーナは存在しません") })
     }
 
     @Test
     fun `bare sign shows ops usage`() {
         val op = env.opPlayer("Op")
-        env.run(op, "arena", "x", "sign")
+        env.runCommand(op, "arena", "x", "sign")
         assertTrue(op.drainMessages().any { it.contains("/1vs1 arena <arena> sign <set|remove>") })
     }
 }

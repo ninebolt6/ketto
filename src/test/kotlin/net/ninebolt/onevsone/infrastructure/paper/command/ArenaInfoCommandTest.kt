@@ -3,7 +3,7 @@ package net.ninebolt.onevsone.infrastructure.paper.command
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.fallIntoVoid
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.run
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.runCommand
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -31,7 +31,7 @@ class ArenaInfoCommandTest {
     @Test
     fun `arena info shows state and players during match`() {
         val viewer = env.player("Viewer")
-        env.run(viewer, "arena", "missing")
+        env.runCommand(viewer, "arena", "missing")
         assertTrue(viewer.drainMessages().any { it.contains("そのアリーナは存在しません") })
 
         val arena = env.newArena()
@@ -42,7 +42,7 @@ class ArenaInfoCommandTest {
         env.tick(6)
         fallIntoVoid(p2)
 
-        env.run(viewer, "arena", "arena1", "info")
+        env.runCommand(viewer, "arena", "arena1", "info")
         val msgs = viewer.drainMessages()
         assertTrue(msgs.any { it.contains("=== Arena[arena1] ===") })
         assertTrue(msgs.any { it.contains("状態: Ingame") })
@@ -54,7 +54,7 @@ class ArenaInfoCommandTest {
     fun `arena name alone defaults to info`() {
         val viewer = env.player("Viewer")
         env.newArena()
-        env.run(viewer, "arena", "arena1")
+        env.runCommand(viewer, "arena", "arena1")
         assertTrue(viewer.drainMessages().any { it.contains("Arena[arena1]") })
     }
 }

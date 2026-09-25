@@ -7,7 +7,7 @@ import net.ninebolt.onevsone.infrastructure.paper.fixtures.backupByName
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.fallIntoVoid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.lastBroadcast
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.registrations
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.run
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.runCommand
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.view
 import org.bukkit.Material
@@ -94,13 +94,13 @@ class PaperArenaMembershipTest {
         p1.inventory.setItem(0, env.item(Material.DIAMOND))
         env.join(p1, arena)
         p1.inventory.setItem(0, null)
-        env.run(p1, "leave")
+        env.runCommand(p1, "leave")
         assertNull(p1.inventory.contents[0])
 
         val p2 = env.player("Bob")
         env.join(p2, arena)
         p2.inventory.setItem(0, env.item(Material.APPLE))
-        env.run(p2, "leave")
+        env.runCommand(p2, "leave")
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
     }
 

@@ -3,7 +3,7 @@ package net.ninebolt.onevsone.infrastructure.paper.command
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.run
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.runCommand
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -32,7 +32,7 @@ class LeaveCommandTest {
     @Test
     fun `leave when not joined reports not joined`() {
         val p = env.player("Alice")
-        env.run(p, "leave")
+        env.runCommand(p, "leave")
         assertTrue(p.drainMessages().any { it.contains("あなたはアリーナに参加していません！") })
     }
 
@@ -41,7 +41,7 @@ class LeaveCommandTest {
         val arena = env.newArena()
         val p = env.player("Alice")
         env.join(p, arena)
-        env.run(p, "leave")
+        env.runCommand(p, "leave")
         assertTrue(p.drainMessages().any { it.contains("アリーナから退出しました") })
         assertEquals(ArenaState.WAITING, env.state("arena1"))
     }

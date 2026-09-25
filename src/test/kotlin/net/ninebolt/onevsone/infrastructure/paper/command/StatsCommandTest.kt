@@ -4,7 +4,7 @@ import io.mockk.every
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.offlineId
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.run
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.runCommand
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.writeStats
 import org.bukkit.Server
@@ -35,18 +35,18 @@ class StatsCommandTest {
     @Test
     fun `console cannot run stats`() {
         val console = env.server.consoleSender
-        env.run(console, "stats")
+        env.runCommand(console, "stats")
         assertTrue(console.drainMessages().any { it.contains("このコマンドはプレイヤーのみ実行可能です") })
     }
 
     @Test
     fun `stats shows own stats or missing message`() {
         val p = env.player("Alice")
-        env.run(p, "stats")
+        env.runCommand(p, "stats")
         assertTrue(p.drainMessages().any { it.contains("Statsが存在しません") })
 
         env.writeStats(p.uuid, 3, 0)
-        env.run(p, "stats")
+        env.runCommand(p, "stats")
         val msgs = p.drainMessages()
         assertTrue(msgs.any { it.contains("Win: 3") })
         assertTrue(msgs.any { it.contains("Lose: 0") })
@@ -58,7 +58,7 @@ class StatsCommandTest {
         val viewer = env.player("Viewer")
         val target = env.player("Target")
         env.writeStats(target.uuid, 0, 2)
-        env.run(viewer, "stats", "Target")
+        env.runCommand(viewer, "stats", "Target")
         val msgs = viewer.drainMessages()
         assertTrue(msgs.any { it.contains("Win: 0") })
         assertTrue(msgs.any { it.contains("Lose: 2") })
@@ -71,7 +71,7 @@ class StatsCommandTest {
         val ghost = env.player("Ghost")
         ghost.disconnect()
         env.writeStats(ghost.uuid, 5, 5)
-        env.run(viewer, "stats", "Ghost")
+        env.runCommand(viewer, "stats", "Ghost")
         assertTrue(viewer.drainMessages().any { it.contains("W/L(勝率): 1.00") })
     }
 
@@ -81,7 +81,7 @@ class StatsCommandTest {
         // getOfflinePlayer produces a deterministic OfflinePlayerMock for uncached names
         val uuid = env.offlineId("Ghost")
         env.writeStats(uuid, 2, 1)
-        env.run(viewer, "stats", "Ghost")
+        env.runCommand(viewer, "stats", "Ghost")
         assertTrue(viewer.drainMessages().none { it.contains("Win:") })
         env.runOneShots()
         assertTrue(viewer.drainMessages().any { it.contains("Win: 2") })
@@ -91,7 +91,7 @@ class StatsCommandTest {
     fun `stats offline lookup failure reports no stats`() {
         val viewer = env.player("Viewer")
         every { (env.server as Server).getOfflinePlayer("Ghost") } throws RuntimeException("lookup failed")
-        env.run(viewer, "stats", "Ghost")
+        env.runCommand(viewer, "stats", "Ghost")
         env.runOneShots()
         assertTrue(viewer.drainMessages().any { it.contains("Statsが存在しません") })
     }
@@ -100,7 +100,7 @@ class StatsCommandTest {
     fun `stats offline callback skipped when plugin disabled`() {
         val viewer = env.player("Viewer")
         every { env.plugin.isEnabled } returns false
-        env.run(viewer, "stats", "Ghost")
+        env.runCommand(viewer, "stats", "Ghost")
         env.runOneShots()
         assertTrue(viewer.drainMessages().isEmpty())
     }
@@ -110,13 +110,13 @@ class StatsCommandTest {
         val viewer = env.player("Viewer")
         val target = env.player("Target")
         env.writeStats(target.uuid, 1, 0)
-        env.run(viewer, "stats", "Target")
+        env.runCommand(viewer, "stats", "Target")
         assertTrue(viewer.drainMessages().any { it.contains("Win: 1") })
 
-        env.run(viewer, "stats", "Target")
+        env.runCommand(viewer, "stats", "Target")
         assertTrue(viewer.drainMessages().any { it.contains("連続で実行できません") })
 
-        env.run(viewer, "stats")
+        env.runCommand(viewer, "stats")
         assertTrue(viewer.drainMessages().any { it.contains("Statsが存在しません") })
     }
 }
