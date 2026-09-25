@@ -104,7 +104,7 @@ data class ArenaMatch private constructor(
     // COUNTDOWN is still pre-match (no teleport, backup, or scoring), so quitting unregisters instead of forfeiting.
     fun forfeit(id: Uuid): Transition<QuitOutcome> {
         val participant = participant(id) ?: return Transition(this, QuitOutcome.NotParticipant)
-        if (state == ArenaState.ONEMORE || state == ArenaState.WAITING || state == ArenaState.COUNTDOWN || !full) {
+        if (!inProgress) {
             val remaining = participants - participant
             return Transition(
                 copy(
@@ -121,7 +121,8 @@ data class ArenaMatch private constructor(
 
     fun recordDefeat(id: Uuid, cause: DefeatCause): Transition<DefeatOutcome> {
         if (!state.acceptsDefeat(cause)) return Transition(this, DefeatOutcome.Rejected)
-        if (!full || resolving) return Transition(this, DefeatOutcome.Rejected)
+        // Defeat-accepting states are entered only with a full lobby
+        if (resolving) return Transition(this, DefeatOutcome.Rejected)
         val loser = participant(id) ?: return Transition(this, DefeatOutcome.Rejected)
         val winner = participants.first { it.id != id }
         // End is judged on the win count before adding; the final kill is not added to the count.

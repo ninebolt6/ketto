@@ -12,10 +12,7 @@ internal class SetLobbyCommand(
 ) {
 
     fun execute(player: Player) {
-        val position = player.location.toWorldPosition()
-        if (position != null) {
-            lobby.setLobby(position)
-            messenger.send(player, Message.LobbySet)
-        }
+        lobby.setLobby(player.toWorldPosition())
+        messenger.send(player, Message.LobbySet)
     }
 }

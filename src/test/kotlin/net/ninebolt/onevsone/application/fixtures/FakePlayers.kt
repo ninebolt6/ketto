@@ -13,11 +13,11 @@ class FakePlayers : PlayerPort {
         override var online = true
         override var dead = false
         var quitting = false
-        var positionValue: WorldPosition? = WorldPosition.new("world", 0.0, 64.0, 0.0)
+        var positionValue: WorldPosition = WorldPosition.new("world", 0.0, 64.0, 0.0)
         val teleports = mutableListOf<WorldPosition>()
         val events = mutableListOf<String>()
 
-        override fun position(): WorldPosition? = positionValue
+        override fun position(): WorldPosition = positionValue
         override fun respawn() {
             if (dead) {
                 dead = false

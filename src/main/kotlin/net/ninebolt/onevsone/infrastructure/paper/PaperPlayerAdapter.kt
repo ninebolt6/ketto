@@ -86,10 +86,9 @@ private class PaperPlayerHandle(
     override val online: Boolean get() = player.isOnline
     override val dead: Boolean get() = player.isDead
 
-    override fun position(): WorldPosition? {
+    override fun position(): WorldPosition {
         val location = player.location
-        val world = location.world ?: return null
-        return WorldPosition.new(world.name, location.x, location.y, location.z, location.yaw, location.pitch)
+        return WorldPosition.new(player.world.name, location.x, location.y, location.z, location.yaw, location.pitch)
     }
 
     override fun respawn() {

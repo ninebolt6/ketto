@@ -64,7 +64,7 @@ class MatchProgressionService(
                 rearm(arenaId, outcome.winner, winnerHandle)
             }
 
-            players.handle(outcome.loser.id)?.position()?.let { presentation.roundEndSound(it) }
+            players.handle(outcome.loser.id)?.let { presentation.roundEndSound(it.position()) }
 
             val ids = match.participants.map { it.id }
             presentation.roundWon(ids, outcome.round, outcome.winner.name)
@@ -93,7 +93,7 @@ class MatchProgressionService(
             winnerHandle?.let { teleportToSlot(match, outcome.winner, it) }
 
             sync.refreshSign(match)
-            startRoundCountdown(arenaId)
+            startRoundCountdown(arenaId, gen)
         } catch (e: Exception) {
             // A failure after the resolution commit would leave a timer-less ROUNDCOUNTDOWN stuck, so abort
             logger.log(Level.SEVERE, "Could not finish round ${outcome.round} in arena ${arenaId.name}; match aborted", e)
@@ -166,8 +166,8 @@ class MatchProgressionService(
         }
     }
 
-    internal fun startInitialCountdown(arenaId: Arena.Id) {
-        runCountdown(arenaId, ticks = 5, stillCounting = { it.canBeginMatch }) {
+    internal fun startInitialCountdown(arenaId: Arena.Id, gen: Long) {
+        runCountdown(arenaId, gen, ticks = 5, stillCounting = { it.canBeginMatch }) {
             if (remaining > 0) {
                 presentation.countdownTick(participantIds, remaining)
                 return@runCountdown false
@@ -200,8 +200,8 @@ class MatchProgressionService(
         }
     }
 
-    private fun startRoundCountdown(arenaId: Arena.Id) {
-        runCountdown(arenaId, ticks = 7, stillCounting = { it.canResumeRound }) {
+    private fun startRoundCountdown(arenaId: Arena.Id, gen: Long) {
+        runCountdown(arenaId, gen, ticks = 7, stillCounting = { it.canResumeRound }) {
             when (remaining) {
                 7 -> {
                     rearm(arenaId, first, p1)
@@ -224,11 +224,11 @@ class MatchProgressionService(
 
     private fun runCountdown(
         arenaId: Arena.Id,
+        gen: Long,
         ticks: Int,
         stillCounting: (ArenaMatch) -> Boolean,
         onTick: CountdownTick.() -> Boolean,
     ) {
-        val gen = registry.match(arenaId)?.epoch ?: return
         var remaining = ticks
         timers[arenaId] = scheduler.repeat(10, 20) { task ->
             val match = registry.match(arenaId)
@@ -236,12 +236,9 @@ class MatchProgressionService(
                 task.cancel()
                 return@repeat
             }
-            val first = match.participantAt(SpawnSlot.FIRST)
-            val second = match.participantAt(SpawnSlot.SECOND)
-            if (first == null || second == null) {
-                task.cancel()
-                return@repeat
-            }
+            // stillCounting implies a full lobby, so both participant slots are populated
+            val first = match.participants[SpawnSlot.FIRST.index]
+            val second = match.participants[SpawnSlot.SECOND.index]
             val p1 = players.handle(first.id)
             val p2 = players.handle(second.id)
             if (p1 == null || p2 == null) {
@@ -318,7 +315,8 @@ class MatchProgressionService(
     }
 
     private fun teleportToSlot(match: ArenaMatch, participant: Participant, handle: PlayerHandle) {
-        val slot = match.slotOf(participant.id) ?: return
+        // Callers pass only match participants, so the id is always found
+        val slot = SpawnSlot.entries[match.participants.indexOfFirst { it.id == participant.id }]
         val spawn = registry.arena(match.arenaId)?.spawn(slot)
         if (spawn == null) {
             logger.warning("Arena ${match.arenaId.name} spawn ${slot.number} is not set; skipping teleport")

@@ -16,7 +16,7 @@ interface PlayerHandle {
     val name: String
     val online: Boolean
     val dead: Boolean
-    fun position(): WorldPosition?
+    fun position(): WorldPosition
     fun respawn()
 
     // no-op while dead

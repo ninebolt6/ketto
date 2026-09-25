@@ -25,6 +25,10 @@ class ArenaRegistry(
     fun resolveArenaId(name: String): Arena.Id? = Arena.Id.of(name)?.takeIf { slots.containsKey(it) }
         ?: slots.keys.firstOrNull { it.name.equals(name, ignoreCase = true) }
 
+    fun resolveArena(name: String): Arena? = resolveArenaId(name)?.let { slots[it]?.arena }
+
+    fun resolveEntry(name: String): Pair<Arena, ArenaMatch>? = resolveArenaId(name)?.let(::entry)
+
     fun arenaIds(): List<Arena.Id> = slots.keys.toList()
 
     fun installArena(arena: Arena, persist: (Arena) -> Unit) {
@@ -50,6 +54,8 @@ class ArenaRegistry(
     }
 
     fun match(id: Arena.Id): ArenaMatch? = slots[id]?.match
+
+    fun entry(id: Arena.Id): Pair<Arena, ArenaMatch>? = slots[id]?.let { it.arena to it.match }
 
     fun matches(): List<ArenaMatch> = slots.values.map { it.match }
 

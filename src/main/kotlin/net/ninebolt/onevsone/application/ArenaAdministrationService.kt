@@ -17,7 +17,7 @@ class ArenaAdministrationService(
 ) {
     fun arenaNames(): List<String> = registry.arenaIds().map { it.name }
 
-    fun arena(name: String): Arena? = registry.resolveArenaId(name)?.let { registry.arena(it) }
+    fun arena(name: String): Arena? = registry.resolveArena(name)
 
     fun create(name: String): CreateError? {
         val id = Arena.Id.of(name) ?: return CreateError.InvalidName
@@ -38,8 +38,8 @@ class ArenaAdministrationService(
     }
 
     fun setEnabled(name: String, enabled: Boolean): ToggleError? {
-        val id = registry.resolveArenaId(name) ?: return ToggleError.NotFound
-        val arena = registry.arena(id) ?: return ToggleError.NotFound
+        val arena = registry.resolveArena(name) ?: return ToggleError.NotFound
+        val id = arena.id
         if (arena.enabled == enabled) {
             return if (enabled) ToggleError.AlreadyEnabled else ToggleError.AlreadyDisabled
         }

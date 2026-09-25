@@ -16,10 +16,9 @@ class ArenaSignService(
     fun signOwner(position: BlockPosition): String? = signs.signOwner(position)
 
     fun setSign(name: String, position: BlockPosition): SetSignError? {
-        val arena = arena(name) ?: return SetSignError.NotFound
+        val (arena, match) = registry.resolveEntry(name) ?: return SetSignError.NotFound
         signs.setSign(arena.name, position)
-        val state = registry.match(arena.id)?.state ?: return null
-        presentation.updateSign(arena.id, position, state)
+        presentation.updateSign(arena.id, position, match.state)
         return null
     }
 
@@ -34,7 +33,7 @@ class ArenaSignService(
         return null
     }
 
-    private fun arena(name: String): Arena? = registry.resolveArenaId(name)?.let { registry.arena(it) }
+    private fun arena(name: String): Arena? = registry.resolveArena(name)
 }
 
 sealed interface SetSignError {

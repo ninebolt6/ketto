@@ -23,7 +23,7 @@ class ArenaApplicationService(
 
     fun matchOf(playerId: Uuid): ArenaMatch? = registry.arenaOf(playerId)?.let { registry.match(it) }
 
-    fun arena(name: String): Arena? = registry.resolveArenaId(name)?.let { registry.arena(it) }
+    fun arena(name: String): Arena? = registry.resolveArena(name)
 
     fun matchOf(name: String): ArenaMatch? = registry.resolveArenaId(name)?.let { registry.match(it) }
 
@@ -31,8 +31,7 @@ class ArenaApplicationService(
 
     fun join(playerId: Uuid, playerName: String, arenaId: Arena.Id): JoinOutput {
         if (registry.isJoined(playerId)) return JoinOutput.AlreadyJoined
-        val arena = registry.arena(arenaId) ?: return JoinOutput.NotFound
-        val match = registry.match(arenaId) ?: return JoinOutput.NotFound
+        val (arena, match) = registry.entry(arenaId) ?: return JoinOutput.NotFound
         if (!arena.enabled) return JoinOutput.NotEnabled
         val participant = Participant.new(playerId, playerName)
 
@@ -46,7 +45,7 @@ class ArenaApplicationService(
         }
 
         registry.putMatch(step.match, persist = sync::persistMatch)
-        if (step.outcome == JoinOutcome.MatchReady) progression.startInitialCountdown(arenaId)
+        if (step.outcome == JoinOutcome.MatchReady) progression.startInitialCountdown(arenaId, step.match.epoch)
         sync.refreshSign(step.match)
         return when (step.outcome) {
             JoinOutcome.FirstJoined -> JoinOutput.JoinedWaiting
