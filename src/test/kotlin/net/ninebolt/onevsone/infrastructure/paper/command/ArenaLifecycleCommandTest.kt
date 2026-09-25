@@ -35,18 +35,18 @@ class ArenaLifecycleCommandTest {
     fun `arena create remove lifecycle`() {
         val op = env.opPlayer("Op")
         env.runCommand(op, "arena", "create", "newarena")
-        assertTrue(op.drainMessages().any { it.contains("アリーナ: newarena を作成しました") })
+        assertTrue(op.drainMessages().any { it.contains("Created arena: newarena") })
         assertEquals(false, env.service.arena("newarena")!!.enabled)
 
         env.runCommand(op, "arena", "create", "newarena")
-        assertTrue(op.drainMessages().any { it.contains("そのアリーナはすでに存在しています") })
+        assertTrue(op.drainMessages().any { it.contains("That arena already exists") })
 
         env.runCommand(op, "arena", "newarena", "remove")
-        assertTrue(op.drainMessages().any { it.contains("アリーナ: newarena を削除しました") })
+        assertTrue(op.drainMessages().any { it.contains("Removed arena: newarena") })
         assertNull(env.service.arena("newarena"))
 
         env.runCommand(op, "arena", "newarena", "remove")
-        assertTrue(op.drainMessages().any { it.contains("そのアリーナは存在しません") })
+        assertTrue(op.drainMessages().any { it.contains("That arena does not exist") })
     }
 
     @Test
@@ -54,13 +54,13 @@ class ArenaLifecycleCommandTest {
         val op = env.opPlayer("Op")
         env.newArena("a2", enabled = false)
         env.runCommand(op, "arena", "a2", "enable")
-        assertTrue(op.drainMessages().any { it.contains("を有効にしました") })
+        assertTrue(op.drainMessages().any { it.contains("Enabled arena") })
         env.runCommand(op, "arena", "a2", "enable")
-        assertTrue(op.drainMessages().any { it.contains("そのアリーナはすでに有効になっています！") })
+        assertTrue(op.drainMessages().any { it.contains("That arena is already enabled!") })
         env.runCommand(op, "arena", "a2", "disable")
-        assertTrue(op.drainMessages().any { it.contains("を無効にしました") })
+        assertTrue(op.drainMessages().any { it.contains("Disabled arena") })
         env.runCommand(op, "arena", "a2", "disable")
-        assertTrue(op.drainMessages().any { it.contains("そのアリーナはすでに無効です！") })
+        assertTrue(op.drainMessages().any { it.contains("That arena is already disabled!") })
         assertEquals(false, env.service.arena("a2")!!.enabled)
         assertFalse(env.arenaRepo.find("a2")!!.enabled)
     }
@@ -85,6 +85,6 @@ class ArenaLifecycleCommandTest {
     fun `console can create arena`() {
         val console = env.server.consoleSender
         env.runCommand(console, "arena", "create", "consolearena")
-        assertTrue(console.drainMessages().any { it.contains("アリーナ: consolearena を作成しました") })
+        assertTrue(console.drainMessages().any { it.contains("Created arena: consolearena") })
     }
 }

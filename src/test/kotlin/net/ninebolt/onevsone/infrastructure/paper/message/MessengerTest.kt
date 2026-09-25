@@ -24,7 +24,7 @@ class MessengerTest {
     private val logger = Logger.getLogger("messages-test")
     private val plain = PlainTextComponentSerializer.plainText()
 
-    private fun load(fallbackLang: String = "ja", language: String = "auto", logger: Logger = this.logger) = Messenger.load(File(folder, "messages"), fallbackLang, language, logger)
+    private fun load(fallbackLang: String = "en", language: String = "auto", logger: Logger = this.logger) = Messenger.load(File(folder, "messages"), fallbackLang, language, logger)
 
     private fun bundledKeys(lang: String): Set<String> {
         val config = javaClass.getResourceAsStream("/messages/$lang.yaml")!!
@@ -77,7 +77,7 @@ class MessengerTest {
     fun `unknown lang falls back to default`() {
         val messenger = load()
         assertEquals(
-            plain.serialize(messenger.render(Message.MatchGameStart, "ja")),
+            plain.serialize(messenger.render(Message.MatchGameStart, "en")),
             plain.serialize(messenger.render(Message.MatchGameStart, "fr")),
         )
     }
@@ -97,7 +97,7 @@ class MessengerTest {
 
             assertTrue(plain.serialize(ja.nextComponentMessage()!!).contains("アリーナ: a1 に参加しました"))
             assertTrue(plain.serialize(en.nextComponentMessage()!!).contains("Joined arena: a1"))
-            assertTrue(plain.serialize(console.nextComponentMessage()!!).contains("アリーナ: a1 に参加しました"))
+            assertTrue(plain.serialize(console.nextComponentMessage()!!).contains("Joined arena: a1"))
         } finally {
             MockBukkit.unmock()
         }
@@ -191,7 +191,7 @@ class MessengerTest {
 
     @Test
     fun `player with unsupported locale falls back to default language`() {
-        val messenger = load(fallbackLang = "en")
+        val messenger = load()
         val server = MockBukkit.mock()
         try {
             val fr = server.addPlayer("Fr").also { it.setLocale(Locale.FRENCH) }

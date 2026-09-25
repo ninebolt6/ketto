@@ -37,7 +37,7 @@ class ArenaSignCommandTest {
         val op = env.opPlayer("Op")
         env.newArena()
         env.runCommand(op, "arena", "arena1", "sign", "set")
-        assertTrue(op.drainMessages().any { it.contains("看板を見て実行してください") })
+        assertTrue(op.drainMessages().any { it.contains("Look at a sign and run the command") })
     }
 
     @Test
@@ -55,7 +55,7 @@ class ArenaSignCommandTest {
         assertEquals("arena1", env.signRepo.signOwner(BlockPosition.new("world", 4, 64, 4)))
 
         env.runCommand(second, "arena", "arena2", "sign", "set")
-        assertTrue(second.drainMessages().any { it.contains("その看板はすでに登録されています") })
+        assertTrue(second.drainMessages().any { it.contains("That sign is already registered") })
     }
 
     @Test
@@ -65,15 +65,15 @@ class ArenaSignCommandTest {
         env.signRepo.setSign("arena1", BlockPosition.new("world", 4, 64, 4))
 
         env.runCommand(op, "arena", "arena1", "sign", "remove")
-        assertTrue(op.drainMessages().any { it.contains("の看板登録を解除しました") })
+        assertTrue(op.drainMessages().any { it.contains("Unregistered sign for arena") })
         assertNull(env.signRepo.signOwner(BlockPosition.new("world", 4, 64, 4)))
         assertNull(env.signRepo.signLocation("arena1"))
 
         env.runCommand(op, "arena", "arena1", "sign", "remove")
-        assertTrue(op.drainMessages().any { it.contains("そのアリーナには看板が登録されていません") })
+        assertTrue(op.drainMessages().any { it.contains("No sign is registered for that arena") })
 
         env.runCommand(op, "arena", "missing", "sign", "remove")
-        assertTrue(op.drainMessages().any { it.contains("そのアリーナは存在しません") })
+        assertTrue(op.drainMessages().any { it.contains("That arena does not exist") })
     }
 
     @Test

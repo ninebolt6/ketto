@@ -121,7 +121,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         every { plugin.isEnabled } returns true
     }
 
-    val messenger = Messenger.load(File(folder, "messages"), "ja", "auto", Logger.getLogger("1vs1-test"))
+    val messenger = Messenger.load(File(folder, "messages"), "en", "auto", Logger.getLogger("1vs1-test"))
     val logger = plugin.logger
     val lookup = PaperPlayerLookup(server)
     val playerPort = PaperPlayerAdapter(lookup, server, plugin, logger)
@@ -256,7 +256,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     fun player(name: String, uuid: Uuid = Uuid.random(), worldName: String = "world"): ArenaPlayerMock {
         val w = world(worldName)
         val p = ArenaPlayerMock(server, name, uuid.toJavaUuid())
-        p.setLocale(Locale.JAPAN)
+        p.setLocale(Locale.ENGLISH)
         server.addPlayer(p)
         p.setLocation(Location(w, 0.0, 64.0, 0.0))
         return p

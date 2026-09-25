@@ -82,7 +82,7 @@ class ArenaListenerSignTest {
 
         val p3 = env.player("Carol")
         env.fire(interact(p3, block))
-        assertTrue(p3.drainMessages().any { it.contains("このアリーナは現在ゲーム中です") })
+        assertTrue(p3.drainMessages().any { it.contains("This arena is currently in a match") })
     }
 
     @Test

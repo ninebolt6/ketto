@@ -42,7 +42,7 @@ class ArenaListenerRestrictionTest {
     private fun assertCommandBlocked(player: ArenaPlayerMock, blocked: Boolean) {
         player.drainMessages()
         player.performCommand("1vs1")
-        assertEquals(blocked, player.drainMessages().any { it.contains("コマンドは使用できません") })
+        assertEquals(blocked, player.drainMessages().any { it.contains("You cannot use commands") })
     }
 
     @Test

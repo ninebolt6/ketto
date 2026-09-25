@@ -44,14 +44,14 @@ class PaperMatchProgressionTest {
         assertEquals(ArenaState.ONEMORE, env.view().state)
         assertEquals(arena, env.service.arenaIdOf(p1.uuid))
         val joined = p1.drainMessages()
-        assertTrue(joined.any { it.contains("に参加しました") })
-        assertTrue(joined.any { it.contains("あと一人参加するのを待っています") })
+        assertTrue(joined.any { it.contains("Joined arena") })
+        assertTrue(joined.any { it.contains("Waiting for one more player") })
 
         val p2 = env.player("Bob")
         env.join(p2, arena)
         assertEquals(ArenaState.COUNTDOWN, env.view().state)
         env.tick()
-        assertTrue(p1.drainMessages().any { it.contains("テレポートまで:") })
+        assertTrue(p1.drainMessages().any { it.contains("Teleporting in:") })
     }
 
     @Test
@@ -60,18 +60,18 @@ class PaperMatchProgressionTest {
         val disabled = env.newArena("disabled", enabled = false)
         val p1 = env.player("Alice")
         env.join(p1, disabled)
-        assertTrue(p1.drainMessages().any { it.contains("アリーナが有効になっていません！") })
+        assertTrue(p1.drainMessages().any { it.contains("That arena is not enabled!") })
         assertNull(env.service.arenaIdOf(p1.uuid))
 
         env.join(p1, arena)
         env.join(p1, arena)
-        assertTrue(p1.drainMessages().any { it.contains("すでに他のアリーナに参加しています") })
+        assertTrue(p1.drainMessages().any { it.contains("You are already in another arena") })
 
         val p2 = env.player("Bob")
         env.join(p2, arena)
         val p3 = env.player("Carol")
         env.join(p3, arena)
-        assertTrue(p3.drainMessages().any { it.contains("このアリーナは現在ゲーム中です") })
+        assertTrue(p3.drainMessages().any { it.contains("This arena is currently in a match") })
         assertNull(env.service.arenaIdOf(p3.uuid))
     }
 
@@ -86,13 +86,13 @@ class PaperMatchProgressionTest {
 
         (5 downTo 1).forEach { n ->
             env.tick()
-            assertTrue(p1.drainMessages().any { it.contains("テレポートまで: ${n}秒") })
+            assertTrue(p1.drainMessages().any { it.contains("Teleporting in: ${n}s") })
         }
         assertEquals(ArenaState.COUNTDOWN, env.view().state)
 
         env.tick()
         assertEquals(ArenaState.INGAME, env.view().state)
-        assertTrue(p1.drainMessages().any { it.contains("ゲームスタート！") })
+        assertTrue(p1.drainMessages().any { it.contains("Game start!") })
         assertTrue(p1.hasTeleported())
         assertTrue(p2.hasTeleported())
         assertEquals(1.0, p1.location.x, 0.001)
@@ -115,19 +115,19 @@ class PaperMatchProgressionTest {
         assertEquals(ArenaState.ROUNDCOUNTDOWN, env.view().state)
         assertEquals(1, env.view().winsOf(p1.uuid))
         val roundEnd = p1.drainMessages()
-        assertTrue(roundEnd.any { it.contains("ラウンド[") })
-        assertTrue(roundEnd.any { it.contains("勝者: Alice") })
+        assertTrue(roundEnd.any { it.contains("Round[") })
+        assertTrue(roundEnd.any { it.contains("winner: Alice") })
 
         env.tick()
         env.tick()
         (5 downTo 1).forEach { n ->
             env.tick()
-            assertTrue(p1.drainMessages().any { it.contains("開始まで: ${n}秒") })
+            assertTrue(p1.drainMessages().any { it.contains("Starting in: ${n}s") })
         }
         env.tick()
         assertEquals(ArenaState.INGAME, env.view().state)
         // The round-start message is a substring of the game-start message, so distinguish by the prefix boundary
-        assertTrue(p1.drainMessages().any { it.contains("] スタート！") })
+        assertTrue(p1.drainMessages().any { it.contains("] Go!") })
     }
 
     @Test
@@ -152,7 +152,7 @@ class PaperMatchProgressionTest {
         assertTrue(env.view().participants.isEmpty())
         assertNull(env.service.arenaIdOf(p1.uuid))
         assertNull(env.service.arenaIdOf(p2.uuid))
-        assertTrue(env.lastBroadcast().contains("が優勝しました！"))
+        assertTrue(env.lastBroadcast().contains("won the match"))
         assertEquals(1, env.statsRepo.find(p1.uuid)!!.wins)
         assertEquals(1, env.statsRepo.find(p2.uuid)!!.losses)
     }

@@ -36,21 +36,21 @@ class StatsCommandTest {
     fun `console cannot run stats`() {
         val console = env.server.consoleSender
         env.runCommand(console, "stats")
-        assertTrue(console.drainMessages().any { it.contains("このコマンドはプレイヤーのみ実行可能です") })
+        assertTrue(console.drainMessages().any { it.contains("This command can only be used by players") })
     }
 
     @Test
     fun `stats shows own stats or missing message`() {
         val p = env.player("Alice")
         env.runCommand(p, "stats")
-        assertTrue(p.drainMessages().any { it.contains("Statsが存在しません") })
+        assertTrue(p.drainMessages().any { it.contains("No stats found") })
 
         env.writeStats(p.uuid, 3, 0)
         env.runCommand(p, "stats")
         val msgs = p.drainMessages()
         assertTrue(msgs.any { it.contains("Win: 3") })
         assertTrue(msgs.any { it.contains("Lose: 0") })
-        assertTrue(msgs.any { it.contains("W/L(勝率): 3.00") })
+        assertTrue(msgs.any { it.contains("W/L(ratio): 3.00") })
     }
 
     @Test
@@ -62,7 +62,7 @@ class StatsCommandTest {
         val msgs = viewer.drainMessages()
         assertTrue(msgs.any { it.contains("Win: 0") })
         assertTrue(msgs.any { it.contains("Lose: 2") })
-        assertTrue(msgs.any { it.contains("W/L(勝率): 0.00") })
+        assertTrue(msgs.any { it.contains("W/L(ratio): 0.00") })
     }
 
     @Test
@@ -72,7 +72,7 @@ class StatsCommandTest {
         ghost.disconnect()
         env.writeStats(ghost.uuid, 5, 5)
         env.runCommand(viewer, "stats", "Ghost")
-        assertTrue(viewer.drainMessages().any { it.contains("W/L(勝率): 1.00") })
+        assertTrue(viewer.drainMessages().any { it.contains("W/L(ratio): 1.00") })
     }
 
     @Test
@@ -93,7 +93,7 @@ class StatsCommandTest {
         every { (env.server as Server).getOfflinePlayer("Ghost") } throws RuntimeException("lookup failed")
         env.runCommand(viewer, "stats", "Ghost")
         env.runOneShots()
-        assertTrue(viewer.drainMessages().any { it.contains("Statsが存在しません") })
+        assertTrue(viewer.drainMessages().any { it.contains("No stats found") })
     }
 
     @Test
@@ -114,9 +114,9 @@ class StatsCommandTest {
         assertTrue(viewer.drainMessages().any { it.contains("Win: 1") })
 
         env.runCommand(viewer, "stats", "Target")
-        assertTrue(viewer.drainMessages().any { it.contains("連続で実行できません") })
+        assertTrue(viewer.drainMessages().any { it.contains("wait a moment") })
 
         env.runCommand(viewer, "stats")
-        assertTrue(viewer.drainMessages().any { it.contains("Statsが存在しません") })
+        assertTrue(viewer.drainMessages().any { it.contains("No stats found") })
     }
 }

@@ -34,7 +34,7 @@ class LeaveCommandTest {
     fun `leave when not joined reports not joined`() {
         val p = env.player("Alice")
         env.runCommand(p, "leave")
-        assertTrue(p.drainMessages().any { it.contains("あなたはアリーナに参加していません！") })
+        assertTrue(p.drainMessages().any { it.contains("You are not in an arena!") })
     }
 
     @Test
@@ -43,7 +43,7 @@ class LeaveCommandTest {
         val p = env.player("Alice")
         env.join(p, arena)
         env.runCommand(p, "leave")
-        assertTrue(p.drainMessages().any { it.contains("アリーナから退出しました") })
+        assertTrue(p.drainMessages().any { it.contains("You left the arena") })
         assertEquals(ArenaState.WAITING, env.state("arena1"))
     }
 
@@ -51,7 +51,7 @@ class LeaveCommandTest {
     fun `leave while ingame is intercepted by the command guard`() {
         val (p1, _) = env.twoPlayerIngame()
         env.runCommand(p1, "leave")
-        assertTrue(p1.drainMessages().any { it.contains("コマンドは使用できません") })
+        assertTrue(p1.drainMessages().any { it.contains("You cannot use commands") })
         assertEquals(ArenaState.INGAME, env.state("arena1"))
     }
 }

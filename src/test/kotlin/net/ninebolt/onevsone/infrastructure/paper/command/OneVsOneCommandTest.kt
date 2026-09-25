@@ -46,7 +46,7 @@ class OneVsOneCommandTest {
         env.runCommand(p, "bogus")
         assertTrue(p.drainMessages().any { it.contains("Incorrect argument") })
         env.runCommand(p, "arena", "bogus")
-        assertTrue(p.drainMessages().any { it.contains("そのアリーナは存在しません") })
+        assertTrue(p.drainMessages().any { it.contains("That arena does not exist") })
         env.runCommand(p, "arena", "bogus", "bogus")
         assertTrue(p.drainMessages().any { it.contains("Incorrect argument") })
     }
@@ -86,16 +86,16 @@ class OneVsOneCommandTest {
         p.addAttachment(env.plugin, ADMIN_PERMISSION, true)
         env.newArena()
         env.runCommand(p, "arena", "arena1", "enable")
-        assertTrue(p.drainMessages().any { it.contains("すでに有効") })
+        assertTrue(p.drainMessages().any { it.contains("already enabled") })
     }
 
     @Test
     fun `non ascii and quoted arena names are accepted`() {
         val op = env.opPlayer("Op")
         env.runCommand(op, "arena", "create", "闘技場")
-        assertTrue(op.drainMessages().any { it.contains("闘技場 を作成しました") })
+        assertTrue(op.drainMessages().any { it.contains("Created arena: 闘技場") })
         env.runCommand(op, "arena", "create", "\"my arena\"")
-        assertTrue(op.drainMessages().any { it.contains("my arena を作成しました") })
+        assertTrue(op.drainMessages().any { it.contains("Created arena: my arena") })
         assertTrue(env.admin.arenaNames().containsAll(listOf("闘技場", "my arena")))
     }
 

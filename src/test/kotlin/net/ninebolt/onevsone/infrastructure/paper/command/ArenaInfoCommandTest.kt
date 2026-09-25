@@ -32,7 +32,7 @@ class ArenaInfoCommandTest {
     fun `arena info shows state and players during match`() {
         val viewer = env.player("Viewer")
         env.runCommand(viewer, "arena", "missing")
-        assertTrue(viewer.drainMessages().any { it.contains("そのアリーナは存在しません") })
+        assertTrue(viewer.drainMessages().any { it.contains("That arena does not exist") })
 
         val arena = env.newArena()
         val p1 = env.player("Alice")
@@ -45,9 +45,9 @@ class ArenaInfoCommandTest {
         env.runCommand(viewer, "arena", "arena1", "info")
         val msgs = viewer.drainMessages()
         assertTrue(msgs.any { it.contains("=== Arena[arena1] ===") })
-        assertTrue(msgs.any { it.contains("状態: Ingame") })
+        assertTrue(msgs.any { it.contains("State: Ingame") })
         assertTrue(msgs.any { it.contains("[Alice] vs [Bob]") })
-        assertTrue(msgs.any { it.contains("勝数: 1-0") })
+        assertTrue(msgs.any { it.contains("Wins: 1-0") })
     }
 
     @Test
