@@ -6,7 +6,6 @@ import net.ninebolt.onevsone.infrastructure.paper.fixtures.blockOf
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.interact
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.itemEntity
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.plainBlock
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.simulation
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.spawn
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.twoPlayerIngame
 import org.bukkit.Material
@@ -16,6 +15,7 @@ import org.bukkit.entity.AbstractArrow
 import org.bukkit.entity.ArmorStand
 import org.bukkit.entity.EntityType
 import org.bukkit.entity.ItemFrame
+import org.bukkit.entity.Player
 import org.bukkit.event.Event
 import org.bukkit.event.block.BlockDispenseArmorEvent
 import org.bukkit.event.block.BlockFertilizeEvent
@@ -23,6 +23,9 @@ import org.bukkit.event.block.SignChangeEvent
 import org.bukkit.event.entity.EntityPickupItemEvent
 import org.bukkit.event.entity.EntityPlaceEvent
 import org.bukkit.event.hanging.HangingPlaceEvent
+import org.bukkit.event.inventory.ClickType
+import org.bukkit.event.inventory.InventoryAction
+import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.inventory.InventoryDragEvent
 import org.bukkit.event.inventory.InventoryType
 import org.bukkit.event.player.PlayerArmorStandManipulateEvent
@@ -35,12 +38,14 @@ import org.bukkit.event.player.PlayerInteractAtEntityEvent
 import org.bukkit.event.player.PlayerInteractEntityEvent
 import org.bukkit.event.player.PlayerPickupArrowEvent
 import org.bukkit.inventory.EquipmentSlot
+import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.ItemStack
 import org.bukkit.util.Vector
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.mockbukkit.mockbukkit.inventory.SimpleInventoryViewMock
 import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -124,26 +129,57 @@ class ArenaListenerItemGuardTest {
         assertEquals(Event.Result.DENY, egg.useItemInHand())
     }
 
+    // InventoryClickEvent resolves raw slots through InventoryView.convertSlot, which SimpleInventoryViewMock leaves unimplemented
+    private fun inventoryView(player: Player, top: Inventory): SimpleInventoryViewMock = object : SimpleInventoryViewMock() {
+        override fun convertSlot(rawSlot: Int): Int = rawSlot
+    }.apply {
+        this.player = player
+        topInventory = top
+    }
+
+    private fun click(view: SimpleInventoryViewMock) = InventoryClickEvent(
+        view,
+        InventoryType.SlotType.CONTAINER,
+        0,
+        ClickType.LEFT,
+        InventoryAction.PICKUP_ALL,
+    )
+
+    private fun drag(view: SimpleInventoryViewMock) = InventoryDragEvent(view, null, env.item(Material.STONE), false, emptyMap())
+
     @Test
-    fun `foreign inventory clicks cancelled but own inventory allowed`() {
+    fun `foreign inventory clicks and drags cancelled but own inventory allowed`() {
         val (p1, _) = env.twoPlayerIngame()
 
-        val own = p1.simulation().simulateInventoryClick(0)
+        val foreign = inventoryView(p1, env.server.createInventory(null, InventoryType.CHEST))
+        val click = click(foreign)
+        env.fire(click)
+        assertTrue(click.isCancelled)
+
+        val foreignDrag = drag(foreign)
+        env.fire(foreignDrag)
+        assertTrue(foreignDrag.isCancelled)
+
+        val own = click(inventoryView(p1, p1.inventory))
+        env.fire(own)
         assertFalse(own.isCancelled)
+    }
 
-        val chestView = p1.openInventory(env.server.createInventory(null, InventoryType.CHEST))!!
-        val foreign = p1.simulation().simulateInventoryClick(chestView, 0)
-        assertTrue(foreign.isCancelled)
+    @Test
+    fun `foreign inventory transfer allowed for outsiders and while onemore`() {
+        env.twoPlayerIngame()
+        val solo = env.newArena("solo")
+        val waiting = env.player("Carol")
+        env.join(waiting, solo)
 
-        val drag = InventoryDragEvent(
-            chestView,
-            null,
-            env.item(Material.STONE),
-            false,
-            mapOf(0 to env.item(Material.STONE)),
-        )
-        env.fire(drag)
-        assertTrue(drag.isCancelled)
+        listOf(waiting, env.player("Outsider")).forEach { p ->
+            val foreignClick = click(inventoryView(p, env.server.createInventory(null, InventoryType.CHEST)))
+            env.fire(foreignClick)
+            assertFalse(foreignClick.isCancelled)
+            val foreignDrag = drag(inventoryView(p, env.server.createInventory(null, InventoryType.CHEST)))
+            env.fire(foreignDrag)
+            assertFalse(foreignDrag.isCancelled)
+        }
     }
 
     @Test

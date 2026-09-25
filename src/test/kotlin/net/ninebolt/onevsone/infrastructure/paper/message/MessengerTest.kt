@@ -24,7 +24,7 @@ class MessengerTest {
     private val logger = Logger.getLogger("messages-test")
     private val plain = PlainTextComponentSerializer.plainText()
 
-    private fun load(language: String = "auto", logger: Logger = this.logger) = Messenger.load(File(folder, "messages"), "ja", language, logger)
+    private fun load(fallbackLang: String = "ja", language: String = "auto", logger: Logger = this.logger) = Messenger.load(File(folder, "messages"), fallbackLang, language, logger)
 
     private fun bundledKeys(lang: String): Set<String> {
         val config = javaClass.getResourceAsStream("/messages/$lang.yaml")!!
@@ -178,6 +178,28 @@ class MessengerTest {
         assertTrue(file.readText().startsWith("# user comment"))
 
         assertEquals(0, LanguageFiles.backfill(file, bundled))
+    }
+
+    @Test
+    fun `unbundled fallback language renders the key name and warns once`() {
+        val recording = RecordingLogger()
+        val messenger = Messenger.load(File(folder, "messages"), "fr", "auto", recording)
+        assertEquals("MATCH_GAME_START", plain.serialize(messenger.render(Message.MatchGameStart, "fr")))
+        messenger.render(Message.MatchGameStart, "fr")
+        assertEquals(1, recording.warnings.count { it.contains("Missing message key") })
+    }
+
+    @Test
+    fun `player with unsupported locale falls back to default language`() {
+        val messenger = load(fallbackLang = "en")
+        val server = MockBukkit.mock()
+        try {
+            val fr = server.addPlayer("Fr").also { it.setLocale(Locale.FRENCH) }
+            messenger.send(fr, Message.MatchJoined("a1"))
+            assertTrue(plain.serialize(fr.nextComponentMessage()!!).contains("Joined arena: a1"))
+        } finally {
+            MockBukkit.unmock()
+        }
     }
 
     @Test

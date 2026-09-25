@@ -6,6 +6,7 @@ import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.domain.MatchId
+import net.ninebolt.onevsone.domain.WorldPosition
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -194,6 +195,44 @@ class PlayerRecoveryServiceTest {
         assertTrue(app.equipment.restored.any { it.playerId == p1.id })
         assertTrue(app.equipment.restored.any { it.playerId == p2.id })
         assertEquals(1, app.equipment.storedBackups.size)
+        assertNotNull(app.service.pendingRestore(p2.id))
+    }
+
+    @Test
+    fun `failed restore during finish keeps position and ticket`() {
+        val app = TestApp(requiredWins = 1)
+        val lobby = WorldPosition.new("world", 9.0, 64.0, 9.0)
+        app.arenas.lobbyPosition = lobby
+        val (p1, p2) = app.startMatch()
+        app.equipment.failOnRestore = true
+
+        app.service.defeat(p2.id, DefeatCause.FALL)
+        app.scheduler.runOneShots()
+        assertTrue(p1.teleports.none { it == lobby })
+        assertTrue(p2.teleports.none { it == lobby })
+        assertNotNull(app.service.pendingRestore(p1.id))
+        assertNotNull(app.service.pendingRestore(p2.id))
+    }
+
+    @Test
+    fun `missing lobby skips teleport with a warning`() {
+        val app = TestApp(requiredWins = 1)
+        val (p1, p2) = app.startMatch()
+
+        app.service.defeat(p2.id, DefeatCause.FALL)
+        app.scheduler.runOneShots()
+        assertTrue(app.logger.warnings.count { it.contains("Lobby is not set") } >= 1)
+        assertNull(app.service.pendingRestore(p1.id))
+    }
+
+    @Test
+    fun `shutdown retains dead player record when restore fails`() {
+        val app = TestApp()
+        val (_, p2) = app.startMatch()
+        p2.dead = true
+        app.equipment.failOnRestore = true
+        app.lifecycle.shutdown()
+        assertTrue(app.logger.reports.any { it.message.contains("Could not restore inventory") })
         assertNotNull(app.service.pendingRestore(p2.id))
     }
 

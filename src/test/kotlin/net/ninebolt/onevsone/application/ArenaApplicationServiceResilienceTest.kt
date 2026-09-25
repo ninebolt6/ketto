@@ -168,6 +168,23 @@ class ArenaApplicationServiceResilienceTest {
     }
 
     @Test
+    fun `arena without spawns starts in place with a warning`() {
+        val app = TestApp()
+        val arena = Arena.Id.new("arena1")
+        app.registry.installArena(Arena.new(arena, enabled = true), persist = {})
+        val p1 = app.players.add("Alice")
+        val p2 = app.players.add("Bob")
+        app.service.join(p1.id, p1.name, arena)
+        app.service.join(p2.id, p2.name, arena)
+
+        app.scheduler.tick(6)
+        assertEquals(ArenaState.INGAME, app.state())
+        assertTrue(p1.teleports.isEmpty())
+        assertTrue(p2.teleports.isEmpty())
+        assertEquals(2, app.logger.warnings.count { it.contains("is not set; skipping teleport") })
+    }
+
+    @Test
     fun `dead player keeps countdown waiting without consuming the start tick`() {
         val app = TestApp()
         val (_, p2) = app.joinedTwo()

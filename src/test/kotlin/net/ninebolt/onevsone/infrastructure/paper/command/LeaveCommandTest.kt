@@ -4,6 +4,7 @@ import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.runCommand
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.twoPlayerIngame
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -44,5 +45,13 @@ class LeaveCommandTest {
         env.runCommand(p, "leave")
         assertTrue(p.drainMessages().any { it.contains("アリーナから退出しました") })
         assertEquals(ArenaState.WAITING, env.state("arena1"))
+    }
+
+    @Test
+    fun `leave while ingame is intercepted by the command guard`() {
+        val (p1, _) = env.twoPlayerIngame()
+        env.runCommand(p1, "leave")
+        assertTrue(p1.drainMessages().any { it.contains("コマンドは使用できません") })
+        assertEquals(ArenaState.INGAME, env.state("arena1"))
     }
 }

@@ -13,7 +13,11 @@ import net.ninebolt.onevsone.infrastructure.paper.PaperInventorySnapshot
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
+import java.lang.reflect.Proxy
+import java.sql.Connection
 import java.sql.DriverManager
+import java.sql.SQLException
+import java.sql.Statement
 import java.util.logging.Logger
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -312,6 +316,58 @@ class SqlitePersistenceTest {
             }
         }
     }
+
+    @Test
+    fun `missing migration resource surfaces as PersistenceFailure`() {
+        DriverManager.getConnection("jdbc:sqlite:${File(folder, "data.db").absolutePath}").use { conn ->
+            conn.createStatement().use { it.execute("PRAGMA user_version=-1") }
+        }
+        assertFailsWith<PersistenceFailure> { store() }
+    }
+
+    @Test
+    fun `failed migration statement rolls back the whole step`() {
+        val file = File(folder, "data.db")
+        DriverManager.getConnection("jdbc:sqlite:${file.absolutePath}").use { real ->
+            val conn = sabotagedConnection(real, "player_stats")
+            assertFailsWith<PersistenceFailure> { SqliteMigrations(conn).migrate() }
+        }
+        DriverManager.getConnection("jdbc:sqlite:${file.absolutePath}").use { conn ->
+            conn.createStatement().use { st ->
+                st.executeQuery("SELECT COUNT(*) AS c FROM sqlite_master WHERE type = 'table'").use { rs ->
+                    rs.next()
+                    assertEquals(0, rs.getInt("c"))
+                }
+                st.executeQuery("PRAGMA user_version").use { rs ->
+                    rs.next()
+                    assertEquals(0, rs.getInt(1))
+                }
+            }
+        }
+    }
+
+    private fun sabotagedConnection(real: Connection, failingFragment: String): Connection = Proxy.newProxyInstance(
+        javaClass.classLoader,
+        arrayOf(Connection::class.java),
+    ) { _, method, args ->
+        val result = method.invoke(real, *(args ?: emptyArray()))
+        if (method.name == "createStatement") {
+            sabotagedStatement(result as Statement, failingFragment)
+        } else {
+            result
+        }
+    } as Connection
+
+    private fun sabotagedStatement(real: Statement, failingFragment: String): Statement = Proxy.newProxyInstance(
+        javaClass.classLoader,
+        arrayOf(Statement::class.java),
+    ) { _, method, args ->
+        val sql = args?.firstOrNull() as? String
+        if (method.name == "execute" && sql != null && failingFragment in sql) {
+            throw SQLException("injected migration failure")
+        }
+        method.invoke(real, *(args ?: emptyArray()))
+    } as Statement
 
     @Test
     fun `codec failure surfaces as PersistenceFailure`() = withStore { store ->

@@ -31,6 +31,15 @@ class ArenaApplicationServiceTest {
     }
 
     @Test
+    fun `join unknown arena id reports not found`() {
+        val app = TestApp()
+        app.newArena()
+        val p = app.players.add("Alice")
+        assertEquals(JoinOutput.NotFound, app.service.join(p.id, p.name, Arena.Id.new("ghost")))
+        assertNull(app.service.arenaIdOf(p.id))
+    }
+
+    @Test
     fun `double join across arenas is rejected by index`() {
         val app = TestApp()
         app.newArena("a1")

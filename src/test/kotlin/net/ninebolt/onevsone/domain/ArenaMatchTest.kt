@@ -265,15 +265,48 @@ class ArenaMatchTest {
     }
 
     @Test
+    fun `leaveWaiting rejects a non participant while onemore`() {
+        val onemore = match().join(alice).match
+        assertEquals(LeaveOutcome.NotWaiting, onemore.leaveWaiting(bob.id).outcome)
+        assertEquals(1, onemore.participants.size)
+    }
+
+    @Test
+    fun `defeat is rejected while a round resolution is pending`() {
+        val resolving = ArenaMatch.restored(
+            Arena.Id.new("a1"),
+            3,
+            ArenaState.ROUNDCOUNTDOWN,
+            listOf(alice, bob),
+            wins = mapOf(alice.id to 1),
+            resolving = true,
+        )
+        assertEquals(DefeatOutcome.Rejected, resolving.recordDefeat(bob.id, DefeatCause.FALL).outcome)
+        assertSame(resolving, resolving.recordDefeat(bob.id, DefeatCause.FALL).match)
+    }
+
+    @Test
     fun `factories reject invalid construction`() {
         assertFailsWith<IllegalArgumentException> {
             ArenaMatch.new(Arena.Id.new("a1"), 0)
+        }
+        assertFailsWith<IllegalArgumentException> {
+            ArenaMatch.restored(Arena.Id.new("a1"), 0, ArenaState.WAITING, emptyList(), emptyMap())
         }
         assertFailsWith<IllegalArgumentException> {
             ArenaMatch.restored(Arena.Id.new("a1"), 3, ArenaState.WAITING, listOf(alice), emptyMap())
         }
         assertFailsWith<IllegalArgumentException> {
             ArenaMatch.restored(Arena.Id.new("a1"), 3, ArenaState.INGAME, listOf(alice), emptyMap())
+        }
+        assertFailsWith<IllegalArgumentException> {
+            ArenaMatch.restored(
+                Arena.Id.new("a1"),
+                3,
+                ArenaState.COUNTDOWN,
+                listOf(alice, alice),
+                wins = emptyMap(),
+            )
         }
         assertFailsWith<IllegalArgumentException> {
             ArenaMatch.restored(
@@ -292,6 +325,16 @@ class ArenaMatchTest {
                 listOf(alice, bob),
                 wins = emptyMap(),
                 resolving = true,
+            )
+        }
+        assertFailsWith<IllegalArgumentException> {
+            ArenaMatch.restored(
+                Arena.Id.new("a1"),
+                3,
+                ArenaState.WAITING,
+                emptyList(),
+                emptyMap(),
+                epoch = -1,
             )
         }
     }
