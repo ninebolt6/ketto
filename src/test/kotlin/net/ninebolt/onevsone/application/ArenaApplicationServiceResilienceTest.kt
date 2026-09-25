@@ -131,6 +131,16 @@ class ArenaApplicationServiceResilienceTest {
     }
 
     @Test
+    fun `load skips every arena when definitions are unreadable`() {
+        val app = TestApp()
+        app.arenas.save(Arena.new(Arena.Id.new("a1"), enabled = true))
+        app.arenas.failOnLoad = true
+        app.lifecycle.load()
+        assertTrue(app.registry.arenaIds().isEmpty())
+        assertTrue(app.logger.warnings.any { it.contains("unreadable") })
+    }
+
+    @Test
     fun `load isolates per arena status persistence failure`() {
         val app = TestApp()
         app.arenas.save(Arena.new(Arena.Id.new("broken")))

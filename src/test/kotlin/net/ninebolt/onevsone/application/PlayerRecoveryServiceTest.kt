@@ -307,6 +307,32 @@ class PlayerRecoveryServiceTest {
     }
 
     @Test
+    fun `restore to lobby leaves the player in place when the restore fails`() {
+        val app = TestApp()
+        val p = app.players.add("Alice")
+        app.equipment.seedBackup(backupRef(p.id, p.name))
+        app.recovery.loadPersisted()
+        app.arenas.lobbyPosition = WorldPosition.new("world", 0.0, 64.0, 0.0)
+        app.equipment.failOnRestore = true
+
+        app.recovery.restoreToLobby(p, app.service.pendingRestore(p.id)!!)
+
+        assertTrue(p.teleports.isEmpty())
+        assertNotNull(app.service.pendingRestore(p.id))
+    }
+
+    @Test
+    fun `restore to lobby without a ticket teleports to the lobby`() {
+        val app = TestApp()
+        val p = app.players.add("Alice")
+        app.arenas.lobbyPosition = WorldPosition.new("world", 9.0, 64.0, 9.0)
+
+        app.recovery.restoreToLobby(p, null)
+
+        assertEquals(1, p.teleports.size)
+    }
+
+    @Test
     fun `dead pending holder cannot join until restored`() {
         val app = TestApp()
         app.newArena()

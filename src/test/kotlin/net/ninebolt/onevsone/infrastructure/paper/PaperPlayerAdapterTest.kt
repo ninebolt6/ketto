@@ -2,6 +2,7 @@ package net.ninebolt.onevsone.infrastructure.paper
 
 import net.ninebolt.onevsone.domain.WorldPosition
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.genericDamage
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -67,6 +68,17 @@ class PaperPlayerAdapterTest {
         assertEquals(20.0, p.health)
         assertEquals(20, p.foodLevel)
         assertEquals(0, p.fireTicks)
+    }
+
+    @Test
+    fun `reset vitals leaves a dead player untouched`() {
+        val p = env.player("Alice")
+        p.simulateDamage(100.0, genericDamage())
+
+        env.playerPort.handle(p.uuid)!!.resetVitals()
+
+        assertEquals(0.0, p.health)
+        assertTrue(p.isDead)
     }
 
     @Test

@@ -42,6 +42,18 @@ class PaperInventorySnapshotTest {
     }
 
     @Test
+    fun `capture clones armor pieces independently`() {
+        val inv = server.addPlayer("Alice").inventory
+        val helmet = ItemStack.of(Material.IRON_HELMET)
+        inv.armorContents = arrayOf(helmet, null, null, null)
+
+        val snapshot = PaperInventorySnapshot.capture(inv)
+        assertEquals(Material.IRON_HELMET, snapshot.armor[0]?.type)
+        assertNotSame(helmet, snapshot.armor[0])
+        assertNull(snapshot.armor[1])
+    }
+
+    @Test
     fun `apply restores exact slots and armor authoritatively`() {
         val inv = server.addPlayer("Alice").inventory
         val helmet = ItemStack.of(Material.IRON_HELMET)

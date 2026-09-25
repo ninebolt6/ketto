@@ -10,6 +10,8 @@ import net.ninebolt.onevsone.domain.MatchId
 import net.ninebolt.onevsone.domain.Participant
 import net.ninebolt.onevsone.domain.WorldPosition
 import net.ninebolt.onevsone.infrastructure.paper.PaperInventorySnapshot
+import org.bukkit.configuration.file.YamlConfiguration
+import org.bukkit.inventory.ItemStack
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
@@ -391,6 +393,15 @@ class SqlitePersistenceTest {
     }
 
     @Test
+    fun `a payload missing the item key decodes with empty items`() {
+        val yaml = YamlConfiguration()
+        yaml.set("armor", listOf<ItemStack>())
+        val snapshot = InventoryPayloadCodec.decode(yaml.saveToString())
+        assertTrue(snapshot.items.isEmpty())
+        assertTrue(snapshot.armor.isEmpty())
+    }
+
+    @Test
     fun `corrupt arena row surfaces as PersistenceFailure`() = withStore { store ->
         store.exec(
             "INSERT INTO arenas(name, enabled, spawn1_world, spawn1_x, spawn1_y, spawn1_z, seq) VALUES ('a1', 1, '', 0, 0, 0, 1)",
@@ -431,6 +442,15 @@ class SqlitePersistenceTest {
             val conn = sabotagedConnection(real, "player_stats") { PersistenceFailure("inner failure") }
             val failure = assertFailsWith<PersistenceFailure> { SqliteMigrations(conn).migrate() }
             assertEquals("inner failure", failure.message)
+        }
+    }
+
+    @Test
+    fun `a non Exception thrown inside a migration propagates unchanged`() {
+        DriverManager.getConnection("jdbc:sqlite:${File(folder, "data.db").absolutePath}").use { real ->
+            val conn = sabotagedConnection(real, "player_stats") { Error("injected error") }
+            val failure = assertFailsWith<Error> { SqliteMigrations(conn).migrate() }
+            assertEquals("injected error", failure.message)
         }
     }
 

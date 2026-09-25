@@ -23,8 +23,10 @@ class InMemoryArenaRepository :
     var lobbyPosition: WorldPosition? = null
     val signs = mutableMapOf<String, BlockPosition>()
     var failOnSave = false
+    var failOnLoad = false
 
     override fun loadAll(): List<Arena> {
+        if (failOnLoad) throw PersistenceFailure("load failed")
         val seen = mutableSetOf<String>()
         return names.mapNotNull { name ->
             if (Arena.Id.of(name) == null || !seen.add(name.lowercase(Locale.ROOT))) null else find(name)

@@ -1,11 +1,18 @@
 package net.ninebolt.onevsone.infrastructure.paper.message
 
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.runs
+import io.mockk.verify
+import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.minimessage.MiniMessage
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.RecordingLogger
 import org.bukkit.configuration.file.YamlConfiguration
+import org.bukkit.entity.Player
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.mockbukkit.mockbukkit.MockBukkit
@@ -13,6 +20,7 @@ import java.io.File
 import java.util.Locale
 import java.util.logging.Logger
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
@@ -232,6 +240,49 @@ class MessengerTest {
         }
         assertTrue(recording.infos.any { it.contains("messages/ja.yaml") })
         assertEquals("<green>CUSTOM <name>", YamlConfiguration.loadConfiguration(File(folder, "messages/ja.yaml")).getString("MATCH_JOINED"))
+    }
+
+    @Test
+    fun `a player whose locale lookup fails falls back to the default language`() {
+        val messenger = load()
+        val player = mockk<Player>()
+        every { player.locale() } throws RuntimeException("locale unavailable")
+        every { player.sendMessage(any<Component>()) } just runs
+
+        messenger.send(player, Message.MatchJoined("a1"))
+
+        verify { player.sendMessage(any<Component>()) }
+    }
+
+    @Test
+    fun `backfill skips bundled section keys but keeps their string leaves`() {
+        val file = File(folder, "en.yaml").also { it.writeText("MATCH_JOINED: \"x\"\n") }
+        val bundled = YamlConfiguration()
+        bundled.set("meta.author", "test")
+        bundled.set("NEW_KEY", "fresh")
+
+        val added = LanguageFiles.backfill(file, bundled)
+
+        assertEquals(2, added)
+        val merged = YamlConfiguration.loadConfiguration(file)
+        assertTrue(merged.isString("meta.author"))
+        assertTrue(merged.isString("NEW_KEY"))
+    }
+
+    @Test
+    fun `loadBundles without a messages directory returns only the bundled languages`() {
+        val bundles = LanguageFiles.loadBundles(File(folder, "absent"), "en", logger)
+        assertEquals(setOf("en", "ja"), bundles.keys)
+        assertTrue(bundles["en"]!!.containsKey(MessageKey.MATCH_JOINED.name))
+    }
+
+    @Test
+    fun `override entries without a string value are skipped`() {
+        File(folder, "messages").mkdirs()
+        File(folder, "messages/de.yaml").writeText("MATCH_JOINED: \"<green>Beigetreten: <name>\"\nEMPTY_KEY:\n")
+        val bundles = LanguageFiles.loadBundles(File(folder, "messages"), "en", logger)
+        assertEquals("<green>Beigetreten: <name>", bundles["de"]?.get("MATCH_JOINED"))
+        assertFalse("EMPTY_KEY" in bundles["de"]!!)
     }
 
     @Test

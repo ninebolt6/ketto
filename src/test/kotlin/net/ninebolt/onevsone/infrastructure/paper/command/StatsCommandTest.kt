@@ -128,4 +128,12 @@ class StatsCommandTest {
         env.runCommand(viewer, "stats")
         assertTrue(viewer.drainMessages().any { it.contains("No stats found") })
     }
+
+    @Test
+    fun `stats read failure reports no stats`() {
+        val p = env.player("Alice")
+        env.store.exec("DROP TABLE player_stats")
+        env.runCommand(p, "stats")
+        assertTrue(p.drainMessages().any { it.contains("No stats found") })
+    }
 }

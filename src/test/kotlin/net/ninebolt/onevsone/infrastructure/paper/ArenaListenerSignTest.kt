@@ -73,6 +73,22 @@ class ArenaListenerSignTest {
     }
 
     @Test
+    fun `second player joining by sign starts the match without the wait message`() {
+        env.newArena()
+        env.signRepo.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
+        val block = env.signBlock(3, 64, 3)
+        val p1 = env.player("Alice")
+        val p2 = env.player("Bob")
+
+        env.fire(interact(p1, block))
+        env.fire(interact(p2, block))
+
+        val messages = p2.drainMessages()
+        assertTrue(messages.any { it.contains("Joined arena") })
+        assertTrue(messages.none { it.contains("one more") })
+    }
+
+    @Test
     fun `cannot join sign click shows message`() {
         val arena = env.newArena()
         env.signRepo.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
@@ -85,6 +101,43 @@ class ArenaListenerSignTest {
         val p3 = env.player("Carol")
         env.fire(interact(p3, block))
         assertTrue(p3.drainMessages().any { it.contains("This arena is currently in a match") })
+    }
+
+    @Test
+    fun `sign click on a disabled arena reports not enabled`() {
+        env.newArena("arena1", enabled = false)
+        env.signRepo.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
+        val p1 = env.player("Alice")
+
+        env.fire(interact(p1, env.signBlock(3, 64, 3)))
+        assertTrue(p1.drainMessages().any { it.contains("not enabled") })
+        assertNull(env.service.arenaIdOf(p1.uuid))
+    }
+
+    @Test
+    fun `sign click while already in the arena reports already joined`() {
+        env.newArena()
+        env.signRepo.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
+        val block = env.signBlock(3, 64, 3)
+        val p1 = env.player("Alice")
+
+        env.fire(interact(p1, block))
+        p1.drainMessages()
+        env.fire(interact(p1, block))
+        assertTrue(p1.drainMessages().any { it.contains("already in another arena") })
+    }
+
+    @Test
+    fun `a sign registered to an invalid arena name reports not found`() {
+        env.store.exec(
+            "INSERT INTO arenas(name, enabled, spawn1_world, spawn1_x, spawn1_y, spawn1_z, seq) VALUES ('create', 1, 'w', 0, 0, 0, 1)",
+        )
+        env.signRepo.setSign("create", BlockPosition.new("world", 3, 64, 3))
+        val p1 = env.player("Alice")
+
+        env.fire(interact(p1, env.signBlock(3, 64, 3)))
+        assertTrue(p1.drainMessages().any { it.contains("does not exist") })
+        assertNull(env.service.arenaIdOf(p1.uuid))
     }
 
     @Test
