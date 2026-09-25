@@ -24,8 +24,6 @@ dependencies {
     compileOnly(libs.adventure.minimessage)
     compileOnly(libs.sqlite.jdbc)
 
-    // MockBukkit must come before the bukkit provider (paper-api)
-    // pairs with the Paper-Version (1.21.11) in the manifest
     testImplementation(libs.mockbukkit)
     testImplementation(libs.paper.api)
     testImplementation(libs.adventure.serializer.plain)
