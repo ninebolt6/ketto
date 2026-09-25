@@ -56,8 +56,8 @@ class ArenaMatchListener(
         val victim = event.entity as? Player
         val attacker = event.damageSource.causingEntity as? Player
         val allowed = DamageAdmission.allows(
-            victimId = victim?.uniqueId?.toKotlinUuid(),
-            attackerId = attacker?.uniqueId?.toKotlinUuid(),
+            victimId = victim?.let { it.uniqueId.toKotlinUuid() },
+            attackerId = attacker?.let { it.uniqueId.toKotlinUuid() },
             victimMatch = victim?.let { service.matchOf(it.uniqueId.toKotlinUuid()) },
             attackerMatch = attacker?.let { service.matchOf(it.uniqueId.toKotlinUuid()) },
         )

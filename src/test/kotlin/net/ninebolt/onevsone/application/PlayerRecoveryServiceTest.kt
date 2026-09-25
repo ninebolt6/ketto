@@ -158,11 +158,12 @@ class PlayerRecoveryServiceTest {
         val (_, p2) = app.startMatch()
         p2.dead = true
         app.service.defeat(p2.id, DefeatCause.DEATH)
+        val applies = app.equipment.kitApplies.count { it.second == p2.id }
         app.service.abort(Arena.Id.new("arena1"))
         app.scheduler.runOneShots()
         val p2Restores = app.equipment.restored.count { it.playerId == p2.id }
         assertEquals(1, p2Restores)
-        assertTrue(app.equipment.kitApplies.count { it.second == p2.id } <= 2)
+        assertEquals(applies, app.equipment.kitApplies.count { it.second == p2.id })
         assertEquals(ArenaState.WAITING, app.state())
     }
 

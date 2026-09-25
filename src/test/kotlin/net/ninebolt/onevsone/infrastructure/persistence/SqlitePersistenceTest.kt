@@ -380,22 +380,24 @@ class SqlitePersistenceTest {
     } as Statement
 
     @Test
-    fun `codec failure surfaces as PersistenceFailure`() = withStore { store ->
-        store.exec(
-            "INSERT INTO backups(backup_id, match_id, player_uuid, player_name, payload) VALUES (?, ?, ?, ?, ?)",
-            Uuid.random().toString(),
-            Uuid.random().toString(),
-            null,
-            "Alice",
-            "not: [valid",
-        )
-        assertFailsWith<PersistenceFailure> { SqliteBackupStore(store).persistedBackups() }
+    fun `codec failure surfaces as PersistenceFailure`() {
+        withStore { store ->
+            store.exec(
+                "INSERT INTO backups(backup_id, match_id, player_uuid, player_name, payload) VALUES (?, ?, ?, ?, ?)",
+                Uuid.random().toString(),
+                Uuid.random().toString(),
+                null,
+                "Alice",
+                "not: [valid",
+            )
+            assertFailsWith<PersistenceFailure> { SqliteBackupStore(store).persistedBackups() }
+        }
     }
 
     @Test
-    fun `a payload missing the item key decodes with empty items`() {
+    fun `a payload missing the armor key decodes with empty armor`() {
         val yaml = YamlConfiguration()
-        yaml.set("armor", listOf<ItemStack>())
+        yaml.set("item", listOf<ItemStack>())
         val snapshot = InventoryPayloadCodec.decode(yaml.saveToString())
         assertTrue(snapshot.items.isEmpty())
         assertTrue(snapshot.armor.isEmpty())
@@ -434,6 +436,21 @@ class SqlitePersistenceTest {
             InventoryPayloadCodec.encode(PaperInventorySnapshot()),
         )
         assertNull(SqliteBackupStore(store).persistedBackups().single().ref.playerId)
+    }
+
+    @Test
+    fun `a backup row with a null owner uuid reads back as an ownerless ref`() = withStore { store ->
+        store.exec(
+            "INSERT INTO backups(backup_id, match_id, player_uuid, player_name, payload) VALUES (?, ?, ?, ?, ?)",
+            Uuid.random().toString(),
+            Uuid.random().toString(),
+            null,
+            "Alice",
+            InventoryPayloadCodec.encode(PaperInventorySnapshot()),
+        )
+        val ref = SqliteBackupStore(store).persistedBackups().single().ref
+        assertNull(ref.playerId)
+        assertEquals("Alice", ref.playerName)
     }
 
     @Test

@@ -52,8 +52,6 @@ data class ArenaMatch private constructor(
         }
     }
 
-    val joinable: Boolean get() = state.isJoinable()
-
     val full: Boolean get() = participants.size == MAX_PARTICIPANTS
 
     val resolvesVoidFall: Boolean

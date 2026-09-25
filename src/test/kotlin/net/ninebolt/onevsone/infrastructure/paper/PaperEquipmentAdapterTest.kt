@@ -75,15 +75,10 @@ class PaperEquipmentAdapterTest {
     }
 
     @Test
-    fun `restore resolves the player by name when the backup has no id`() {
-        val p = env.player("Alice")
-        p.inventory.setItem(0, env.item(Material.DIAMOND))
-        val snapshot = PaperInventorySnapshot.capture(p.inventory)
-        p.inventory.clear()
+    fun `restore of an ownerless backup fails as an unavailable player`() {
         val ref = BackupRef.new(MatchId.new(), null, "Alice")
-        env.backupStore.saveBackups(listOf(PersistedBackup(ref, snapshot)))
-        env.equipment.restore(ref)
-        assertEquals(Material.DIAMOND, p.inventory.getItem(0)?.type)
+        env.backupStore.saveBackups(listOf(PersistedBackup(ref, PaperInventorySnapshot())))
+        assertFailsWith<PersistenceFailure> { env.equipment.restore(ref) }
     }
 
     @Test

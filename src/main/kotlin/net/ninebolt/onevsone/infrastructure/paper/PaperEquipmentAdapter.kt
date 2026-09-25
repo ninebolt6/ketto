@@ -61,7 +61,7 @@ class PaperEquipmentAdapter(
         snapshot.apply(player.inventory)
     }
 
-    private fun resolve(backup: BackupRef): Player? = backup.playerId?.let { lookup.resolve(it) } ?: lookup.resolveByName(backup.playerName)
+    private fun resolve(backup: BackupRef): Player? = backup.playerId?.let(lookup::resolve)
 
     override fun acknowledge(backup: BackupRef) {
         backups.deleteBackup(backup)

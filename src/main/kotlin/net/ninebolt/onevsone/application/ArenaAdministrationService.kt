@@ -44,7 +44,6 @@ class ArenaAdministrationService(
             return if (enabled) ToggleError.AlreadyEnabled else ToggleError.AlreadyDisabled
         }
         registry.updateArena(id, persist = arenas::save) { if (enabled) it.enable() else it.disable() }
-            ?: return ToggleError.NotFound
         if (!enabled) progression.abort(id)
         return null
     }
@@ -52,7 +51,6 @@ class ArenaAdministrationService(
     fun setSpawn(name: String, slot: SpawnSlot, position: WorldPosition): SetSpawnError? {
         val id = registry.resolveArenaId(name) ?: return SetSpawnError.NotFound
         registry.updateArena(id, persist = arenas::save) { it.withSpawn(slot, position) }
-            ?: return SetSpawnError.NotFound
         return null
     }
 

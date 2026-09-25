@@ -207,6 +207,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
             recovery,
             progression,
             MatchStateSync(matchStateRepo, signs),
+            logger,
         )
         val lifecycle = ArenaLifecycleService(
             registry,

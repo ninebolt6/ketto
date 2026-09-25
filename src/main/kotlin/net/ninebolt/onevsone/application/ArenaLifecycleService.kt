@@ -24,9 +24,9 @@ class ArenaLifecycleService(
         }
         loaded.forEach { arena ->
             // Loaded definitions are already persisted, so install saves nothing
-            registry.installArena(arena, persist = {})
+            val match = registry.installArena(arena, persist = {})
             logger.warnOnFailure("Could not persist status for arena ${arena.id.name}; continuing startup") {
-                registry.match(arena.id)?.let { sync.saveStatus(it) }
+                sync.saveStatus(match)
             }
             logger.warnOnFailure("Could not update sign for arena ${arena.id.name}; continuing startup") {
                 sync.refreshSign(arena.id, ArenaState.WAITING)

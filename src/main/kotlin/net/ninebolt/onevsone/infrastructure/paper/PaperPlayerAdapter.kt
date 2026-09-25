@@ -44,8 +44,6 @@ class PaperPlayerLookup(private val server: Server) {
     fun isPluginTeleport(playerId: Uuid): Boolean = playerId in pluginTeleports
 
     fun resolve(id: Uuid): Player? = quitting[id] ?: server.getPlayer(id.toJavaUuid())
-
-    fun resolveByName(name: String): Player? = quitting.values.firstOrNull { it.name == name } ?: server.getPlayerExact(name)
 }
 
 class PaperPlayerAdapter(

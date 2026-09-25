@@ -119,6 +119,7 @@ private class PluginModule(
         recovery = recovery,
         progression = progression,
         sync = stateSync,
+        logger = plugin.logger,
     )
     val lifecycle = ArenaLifecycleService(
         registry = registry,

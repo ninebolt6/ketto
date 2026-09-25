@@ -38,6 +38,7 @@ class TestApp(val requiredWins: Int = 3) {
         recovery,
         progression,
         stateSync,
+        logger,
     )
     val lifecycle = ArenaLifecycleService(registry, arenas, stateSync, recovery, progression, logger)
     val admin = ArenaAdministrationService(registry, arenas, arenas, equipment, progression)

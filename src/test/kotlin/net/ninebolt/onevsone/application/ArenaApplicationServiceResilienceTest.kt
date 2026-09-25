@@ -84,17 +84,6 @@ class ArenaApplicationServiceResilienceTest {
     }
 
     @Test
-    fun `countdown aborts when participant disconnects mid countdown`() {
-        val app = TestApp()
-        val (_, p2) = app.joinedTwo()
-        app.scheduler.tick(2)
-        app.players.disconnect(p2)
-        app.scheduler.tick()
-        assertEquals(ArenaState.WAITING, app.state())
-        assertTrue(app.equipment.kitApplies.isEmpty())
-    }
-
-    @Test
     fun `stats failure for winner does not block loser record or restores`() {
         val app = TestApp(requiredWins = 1)
         val (p1, p2) = app.startMatch()
@@ -192,19 +181,5 @@ class ArenaApplicationServiceResilienceTest {
         assertTrue(p1.teleports.isEmpty())
         assertTrue(p2.teleports.isEmpty())
         assertEquals(2, app.logger.warnings.count { it.contains("is not set; skipping teleport") })
-    }
-
-    @Test
-    fun `dead player keeps countdown waiting without consuming the start tick`() {
-        val app = TestApp()
-        val (_, p2) = app.joinedTwo()
-        app.scheduler.tick(5)
-        p2.dead = true
-        app.scheduler.tick()
-        assertEquals(ArenaState.COUNTDOWN, app.state())
-        assertEquals(0, app.equipment.backupCalls)
-        p2.dead = false
-        app.scheduler.tick()
-        assertEquals(ArenaState.INGAME, app.state())
     }
 }

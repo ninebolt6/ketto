@@ -77,7 +77,7 @@ class MatchProgressionService(
             }
             if (death) {
                 scheduleDeferred(outcome.loser.id, {
-                    registry.match(arenaId)?.epoch == gen && registry.arenaOf(outcome.loser.id) == arenaId
+                    registry.match(arenaId)?.epoch == gen
                 }) { h ->
                     rearm(arenaId, outcome.loser, h)
                     registry.match(arenaId)?.let { teleportToSlot(it, outcome.loser, h) }
@@ -110,29 +110,23 @@ class MatchProgressionService(
     ) {
         val arenaId = match.arenaId
         cancelCountdown(arenaId)
-        val gen = match.epoch
 
         // Tickets must be secured first: the committing transition has already unregistered both participants
         val winnerTicket = recovery.pending(winner.id)
         val loserTicket = recovery.pending(loser.id)
+        if (winnerTicket == null || loserTicket == null) {
+            logger.severe("Match in arena ${arenaId.name} ended without a pending backup; retained rows restore on next login")
+        }
 
         presentation.champion(arenaId, winner.name)
 
-        runNowOrAfterRespawn(
-            winner.id,
-            winnerTicket,
-            valid = { registry.match(arenaId)?.epoch == gen && registry.arenaOf(winner.id) == null },
-        ) { h ->
+        runNowOrAfterRespawn(winner.id, winnerTicket) { h ->
             resetAndRestore(h, winnerTicket)
             if (!forfeit) presentation.championFirework(winner.id)
         }
 
         if (death) {
-            scheduleDeferred(
-                loser.id,
-                loserTicket,
-                valid = { registry.match(arenaId)?.epoch == gen && registry.arenaOf(loser.id) == null },
-            ) { h ->
+            runAfterRespawn(loser.id, loserTicket) { h ->
                 resetAndRestore(h, loserTicket)
             }
         } else {
@@ -187,10 +181,13 @@ class MatchProgressionService(
                 teleportToSlot(match, second, p2)
                 presentation.matchStart(participantIds)
                 val began = registry.transact(arenaId, persist = sync::persistMatch) { it.beginMatch() }
-                if (began?.outcome == true) {
-                    presentation.updateScoreboard(began.match)
-                    sync.refreshSign(began.match)
-                }
+                    ?: run {
+                        logger.severe("Arena ${arenaId.name} vanished before the match could begin; aborting")
+                        abort(arenaId)
+                        return@runCountdown true
+                    }
+                presentation.updateScoreboard(began.match)
+                sync.refreshSign(began.match)
             } catch (e: Exception) {
                 // Mid-swap failure: abort restores the players from the backups already taken
                 logger.log(Level.SEVERE, "Could not apply equipment before starting arena ${arenaId.name}; match aborted", e)
@@ -212,10 +209,9 @@ class MatchProgressionService(
 
                 0 -> {
                     presentation.roundStart(participantIds)
-                    val resumed = registry.transact(arenaId, persist = sync::persistMatch) { it.resumeRound() }
-                    if (resumed?.outcome == true) {
-                        sync.refreshSign(resumed.match)
-                    }
+                    registry.transact(arenaId, persist = sync::persistMatch) { it.resumeRound() }
+                        ?.let { sync.refreshSign(it.match) }
+                        ?: logger.severe("Arena ${arenaId.name} vanished while resuming a round")
                 }
             }
             remaining == 0
@@ -276,7 +272,6 @@ class MatchProgressionService(
     private fun runNowOrAfterRespawn(
         playerId: Uuid,
         ticket: PlayerRecoveryService.RestoreTicket?,
-        valid: () -> Boolean = { true },
         action: (PlayerHandle) -> Unit,
     ) {
         val handle = players.handle(playerId) ?: return
@@ -284,7 +279,11 @@ class MatchProgressionService(
             action(handle)
             return
         }
-        scheduleDeferred(playerId, ticket, valid, action)
+        if (ticket != null) {
+            scheduleTicketed(playerId, ticket, action)
+        } else {
+            scheduleDeferred(playerId, { true }, action)
+        }
     }
 
     private fun scheduleDeferred(playerId: Uuid, valid: () -> Boolean, action: (PlayerHandle) -> Unit) {
@@ -296,23 +295,17 @@ class MatchProgressionService(
         }
     }
 
+    // A killed participant must wait for the respawn tick even if the handle still reports alive
+    private fun runAfterRespawn(playerId: Uuid, ticket: PlayerRecoveryService.RestoreTicket?, action: (PlayerHandle) -> Unit) {
+        if (ticket != null) scheduleTicketed(playerId, ticket, action) else scheduleDeferred(playerId, { true }, action)
+    }
+
     // A deferred restore is valid only while the exact same ticket is still pending
     private fun scheduleTicketed(
         playerId: Uuid,
         ticket: PlayerRecoveryService.RestoreTicket,
         action: (PlayerHandle) -> Unit,
     ) = scheduleDeferred(playerId, { recovery.pending(playerId) === ticket }, action)
-
-    private fun scheduleDeferred(
-        playerId: Uuid,
-        ticket: PlayerRecoveryService.RestoreTicket?,
-        valid: () -> Boolean,
-        action: (PlayerHandle) -> Unit,
-    ) = if (ticket != null) {
-        scheduleTicketed(playerId, ticket, action)
-    } else {
-        scheduleDeferred(playerId, valid, action)
-    }
 
     private fun teleportToSlot(match: ArenaMatch, participant: Participant, handle: PlayerHandle) {
         // Callers pass only match participants, so the id is always found

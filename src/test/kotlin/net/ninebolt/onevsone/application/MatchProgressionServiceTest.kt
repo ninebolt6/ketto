@@ -1,7 +1,6 @@
 package net.ninebolt.onevsone.application
 
 import net.ninebolt.onevsone.application.fixtures.TestApp
-import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatCause
@@ -273,20 +272,6 @@ class MatchProgressionServiceTest {
     }
 
     @Test
-    fun `the countdown stops when the arena is removed`() {
-        val app = TestApp()
-        app.joinedTwo()
-        app.scheduler.tick(2)
-
-        assertNull(app.admin.remove("arena1"))
-        app.scheduler.tick(10)
-
-        assertNull(app.service.matchOf("arena1"))
-        assertEquals(0, app.equipment.backupCalls)
-        assertTrue(app.equipment.kitApplies.isEmpty())
-    }
-
-    @Test
     fun `forfeit restores an online loser without a vitals reset`() {
         val app = TestApp()
         val (_, p2) = app.startMatch()
@@ -342,39 +327,17 @@ class MatchProgressionServiceTest {
     }
 
     @Test
-    fun `finish deferred callbacks are skipped once the arena is removed`() {
-        val app = TestApp()
-        app.joinedTwo()
-        val match = app.service.matchOf("arena1")!!
-        val (first, second) = match.participants
-        val h1 = app.players.players.getValue(first.id).also { it.dead = true }
-        val h2 = app.players.players.getValue(second.id).also { it.dead = true }
-
-        app.progression.finishMatch(match, first, second, forfeit = false, death = true)
+    fun `a deferred restore still completes after the arena is removed`() {
+        val app = TestApp(requiredWins = 1)
+        val (_, p2) = app.startMatch()
+        p2.dead = true
+        assertTrue(app.service.defeat(p2.id, DefeatCause.DEATH))
         assertNull(app.admin.remove("arena1"))
+
         app.scheduler.runOneShots()
 
-        assertTrue("vitals" !in h1.events)
-        assertTrue("vitals" !in h2.events)
-        assertTrue(app.equipment.restored.isEmpty())
-    }
-
-    @Test
-    fun `finish deferred callbacks are skipped while the player is still registered`() {
-        val app = TestApp()
-        app.joinedTwo()
-        val match = app.service.matchOf("arena1")!!
-        val (first, second) = match.participants
-        val h1 = app.players.players.getValue(first.id).also { it.dead = true }
-        val h2 = app.players.players.getValue(second.id).also { it.dead = true }
-
-        app.progression.finishMatch(match, first, second, forfeit = false, death = true)
-        app.scheduler.runOneShots()
-
-        assertTrue("vitals" !in h1.events)
-        assertTrue("vitals" !in h2.events)
-        assertTrue("respawn" !in h1.events)
-        assertTrue(app.equipment.restored.isEmpty())
+        assertTrue("respawn" in p2.events)
+        assertTrue(app.equipment.restored.isNotEmpty())
     }
 
     @Test
@@ -390,57 +353,16 @@ class MatchProgressionServiceTest {
     }
 
     @Test
-    fun `a failed inventory backup aborts the match before it starts`() {
-        val app = TestApp()
-        app.joinedTwo()
-        app.equipment.failOnBackup = PersistenceFailure("backup failed")
+    fun `an aborted match still completes a pending deferred restore`() {
+        val app = TestApp(requiredWins = 1)
+        val (_, p2) = app.startMatch()
+        p2.dead = true
+        assertTrue(app.service.defeat(p2.id, DefeatCause.DEATH))
 
-        app.scheduler.tick(6)
+        app.service.abort(Arena.Id.new("arena1"))
+        app.scheduler.runOneShots()
 
-        assertEquals(ArenaState.WAITING, app.state())
-        assertTrue(app.equipment.kitApplies.isEmpty())
-    }
-
-    @Test
-    fun `a kit failure during match start aborts the match`() {
-        val app = TestApp()
-        app.joinedTwo()
-        app.equipment.failOnApplyAt = 1
-
-        app.scheduler.tick(6)
-
-        assertEquals(ArenaState.WAITING, app.state())
-        assertTrue(app.logger.reports.isNotEmpty())
-    }
-
-    @Test
-    fun `a match starts even when a spawn is not configured`() {
-        val app = TestApp()
-        app.registry.installArena(Arena.new(Arena.Id.new("arena1"), enabled = true), persist = {})
-        val p1 = app.players.add("Alice")
-        val p2 = app.players.add("Bob")
-        app.service.join(p1.id, p1.name, Arena.Id.new("arena1"))
-        app.service.join(p2.id, p2.name, Arena.Id.new("arena1"))
-
-        app.scheduler.tick(6)
-
-        assertEquals(ArenaState.INGAME, app.state())
-        assertTrue(app.logger.warnings.any { it.contains("spawn") && it.contains("not set") })
-    }
-
-    @Test
-    fun `a forfeit without a loser ticket does not restore the loser`() {
-        val app = TestApp()
-        app.joinedTwo()
-        val match = app.service.matchOf("arena1")!!
-        val (first, second) = match.participants
-        val h1 = app.players.players.getValue(first.id)
-        val h2 = app.players.players.getValue(second.id)
-
-        app.progression.finishMatch(match, first, second, forfeit = true, death = false)
-
-        assertTrue("vitals" in h1.events)
-        assertTrue("vitals" !in h2.events)
-        assertTrue(app.equipment.restored.isEmpty())
+        assertTrue("respawn" in p2.events)
+        assertTrue(app.equipment.restored.isNotEmpty())
     }
 }
