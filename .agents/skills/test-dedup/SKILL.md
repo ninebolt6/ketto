@@ -70,6 +70,12 @@ Regenerate a fresh baseline (a stale report misattributes coverage) before plann
 - Cross-check the declared test count against the runner's results (JUnit XML, test report): skipped/aborted tests and tests the runner rejects contribute zero coverage — report them as dormant-test findings.
 - Mine the never-covered list for uncovered production branches and report them as side findings — they are gaps regardless of duplication.
 
+### Helper scripts (`scripts/`, stdlib-only Python)
+
+- `kover_summary.py [report.xml] [--methods]` — aggregate counters plus every class/method with missed branches. Start the gap inventory here.
+- `kover_lines.py [--class NAME] [--kind pc|nc]` — the XML report has no line granularity; this extracts the exact partially-covered/uncovered source lines (with line numbers) from the `koverHtmlReport` output, which is required for deciding _which arm_ of a branch is missing.
+- `junit_summary.py [--dir DIR]` — test totals and the skipped/failed test list for the dormant-test cross-check.
+
 ## Step 6 — Consolidation mechanics
 
 Priority order: upgrade a fixture-bypass test to real dispatch > fold-down (add the missing case to the lower-layer suite) > fold assertions into a survivor > delete.
