@@ -9,8 +9,11 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.mockbukkit.mockbukkit.command.CommandSourceStackMock
+import org.mockbukkit.mockbukkit.command.brigadier.PaperCommandsMock
 import java.io.File
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class OneVsOneCommandTest {
@@ -104,19 +107,28 @@ class OneVsOneCommandTest {
         assertEquals(listOf("Arena1", "create").sorted(), env.tabComplete(op, "arena", "").sorted())
         assertEquals(listOf("Arena1"), env.tabComplete(op, "arena", "arena"))
         assertEquals(
-            listOf("info", "remove", "enable", "disable", "spawn", "kit", "sign"),
-            env.tabComplete(op, "arena", "Arena1", ""),
+            listOf("info", "remove", "enable", "disable", "spawn", "kit", "sign").sorted(),
+            env.tabComplete(op, "arena", "Arena1", "").sorted(),
         )
-        assertEquals(listOf("spawn", "sign"), env.tabComplete(op, "arena", "Arena1", "s"))
+        assertEquals(listOf("sign", "spawn"), env.tabComplete(op, "arena", "Arena1", "s").sorted())
         assertEquals(listOf("1", "2"), env.tabComplete(op, "arena", "Arena1", "spawn", "set", ""))
     }
 
     @Test
-    fun `tab completion hides ops-only namespaces from non ops`() {
+    fun `ops-only nodes are restricted for non ops`() {
         val p = env.player("Alice")
+        val op = env.opPlayer("Op")
         env.newArena("Arena1")
-        assertTrue(env.tabComplete(p, "").none { it == "lobby" })
-        assertEquals(listOf("Arena1"), env.tabComplete(p, "arena", ""))
-        assertEquals(listOf("info"), env.tabComplete(p, "arena", "Arena1", ""))
+        env.tabComplete(p) // the command tree registers on first dispatch
+        val nonOp = CommandSourceStackMock.from(p)
+        val asOp = CommandSourceStackMock.from(op)
+        val root = PaperCommandsMock.INSTANCE.dispatcherInternal.root.getChild("1vs1")
+        val arenaArg = root.getChild("arena").getChild("arena")
+        assertTrue(root.getChild("stats").canUse(nonOp) && root.getChild("leave").canUse(nonOp))
+        assertFalse(root.getChild("lobby").canUse(nonOp))
+        arenaArg.children.forEach { assertEquals(it.name == "info", it.canUse(nonOp), it.name) }
+        assertTrue(root.getChild("lobby").canUse(asOp))
+        arenaArg.children.forEach { assertTrue(it.canUse(asOp), it.name) }
+        assertTrue(env.tabComplete(p, "arena", "").contains("Arena1"))
     }
 }

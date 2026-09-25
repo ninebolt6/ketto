@@ -2,17 +2,22 @@ package net.ninebolt.onevsone.infrastructure.paper.fixtures
 
 import org.bukkit.Server
 import org.bukkit.command.CommandSender
+import org.mockbukkit.mockbukkit.command.CommandSourceStackMock
+import org.mockbukkit.mockbukkit.command.brigadier.PaperCommandsMock
 import kotlin.uuid.Uuid
 import kotlin.uuid.toKotlinUuid
 
 internal fun TestEnv.runCommand(sender: CommandSender, vararg args: String) = server.dispatchCommand(sender, (listOf("1vs1") + args).joinToString(" "))
 
-// getCommandTabComplete does not trigger lifecycle initialization, so dispatch once first
+// ServerMock.getCommandTabComplete routes through the legacy Command.tabComplete, which never reaches the
+// Brigadier dispatcher that lifecycle commands register into, so complete against PaperCommandsMock directly
 internal fun TestEnv.tabComplete(sender: CommandSender, vararg args: String): List<String> {
     if (server.commandMap.getCommand("1vs1") == null) {
         server.dispatchCommand(server.consoleSender, "1vs1")
     }
-    return server.getCommandTabComplete(sender, (listOf("1vs1") + args).joinToString(" "))
+    val dispatcher = PaperCommandsMock.INSTANCE.getDispatcherInternal()
+    val parsed = dispatcher.parse((listOf("1vs1") + args).joinToString(" "), CommandSourceStackMock.from(sender))
+    return dispatcher.getCompletionSuggestions(parsed).join().list.map { it.text }
 }
 
 internal fun TestEnv.writeStats(uuid: Uuid, win: Int, lose: Int) {
