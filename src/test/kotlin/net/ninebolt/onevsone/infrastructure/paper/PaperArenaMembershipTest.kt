@@ -2,6 +2,7 @@ package net.ninebolt.onevsone.infrastructure.paper
 
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaState
+import net.ninebolt.onevsone.domain.WorldPosition
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.backupByName
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.fallIntoVoid
@@ -117,10 +118,10 @@ class PaperArenaMembershipTest {
         val p2 = env.player("Bob")
         p2.inventory.setItem(0, env.item(Material.APPLE))
         env.join(p2, arena)
-        env.admin.setEnabled("arena1", false)
+        env.admin.disable("arena1")
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
         assertNull(env.service.pendingRestore(p2.uuid))
-        env.admin.setEnabled("arena1", true)
+        env.admin.enable("arena1")
 
         val p3 = env.player("Carol")
         p3.inventory.setItem(0, env.item(Material.COOKED_BEEF))
@@ -209,7 +210,13 @@ class PaperArenaMembershipTest {
 
     @Test
     fun `enabled persists across service load`() {
-        env.arenaRepo.save(Arena.new(Arena.Id.new("arena1"), enabled = true))
+        env.arenaRepo.save(
+            Arena.Enabled.restored(
+                Arena.Id.new("arena1"),
+                WorldPosition.new("world", 1.0, 64.0, 1.0),
+                WorldPosition.new("world", 2.0, 64.0, 2.0),
+            ),
+        )
         env.lifecycle.load()
         assertTrue(env.service.arena("arena1")!!.enabled)
     }

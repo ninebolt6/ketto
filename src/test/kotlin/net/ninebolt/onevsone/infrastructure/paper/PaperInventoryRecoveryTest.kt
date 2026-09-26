@@ -85,7 +85,7 @@ class PaperInventoryRecoveryTest {
         p.disconnect()
         p.inventory.setItem(0, env.item(Material.STONE))
 
-        env.arenaRepo.save(Arena.new(Arena.Id.new("a1")))
+        env.arenaRepo.save(Arena.Disabled.new(Arena.Id.new("a1")))
         val ref = BackupRef.new(MatchId.new(), participant.id, participant.name)
         env.matchStateRepo.persistMatch(
             ArenaMatch.restored(

@@ -34,7 +34,7 @@ class ArenaApplicationService(
     fun join(playerId: Uuid, playerName: String, arenaId: Arena.Id): JoinOutput {
         if (registry.isJoined(playerId)) return JoinOutput.AlreadyJoined
         val (arena, match) = registry.entry(arenaId) ?: return JoinOutput.NotFound
-        if (!arena.enabled) return JoinOutput.NotEnabled
+        if (arena !is Arena.Enabled) return JoinOutput.NotEnabled
         val participant = Participant.new(playerId, playerName)
 
         val step = match.join(participant)

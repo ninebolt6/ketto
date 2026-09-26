@@ -41,21 +41,20 @@ class TestApp(val requiredWins: Int = 3) {
         logger,
     )
     val lifecycle = ArenaLifecycleService(registry, arenas, stateSync, recovery, progression, logger)
-    val admin = ArenaAdministrationService(registry, arenas, arenas, equipment, progression)
+    val admin = ArenaAdministrationService(registry, arenas, arenas, equipment, progression, stateSync)
     val lobby = LobbyService(arenas)
     val statsService = PlayerStatsService(stats)
 
     fun newArena(name: String = "arena1", enabled: Boolean = true): Arena.Id {
         val id = Arena.Id.new(name)
-        registry.installArena(
-            Arena.new(
-                id,
-                enabled = enabled,
-                spawn1 = WorldPosition.new("world", 1.0, 64.0, 1.0),
-                spawn2 = WorldPosition.new("world", 2.0, 64.0, 2.0),
-            ),
-            persist = {},
-        )
+        val spawn1 = WorldPosition.new("world", 1.0, 64.0, 1.0)
+        val spawn2 = WorldPosition.new("world", 2.0, 64.0, 2.0)
+        val arena = if (enabled) {
+            Arena.Enabled.restored(id, spawn1, spawn2)
+        } else {
+            Arena.Disabled.restored(id, spawn1, spawn2)
+        }
+        registry.installArena(arena, persist = {})
         return id
     }
 

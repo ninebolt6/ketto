@@ -66,6 +66,15 @@ class ArenaLifecycleCommandTest {
     }
 
     @Test
+    fun `enable without spawns reports the missing slots`() {
+        val op = env.opPlayer("Op")
+        env.runCommand(op, "arena", "create", "newarena")
+        env.runCommand(op, "arena", "newarena", "enable")
+        assertTrue(op.drainMessages().any { it.contains("Set spawn 1, 2 for arena newarena first") })
+        assertEquals(false, env.service.arena("newarena")!!.enabled)
+    }
+
+    @Test
     fun `enable reports not found for an unknown arena`() {
         val op = env.opPlayer("Op")
         env.runCommand(op, "arena", "missing", "enable")

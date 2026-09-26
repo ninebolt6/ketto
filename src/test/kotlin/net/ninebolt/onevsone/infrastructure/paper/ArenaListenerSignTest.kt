@@ -233,4 +233,23 @@ class ArenaListenerSignTest {
         env.join(env.player("Alice"))
         assertTrue(lines()[3].contains("1 More"))
     }
+
+    @Test
+    fun `disabled arena sign shows cannot join and returns to join on enable`() {
+        env.newArena("arena1", enabled = false)
+        val block = env.signBlock(3, 64, 3)
+        env.signs.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
+
+        val plain = PlainTextComponentSerializer.plainText()
+        fun lines() = (0..3).map {
+            plain.serialize((block.state as Sign).getSide(Side.FRONT).line(it))
+        }
+
+        assertTrue(lines()[2].contains("Cannot join"))
+        assertTrue(lines()[3].contains("Disabled"))
+
+        env.admin.enable("arena1")
+        assertTrue(lines()[2].contains("Join"))
+        assertTrue(lines()[3].contains("Waiting"))
+    }
 }

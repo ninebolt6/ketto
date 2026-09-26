@@ -2,6 +2,7 @@ package net.ninebolt.onevsone.infrastructure.persistence
 
 import net.ninebolt.onevsone.application.port.ArenaRepository
 import net.ninebolt.onevsone.domain.Arena
+import net.ninebolt.onevsone.domain.EnableOutcome
 import net.ninebolt.onevsone.domain.WorldPosition
 import java.sql.ResultSet
 import java.util.logging.Logger
@@ -27,7 +28,7 @@ class SqliteArenaRepository(
 
     override fun find(name: String): Arena? {
         val id = Arena.Id.of(name) ?: return null
-        return store.queryOne("SELECT * FROM arenas WHERE name = ?", name) { toArena(it) } ?: Arena.new(id)
+        return store.queryOne("SELECT * FROM arenas WHERE name = ?", name) { toArena(it) } ?: Arena.Disabled.new(id)
     }
 
     // seq is assigned only on first insert so updates keep the registration slot and stored casing
@@ -66,12 +67,27 @@ class SqliteArenaRepository(
         null
     }
 
-    private fun toArena(row: ResultSet): Arena = Arena.new(
-        id = Arena.Id.new(row.getString("name")),
-        enabled = row.getInt("enabled") != 0,
-        spawn1 = readLocation(row, "spawn1"),
-        spawn2 = readLocation(row, "spawn2"),
-    )
+    private fun toArena(row: ResultSet): Arena {
+        val id = Arena.Id.new(row.getString("name"))
+        val disabled = Arena.Disabled.restored(
+            id,
+            readLocation(row, "spawn1"),
+            readLocation(row, "spawn2"),
+        )
+        if (row.getInt("enabled") == 0) return disabled
+        return when (val outcome = disabled.enable()) {
+            is EnableOutcome.Ready -> outcome.arena
+
+            is EnableOutcome.MissingSpawns -> {
+                logger.warning(
+                    "Arena '${id.name}' is marked enabled but spawn " +
+                        outcome.slots.joinToString(", ") { it.number.toString() } +
+                        " is missing; loading as disabled",
+                )
+                disabled
+            }
+        }
+    }
 
     private fun readLocation(row: ResultSet, prefix: String): WorldPosition? {
         val world = row.getString("${prefix}_world") ?: return null

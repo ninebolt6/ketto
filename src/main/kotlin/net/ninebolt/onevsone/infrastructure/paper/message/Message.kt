@@ -2,6 +2,7 @@ package net.ninebolt.onevsone.infrastructure.paper.message
 
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.PlayerStats
+import net.ninebolt.onevsone.domain.SpawnSlot
 import java.util.Locale
 
 sealed class Message(val key: MessageKey, vararg val args: Arg) {
@@ -39,6 +40,12 @@ sealed class Message(val key: MessageKey, vararg val args: Arg) {
     data object ArenaAlreadyEnabled : Message(MessageKey.ARENA_ALREADY_ENABLED)
     class ArenaDisabled(name: String) : Message(MessageKey.ARENA_DISABLED, Str("name", name))
     data object ArenaAlreadyDisabled : Message(MessageKey.ARENA_ALREADY_DISABLED)
+    class ArenaMissingSpawns(name: String, slots: List<SpawnSlot>) :
+        Message(
+            MessageKey.ARENA_MISSING_SPAWNS,
+            Str("name", name),
+            Str("slots", slots.joinToString(", ") { it.number.toString() }),
+        )
     class ArenaInventorySet(name: String) : Message(MessageKey.ARENA_INVENTORY_SET, Str("name", name))
     data object ArenaNotEnabled : Message(MessageKey.ARENA_NOT_ENABLED)
 
@@ -86,6 +93,8 @@ sealed class Message(val key: MessageKey, vararg val args: Arg) {
             },
         )
 
+    data object StateDisabled : Message(MessageKey.STATE_DISABLED)
+
     class ScoreboardTitle(arena: String) : Message(MessageKey.SCOREBOARD_TITLE, Str("arena", arena))
     class ScoreboardEntry(name: String) : Message(MessageKey.SCOREBOARD_ENTRY, Str("name", name))
 }
@@ -116,6 +125,7 @@ enum class MessageKey {
     ARENA_ALREADY_ENABLED,
     ARENA_DISABLED,
     ARENA_ALREADY_DISABLED,
+    ARENA_MISSING_SPAWNS,
     ARENA_INVENTORY_SET,
     ARENA_NOT_ENABLED,
 
@@ -157,6 +167,7 @@ enum class MessageKey {
     STATE_ONEMORE,
     STATE_COUNTDOWN,
     STATE_INGAME,
+    STATE_DISABLED,
 
     SCOREBOARD_TITLE,
     SCOREBOARD_ENTRY,

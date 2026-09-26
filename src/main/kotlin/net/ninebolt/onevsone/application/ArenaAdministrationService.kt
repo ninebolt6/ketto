@@ -4,6 +4,7 @@ import net.ninebolt.onevsone.application.port.ArenaRepository
 import net.ninebolt.onevsone.application.port.ArenaSignRepository
 import net.ninebolt.onevsone.application.port.KitPort
 import net.ninebolt.onevsone.domain.Arena
+import net.ninebolt.onevsone.domain.EnableOutcome
 import net.ninebolt.onevsone.domain.SpawnSlot
 import net.ninebolt.onevsone.domain.WorldPosition
 import kotlin.uuid.Uuid
@@ -14,6 +15,7 @@ class ArenaAdministrationService(
     private val signs: ArenaSignRepository,
     private val kit: KitPort,
     private val progression: MatchProgressionService,
+    private val sync: MatchStateSync,
 ) {
     fun arenaNames(): List<String> = registry.arenaIds().map { it.name }
 
@@ -22,7 +24,7 @@ class ArenaAdministrationService(
     fun create(name: String): CreateError? {
         val id = Arena.Id.of(name) ?: return CreateError.InvalidName
         if (registry.resolveArenaId(name) != null) return CreateError.AlreadyExists
-        val arena = Arena.new(id)
+        val arena = Arena.Disabled.new(id)
         // Authoritative data: a save failure propagates and the arena is never registered
         registry.installArena(arena, persist = arenas::save)
         return null
@@ -37,14 +39,29 @@ class ArenaAdministrationService(
         return null
     }
 
-    fun setEnabled(name: String, enabled: Boolean): ToggleError? {
-        val arena = registry.resolveArena(name) ?: return ToggleError.NotFound
-        val id = arena.id
-        if (arena.enabled == enabled) {
-            return if (enabled) ToggleError.AlreadyEnabled else ToggleError.AlreadyDisabled
+    fun enable(name: String): EnableError? {
+        val arena = registry.resolveArena(name) ?: return EnableError.NotFound
+        val next = when (arena) {
+            is Arena.Enabled -> return EnableError.AlreadyEnabled
+
+            is Arena.Disabled -> when (val outcome = arena.enable()) {
+                is EnableOutcome.MissingSpawns -> return EnableError.MissingSpawns(outcome.slots)
+                is EnableOutcome.Ready -> outcome.arena
+            }
         }
-        registry.updateArena(id, persist = arenas::save) { if (enabled) it.enable() else it.disable() }
-        if (!enabled) progression.abort(id)
+        registry.updateArena(arena.id, persist = arenas::save) { next }
+        registry.match(arena.id)?.let(sync::refreshSign)
+        return null
+    }
+
+    fun disable(name: String): DisableError? {
+        val arena = registry.resolveArena(name) ?: return DisableError.NotFound
+        val next = when (arena) {
+            is Arena.Disabled -> return DisableError.AlreadyDisabled
+            is Arena.Enabled -> arena.disable()
+        }
+        registry.updateArena(arena.id, persist = arenas::save) { next }
+        progression.abort(arena.id)
         return null
     }
 
@@ -70,10 +87,15 @@ sealed interface RemoveError {
     data object NotFound : RemoveError
 }
 
-sealed interface ToggleError {
-    data object AlreadyEnabled : ToggleError
-    data object AlreadyDisabled : ToggleError
-    data object NotFound : ToggleError
+sealed interface EnableError {
+    data object AlreadyEnabled : EnableError
+    data class MissingSpawns(val slots: List<SpawnSlot>) : EnableError
+    data object NotFound : EnableError
+}
+
+sealed interface DisableError {
+    data object AlreadyDisabled : DisableError
+    data object NotFound : DisableError
 }
 
 sealed interface SetSpawnError {

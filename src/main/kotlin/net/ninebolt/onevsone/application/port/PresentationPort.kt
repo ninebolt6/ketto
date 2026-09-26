@@ -18,5 +18,5 @@ interface PresentationPort {
     fun championFirework(playerId: Uuid)
     fun updateScoreboard(match: ArenaMatch)
     fun clearScoreboard(playerId: Uuid)
-    fun updateSign(arena: Arena.Id, position: BlockPosition, state: ArenaState)
+    fun updateSign(arena: Arena, position: BlockPosition, state: ArenaState)
 }

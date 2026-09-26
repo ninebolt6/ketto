@@ -21,6 +21,8 @@ class ArenaRegistry(
 
     fun arena(id: Arena.Id): Arena? = slots[id]?.arena
 
+    fun enabledArena(id: Arena.Id): Arena.Enabled? = arena(id) as? Arena.Enabled
+
     // Case-insensitive fallback is unambiguous because create rejects case-insensitive duplicate names
     fun resolveArenaId(name: String): Arena.Id? = Arena.Id.of(name)?.takeIf { slots.containsKey(it) }
         ?: slots.keys.firstOrNull { it.name.equals(name, ignoreCase = true) }

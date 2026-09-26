@@ -55,21 +55,42 @@ class ArenaAdministrationServiceTest {
     }
 
     @Test
-    fun `setEnabled toggles and persists, disable aborts countdown`() {
+    fun `enable and disable toggle and persist, disable aborts countdown`() {
         app.newArena()
         app.joinedTwo()
         assertEquals(ArenaState.COUNTDOWN, app.state())
 
-        assertNull(app.admin.setEnabled("arena1", false))
+        assertNull(app.admin.disable("arena1"))
         assertFalse(app.service.arena("arena1")!!.enabled)
         assertEquals(ArenaState.WAITING, app.state())
         assertFalse(app.arenas.find("arena1").enabled)
 
-        assertEquals(ToggleError.AlreadyDisabled, app.admin.setEnabled("arena1", false))
-        assertNull(app.admin.setEnabled("arena1", true))
-        assertEquals(ToggleError.AlreadyEnabled, app.admin.setEnabled("arena1", true))
-        assertEquals(ToggleError.NotFound, app.admin.setEnabled("missing", true))
-        assertEquals(ToggleError.NotFound, app.admin.setEnabled("bad name!", true))
+        assertEquals(DisableError.AlreadyDisabled, app.admin.disable("arena1"))
+        assertNull(app.admin.enable("arena1"))
+        assertEquals(EnableError.AlreadyEnabled, app.admin.enable("arena1"))
+        assertEquals(EnableError.NotFound, app.admin.enable("missing"))
+        assertEquals(EnableError.NotFound, app.admin.enable("bad name!"))
+    }
+
+    @Test
+    fun `enable requires both spawns and reports the missing slots`() {
+        assertNull(app.admin.create("arena1"))
+        assertEquals(
+            EnableError.MissingSpawns(listOf(SpawnSlot.FIRST, SpawnSlot.SECOND)),
+            app.admin.enable("arena1"),
+        )
+        assertFalse(app.arenas.find("arena1").enabled)
+
+        val pos = WorldPosition.new("world", 9.5, 70.0, -2.5)
+        assertNull(app.admin.setSpawn("arena1", SpawnSlot.FIRST, pos))
+        assertEquals(
+            EnableError.MissingSpawns(listOf(SpawnSlot.SECOND)),
+            app.admin.enable("arena1"),
+        )
+
+        assertNull(app.admin.setSpawn("arena1", SpawnSlot.SECOND, pos))
+        assertNull(app.admin.enable("arena1"))
+        assertTrue(app.arenas.find("arena1").enabled)
     }
 
     @Test
@@ -99,9 +120,9 @@ class ArenaAdministrationServiceTest {
         assertEquals("Arena1", app.service.arena("ARENA1")?.name)
         assertEquals(ArenaState.WAITING, app.service.matchOf("ArEnA1")?.state)
 
-        assertNull(app.admin.setEnabled("ARENA1", false))
+        assertNull(app.admin.disable("ARENA1"))
         assertFalse(app.service.arena("Arena1")!!.enabled)
-        assertEquals(ToggleError.AlreadyDisabled, app.admin.setEnabled("arena1", false))
+        assertEquals(DisableError.AlreadyDisabled, app.admin.disable("arena1"))
 
         assertNull(app.admin.setSpawn("ARENA1", SpawnSlot.FIRST, WorldPosition.new("world", 1.0, 64.0, 1.0)))
         assertNull(app.signs.setSign("arena1", BlockPosition.new("world", 3, 64, 3)))
@@ -133,7 +154,18 @@ class ArenaAdministrationServiceTest {
         app.arenas.failOnSave = false
         app.newArena()
         app.arenas.failOnSave = true
-        assertFailsWith<PersistenceFailure> { app.admin.setEnabled("arena1", false) }
+        assertFailsWith<PersistenceFailure> { app.admin.disable("arena1") }
         assertTrue(app.service.arena("arena1")!!.enabled)
+    }
+
+    @Test
+    fun `enable persist failure leaves the arena disabled and the sign untouched`() {
+        app.newArena("arena1", enabled = false)
+        app.signs.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
+        val signWrites = app.presentation.signUpdates.size
+        app.arenas.failOnSave = true
+        assertFailsWith<PersistenceFailure> { app.admin.enable("arena1") }
+        assertFalse(app.service.arena("arena1")!!.enabled)
+        assertEquals(signWrites, app.presentation.signUpdates.size)
     }
 }

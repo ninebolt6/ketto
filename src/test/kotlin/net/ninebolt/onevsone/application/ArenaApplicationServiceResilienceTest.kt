@@ -5,6 +5,7 @@ import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatCause
+import net.ninebolt.onevsone.domain.WorldPosition
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -122,7 +123,13 @@ class ArenaApplicationServiceResilienceTest {
     @Test
     fun `load skips every arena when definitions are unreadable`() {
         val app = TestApp()
-        app.arenas.save(Arena.new(Arena.Id.new("a1"), enabled = true))
+        app.arenas.save(
+            Arena.Enabled.restored(
+                Arena.Id.new("a1"),
+                WorldPosition.new("world", 1.0, 64.0, 1.0),
+                WorldPosition.new("world", 2.0, 64.0, 2.0),
+            ),
+        )
         app.arenas.failOnLoad = true
         app.lifecycle.load()
         assertTrue(app.registry.arenaIds().isEmpty())
@@ -132,8 +139,8 @@ class ArenaApplicationServiceResilienceTest {
     @Test
     fun `load isolates per arena status persistence failure`() {
         val app = TestApp()
-        app.arenas.save(Arena.new(Arena.Id.new("broken")))
-        app.arenas.save(Arena.new(Arena.Id.new("healthy")))
+        app.arenas.save(Arena.Disabled.new(Arena.Id.new("broken")))
+        app.arenas.save(Arena.Disabled.new(Arena.Id.new("healthy")))
         app.matchState.failOnSaveStatusFor += "broken"
         app.lifecycle.load()
         assertEquals(ArenaState.WAITING, app.service.matchOf("broken")!!.state)
@@ -164,22 +171,5 @@ class ArenaApplicationServiceResilienceTest {
         assertTrue(app.equipment.kitApplies.isEmpty())
         val p3 = app.players.add("Carol")
         assertEquals(JoinOutput.JoinedWaiting, app.service.join(p3.id, p3.name, Arena.Id.new("arena1")))
-    }
-
-    @Test
-    fun `arena without spawns starts in place with a warning`() {
-        val app = TestApp()
-        val arena = Arena.Id.new("arena1")
-        app.registry.installArena(Arena.new(arena, enabled = true), persist = {})
-        val p1 = app.players.add("Alice")
-        val p2 = app.players.add("Bob")
-        app.service.join(p1.id, p1.name, arena)
-        app.service.join(p2.id, p2.name, arena)
-
-        app.scheduler.tick(6)
-        assertEquals(ArenaState.INGAME, app.state())
-        assertTrue(p1.teleports.isEmpty())
-        assertTrue(p2.teleports.isEmpty())
-        assertEquals(2, app.logger.warnings.count { it.contains("is not set; skipping teleport") })
     }
 }

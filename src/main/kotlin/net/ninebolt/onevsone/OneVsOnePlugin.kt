@@ -135,6 +135,7 @@ private class PluginModule(
         signs = signRepository,
         kit = equipment,
         progression = progression,
+        sync = stateSync,
     )
     private val lobby = LobbyService(lobby = lobbyRepository)
     private val statsService = PlayerStatsService(stats = stats)

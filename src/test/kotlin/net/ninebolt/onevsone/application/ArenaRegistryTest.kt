@@ -6,6 +6,7 @@ import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.JoinOutcome
 import net.ninebolt.onevsone.domain.Participant
+import net.ninebolt.onevsone.domain.WorldPosition
 import org.junit.jupiter.api.Test
 import java.util.logging.Logger
 import kotlin.test.assertEquals
@@ -19,7 +20,14 @@ class ArenaRegistryTest {
 
     private val logger = Logger.getLogger("test")
 
-    private fun ArenaRegistry.install(name: String) = installArena(Arena.new(Arena.Id.new(name), enabled = true), persist = {})
+    private fun ArenaRegistry.install(name: String) = installArena(
+        Arena.Enabled.restored(
+            Arena.Id.new(name),
+            WorldPosition.new("world", 1.0, 64.0, 1.0),
+            WorldPosition.new("world", 2.0, 64.0, 2.0),
+        ),
+        persist = {},
+    )
 
     private fun match(name: String, state: ArenaState, participants: List<Participant>) = ArenaMatch.restored(
         Arena.Id.new(name),
@@ -129,7 +137,7 @@ class ArenaRegistryTest {
     fun `persist failure leaves registry untouched`() {
         val registry = ArenaRegistry(3, logger)
         assertFailsWith<PersistenceFailure> {
-            registry.installArena(Arena.new(Arena.Id.new("a1"))) { throw PersistenceFailure("disk") }
+            registry.installArena(Arena.Disabled.new(Arena.Id.new("a1"))) { throw PersistenceFailure("disk") }
         }
         assertNull(registry.arena(Arena.Id.new("a1")))
         assertTrue(registry.arenaIds().isEmpty())

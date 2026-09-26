@@ -217,7 +217,14 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
             progression,
             logger,
         )
-        val admin = ArenaAdministrationService(registry, arenaRepo, signRepo, equipment, progression)
+        val admin = ArenaAdministrationService(
+            registry,
+            arenaRepo,
+            signRepo,
+            equipment,
+            progression,
+            MatchStateSync(matchStateRepo, signs),
+        )
         val statsService = PlayerStatsService(statsRepo)
         val lobby = LobbyService(lobbyRepo)
         return Deps(
@@ -285,15 +292,14 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
 
     fun newArena(name: String = "arena1", enabled: Boolean = true): Arena.Id {
         val id = Arena.Id.new(name)
-        registry.installArena(
-            Arena.new(
-                id,
-                enabled = enabled,
-                spawn1 = WorldPosition.new("world", 1.0, 64.0, 1.0),
-                spawn2 = WorldPosition.new("world", 2.0, 64.0, 2.0),
-            ),
-            persist = arenaRepo::save,
-        )
+        val spawn1 = WorldPosition.new("world", 1.0, 64.0, 1.0)
+        val spawn2 = WorldPosition.new("world", 2.0, 64.0, 2.0)
+        val arena = if (enabled) {
+            Arena.Enabled.restored(id, spawn1, spawn2)
+        } else {
+            Arena.Disabled.restored(id, spawn1, spawn2)
+        }
+        registry.installArena(arena, persist = arenaRepo::save)
         return id
     }
 

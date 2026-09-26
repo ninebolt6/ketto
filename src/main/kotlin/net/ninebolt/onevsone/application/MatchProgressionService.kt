@@ -310,9 +310,9 @@ class MatchProgressionService(
     private fun teleportToSlot(match: ArenaMatch, participant: Participant, handle: PlayerHandle) {
         // Callers pass only match participants, so the id is always found
         val slot = SpawnSlot.entries[match.participants.indexOfFirst { it.id == participant.id }]
-        val spawn = registry.arena(match.arenaId)?.spawn(slot)
+        val spawn = registry.enabledArena(match.arenaId)?.spawn(slot)
         if (spawn == null) {
-            logger.warning("Arena ${match.arenaId.name} spawn ${slot.number} is not set; skipping teleport")
+            logger.warning("Arena ${match.arenaId.name} is not enabled during an active match; skipping teleport")
             return
         }
         handle.teleport(spawn)
