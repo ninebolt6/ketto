@@ -1,5 +1,6 @@
 package net.ninebolt.onevsone.application.port
 
+import java.util.logging.Level
 import java.util.logging.Logger
 
 // corrupt files and I/O errors; user-facing rejections are use-case results, not this
@@ -9,6 +10,6 @@ internal inline fun Logger.warnOnFailure(message: String, block: () -> Unit) {
     try {
         block()
     } catch (e: PersistenceFailure) {
-        warning(message)
+        log(Level.WARNING, message, e)
     }
 }

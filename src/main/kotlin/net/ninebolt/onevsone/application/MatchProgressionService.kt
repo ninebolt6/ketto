@@ -149,7 +149,7 @@ class MatchProgressionService(
         listOf(winner to true, loser to false).forEach { (participant, win) ->
             try {
                 if (win) stats.recordWin(participant.id) else stats.recordLoss(participant.id)
-            } catch (e: IllegalStateException) {
+            } catch (e: PersistenceFailure) {
                 logger.log(
                     Level.SEVERE,
                     "Failed to record ${if (win) "win" else "loss"} for ${participant.name} (${participant.id}); " +
