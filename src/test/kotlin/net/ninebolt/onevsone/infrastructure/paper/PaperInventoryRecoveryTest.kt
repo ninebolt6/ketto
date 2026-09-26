@@ -57,7 +57,7 @@ class PaperInventoryRecoveryTest {
         assertEquals(Material.IRON_SWORD, p2.inventory.contents[0]?.type)
 
         p2.simulateDamage(100.0, genericDamage())
-        assertEquals(ArenaState.WAITING, env.view().state)
+        assertEquals(ArenaState.Kind.WAITING, env.view().state.kind)
         env.runOneShots()
         assertEquals(1, p2.respawnCount)
         assertNotEquals(Material.APPLE, p2.slotAtRespawn?.type)
@@ -74,7 +74,7 @@ class PaperInventoryRecoveryTest {
         env.join(p1, arena)
         env.join(p2, arena)
         env.tick(6)
-        assertEquals(ArenaState.INGAME, env.view().state)
+        assertEquals(ArenaState.Kind.INGAME, env.view().state.kind)
         assertNull(p1.inventory.contents[0])
     }
 
@@ -91,9 +91,7 @@ class PaperInventoryRecoveryTest {
             ArenaMatch.restored(
                 Arena.Id.new("a1"),
                 requiredWins = 3,
-                state = ArenaState.ONEMORE,
-                participants = listOf(participant),
-                wins = emptyMap(),
+                state = ArenaState.OneMore(participant),
             ),
         )
         env.backupStore.saveBackups(listOf(PersistedBackup(ref, PaperInventorySnapshot())))
@@ -118,7 +116,7 @@ class PaperInventoryRecoveryTest {
         env.tick(6)
 
         p2.simulateDamage(100.0, genericDamage())
-        assertEquals(ArenaState.WAITING, env.view().state)
+        assertEquals(ArenaState.Kind.WAITING, env.view().state.kind)
 
         p2.disconnect()
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
@@ -169,7 +167,7 @@ class PaperInventoryRecoveryTest {
         env.tick(5)
         assertNull(env.backupByName("Alice"))
         env.tick()
-        assertEquals(ArenaState.INGAME, env.view().state)
+        assertEquals(ArenaState.Kind.INGAME, env.view().state.kind)
         assertEquals(Material.IRON_SWORD, p1.inventory.contents[0]?.type)
         assertEquals(p1.uniqueId.toString(), env.backupByName("Alice")!!.playerUuid)
         assertEquals(p2.uniqueId.toString(), env.backupByName("Bob")!!.playerUuid)

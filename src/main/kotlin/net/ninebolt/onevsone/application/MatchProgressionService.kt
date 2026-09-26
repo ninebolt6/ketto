@@ -10,6 +10,7 @@ import net.ninebolt.onevsone.application.port.PresentationPort
 import net.ninebolt.onevsone.application.port.SchedulerPort
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
+import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatOutcome
 import net.ninebolt.onevsone.domain.Participant
 import net.ninebolt.onevsone.domain.SpawnSlot
@@ -228,15 +229,12 @@ class MatchProgressionService(
         var remaining = ticks
         timers[arenaId] = scheduler.repeat(10, 20) { task ->
             val match = registry.match(arenaId)
-            if (match == null || match.epoch != gen || !stillCounting(match)) {
+            val paired = match?.state as? ArenaState.Paired
+            if (match == null || match.epoch != gen || !stillCounting(match) || paired == null) {
                 task.cancel()
                 return@repeat
             }
-            // stillCounting implies a full lobby, so the pair is present in practice
-            val (first, second) = match.fullMatchup() ?: run {
-                task.cancel()
-                return@repeat
-            }
+            val (first, second) = paired.pair
             val p1 = players.handle(first.id)
             val p2 = players.handle(second.id)
             if (p1 == null || p2 == null) {

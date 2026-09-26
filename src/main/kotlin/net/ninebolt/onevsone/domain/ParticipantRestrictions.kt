@@ -16,8 +16,8 @@ data class ParticipantRestrictions private constructor(
     val commandsBlocked: Boolean,
 ) {
     companion object {
-        fun forState(state: ArenaState): ParticipantRestrictions = when (state) {
-            ArenaState.ROUNDCOUNTDOWN -> ParticipantRestrictions(
+        fun forState(kind: ArenaState.Kind): ParticipantRestrictions = when (kind) {
+            ArenaState.Kind.ROUNDCOUNTDOWN -> ParticipantRestrictions(
                 horizontalMoveFrozen = true,
                 damageCancelled = true,
                 opponentDamageOnly = false,
@@ -30,7 +30,7 @@ data class ParticipantRestrictions private constructor(
                 commandsBlocked = true,
             )
 
-            ArenaState.INGAME -> ParticipantRestrictions(
+            ArenaState.Kind.INGAME -> ParticipantRestrictions(
                 horizontalMoveFrozen = false,
                 damageCancelled = false,
                 opponentDamageOnly = true,
@@ -43,7 +43,7 @@ data class ParticipantRestrictions private constructor(
                 commandsBlocked = true,
             )
 
-            ArenaState.COUNTDOWN -> ParticipantRestrictions(
+            ArenaState.Kind.COUNTDOWN -> ParticipantRestrictions(
                 horizontalMoveFrozen = false,
                 damageCancelled = false,
                 opponentDamageOnly = false,
@@ -57,7 +57,7 @@ data class ParticipantRestrictions private constructor(
             )
 
             // No transition leaves participants in WAITING; commands are denied in every state except ONEMORE.
-            ArenaState.ONEMORE -> ParticipantRestrictions(
+            ArenaState.Kind.ONEMORE -> ParticipantRestrictions(
                 horizontalMoveFrozen = false,
                 damageCancelled = false,
                 opponentDamageOnly = false,
@@ -70,7 +70,7 @@ data class ParticipantRestrictions private constructor(
                 commandsBlocked = false,
             )
 
-            ArenaState.WAITING -> ParticipantRestrictions(
+            ArenaState.Kind.WAITING -> ParticipantRestrictions(
                 horizontalMoveFrozen = false,
                 damageCancelled = false,
                 opponentDamageOnly = false,

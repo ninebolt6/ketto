@@ -53,7 +53,7 @@ class ArenaListenerCombatTest {
         env.assertFired<PlayerDeathEvent> { event ->
             event.keepInventory && event.drops.isEmpty() && event.droppedExp == 0 && event.keepLevel
         }
-        assertEquals(ArenaState.ROUNDCOUNTDOWN, env.state())
+        assertEquals(ArenaState.Kind.ROUNDCOUNTDOWN, env.state())
         assertEquals(1, env.service.matchOf("arena1")!!.winsOf(p1.uuid))
     }
 
@@ -71,15 +71,15 @@ class ArenaListenerCombatTest {
         val p2 = env.player("Bob")
         env.join(p1, arena)
         env.join(p2, arena)
-        assertEquals(ArenaState.COUNTDOWN, env.state())
+        assertEquals(ArenaState.Kind.COUNTDOWN, env.state())
 
         p1.simulateDamage(100.0, genericDamage())
         env.assertFired<PlayerDeathEvent> { event -> event.keepInventory && event.keepLevel }
-        assertEquals(ArenaState.COUNTDOWN, env.state())
+        assertEquals(ArenaState.Kind.COUNTDOWN, env.state())
         assertEquals(arena, env.service.arenaIdOf(p1.uuid))
 
         env.tick(6)
-        assertEquals(ArenaState.INGAME, env.state())
+        assertEquals(ArenaState.Kind.INGAME, env.state())
         assertEquals(1, p1.respawnCount)
         assertTrue(p1.hasTeleported())
         assertTrue(p2.hasTeleported())
@@ -158,19 +158,19 @@ class ArenaListenerCombatTest {
         val arena = env.newArena()
         val p1 = env.player("Alice")
         env.join(p1, arena)
-        assertEquals(ArenaState.ONEMORE, env.state())
+        assertEquals(ArenaState.Kind.ONEMORE, env.state())
 
         val w = env.world()
         val sim = p1.simulation()
         sim.simulatePlayerMove(Location(w, 0.0, -5.0, 0.0))
-        assertEquals(ArenaState.ONEMORE, env.state())
+        assertEquals(ArenaState.Kind.ONEMORE, env.state())
 
         val p2 = env.player("Bob")
         env.join(p2, arena)
         env.tick(6)
 
         sim.simulatePlayerMove(Location(w, 0.0, -1.0, 0.0))
-        assertEquals(ArenaState.ROUNDCOUNTDOWN, env.state())
+        assertEquals(ArenaState.Kind.ROUNDCOUNTDOWN, env.state())
         assertEquals(1, env.service.matchOf("arena1")!!.winsOf(p2.uuid))
     }
 
@@ -199,10 +199,10 @@ class ArenaListenerCombatTest {
         val sim = p1.simulation()
 
         sim.simulatePlayerMove(Location(deep, 0.0, -55.0, 0.0))
-        assertEquals(ArenaState.INGAME, env.state())
+        assertEquals(ArenaState.Kind.INGAME, env.state())
 
         sim.simulatePlayerMove(Location(deep, 0.0, -65.0, 0.0))
-        assertEquals(ArenaState.ROUNDCOUNTDOWN, env.state())
+        assertEquals(ArenaState.Kind.ROUNDCOUNTDOWN, env.state())
         assertEquals(1, env.service.matchOf("arena1")!!.winsOf(p2.uuid))
     }
 
@@ -210,7 +210,7 @@ class ArenaListenerCombatTest {
     fun `void fall in ROUNDCOUNTDOWN scores again after resolving guard released`() {
         val (p1, p2) = env.twoPlayerIngame()
         fallIntoVoid(p2)
-        assertEquals(ArenaState.ROUNDCOUNTDOWN, env.state())
+        assertEquals(ArenaState.Kind.ROUNDCOUNTDOWN, env.state())
 
         env.runOneShots()
         val sim = p2.simulation()
@@ -218,10 +218,10 @@ class ArenaListenerCombatTest {
         sim.simulatePlayerMove(Location(base.world, base.x, -1.0, base.z))
         assertEquals(2, env.service.matchOf("arena1")!!.winsOf(p1.uuid))
         env.tick(8)
-        assertEquals(ArenaState.INGAME, env.state())
+        assertEquals(ArenaState.Kind.INGAME, env.state())
 
         sim.simulatePlayerMove(Location(base.world, base.x, -1.0, base.z))
-        assertEquals(ArenaState.WAITING, env.state())
+        assertEquals(ArenaState.Kind.WAITING, env.state())
     }
 
     @Test

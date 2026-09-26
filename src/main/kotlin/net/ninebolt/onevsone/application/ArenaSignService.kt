@@ -18,14 +18,14 @@ class ArenaSignService(
     fun setSign(name: String, position: BlockPosition): SetSignError? {
         val (arena, match) = registry.resolveEntry(name) ?: return SetSignError.NotFound
         signs.setSign(arena.name, position)
-        presentation.updateSign(arena, position, match.state)
+        presentation.updateSign(arena, position, match.state.kind)
         return null
     }
 
     fun refreshSign(arena: Arena.Id, state: ArenaState) {
         val position = signs.signLocation(arena.name) ?: return
         val resolved = registry.arena(arena) ?: return
-        presentation.updateSign(resolved, position, state)
+        presentation.updateSign(resolved, position, state.kind)
     }
 
     fun clearSign(name: String): ClearSignError? {

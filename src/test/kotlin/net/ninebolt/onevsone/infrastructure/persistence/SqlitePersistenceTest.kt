@@ -153,9 +153,7 @@ class SqlitePersistenceTest {
         val match = ArenaMatch.restored(
             Arena.Id.new("a1"),
             requiredWins = 3,
-            state = ArenaState.INGAME,
-            participants = listOf(p1, p2),
-            wins = mapOf(p1.id to 2),
+            state = ArenaState.InGame.of(p1, p2, firstWins = 2, secondWins = 0),
         )
         SqliteMatchStateRepository(store).saveStatus(match)
 
@@ -175,9 +173,7 @@ class SqlitePersistenceTest {
         val match = ArenaMatch.restored(
             Arena.Id.new("a1"),
             requiredWins = 3,
-            state = ArenaState.COUNTDOWN,
-            participants = listOf(p1, p2),
-            wins = emptyMap(),
+            state = ArenaState.Countdown.of(p1, p2),
         )
         SqliteMatchStateRepository(store).persistMatch(match)
 
@@ -196,9 +192,7 @@ class SqlitePersistenceTest {
         val match = ArenaMatch.restored(
             Arena.Id.new("a1"),
             requiredWins = 3,
-            state = ArenaState.ONEMORE,
-            participants = listOf(p),
-            wins = emptyMap(),
+            state = ArenaState.OneMore(p),
         )
         SqliteMatchStateRepository(store).persistMatch(match)
 
@@ -214,10 +208,10 @@ class SqlitePersistenceTest {
         val repo = SqliteMatchStateRepository(store)
         val p = Participant.new("Alice")
         repo.persistMatch(
-            ArenaMatch.restored(Arena.Id.new("a1"), 3, ArenaState.ONEMORE, listOf(p), emptyMap()),
+            ArenaMatch.restored(Arena.Id.new("a1"), 3, ArenaState.OneMore(p)),
         )
         repo.persistMatch(
-            ArenaMatch.restored(Arena.Id.new("a2"), 3, ArenaState.ONEMORE, listOf(p), emptyMap()),
+            ArenaMatch.restored(Arena.Id.new("a2"), 3, ArenaState.OneMore(p)),
         )
         val rows = store.query("SELECT arena_name FROM registrations WHERE player_uuid = ?", p.id.toString()) {
             it.getString(1)
@@ -229,7 +223,7 @@ class SqlitePersistenceTest {
     fun `clearRegistrations preserves backups`() = withStore { store ->
         SqliteArenaRepository(store).save(Arena.Disabled.new(Arena.Id.new("a1")))
         val p = Participant.new("Alice")
-        val match = ArenaMatch.restored(Arena.Id.new("a1"), 3, ArenaState.ONEMORE, listOf(p), emptyMap())
+        val match = ArenaMatch.restored(Arena.Id.new("a1"), 3, ArenaState.OneMore(p))
         val matchState = SqliteMatchStateRepository(store)
         matchState.persistMatch(match)
         val ref = BackupRef.new(MatchId.new(), p.id, p.name)

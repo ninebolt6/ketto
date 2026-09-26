@@ -70,9 +70,9 @@ class TestApp(val requiredWins: Int = 3) {
     fun startMatch(arenaName: String = "arena1"): Pair<FakePlayers.FakeHandle, FakePlayers.FakeHandle> {
         val pair = joinedTwo(arenaName)
         scheduler.tick(6)
-        assertEquals(ArenaState.INGAME, state(arenaName))
+        assertEquals(ArenaState.Kind.INGAME, state(arenaName))
         return pair
     }
 
-    fun state(name: String = "arena1") = service.matchOf(name)!!.state
+    fun state(name: String = "arena1") = service.matchOf(name)!!.state.kind
 }

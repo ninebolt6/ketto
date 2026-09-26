@@ -50,7 +50,7 @@ sealed class Message(val key: MessageKey, vararg val args: Arg) {
     data object ArenaNotEnabled : Message(MessageKey.ARENA_NOT_ENABLED)
 
     class ArenaInfoHeader(name: String) : Message(MessageKey.ARENA_INFO_HEADER, Str("name", name))
-    class ArenaInfoState(state: ArenaState) : Message(MessageKey.ARENA_INFO_STATE, Nested("display", StateDisplay(state)))
+    class ArenaInfoState(kind: ArenaState.Kind) : Message(MessageKey.ARENA_INFO_STATE, Nested("display", StateDisplay(kind)))
     class ArenaInfoVersus(name1: String, name2: String) : Message(MessageKey.ARENA_INFO_VERSUS, Str("name1", name1), Str("name2", name2))
     class ArenaInfoWinCount(wins1: Int, wins2: Int) : Message(MessageKey.ARENA_INFO_WIN_COUNT, Str("wins1", "$wins1"), Str("wins2", "$wins2"))
 
@@ -84,13 +84,13 @@ sealed class Message(val key: MessageKey, vararg val args: Arg) {
     data object SignJoin : Message(MessageKey.SIGN_JOIN)
     data object SignCannotJoin : Message(MessageKey.SIGN_CANNOT_JOIN)
 
-    class StateDisplay(state: ArenaState) :
+    class StateDisplay(kind: ArenaState.Kind) :
         Message(
-            when (state) {
-                ArenaState.WAITING -> MessageKey.STATE_WAITING
-                ArenaState.ONEMORE -> MessageKey.STATE_ONEMORE
-                ArenaState.COUNTDOWN -> MessageKey.STATE_COUNTDOWN
-                ArenaState.ROUNDCOUNTDOWN, ArenaState.INGAME -> MessageKey.STATE_INGAME
+            when (kind) {
+                ArenaState.Kind.WAITING -> MessageKey.STATE_WAITING
+                ArenaState.Kind.ONEMORE -> MessageKey.STATE_ONEMORE
+                ArenaState.Kind.COUNTDOWN -> MessageKey.STATE_COUNTDOWN
+                ArenaState.Kind.ROUNDCOUNTDOWN, ArenaState.Kind.INGAME -> MessageKey.STATE_INGAME
             },
         )
 

@@ -61,7 +61,7 @@ class PaperPresentationTest {
         val sign = env.signBlock(1, 64, 1)
         val warnings = captureLog()
 
-        env.presentation.updateSign(arena, BlockPosition.new("missing-world", 1, 64, 1), ArenaState.ONEMORE)
+        env.presentation.updateSign(arena, BlockPosition.new("missing-world", 1, 64, 1), ArenaState.Kind.ONEMORE)
 
         assertTrue(warnings.any { "missing-world" in it })
         assertEquals(Component.empty(), (sign.state as Sign).getSide(Side.FRONT).line(0))
@@ -74,7 +74,7 @@ class PaperPresentationTest {
         val block = env.plainBlock()
         val warnings = captureLog()
 
-        env.presentation.updateSign(arena, BlockPosition.new("world", 9, 64, 9), ArenaState.ONEMORE)
+        env.presentation.updateSign(arena, BlockPosition.new("world", 9, 64, 9), ArenaState.Kind.ONEMORE)
 
         assertFalse(block.state is Sign)
         assertTrue(warnings.none { "not loaded" in it })

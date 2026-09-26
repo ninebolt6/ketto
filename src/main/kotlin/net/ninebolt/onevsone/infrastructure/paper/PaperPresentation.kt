@@ -127,7 +127,7 @@ class PaperPresentation(
         player(playerId)?.scoreboard = manager.newScoreboard
     }
 
-    override fun updateSign(arena: Arena, position: BlockPosition, state: ArenaState) {
+    override fun updateSign(arena: Arena, position: BlockPosition, kind: ArenaState.Kind) {
         val world = server.getWorld(position.world)
         if (world == null) {
             logger.warning("Sign world '${position.world}' for arena ${arena.name} is not loaded")
@@ -136,11 +136,11 @@ class PaperPresentation(
         val blockState = world.getBlockAt(position.x, position.y, position.z).state
         if (blockState !is Sign) return
         val front = blockState.getSide(Side.FRONT)
-        val joinable = arena is Arena.Enabled && state.isJoinable()
+        val joinable = arena is Arena.Enabled && kind.isJoinable()
         front.line(0, messenger.render(Message.SignTitle))
         front.line(1, messenger.render(Message.SignArena(arena.name)))
         front.line(2, messenger.render(if (joinable) Message.SignJoin else Message.SignCannotJoin))
-        front.line(3, messenger.render(if (arena is Arena.Enabled) Message.StateDisplay(state) else Message.StateDisabled))
+        front.line(3, messenger.render(if (arena is Arena.Enabled) Message.StateDisplay(kind) else Message.StateDisabled))
         blockState.update()
     }
 }

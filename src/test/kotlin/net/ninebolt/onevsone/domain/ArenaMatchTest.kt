@@ -19,13 +19,13 @@ class ArenaMatchTest {
     @Test
     fun `join transitions WAITING to ONEMORE to COUNTDOWN`() {
         val m0 = match()
-        assertEquals(ArenaState.WAITING, m0.state)
+        assertEquals(ArenaState.Kind.WAITING, m0.state.kind)
         val s1 = m0.join(alice)
         assertEquals(JoinOutcome.FirstJoined, s1.outcome)
-        assertEquals(ArenaState.ONEMORE, s1.match.state)
+        assertEquals(ArenaState.Kind.ONEMORE, s1.match.state.kind)
         val s2 = s1.match.join(bob)
         assertEquals(JoinOutcome.MatchReady, s2.outcome)
-        assertEquals(ArenaState.COUNTDOWN, s2.match.state)
+        assertEquals(ArenaState.Kind.COUNTDOWN, s2.match.state.kind)
     }
 
     @Test
@@ -65,7 +65,7 @@ class ArenaMatchTest {
         val step = waiting.leaveWaiting(alice.id)
         assertTrue(step.outcome is LeaveOutcome.Left)
         assertEquals(alice, step.outcome.participant)
-        assertEquals(ArenaState.WAITING, step.match.state)
+        assertEquals(ArenaState.Kind.WAITING, step.match.state.kind)
         assertEquals(0, step.match.participants.size)
     }
 
@@ -78,7 +78,7 @@ class ArenaMatchTest {
         m = m.join(bob).match
         val began = m.beginMatch()
         assertTrue(began.outcome)
-        assertEquals(ArenaState.INGAME, began.match.state)
+        assertEquals(ArenaState.Kind.INGAME, began.match.state.kind)
         assertFalse(began.match.beginMatch().outcome)
     }
 
@@ -88,7 +88,7 @@ class ArenaMatchTest {
         m = m.join(alice).match
         val step = m.forfeit(alice.id)
         assertTrue(step.outcome is QuitOutcome.WaitingExit)
-        assertEquals(ArenaState.WAITING, step.match.state)
+        assertEquals(ArenaState.Kind.WAITING, step.match.state.kind)
         assertEquals(0, step.match.participants.size)
         assertEquals(QuitOutcome.NotParticipant, step.match.forfeit(alice.id).outcome)
     }
@@ -101,7 +101,7 @@ class ArenaMatchTest {
         val step = countdown.forfeit(alice.id)
         assertTrue(step.outcome is QuitOutcome.WaitingExit)
         assertEquals(alice, step.outcome.participant)
-        assertEquals(ArenaState.ONEMORE, step.match.state)
+        assertEquals(ArenaState.Kind.ONEMORE, step.match.state.kind)
         assertEquals(listOf(bob), step.match.participants)
         assertTrue(step.match.epoch > countdown.epoch)
     }
@@ -113,7 +113,7 @@ class ArenaMatchTest {
         assertTrue(finished.outcome is QuitOutcome.MatchEnded)
         assertEquals(bob, finished.outcome.winner)
         assertEquals(0, finished.match.participants.size)
-        assertEquals(ArenaState.WAITING, finished.match.state)
+        assertEquals(ArenaState.Kind.WAITING, finished.match.state.kind)
     }
 
     @Test
@@ -121,7 +121,7 @@ class ArenaMatchTest {
         val m = startedMatch()
         val step = m.abort()
         assertEquals(listOf(alice, bob), step.outcome)
-        assertEquals(ArenaState.WAITING, step.match.state)
+        assertEquals(ArenaState.Kind.WAITING, step.match.state.kind)
         assertEquals(0, step.match.participants.size)
         assertTrue(step.match.wins.isEmpty())
     }
@@ -145,10 +145,10 @@ class ArenaMatchTest {
     fun `held snapshot is not mutated by later transitions`() {
         val snapshot = startedMatch()
         val after = snapshot.recordDefeat(bob.id, DefeatCause.FALL).match
-        assertEquals(ArenaState.INGAME, snapshot.state)
+        assertEquals(ArenaState.Kind.INGAME, snapshot.state.kind)
         assertEquals(0, snapshot.winsOf(alice.id))
         assertEquals(2, snapshot.participants.size)
-        assertEquals(ArenaState.ROUNDCOUNTDOWN, after.state)
+        assertEquals(ArenaState.Kind.ROUNDCOUNTDOWN, after.state.kind)
         assertEquals(1, after.winsOf(alice.id))
     }
 
@@ -168,7 +168,7 @@ class ArenaMatchTest {
     @Test
     fun `restrictions matrix matches arena states`() {
         fun assertRestrictions(
-            state: ArenaState,
+            state: ArenaState.Kind,
             horizontalMoveFrozen: Boolean,
             damageCancelled: Boolean,
             opponentDamageOnly: Boolean,
@@ -198,7 +198,7 @@ class ArenaMatchTest {
         }
 
         assertRestrictions(
-            ArenaState.WAITING,
+            ArenaState.Kind.WAITING,
             horizontalMoveFrozen = false,
             damageCancelled = false,
             opponentDamageOnly = false,
@@ -211,7 +211,7 @@ class ArenaMatchTest {
             commandsBlocked = true,
         )
         assertRestrictions(
-            ArenaState.ONEMORE,
+            ArenaState.Kind.ONEMORE,
             horizontalMoveFrozen = false,
             damageCancelled = false,
             opponentDamageOnly = false,
@@ -224,7 +224,7 @@ class ArenaMatchTest {
             commandsBlocked = false,
         )
         assertRestrictions(
-            ArenaState.COUNTDOWN,
+            ArenaState.Kind.COUNTDOWN,
             horizontalMoveFrozen = false,
             damageCancelled = false,
             opponentDamageOnly = false,
@@ -237,7 +237,7 @@ class ArenaMatchTest {
             commandsBlocked = true,
         )
         assertRestrictions(
-            ArenaState.ROUNDCOUNTDOWN,
+            ArenaState.Kind.ROUNDCOUNTDOWN,
             horizontalMoveFrozen = true,
             damageCancelled = true,
             opponentDamageOnly = false,
@@ -250,7 +250,7 @@ class ArenaMatchTest {
             commandsBlocked = true,
         )
         assertRestrictions(
-            ArenaState.INGAME,
+            ArenaState.Kind.INGAME,
             horizontalMoveFrozen = false,
             damageCancelled = false,
             opponentDamageOnly = true,
@@ -276,10 +276,7 @@ class ArenaMatchTest {
         val resolving = ArenaMatch.restored(
             Arena.Id.new("a1"),
             3,
-            ArenaState.ROUNDCOUNTDOWN,
-            listOf(alice, bob),
-            wins = mapOf(alice.id to 1),
-            resolving = true,
+            ArenaState.RoundCountdown.of(alice, bob, firstWins = 1, secondWins = 0, resolving = true),
         )
         assertEquals(DefeatOutcome.Rejected, resolving.recordDefeat(bob.id, DefeatCause.FALL).outcome)
         assertSame(resolving, resolving.recordDefeat(bob.id, DefeatCause.FALL).match)
@@ -291,51 +288,16 @@ class ArenaMatchTest {
             ArenaMatch.new(Arena.Id.new("a1"), 0)
         }
         assertFailsWith<IllegalArgumentException> {
-            ArenaMatch.restored(Arena.Id.new("a1"), 0, ArenaState.WAITING, emptyList(), emptyMap())
+            ArenaMatch.restored(Arena.Id.new("a1"), 0, ArenaState.Waiting)
         }
         assertFailsWith<IllegalArgumentException> {
-            ArenaMatch.restored(Arena.Id.new("a1"), 3, ArenaState.WAITING, listOf(alice), emptyMap())
+            ArenaState.Countdown.of(alice, alice)
         }
         assertFailsWith<IllegalArgumentException> {
-            ArenaMatch.restored(Arena.Id.new("a1"), 3, ArenaState.INGAME, listOf(alice), emptyMap())
+            ArenaState.InGame.of(alice, bob, -1, 0)
         }
         assertFailsWith<IllegalArgumentException> {
-            ArenaMatch.restored(
-                Arena.Id.new("a1"),
-                3,
-                ArenaState.COUNTDOWN,
-                listOf(alice, alice),
-                wins = emptyMap(),
-            )
-        }
-        assertFailsWith<IllegalArgumentException> {
-            ArenaMatch.restored(
-                Arena.Id.new("a1"),
-                3,
-                ArenaState.INGAME,
-                listOf(alice, bob),
-                wins = mapOf(carol.id to 1),
-            )
-        }
-        assertFailsWith<IllegalArgumentException> {
-            ArenaMatch.restored(
-                Arena.Id.new("a1"),
-                3,
-                ArenaState.INGAME,
-                listOf(alice, bob),
-                wins = emptyMap(),
-                resolving = true,
-            )
-        }
-        assertFailsWith<IllegalArgumentException> {
-            ArenaMatch.restored(
-                Arena.Id.new("a1"),
-                3,
-                ArenaState.WAITING,
-                emptyList(),
-                emptyMap(),
-                epoch = -1,
-            )
+            ArenaMatch.restored(Arena.Id.new("a1"), 3, ArenaState.Waiting, epoch = -1)
         }
     }
 }

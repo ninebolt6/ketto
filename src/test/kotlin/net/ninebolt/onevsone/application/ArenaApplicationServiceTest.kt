@@ -23,12 +23,12 @@ class ArenaApplicationServiceTest {
         app.newArena()
         val p1 = app.players.add("Alice")
         assertEquals(JoinOutput.JoinedWaiting, app.service.join(p1.id, p1.name, Arena.Id.new("arena1")))
-        assertEquals(ArenaState.ONEMORE, app.state())
+        assertEquals(ArenaState.Kind.ONEMORE, app.state())
         assertEquals(Arena.Id.new("arena1"), app.service.arenaIdOf(p1.id))
 
         val p2 = app.players.add("Bob")
         assertEquals(JoinOutput.JoinedStarting, app.service.join(p2.id, p2.name, Arena.Id.new("arena1")))
-        assertEquals(ArenaState.COUNTDOWN, app.state())
+        assertEquals(ArenaState.Kind.COUNTDOWN, app.state())
         assertEquals(1, app.scheduler.timers.size)
         assertEquals(10L, app.scheduler.timers.last().delay)
         assertEquals(20L, app.scheduler.timers.last().period)
@@ -52,7 +52,7 @@ class ArenaApplicationServiceTest {
         assertEquals(JoinOutput.JoinedWaiting, app.service.join(p.id, p.name, Arena.Id.new("a1")))
         assertEquals(JoinOutput.AlreadyJoined, app.service.join(p.id, p.name, Arena.Id.new("a2")))
         assertEquals(Arena.Id.new("a1"), app.service.arenaIdOf(p.id))
-        assertEquals(ArenaState.WAITING, app.service.matchOf("a2")!!.state)
+        assertEquals(ArenaState.Kind.WAITING, app.service.matchOf("a2")!!.state.kind)
     }
 
     @Test
@@ -81,7 +81,7 @@ class ArenaApplicationServiceTest {
         app.service.join(p1.id, p1.name, Arena.Id.new("arena1"))
         app.service.join(p2.id, p2.name, Arena.Id.new("arena1"))
         app.scheduler.tick(5)
-        assertEquals(ArenaState.COUNTDOWN, app.state())
+        assertEquals(ArenaState.Kind.COUNTDOWN, app.state())
         assertEquals(0, app.equipment.backupCalls)
         assertTrue(app.equipment.kitApplies.isEmpty())
     }
@@ -94,11 +94,11 @@ class ArenaApplicationServiceTest {
             app.scheduler.tick()
             assertEquals(n, app.presentation.countdownTicks.last().seconds)
         }
-        assertEquals(ArenaState.COUNTDOWN, app.state())
+        assertEquals(ArenaState.Kind.COUNTDOWN, app.state())
         assertEquals(0, app.equipment.backupCalls)
 
         app.scheduler.tick()
-        assertEquals(ArenaState.INGAME, app.state())
+        assertEquals(ArenaState.Kind.INGAME, app.state())
         assertEquals(1, app.equipment.backupCalls)
         assertEquals(2, app.equipment.kitApplies.size)
         assertEquals(1, app.presentation.matchStarts.size)
@@ -116,9 +116,9 @@ class ArenaApplicationServiceTest {
         assertEquals(1, app.equipment.backupCalls)
 
         assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
-        assertEquals(ArenaState.ROUNDCOUNTDOWN, app.state())
+        assertEquals(ArenaState.Kind.ROUNDCOUNTDOWN, app.state())
         app.scheduler.tick(8)
-        assertEquals(ArenaState.INGAME, app.state())
+        assertEquals(ArenaState.Kind.INGAME, app.state())
         assertEquals(1, app.equipment.backupCalls)
 
         assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
@@ -131,7 +131,7 @@ class ArenaApplicationServiceTest {
         val app = TestApp()
         val (p1, p2) = app.startMatch()
         assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
-        assertEquals(ArenaState.ROUNDCOUNTDOWN, app.state())
+        assertEquals(ArenaState.Kind.ROUNDCOUNTDOWN, app.state())
         assertEquals(1, app.presentation.roundWins.size)
         assertEquals(Triple(listOf(p1.id, p2.id), 1, "Alice"), app.presentation.roundWins.last())
 
@@ -146,7 +146,7 @@ class ArenaApplicationServiceTest {
         val app = TestApp(requiredWins = 1)
         val (p1, p2) = app.startMatch()
         assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
-        assertEquals(ArenaState.WAITING, app.state())
+        assertEquals(ArenaState.Kind.WAITING, app.state())
         assertNull(app.service.arenaIdOf(p1.id))
         assertNull(app.service.arenaIdOf(p2.id))
         assertEquals(listOf(Arena.Id.new("arena1") to "Alice"), app.presentation.champions)
@@ -166,7 +166,7 @@ class ArenaApplicationServiceTest {
         app.players.quittingScope(p1) {
             app.service.quit(p1.id)
         }
-        assertEquals(ArenaState.ONEMORE, app.state())
+        assertEquals(ArenaState.Kind.ONEMORE, app.state())
         assertNull(app.service.arenaIdOf(p1.id))
         assertEquals(Arena.Id.new("arena1"), app.service.arenaIdOf(p2.id))
         assertFalse(app.matchState.registrations.containsKey(p1.id))
@@ -175,7 +175,7 @@ class ArenaApplicationServiceTest {
         assertTrue(app.equipment.restored.isEmpty())
         assertTrue(app.presentation.champions.isEmpty())
         app.scheduler.tick(6)
-        assertEquals(ArenaState.ONEMORE, app.state())
+        assertEquals(ArenaState.Kind.ONEMORE, app.state())
     }
 
     @Test
@@ -188,7 +188,7 @@ class ArenaApplicationServiceTest {
         app.players.quittingScope(p1) {
             app.service.quit(p1.id)
         }
-        assertEquals(ArenaState.WAITING, app.state())
+        assertEquals(ArenaState.Kind.WAITING, app.state())
         assertNull(app.service.arenaIdOf(p1.id))
         assertFalse(app.matchState.registrations.containsKey(p1.id))
         assertTrue(app.stats.stats.isEmpty())
@@ -215,7 +215,7 @@ class ArenaApplicationServiceTest {
         val p1 = app.players.add("Alice")
         app.service.join(p1.id, p1.name, Arena.Id.new("arena1"))
         assertNull(app.service.leave(p1.id))
-        assertEquals(ArenaState.WAITING, app.state())
+        assertEquals(ArenaState.Kind.WAITING, app.state())
         assertNull(app.service.arenaIdOf(p1.id))
         assertFalse(app.matchState.registrations.containsKey(p1.id))
         assertTrue(app.equipment.restored.isEmpty())
@@ -226,7 +226,7 @@ class ArenaApplicationServiceTest {
         val app = TestApp()
         val (p1, _) = app.startMatch()
         app.lifecycle.shutdown()
-        assertEquals(ArenaState.WAITING, app.state())
+        assertEquals(ArenaState.Kind.WAITING, app.state())
         assertTrue(app.service.arena("arena1")!!.enabled)
         assertNull(app.service.arenaIdOf(p1.id))
         assertEquals(2, app.equipment.restored.size)
@@ -244,9 +244,9 @@ class ArenaApplicationServiceTest {
             app.scheduler.tick()
             assertEquals(n, app.presentation.roundCountdownTicks.last().seconds)
         }
-        assertEquals(ArenaState.ROUNDCOUNTDOWN, app.state())
+        assertEquals(ArenaState.Kind.ROUNDCOUNTDOWN, app.state())
         app.scheduler.tick()
-        assertEquals(ArenaState.INGAME, app.state())
+        assertEquals(ArenaState.Kind.INGAME, app.state())
         assertEquals(1, app.presentation.roundStarts.size)
         assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
     }
@@ -325,12 +325,12 @@ class ArenaApplicationServiceTest {
         val app = TestApp()
         val (p1, p2) = app.startMatch()
         app.service.defeat(p2.id, DefeatCause.FALL)
-        assertEquals(ArenaState.ROUNDCOUNTDOWN, app.state())
+        assertEquals(ArenaState.Kind.ROUNDCOUNTDOWN, app.state())
         app.players.disconnect(p1)
         app.players.quittingScope(p1) {
             app.service.quit(p1.id)
         }
-        assertEquals(ArenaState.WAITING, app.state())
+        assertEquals(ArenaState.Kind.WAITING, app.state())
         assertEquals(1, app.stats.stats[p2.id]?.wins)
         assertEquals(1, app.stats.stats[p1.id]?.losses)
     }

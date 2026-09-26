@@ -28,7 +28,7 @@ class ArenaAdministrationServiceTest {
     fun `create persists arena and rejects duplicates and invalid names`() {
         assertNull(app.admin.create("arena1"))
         assertEquals(false, app.arenas.find("arena1").enabled)
-        assertEquals(ArenaState.WAITING, app.state())
+        assertEquals(ArenaState.Kind.WAITING, app.state())
 
         assertEquals(CreateError.AlreadyExists, app.admin.create("Arena1"))
         assertEquals(CreateError.InvalidName, app.admin.create("bad/name"))
@@ -58,11 +58,11 @@ class ArenaAdministrationServiceTest {
     fun `enable and disable toggle and persist, disable aborts countdown`() {
         app.newArena()
         app.joinedTwo()
-        assertEquals(ArenaState.COUNTDOWN, app.state())
+        assertEquals(ArenaState.Kind.COUNTDOWN, app.state())
 
         assertNull(app.admin.disable("arena1"))
         assertFalse(app.service.arena("arena1")!!.enabled)
-        assertEquals(ArenaState.WAITING, app.state())
+        assertEquals(ArenaState.Kind.WAITING, app.state())
         assertFalse(app.arenas.find("arena1").enabled)
 
         assertEquals(DisableError.AlreadyDisabled, app.admin.disable("arena1"))
@@ -118,7 +118,7 @@ class ArenaAdministrationServiceTest {
         app.newArena("Arena1")
         assertEquals("Arena1", app.admin.arena("arena1")?.name)
         assertEquals("Arena1", app.service.arena("ARENA1")?.name)
-        assertEquals(ArenaState.WAITING, app.service.matchOf("ArEnA1")?.state)
+        assertEquals(ArenaState.Kind.WAITING, app.service.matchOf("ArEnA1")?.state?.kind)
 
         assertNull(app.admin.disable("ARENA1"))
         assertFalse(app.service.arena("Arena1")!!.enabled)

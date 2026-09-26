@@ -29,12 +29,10 @@ class ArenaRegistryTest {
         persist = {},
     )
 
-    private fun match(name: String, state: ArenaState, participants: List<Participant>) = ArenaMatch.restored(
+    private fun match(name: String, state: ArenaState) = ArenaMatch.restored(
         Arena.Id.new(name),
         3,
         state,
-        participants,
-        emptyMap(),
     )
 
     @Test
@@ -43,11 +41,11 @@ class ArenaRegistryTest {
         registry.install("a1")
         registry.install("a2")
         val p = Participant.new("Alice")
-        registry.putMatch(match("a1", ArenaState.ONEMORE, listOf(p)), persist = {})
-        registry.putMatch(match("a2", ArenaState.ONEMORE, listOf(p)), persist = {})
+        registry.putMatch(match("a1", ArenaState.OneMore(p)), persist = {})
+        registry.putMatch(match("a2", ArenaState.OneMore(p)), persist = {})
         assertEquals(Arena.Id.new("a2"), registry.arenaOf(p.id))
 
-        registry.putMatch(match("a1", ArenaState.WAITING, emptyList()), persist = {})
+        registry.putMatch(match("a1", ArenaState.Waiting), persist = {})
         assertEquals(Arena.Id.new("a2"), registry.arenaOf(p.id))
         assertTrue(registry.isJoined(p.id))
     }
@@ -57,7 +55,7 @@ class ArenaRegistryTest {
         val registry = ArenaRegistry(3, logger)
         registry.install("a1")
         val p = Participant.new("Alice")
-        registry.putMatch(match("a1", ArenaState.ONEMORE, listOf(p)), persist = {})
+        registry.putMatch(match("a1", ArenaState.OneMore(p)), persist = {})
 
         var persists = 0
         val rejected = registry.transact(Arena.Id.new("a1"), persist = { persists++ }) { it.join(p) }
@@ -89,7 +87,7 @@ class ArenaRegistryTest {
         var persists = 0
         registry.removeArena(id, persist = { persists++ })
         assertNull(registry.updateArena(id, persist = { persists++ }) { it })
-        registry.putMatch(match("nope", ArenaState.WAITING, emptyList()), persist = { persists++ })
+        registry.putMatch(match("nope", ArenaState.Waiting), persist = { persists++ })
         assertNull(registry.updateMatch(id, persist = { persists++ }) { it })
         assertNull(registry.transact(id, persist = { persists++ }) { it.abort() })
         assertEquals(0, persists)
@@ -111,12 +109,12 @@ class ArenaRegistryTest {
         val registry = ArenaRegistry(3, logger)
         registry.install("a1")
         val p = Participant.new("Alice")
-        registry.putMatch(match("a1", ArenaState.ONEMORE, listOf(p)), persist = {})
+        registry.putMatch(match("a1", ArenaState.OneMore(p)), persist = {})
 
         registry.install("a1")
 
         assertFalse(registry.isJoined(p.id))
-        assertEquals(ArenaState.WAITING, registry.match(Arena.Id.new("a1"))!!.state)
+        assertEquals(ArenaState.Kind.WAITING, registry.match(Arena.Id.new("a1"))!!.state.kind)
     }
 
     @Test
@@ -124,7 +122,7 @@ class ArenaRegistryTest {
         val registry = ArenaRegistry(3, logger)
         registry.install("a1")
         val p = Participant.new("Alice")
-        registry.putMatch(match("a1", ArenaState.ONEMORE, listOf(p)), persist = {})
+        registry.putMatch(match("a1", ArenaState.OneMore(p)), persist = {})
 
         registry.removeArena(Arena.Id.new("a1"), persist = {})
 

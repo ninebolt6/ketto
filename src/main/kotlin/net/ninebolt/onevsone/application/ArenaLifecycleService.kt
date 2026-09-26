@@ -29,7 +29,7 @@ class ArenaLifecycleService(
                 sync.saveStatus(match)
             }
             logger.warnOnFailure("Could not update sign for arena ${arena.id.name}; continuing startup") {
-                sync.refreshSign(arena.id, ArenaState.WAITING)
+                sync.refreshSign(arena.id, ArenaState.Waiting)
             }
         }
         logger.warnOnFailure("Persisted backups are unreadable; pending restores unavailable this session") {

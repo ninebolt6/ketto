@@ -41,7 +41,7 @@ class DamageAdmissionTest {
     @Test
     fun `everything denied while damage cancelled`() {
         val roundCountdown = ingame.recordDefeat(bob.id, DefeatCause.FALL).match
-        assertEquals(ArenaState.ROUNDCOUNTDOWN, roundCountdown.state)
+        assertEquals(ArenaState.Kind.ROUNDCOUNTDOWN, roundCountdown.state.kind)
         assertFalse(DamageAdmission.allows(side(alice, roundCountdown), side(bob, roundCountdown)))
         assertFalse(DamageAdmission.allows(side(alice, roundCountdown), side(alice, roundCountdown)))
     }
@@ -57,7 +57,7 @@ class DamageAdmissionTest {
         val began = joined.beginMatch()
         check(began.outcome)
         val other = began.match
-        assertEquals(ArenaState.INGAME, other.state)
+        assertEquals(ArenaState.Kind.INGAME, other.state.kind)
         assertTrue(DamageAdmission.allows(side(carol, other), side(dave, other)))
         assertFalse(DamageAdmission.allows(side(alice, ingame), side(carol, other)))
         assertFalse(DamageAdmission.allows(side(carol, other), side(alice, ingame)))

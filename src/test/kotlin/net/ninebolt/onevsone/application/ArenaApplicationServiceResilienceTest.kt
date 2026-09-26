@@ -20,7 +20,7 @@ class ArenaApplicationServiceResilienceTest {
         val (p1, p2) = app.joinedTwo()
         app.scheduler.tick(2)
         app.service.abort(Arena.Id.new("arena1"))
-        assertEquals(ArenaState.WAITING, app.state())
+        assertEquals(ArenaState.Kind.WAITING, app.state())
         assertNull(app.service.arenaIdOf(p1.id))
         app.scheduler.tick(6)
         assertEquals(0, app.equipment.backupCalls)
@@ -36,7 +36,7 @@ class ArenaApplicationServiceResilienceTest {
         app.equipment.failOnBackup = PersistenceFailure("disk full")
         val (p1, p2) = app.joinedTwo()
         app.scheduler.tick(6)
-        assertEquals(ArenaState.WAITING, app.state())
+        assertEquals(ArenaState.Kind.WAITING, app.state())
         assertNull(app.service.arenaIdOf(p1.id))
         assertNull(app.service.arenaIdOf(p2.id))
         assertTrue(app.equipment.kitApplies.isEmpty())
@@ -52,7 +52,7 @@ class ArenaApplicationServiceResilienceTest {
         app.equipment.failOnApplyAt = 2
         val (p1, _) = app.joinedTwo()
         app.scheduler.tick(6)
-        assertEquals(ArenaState.WAITING, app.state())
+        assertEquals(ArenaState.Kind.WAITING, app.state())
         assertNull(app.service.arenaIdOf(p1.id))
         assertEquals(2, app.equipment.restored.size)
         assertTrue(app.logger.reports.any { it.message.contains("Could not apply equipment") })
@@ -65,7 +65,7 @@ class ArenaApplicationServiceResilienceTest {
         app.equipment.failOnApplyAt = app.equipment.applyCalls + 1
 
         assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
-        assertEquals(ArenaState.WAITING, app.state())
+        assertEquals(ArenaState.Kind.WAITING, app.state())
         assertNull(app.service.arenaIdOf(p1.id))
         assertNull(app.service.arenaIdOf(p2.id))
         assertEquals(2, app.equipment.restored.size)
@@ -90,7 +90,7 @@ class ArenaApplicationServiceResilienceTest {
         val (p1, p2) = app.startMatch()
         app.stats.failOnWin = PersistenceFailure("write failed")
         assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
-        assertEquals(ArenaState.WAITING, app.state())
+        assertEquals(ArenaState.Kind.WAITING, app.state())
         assertEquals(1, app.stats.stats[p2.id]?.losses)
         assertNull(app.stats.stats[p1.id])
         assertEquals(2, app.equipment.restored.size)
@@ -143,8 +143,8 @@ class ArenaApplicationServiceResilienceTest {
         app.arenas.save(Arena.Disabled.new(Arena.Id.new("healthy")))
         app.matchState.failOnSaveStatusFor += "broken"
         app.lifecycle.load()
-        assertEquals(ArenaState.WAITING, app.service.matchOf("broken")!!.state)
-        assertEquals(ArenaState.WAITING, app.service.matchOf("healthy")!!.state)
+        assertEquals(ArenaState.Kind.WAITING, app.service.matchOf("broken")!!.state.kind)
+        assertEquals(ArenaState.Kind.WAITING, app.service.matchOf("healthy")!!.state.kind)
         assertTrue(app.logger.warnings.any { it.contains("broken") })
     }
 

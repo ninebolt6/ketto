@@ -43,17 +43,17 @@ class MatchScenarioTest {
         val p2 = env.player("Bob")
 
         env.fire(interact(p1, env.signBlock(3, 64, 3)))
-        assertEquals(ArenaState.ONEMORE, env.state())
+        assertEquals(ArenaState.Kind.ONEMORE, env.state())
         env.fire(interact(p2, env.signBlock(3, 64, 3)))
-        assertEquals(ArenaState.COUNTDOWN, env.state())
+        assertEquals(ArenaState.Kind.COUNTDOWN, env.state())
 
         env.tick(6)
-        assertEquals(ArenaState.INGAME, env.state())
+        assertEquals(ArenaState.Kind.INGAME, env.state())
         assertTrue(p1.hasTeleported())
         assertEquals(Material.IRON_SWORD, p1.inventory.contents[0]?.type)
 
         p2.simulateDamage(100.0, attackDamage(p1))
-        assertEquals(ArenaState.WAITING, env.state())
+        assertEquals(ArenaState.Kind.WAITING, env.state())
         assertEquals(1, env.statsRepo.find(p1.uuid)!!.wins)
         assertEquals(1, env.statsRepo.find(p2.uuid)!!.losses)
         assertNull(p1.inventory.contents[0])

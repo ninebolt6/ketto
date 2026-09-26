@@ -41,7 +41,7 @@ class PaperMatchProgressionTest {
         val arena = env.newArena()
         val p1 = env.player("Alice")
         env.join(p1, arena)
-        assertEquals(ArenaState.ONEMORE, env.view().state)
+        assertEquals(ArenaState.Kind.ONEMORE, env.view().state.kind)
         assertEquals(arena, env.service.arenaIdOf(p1.uuid))
         val joined = p1.drainMessages()
         assertTrue(joined.any { it.contains("Joined arena") })
@@ -49,7 +49,7 @@ class PaperMatchProgressionTest {
 
         val p2 = env.player("Bob")
         env.join(p2, arena)
-        assertEquals(ArenaState.COUNTDOWN, env.view().state)
+        assertEquals(ArenaState.Kind.COUNTDOWN, env.view().state.kind)
         env.tick()
         assertTrue(p1.drainMessages().any { it.contains("Teleporting in:") })
     }
@@ -88,10 +88,10 @@ class PaperMatchProgressionTest {
             env.tick()
             assertTrue(p1.drainMessages().any { it.contains("Teleporting in: ${n}s") })
         }
-        assertEquals(ArenaState.COUNTDOWN, env.view().state)
+        assertEquals(ArenaState.Kind.COUNTDOWN, env.view().state.kind)
 
         env.tick()
-        assertEquals(ArenaState.INGAME, env.view().state)
+        assertEquals(ArenaState.Kind.INGAME, env.view().state.kind)
         assertTrue(p1.drainMessages().any { it.contains("Game start!") })
         assertTrue(p1.hasTeleported())
         assertTrue(p2.hasTeleported())
@@ -109,10 +109,10 @@ class PaperMatchProgressionTest {
         env.join(p1, arena)
         env.join(p2, arena)
         env.tick(6)
-        assertEquals(ArenaState.INGAME, env.view().state)
+        assertEquals(ArenaState.Kind.INGAME, env.view().state.kind)
 
         fallIntoVoid(p2)
-        assertEquals(ArenaState.ROUNDCOUNTDOWN, env.view().state)
+        assertEquals(ArenaState.Kind.ROUNDCOUNTDOWN, env.view().state.kind)
         assertEquals(1, env.view().winsOf(p1.uuid))
         val roundEnd = p1.drainMessages()
         assertTrue(roundEnd.any { it.contains("Round[") })
@@ -125,7 +125,7 @@ class PaperMatchProgressionTest {
             assertTrue(p1.drainMessages().any { it.contains("Starting in: ${n}s") })
         }
         env.tick()
-        assertEquals(ArenaState.INGAME, env.view().state)
+        assertEquals(ArenaState.Kind.INGAME, env.view().state.kind)
         // The round-start message is a substring of the game-start message, so distinguish by the prefix boundary
         assertTrue(p1.drainMessages().any { it.contains("] Go!") })
     }
@@ -147,7 +147,7 @@ class PaperMatchProgressionTest {
         env.tick(8)
         fallIntoVoid(p2)
 
-        assertEquals(ArenaState.WAITING, env.view().state)
+        assertEquals(ArenaState.Kind.WAITING, env.view().state.kind)
         assertTrue(env.view().wins.isEmpty())
         assertTrue(env.view().participants.isEmpty())
         assertNull(env.service.arenaIdOf(p1.uuid))

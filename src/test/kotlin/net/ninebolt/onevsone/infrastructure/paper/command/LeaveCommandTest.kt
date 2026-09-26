@@ -44,7 +44,7 @@ class LeaveCommandTest {
         env.join(p, arena)
         env.runCommand(p, "leave")
         assertTrue(p.drainMessages().any { it.contains("You left the arena") })
-        assertEquals(ArenaState.WAITING, env.state("arena1"))
+        assertEquals(ArenaState.Kind.WAITING, env.state("arena1"))
     }
 
     @Test
@@ -52,6 +52,6 @@ class LeaveCommandTest {
         val (p1, _) = env.twoPlayerIngame()
         env.runCommand(p1, "leave")
         assertTrue(p1.drainMessages().any { it.contains("You cannot use commands") })
-        assertEquals(ArenaState.INGAME, env.state("arena1"))
+        assertEquals(ArenaState.Kind.INGAME, env.state("arena1"))
     }
 }

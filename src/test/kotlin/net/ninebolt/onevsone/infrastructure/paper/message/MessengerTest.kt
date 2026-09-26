@@ -87,11 +87,11 @@ class MessengerTest {
         val messenger = load()
         assertEquals(
             "状態: Ingame",
-            plain.serialize(messenger.render(Message.ArenaInfoState(ArenaState.INGAME), "ja")),
+            plain.serialize(messenger.render(Message.ArenaInfoState(ArenaState.Kind.INGAME), "ja")),
         )
         assertEquals(
             "State: Ingame",
-            plain.serialize(messenger.render(Message.ArenaInfoState(ArenaState.INGAME), "en")),
+            plain.serialize(messenger.render(Message.ArenaInfoState(ArenaState.Kind.INGAME), "en")),
         )
     }
 

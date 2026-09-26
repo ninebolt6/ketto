@@ -23,7 +23,7 @@ class ArenaMatchDefeatTest {
         assertEquals(alice, outcome.winner)
         assertEquals(bob, outcome.loser)
         assertEquals(m.epoch + 1, step.match.epoch)
-        assertEquals(ArenaState.ROUNDCOUNTDOWN, step.match.state)
+        assertEquals(ArenaState.Kind.ROUNDCOUNTDOWN, step.match.state.kind)
         assertTrue(step.match.resolving)
         assertEquals(1, step.match.winsOf(alice.id))
     }
@@ -39,7 +39,7 @@ class ArenaMatchDefeatTest {
         m = m.resumeRound().match
         val step = m.recordDefeat(bob.id, DefeatCause.FALL)
         assertTrue(step.outcome is DefeatOutcome.MatchFinished)
-        assertEquals(ArenaState.WAITING, step.match.state)
+        assertEquals(ArenaState.Kind.WAITING, step.match.state.kind)
         assertTrue(step.match.wins.isEmpty())
         assertTrue(step.match.participants.isEmpty())
     }
@@ -115,9 +115,6 @@ class ArenaMatchDefeatTest {
             m.arenaId,
             m.requiredWins,
             m.state,
-            m.participants,
-            m.wins,
-            resolving = true,
             epoch = m.epoch + 1,
         )
         assertSame(after, after.releaseResolution(m.epoch))
@@ -132,7 +129,7 @@ class ArenaMatchDefeatTest {
         val resumed = m.resumeRound()
         assertTrue(resumed.outcome)
         m = resumed.match
-        assertEquals(ArenaState.INGAME, m.state)
+        assertEquals(ArenaState.Kind.INGAME, m.state.kind)
         assertTrue(m.recordDefeat(bob.id, DefeatCause.DEATH).outcome is DefeatOutcome.RoundWon)
     }
 

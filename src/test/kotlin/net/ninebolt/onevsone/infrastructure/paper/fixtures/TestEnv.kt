@@ -311,7 +311,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         return output
     }
 
-    fun state(name: String = "arena1") = service.matchOf(name)?.state
+    fun state(name: String = "arena1") = service.matchOf(name)?.state?.kind
 
     fun close() {
         deps.store.close()

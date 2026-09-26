@@ -32,7 +32,7 @@ class SqliteMatchStateRepository(private val store: SqliteStore) : MatchStateRep
         store.exec(
             "INSERT OR REPLACE INTO match_status(arena_name, state, players, wins) VALUES (?, ?, ?, ?)",
             match.arenaId.name,
-            match.state.name,
+            match.state.kind.name,
             players,
             wins,
         )

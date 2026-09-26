@@ -35,7 +35,7 @@ class PlayerRecoveryServiceTest {
         val (_, p2) = app.startMatch()
         p2.dead = true
         app.service.defeat(p2.id, DefeatCause.DEATH)
-        assertEquals(ArenaState.WAITING, app.state())
+        assertEquals(ArenaState.Kind.WAITING, app.state())
 
         val ticket = app.recovery.pending(p2.id)
         assertNotNull(ticket)
@@ -183,7 +183,7 @@ class PlayerRecoveryServiceTest {
         val p2Restores = app.equipment.restored.count { it.playerId == p2.id }
         assertEquals(1, p2Restores)
         assertEquals(applies, app.equipment.kitApplies.count { it.second == p2.id })
-        assertEquals(ArenaState.WAITING, app.state())
+        assertEquals(ArenaState.Kind.WAITING, app.state())
     }
 
     @Test
@@ -197,7 +197,7 @@ class PlayerRecoveryServiceTest {
         assertNotNull(app.service.pendingRestore(p2.id))
 
         app.scheduler.tick()
-        assertEquals(ArenaState.WAITING, app.state())
+        assertEquals(ArenaState.Kind.WAITING, app.state())
         assertNotNull(app.service.pendingRestore(p2.id))
         assertNull(app.service.arenaIdOf(p2.id))
 

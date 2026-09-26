@@ -65,7 +65,7 @@ class MatchProgressionServiceTest {
         assertEquals(2, app.equipment.kitApplies.count { it.second == p2.id })
 
         app.scheduler.tick()
-        assertEquals(ArenaState.WAITING, app.state())
+        assertEquals(ArenaState.Kind.WAITING, app.state())
         assertTrue(app.equipment.restored.any { it.playerId == p2.id })
     }
 
@@ -79,10 +79,10 @@ class MatchProgressionServiceTest {
 
         assertTrue(app.presentation.roundEndSounds.isEmpty())
         assertFalse(app.service.matchOf("arena1")!!.resolving)
-        assertEquals(ArenaState.ROUNDCOUNTDOWN, app.state())
+        assertEquals(ArenaState.Kind.ROUNDCOUNTDOWN, app.state())
 
         app.scheduler.tick()
-        assertEquals(ArenaState.WAITING, app.state())
+        assertEquals(ArenaState.Kind.WAITING, app.state())
     }
 
     @Test
@@ -113,7 +113,7 @@ class MatchProgressionServiceTest {
         assertEquals(1, app.equipment.restored.count { it.playerId == p1.id })
         assertTrue("vitals" !in p1.events)
         assertTrue(app.presentation.fireworks.isEmpty())
-        assertEquals(ArenaState.ONEMORE, app.state())
+        assertEquals(ArenaState.Kind.ONEMORE, app.state())
     }
 
     @Test
@@ -124,7 +124,7 @@ class MatchProgressionServiceTest {
 
         app.service.quit(p2.id)
 
-        assertEquals(ArenaState.WAITING, app.state())
+        assertEquals(ArenaState.Kind.WAITING, app.state())
         assertTrue(app.equipment.restored.any { it.playerId == p1.id })
         assertTrue(app.equipment.restored.none { it.playerId == p2.id })
         assertNotNull(app.service.pendingRestore(p2.id))
@@ -139,12 +139,12 @@ class MatchProgressionServiceTest {
         app.scheduler.tick(5)
         p1.dead = true
         app.scheduler.tick()
-        assertEquals(ArenaState.COUNTDOWN, app.state())
+        assertEquals(ArenaState.Kind.COUNTDOWN, app.state())
         assertEquals(0, app.equipment.backupCalls)
 
         p1.dead = false
         app.scheduler.tick()
-        assertEquals(ArenaState.INGAME, app.state())
+        assertEquals(ArenaState.Kind.INGAME, app.state())
     }
 
     @Test
@@ -154,12 +154,12 @@ class MatchProgressionServiceTest {
         app.scheduler.tick(5)
         p2.dead = true
         app.scheduler.tick()
-        assertEquals(ArenaState.COUNTDOWN, app.state())
+        assertEquals(ArenaState.Kind.COUNTDOWN, app.state())
         assertEquals(0, app.equipment.backupCalls)
 
         p2.dead = false
         app.scheduler.tick()
-        assertEquals(ArenaState.INGAME, app.state())
+        assertEquals(ArenaState.Kind.INGAME, app.state())
     }
 
     @Test
@@ -169,7 +169,7 @@ class MatchProgressionServiceTest {
         app.scheduler.tick(2)
         app.players.disconnect(p1)
         app.scheduler.tick()
-        assertEquals(ArenaState.WAITING, app.state())
+        assertEquals(ArenaState.Kind.WAITING, app.state())
         assertTrue(app.equipment.kitApplies.isEmpty())
     }
 
@@ -278,7 +278,7 @@ class MatchProgressionServiceTest {
 
         app.service.quit(p2.id)
 
-        assertEquals(ArenaState.WAITING, app.state())
+        assertEquals(ArenaState.Kind.WAITING, app.state())
         assertTrue(app.equipment.restored.any { it.playerId == p2.id })
         assertTrue("vitals" !in p2.events)
         assertTrue(app.presentation.fireworks.isEmpty())
@@ -291,7 +291,7 @@ class MatchProgressionServiceTest {
         app.scheduler.tick(2)
         app.players.disconnect(p2)
         app.scheduler.tick()
-        assertEquals(ArenaState.WAITING, app.state())
+        assertEquals(ArenaState.Kind.WAITING, app.state())
         assertTrue(app.equipment.kitApplies.isEmpty())
     }
 
@@ -318,12 +318,12 @@ class MatchProgressionServiceTest {
         app.joinedTwo()
         val timer = app.scheduler.timers.last()
         app.scheduler.tick(6)
-        assertEquals(ArenaState.INGAME, app.state())
+        assertEquals(ArenaState.Kind.INGAME, app.state())
 
         timer.run()
 
         assertTrue(timer.cancelled)
-        assertEquals(ArenaState.INGAME, app.state())
+        assertEquals(ArenaState.Kind.INGAME, app.state())
     }
 
     @Test

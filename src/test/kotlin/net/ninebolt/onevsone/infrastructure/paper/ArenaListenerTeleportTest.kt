@@ -81,7 +81,7 @@ class ArenaListenerTeleportTest {
     fun `round countdown allows only plugin teleports`() {
         val (p1, p2) = env.twoPlayerIngame()
         fallIntoVoid(p2)
-        assertEquals(ArenaState.ROUNDCOUNTDOWN, env.state())
+        assertEquals(ArenaState.Kind.ROUNDCOUNTDOWN, env.state())
 
         val pearl = teleport(p1, PlayerTeleportEvent.TeleportCause.ENDER_PEARL)
         env.fire(pearl)
@@ -129,7 +129,7 @@ class ArenaListenerTeleportTest {
         env.join(p2, arena)
 
         env.tick(6)
-        assertEquals(ArenaState.INGAME, env.state())
+        assertEquals(ArenaState.Kind.INGAME, env.state())
         assertTrue(p1.hasTeleported())
         assertTrue(p2.hasTeleported())
 
@@ -158,7 +158,7 @@ class ArenaListenerTeleportTest {
         assertFalse(ingame.isCancelled)
 
         fallIntoVoid(p2)
-        assertEquals(ArenaState.ROUNDCOUNTDOWN, env.state())
+        assertEquals(ArenaState.Kind.ROUNDCOUNTDOWN, env.state())
         val frozen = VehicleEnterEvent(boat, p1)
         env.fire(frozen)
         assertTrue(frozen.isCancelled)

@@ -20,7 +20,7 @@ class ArenaSignServiceTest {
         assertEquals(sign, app.signs.signLocation("arena1"))
         assertEquals("arena1", app.signs.signOwner(BlockPosition.new("world", 3, 64, 3)))
         assertEquals(
-            Triple(app.service.arena("arena1")!!, sign, ArenaState.WAITING),
+            Triple(app.service.arena("arena1")!!, sign, ArenaState.Kind.WAITING),
             app.presentation.signUpdates.last(),
         )
 
@@ -44,6 +44,6 @@ class ArenaSignServiceTest {
         val (arenaAfterEnable, position, state) = app.presentation.signUpdates.last()
         assertIs<Arena.Enabled>(arenaAfterEnable)
         assertEquals(sign, position)
-        assertEquals(ArenaState.WAITING, state)
+        assertEquals(ArenaState.Kind.WAITING, state)
     }
 }

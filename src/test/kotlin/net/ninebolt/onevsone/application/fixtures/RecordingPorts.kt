@@ -24,7 +24,7 @@ class RecordingPresentation : PresentationPort {
     val fireworks = mutableListOf<Uuid>()
     val scoreboards = mutableListOf<ArenaMatch>()
     val clearedScoreboards = mutableListOf<Uuid>()
-    val signUpdates = mutableListOf<Triple<Arena, BlockPosition, ArenaState>>()
+    val signUpdates = mutableListOf<Triple<Arena, BlockPosition, ArenaState.Kind>>()
 
     override fun countdownTick(participantIds: List<Uuid>, secondsLeft: Int) {
         countdownTicks += Countdown(participantIds, secondsLeft)
@@ -66,8 +66,8 @@ class RecordingPresentation : PresentationPort {
         clearedScoreboards += playerId
     }
 
-    override fun updateSign(arena: Arena, position: BlockPosition, state: ArenaState) {
-        signUpdates += Triple(arena, position, state)
+    override fun updateSign(arena: Arena, position: BlockPosition, kind: ArenaState.Kind) {
+        signUpdates += Triple(arena, position, kind)
     }
 }
 

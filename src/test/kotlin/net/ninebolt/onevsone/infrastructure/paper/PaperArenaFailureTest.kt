@@ -56,7 +56,7 @@ class PaperArenaFailureTest {
         val p = env.player("Alice")
         assertEquals(JoinOutput.JoinedWaiting, env.service.join(p.uuid, p.name, arena))
         assertEquals(arena, env.service.arenaIdOf(p.uuid))
-        assertEquals(ArenaState.ONEMORE, env.view().state)
+        assertEquals(ArenaState.Kind.ONEMORE, env.view().state.kind)
         assertTrue(records.any { it.message.contains("match projection") && it.thrown is PersistenceFailure })
     }
 
@@ -103,7 +103,7 @@ class PaperArenaFailureTest {
         env.tick(6)
         every { spyStats.recordWin(p1.uuid) } throws PersistenceFailure("disk gone")
         p2.simulateDamage(100.0, genericDamage())
-        assertEquals(ArenaState.WAITING, env.view().state)
+        assertEquals(ArenaState.Kind.WAITING, env.view().state.kind)
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
         env.runOneShots()
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)

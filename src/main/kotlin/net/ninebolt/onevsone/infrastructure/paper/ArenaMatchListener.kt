@@ -82,7 +82,7 @@ class ArenaMatchListener(
     fun onMove(event: PlayerMoveEvent) {
         // PlayerTeleportEvent has its own HandlerList and never reaches this handler
         val match = service.matchOf(event.player.uniqueId.toKotlinUuid()) ?: return
-        if (ParticipantRestrictions.forState(match.state).horizontalMoveFrozen) {
+        if (ParticipantRestrictions.forState(match.state.kind).horizontalMoveFrozen) {
             val from = event.from
             val to = event.to
             if (from.blockX != to.blockX || from.blockZ != to.blockZ) {

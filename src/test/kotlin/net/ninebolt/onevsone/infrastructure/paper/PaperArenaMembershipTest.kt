@@ -52,7 +52,7 @@ class PaperArenaMembershipTest {
 
         p2.disconnect()
 
-        assertEquals(ArenaState.WAITING, env.view().state)
+        assertEquals(ArenaState.Kind.WAITING, env.view().state.kind)
         assertNull(env.service.arenaIdOf(p1.uuid))
         assertNull(env.service.arenaIdOf(p2.uuid))
         assertEquals(1, env.statsRepo.find(p1.uuid)!!.wins)
@@ -141,7 +141,7 @@ class PaperArenaMembershipTest {
         env.join(p1, arena)
         env.join(p2, arena)
         p1.disconnect()
-        assertEquals(ArenaState.ONEMORE, env.view().state)
+        assertEquals(ArenaState.Kind.ONEMORE, env.view().state.kind)
         assertNull(env.service.arenaIdOf(p1.uuid))
         assertEquals(arena, env.service.arenaIdOf(p2.uuid))
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
@@ -152,7 +152,7 @@ class PaperArenaMembershipTest {
         assertNull(env.backupByName("Bob"))
 
         env.tick(6)
-        assertEquals(ArenaState.ONEMORE, env.view().state)
+        assertEquals(ArenaState.Kind.ONEMORE, env.view().state.kind)
         assertFalse(p1.hasTeleported())
         assertFalse(p2.hasTeleported())
     }
@@ -170,12 +170,12 @@ class PaperArenaMembershipTest {
         env.tick(6)
 
         fallIntoVoid(p2)
-        assertEquals(ArenaState.ROUNDCOUNTDOWN, env.view().state)
+        assertEquals(ArenaState.Kind.ROUNDCOUNTDOWN, env.view().state.kind)
 
         p1.disconnect()
         assertNull(env.service.pendingRestore(p1.uuid))
         assertNull(env.backupByName("Alice"))
-        assertEquals(ArenaState.WAITING, env.view().state)
+        assertEquals(ArenaState.Kind.WAITING, env.view().state.kind)
         assertTrue(env.view().participants.isEmpty())
         assertNull(env.service.arenaIdOf(p1.uuid))
         assertNull(env.service.arenaIdOf(p2.uuid))
@@ -189,7 +189,7 @@ class PaperArenaMembershipTest {
 
         // The round-resume timer was still pending at the quit and must not restart the finished match
         env.tick(8)
-        assertEquals(ArenaState.WAITING, env.view().state)
+        assertEquals(ArenaState.Kind.WAITING, env.view().state.kind)
     }
 
     @Test

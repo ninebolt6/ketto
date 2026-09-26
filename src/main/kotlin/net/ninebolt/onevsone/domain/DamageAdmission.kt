@@ -10,12 +10,12 @@ object DamageAdmission {
 
     fun allows(victim: Side?, attacker: Side?): Boolean {
         fun limits(side: Side?) = side?.match?.let {
-            ParticipantRestrictions.forState(it.state).let { r -> r.damageCancelled || r.opponentDamageOnly }
+            ParticipantRestrictions.forState(it.state.kind).let { r -> r.damageCancelled || r.opponentDamageOnly }
         } == true
 
         if (!limits(victim) && !limits(attacker)) return true
         if (victim == null || attacker == null) return false
-        if (!ParticipantRestrictions.forState(victim.match.state).opponentDamageOnly) return false
+        if (!ParticipantRestrictions.forState(victim.match.state.kind).opponentDamageOnly) return false
         return attacker.id == victim.id ||
             victim.match.participants.any { it.id == attacker.id && it.id != victim.id }
     }
