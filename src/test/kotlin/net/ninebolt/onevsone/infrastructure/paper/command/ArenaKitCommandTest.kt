@@ -1,6 +1,6 @@
 package net.ninebolt.onevsone.infrastructure.paper.command
 
-import net.ninebolt.onevsone.domain.Arena
+import net.ninebolt.onevsone.domain.fixtures.arenaId
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.opPlayer
@@ -38,7 +38,7 @@ class ArenaKitCommandTest {
         op.inventory.setItem(0, env.item(Material.DIAMOND_SWORD))
         env.runCommand(op, "arena", "arena1", "kit", "set")
         assertTrue(op.drainMessages().any { it.contains("Set inventory for arena") })
-        assertEquals(Material.DIAMOND_SWORD, env.equipment.kitOf(Arena.Id.new("arena1"))?.items?.get(0)?.type)
+        assertEquals(Material.DIAMOND_SWORD, env.equipment.kitOf(arenaId("arena1"))?.items?.get(0)?.type)
     }
 
     @Test

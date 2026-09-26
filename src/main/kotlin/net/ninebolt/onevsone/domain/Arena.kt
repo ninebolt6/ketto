@@ -80,8 +80,6 @@ sealed interface Arena {
                 !name.equals("create", ignoreCase = true)
 
             fun of(name: String): Id? = if (isValidName(name)) Id(name) else null
-
-            fun new(name: String): Id = of(name) ?: throw IllegalArgumentException("invalid arena name: '$name'")
         }
     }
 }

@@ -1,6 +1,7 @@
 package net.ninebolt.onevsone.domain
 
 import net.ninebolt.onevsone.domain.fixtures.alice
+import net.ninebolt.onevsone.domain.fixtures.arenaId
 import net.ninebolt.onevsone.domain.fixtures.bob
 import net.ninebolt.onevsone.domain.fixtures.carol
 import net.ninebolt.onevsone.domain.fixtures.dave
@@ -53,7 +54,7 @@ class DamageAdmissionTest {
 
     @Test
     fun `participants of different matches cannot hurt each other`() {
-        val joined = ArenaMatch.new(Arena.Id.new("arena2"), 3).join(carol).match.join(dave).match
+        val joined = ArenaMatch.new(arenaId("arena2"), 3).join(carol).match.join(dave).match
         val began = joined.beginMatch()
         check(began.outcome)
         val other = began.match

@@ -1,9 +1,9 @@
 package net.ninebolt.onevsone.application
 
 import net.ninebolt.onevsone.application.fixtures.TestApp
-import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatCause
+import net.ninebolt.onevsone.domain.fixtures.arenaId
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -45,7 +45,7 @@ class MatchProgressionServiceTest {
     @Test
     fun `abort on an unknown arena is a no-op`() {
         val app = TestApp()
-        app.service.abort(Arena.Id.new("nope"))
+        app.service.abort(arenaId("nope"))
         assertTrue(app.scheduler.timers.isEmpty())
         assertTrue(app.presentation.signUpdates.isEmpty())
         assertTrue(app.logger.records.isEmpty())
@@ -106,7 +106,7 @@ class MatchProgressionServiceTest {
         assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
 
         p1.dead = false
-        assertEquals(JoinOutput.JoinedWaiting, app.service.join(p1.id, p1.name, Arena.Id.new("arena1")))
+        assertEquals(JoinOutput.JoinedWaiting, app.service.join(p1.id, p1.name, arenaId("arena1")))
         assertEquals(1, app.equipment.restored.count { it.playerId == p1.id })
 
         app.scheduler.runOneShots()
@@ -179,7 +179,7 @@ class MatchProgressionServiceTest {
         val (p1, _) = app.joinedTwo()
         p1.dead = true
 
-        app.service.abort(Arena.Id.new("arena1"))
+        app.service.abort(arenaId("arena1"))
 
         assertTrue(app.equipment.restored.isEmpty())
         app.scheduler.runOneShots()
@@ -196,7 +196,7 @@ class MatchProgressionServiceTest {
         val applies = app.equipment.kitApplies.count { it.second == p2.id }
         val teleports = p2.teleports.size
 
-        app.service.abort(Arena.Id.new("arena1"))
+        app.service.abort(arenaId("arena1"))
         app.scheduler.runOneShots()
 
         assertEquals(applies, app.equipment.kitApplies.count { it.second == p2.id })
@@ -359,7 +359,7 @@ class MatchProgressionServiceTest {
         p2.dead = true
         assertTrue(app.service.defeat(p2.id, DefeatCause.DEATH))
 
-        app.service.abort(Arena.Id.new("arena1"))
+        app.service.abort(arenaId("arena1"))
         app.scheduler.runOneShots()
 
         assertTrue("respawn" in p2.events)

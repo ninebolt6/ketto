@@ -3,6 +3,7 @@ package net.ninebolt.onevsone.infrastructure.paper
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.WorldPosition
+import net.ninebolt.onevsone.domain.fixtures.arenaId
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.backupByName
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.fallIntoVoid
@@ -212,7 +213,7 @@ class PaperArenaMembershipTest {
     fun `enabled persists across service load`() {
         env.arenaRepo.save(
             Arena.Enabled.restored(
-                Arena.Id.new("arena1"),
+                arenaId("arena1"),
                 WorldPosition.new("world", 1.0, 64.0, 1.0),
                 WorldPosition.new("world", 2.0, 64.0, 2.0),
             ),

@@ -7,6 +7,7 @@ import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.JoinOutcome
 import net.ninebolt.onevsone.domain.Participant
 import net.ninebolt.onevsone.domain.WorldPosition
+import net.ninebolt.onevsone.domain.fixtures.arenaId
 import org.junit.jupiter.api.Test
 import java.util.logging.Logger
 import kotlin.test.assertEquals
@@ -22,7 +23,7 @@ class ArenaRegistryTest {
 
     private fun ArenaRegistry.install(name: String) = installArena(
         Arena.Enabled.restored(
-            Arena.Id.new(name),
+            arenaId(name),
             WorldPosition.new("world", 1.0, 64.0, 1.0),
             WorldPosition.new("world", 2.0, 64.0, 2.0),
         ),
@@ -30,7 +31,7 @@ class ArenaRegistryTest {
     )
 
     private fun match(name: String, state: ArenaState) = ArenaMatch.restored(
-        Arena.Id.new(name),
+        arenaId(name),
         3,
         state,
     )
@@ -43,10 +44,10 @@ class ArenaRegistryTest {
         val p = Participant.new("Alice")
         registry.putMatch(match("a1", ArenaState.OneMore(p)), persist = {})
         registry.putMatch(match("a2", ArenaState.OneMore(p)), persist = {})
-        assertEquals(Arena.Id.new("a2"), registry.arenaOf(p.id))
+        assertEquals(arenaId("a2"), registry.arenaOf(p.id))
 
         registry.putMatch(match("a1", ArenaState.Waiting), persist = {})
-        assertEquals(Arena.Id.new("a2"), registry.arenaOf(p.id))
+        assertEquals(arenaId("a2"), registry.arenaOf(p.id))
         assertTrue(registry.isJoined(p.id))
     }
 
@@ -58,18 +59,18 @@ class ArenaRegistryTest {
         registry.putMatch(match("a1", ArenaState.OneMore(p)), persist = {})
 
         var persists = 0
-        val rejected = registry.transact(Arena.Id.new("a1"), persist = { persists++ }) { it.join(p) }
+        val rejected = registry.transact(arenaId("a1"), persist = { persists++ }) { it.join(p) }
         assertEquals(JoinOutcome.Rejected, rejected?.outcome)
         assertEquals(0, persists)
 
-        registry.transact(Arena.Id.new("a1"), persist = { persists++ }) { it.join(Participant.new("Bob")) }
+        registry.transact(arenaId("a1"), persist = { persists++ }) { it.join(Participant.new("Bob")) }
         assertEquals(1, persists)
     }
 
     @Test
     fun `reads on unknown ids and names return null`() {
         val registry = ArenaRegistry(3, logger)
-        val id = Arena.Id.new("nope")
+        val id = arenaId("nope")
         assertNull(registry.arena(id))
         assertNull(registry.match(id))
         assertNull(registry.entry(id))
@@ -83,7 +84,7 @@ class ArenaRegistryTest {
     @Test
     fun `mutators on an unknown arena are no-ops`() {
         val registry = ArenaRegistry(3, logger)
-        val id = Arena.Id.new("nope")
+        val id = arenaId("nope")
         var persists = 0
         registry.removeArena(id, persist = { persists++ })
         assertNull(registry.updateArena(id, persist = { persists++ }) { it })
@@ -98,7 +99,7 @@ class ArenaRegistryTest {
     fun `putting the identical match instance skips the persist hook`() {
         val registry = ArenaRegistry(3, logger)
         registry.install("a1")
-        val current = registry.match(Arena.Id.new("a1"))!!
+        val current = registry.match(arenaId("a1"))!!
         var persists = 0
         registry.putMatch(current, persist = { persists++ })
         assertEquals(0, persists)
@@ -114,7 +115,7 @@ class ArenaRegistryTest {
         registry.install("a1")
 
         assertFalse(registry.isJoined(p.id))
-        assertEquals(ArenaState.Kind.WAITING, registry.match(Arena.Id.new("a1"))!!.state.kind)
+        assertEquals(ArenaState.Kind.WAITING, registry.match(arenaId("a1"))!!.state.kind)
     }
 
     @Test
@@ -124,9 +125,9 @@ class ArenaRegistryTest {
         val p = Participant.new("Alice")
         registry.putMatch(match("a1", ArenaState.OneMore(p)), persist = {})
 
-        registry.removeArena(Arena.Id.new("a1"), persist = {})
+        registry.removeArena(arenaId("a1"), persist = {})
 
-        assertNull(registry.arena(Arena.Id.new("a1")))
+        assertNull(registry.arena(arenaId("a1")))
         assertFalse(registry.isJoined(p.id))
         assertNull(registry.arenaOf(p.id))
     }
@@ -135,9 +136,9 @@ class ArenaRegistryTest {
     fun `persist failure leaves registry untouched`() {
         val registry = ArenaRegistry(3, logger)
         assertFailsWith<PersistenceFailure> {
-            registry.installArena(Arena.Disabled.new(Arena.Id.new("a1"))) { throw PersistenceFailure("disk") }
+            registry.installArena(Arena.Disabled.new(arenaId("a1"))) { throw PersistenceFailure("disk") }
         }
-        assertNull(registry.arena(Arena.Id.new("a1")))
+        assertNull(registry.arena(arenaId("a1")))
         assertTrue(registry.arenaIds().isEmpty())
     }
 }

@@ -9,6 +9,7 @@ import net.ninebolt.onevsone.domain.BlockPosition
 import net.ninebolt.onevsone.domain.MatchId
 import net.ninebolt.onevsone.domain.Participant
 import net.ninebolt.onevsone.domain.WorldPosition
+import net.ninebolt.onevsone.domain.fixtures.arenaId
 import net.ninebolt.onevsone.infrastructure.paper.PaperInventorySnapshot
 import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.inventory.ItemStack
@@ -41,7 +42,7 @@ class SqlitePersistenceTest {
     private fun <T> withStore(block: (SqliteStore) -> T): T = store().use(block)
 
     private fun enabled(name: String): Arena = Arena.Enabled.restored(
-        Arena.Id.new(name),
+        arenaId(name),
         WorldPosition.new("world", 1.0, 64.0, 1.0),
         WorldPosition.new("world", 2.0, 64.0, 2.0),
     )
@@ -64,7 +65,7 @@ class SqlitePersistenceTest {
     fun `arena round trip keeps fractional yaw pitch and enabled`() = withStore { store ->
         val repo = SqliteArenaRepository(store)
         val def = Arena.Enabled.restored(
-            Arena.Id.new("a1"),
+            arenaId("a1"),
             WorldPosition.new("world", 1.5, 64.25, -3.75, 12.34f, -56.78f),
             WorldPosition.new("world", 2.0, 64.0, 2.0),
         )
@@ -88,7 +89,7 @@ class SqlitePersistenceTest {
     @Test
     fun `loadAll follows insertion order and updates keep the slot`() = withStore { store ->
         val repo = SqliteArenaRepository(store)
-        repo.save(Arena.Disabled.new(Arena.Id.new("b1")))
+        repo.save(Arena.Disabled.new(arenaId("b1")))
         repo.save(enabled("a1"))
         repo.save(enabled("b1"))
 
@@ -103,7 +104,7 @@ class SqlitePersistenceTest {
     @Test
     fun `arena names collide case insensitively`() = withStore { store ->
         val repo = SqliteArenaRepository(store)
-        repo.save(Arena.Disabled.new(Arena.Id.new("Arena1")))
+        repo.save(Arena.Disabled.new(arenaId("Arena1")))
         repo.save(enabled("arena1"))
         val loaded = repo.loadAll()
         assertEquals(1, loaded.size)
@@ -116,7 +117,7 @@ class SqlitePersistenceTest {
         arenas.save(enabled("a1"))
         SqliteKitStore(store).saveArenaKit("a1", PaperInventorySnapshot())
         SqliteArenaSignRepository(store).setSign("a1", BlockPosition.new("world", 1, 2, 3))
-        SqliteMatchStateRepository(store).saveStatus(ArenaMatch.new(Arena.Id.new("a1"), requiredWins = 3))
+        SqliteMatchStateRepository(store).saveStatus(ArenaMatch.new(arenaId("a1"), requiredWins = 3))
         store.exec(
             "INSERT INTO registrations(player_uuid, player_name, arena_name) VALUES (?, ?, ?)",
             Uuid.random().toString(),
@@ -147,11 +148,11 @@ class SqlitePersistenceTest {
 
     @Test
     fun `status row persists state players and wins`() = withStore { store ->
-        SqliteArenaRepository(store).save(Arena.Disabled.new(Arena.Id.new("a1")))
+        SqliteArenaRepository(store).save(Arena.Disabled.new(arenaId("a1")))
         val p1 = Participant.new("Alice")
         val p2 = Participant.new("Bob")
         val match = ArenaMatch.restored(
-            Arena.Id.new("a1"),
+            arenaId("a1"),
             requiredWins = 3,
             state = ArenaState.InGame.of(p1, p2, firstWins = 2, secondWins = 0),
         )
@@ -167,11 +168,11 @@ class SqlitePersistenceTest {
 
     @Test
     fun `persistMatch writes uuid keyed registrations`() = withStore { store ->
-        SqliteArenaRepository(store).save(Arena.Disabled.new(Arena.Id.new("a1")))
+        SqliteArenaRepository(store).save(Arena.Disabled.new(arenaId("a1")))
         val p1 = Participant.new("Alice")
         val p2 = Participant.new("Alice")
         val match = ArenaMatch.restored(
-            Arena.Id.new("a1"),
+            arenaId("a1"),
             requiredWins = 3,
             state = ArenaState.Countdown.of(p1, p2),
         )
@@ -185,12 +186,12 @@ class SqlitePersistenceTest {
 
     @Test
     fun `persistMatch converges rows left behind by a failed call`() = withStore { store ->
-        SqliteArenaRepository(store).save(Arena.Disabled.new(Arena.Id.new("a1")))
+        SqliteArenaRepository(store).save(Arena.Disabled.new(arenaId("a1")))
         store.exec("INSERT INTO registrations(player_uuid, player_name, arena_name) VALUES (?, ?, ?)", "stale-uuid", "Stale", "a1")
 
         val p = Participant.new("Alice")
         val match = ArenaMatch.restored(
-            Arena.Id.new("a1"),
+            arenaId("a1"),
             requiredWins = 3,
             state = ArenaState.OneMore(p),
         )
@@ -203,15 +204,15 @@ class SqlitePersistenceTest {
     @Test
     fun `persistMatch moves a registration when the player joined another arena`() = withStore { store ->
         val arenas = SqliteArenaRepository(store)
-        arenas.save(Arena.Disabled.new(Arena.Id.new("a1")))
-        arenas.save(Arena.Disabled.new(Arena.Id.new("a2")))
+        arenas.save(Arena.Disabled.new(arenaId("a1")))
+        arenas.save(Arena.Disabled.new(arenaId("a2")))
         val repo = SqliteMatchStateRepository(store)
         val p = Participant.new("Alice")
         repo.persistMatch(
-            ArenaMatch.restored(Arena.Id.new("a1"), 3, ArenaState.OneMore(p)),
+            ArenaMatch.restored(arenaId("a1"), 3, ArenaState.OneMore(p)),
         )
         repo.persistMatch(
-            ArenaMatch.restored(Arena.Id.new("a2"), 3, ArenaState.OneMore(p)),
+            ArenaMatch.restored(arenaId("a2"), 3, ArenaState.OneMore(p)),
         )
         val rows = store.query("SELECT arena_name FROM registrations WHERE player_uuid = ?", p.id.toString()) {
             it.getString(1)
@@ -221,9 +222,9 @@ class SqlitePersistenceTest {
 
     @Test
     fun `clearRegistrations preserves backups`() = withStore { store ->
-        SqliteArenaRepository(store).save(Arena.Disabled.new(Arena.Id.new("a1")))
+        SqliteArenaRepository(store).save(Arena.Disabled.new(arenaId("a1")))
         val p = Participant.new("Alice")
-        val match = ArenaMatch.restored(Arena.Id.new("a1"), 3, ArenaState.OneMore(p))
+        val match = ArenaMatch.restored(arenaId("a1"), 3, ArenaState.OneMore(p))
         val matchState = SqliteMatchStateRepository(store)
         matchState.persistMatch(match)
         val ref = BackupRef.new(MatchId.new(), p.id, p.name)
@@ -445,7 +446,7 @@ class SqlitePersistenceTest {
     @Test
     fun `loadAll skips an arena row whose name is not a valid id`() = withStore { store ->
         val repo = SqliteArenaRepository(store)
-        repo.save(Arena.Disabled.new(Arena.Id.new("a1")))
+        repo.save(Arena.Disabled.new(arenaId("a1")))
         store.exec("UPDATE arenas SET name='create' WHERE name='a1'")
         assertEquals(emptyList(), repo.loadAll())
     }
@@ -527,7 +528,7 @@ class SqlitePersistenceTest {
 
     @Test
     fun `kit round trips and deletes`() = withStore { store ->
-        SqliteArenaRepository(store).save(Arena.Disabled.new(Arena.Id.new("a1")))
+        SqliteArenaRepository(store).save(Arena.Disabled.new(arenaId("a1")))
         val kits = SqliteKitStore(store)
         assertEquals(PaperInventorySnapshot(), kits.loadArenaKit("a1"))
         kits.saveArenaKit("a1", PaperInventorySnapshot(items = listOf(null, null)))
@@ -538,7 +539,7 @@ class SqlitePersistenceTest {
 
     @Test
     fun `sign index is rebuilt from the table by a new instance`() = withStore { store ->
-        SqliteArenaRepository(store).save(Arena.Disabled.new(Arena.Id.new("a1")))
+        SqliteArenaRepository(store).save(Arena.Disabled.new(arenaId("a1")))
         SqliteArenaSignRepository(store).setSign("a1", BlockPosition.new("world", 5, 64, 5))
         val fresh = SqliteArenaSignRepository(store)
         assertEquals("a1", fresh.signOwner(BlockPosition.new("world", 5, 64, 5)))
@@ -547,7 +548,7 @@ class SqlitePersistenceTest {
 
     @Test
     fun `setSign releases old position and clearSign removes it`() = withStore { store ->
-        SqliteArenaRepository(store).save(Arena.Disabled.new(Arena.Id.new("a1")))
+        SqliteArenaRepository(store).save(Arena.Disabled.new(arenaId("a1")))
         val repo = SqliteArenaSignRepository(store)
         repo.setSign("a1", BlockPosition.new("world", 5, 64, 5))
         repo.setSign("a1", BlockPosition.new("world", 9, 64, 9))
@@ -566,7 +567,7 @@ class SqlitePersistenceTest {
         val before = file.readBytes()
 
         SqliteLobbyRepository(store).setLobby(WorldPosition.new("lobby", 1.0, 2.0, 3.0))
-        SqliteArenaRepository(store).save(Arena.Disabled.new(Arena.Id.new("a1")))
+        SqliteArenaRepository(store).save(Arena.Disabled.new(arenaId("a1")))
         SqliteArenaSignRepository(store).setSign("a1", BlockPosition.new("world", 5, 64, 5))
         assertEquals(before.toList(), file.readBytes().toList())
     }

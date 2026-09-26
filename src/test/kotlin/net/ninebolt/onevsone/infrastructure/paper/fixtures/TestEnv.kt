@@ -22,6 +22,7 @@ import net.ninebolt.onevsone.application.port.MatchStateRepository
 import net.ninebolt.onevsone.application.port.PlayerStatsRepository
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.WorldPosition
+import net.ninebolt.onevsone.domain.fixtures.arenaId
 import net.ninebolt.onevsone.infrastructure.paper.ArenaGuardListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaMatchListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaSignListener
@@ -291,7 +292,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     }
 
     fun newArena(name: String = "arena1", enabled: Boolean = true): Arena.Id {
-        val id = Arena.Id.new(name)
+        val id = arenaId(name)
         val spawn1 = WorldPosition.new("world", 1.0, 64.0, 1.0)
         val spawn2 = WorldPosition.new("world", 2.0, 64.0, 2.0)
         val arena = if (enabled) {
@@ -305,7 +306,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
 
     fun setKit(arena: Arena.Id, snapshot: PaperInventorySnapshot) = equipment.putKit(arena, snapshot)
 
-    fun join(player: Player, arena: Arena.Id = Arena.Id.new("arena1")): JoinOutput {
+    fun join(player: Player, arena: Arena.Id = arenaId("arena1")): JoinOutput {
         val output = service.join(player.uuid, player.name, arena)
         signListener.renderJoin(player, arena.name, output)
         return output

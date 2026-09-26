@@ -68,7 +68,8 @@ class SqliteArenaRepository(
     }
 
     private fun toArena(row: ResultSet): Arena {
-        val id = Arena.Id.new(row.getString("name"))
+        val name = row.getString("name")
+        val id = Arena.Id.of(name) ?: throw IllegalArgumentException("invalid arena name: '$name'")
         val disabled = Arena.Disabled.restored(
             id,
             readLocation(row, "spawn1"),

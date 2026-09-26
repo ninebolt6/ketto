@@ -6,6 +6,7 @@ import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.domain.WorldPosition
+import net.ninebolt.onevsone.domain.fixtures.arenaId
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -19,7 +20,7 @@ class ArenaApplicationServiceResilienceTest {
         val app = TestApp()
         val (p1, p2) = app.joinedTwo()
         app.scheduler.tick(2)
-        app.service.abort(Arena.Id.new("arena1"))
+        app.service.abort(arenaId("arena1"))
         assertEquals(ArenaState.Kind.WAITING, app.state())
         assertNull(app.service.arenaIdOf(p1.id))
         app.scheduler.tick(6)
@@ -112,7 +113,7 @@ class ArenaApplicationServiceResilienceTest {
         val app = TestApp()
         val (p1, _) = app.startMatch()
         app.matchState.failOnPersist = true
-        app.service.abort(Arena.Id.new("arena1"))
+        app.service.abort(arenaId("arena1"))
         assertNull(app.service.arenaIdOf(p1.id))
         assertTrue(app.logger.reports.any { it.message.contains("match projection") })
         app.matchState.failOnPersist = false
@@ -125,7 +126,7 @@ class ArenaApplicationServiceResilienceTest {
         val app = TestApp()
         app.arenas.save(
             Arena.Enabled.restored(
-                Arena.Id.new("a1"),
+                arenaId("a1"),
                 WorldPosition.new("world", 1.0, 64.0, 1.0),
                 WorldPosition.new("world", 2.0, 64.0, 2.0),
             ),
@@ -139,8 +140,8 @@ class ArenaApplicationServiceResilienceTest {
     @Test
     fun `load isolates per arena status persistence failure`() {
         val app = TestApp()
-        app.arenas.save(Arena.Disabled.new(Arena.Id.new("broken")))
-        app.arenas.save(Arena.Disabled.new(Arena.Id.new("healthy")))
+        app.arenas.save(Arena.Disabled.new(arenaId("broken")))
+        app.arenas.save(Arena.Disabled.new(arenaId("healthy")))
         app.matchState.failOnSaveStatusFor += "broken"
         app.lifecycle.load()
         assertEquals(ArenaState.Kind.WAITING, app.service.matchOf("broken")!!.state.kind)
@@ -165,11 +166,11 @@ class ArenaApplicationServiceResilienceTest {
         val app = TestApp()
         app.joinedTwo()
         val timer = app.scheduler.timers.last()
-        app.service.abort(Arena.Id.new("arena1"))
+        app.service.abort(arenaId("arena1"))
         timer.run()
         assertTrue(timer.cancelled)
         assertTrue(app.equipment.kitApplies.isEmpty())
         val p3 = app.players.add("Carol")
-        assertEquals(JoinOutput.JoinedWaiting, app.service.join(p3.id, p3.name, Arena.Id.new("arena1")))
+        assertEquals(JoinOutput.JoinedWaiting, app.service.join(p3.id, p3.name, arenaId("arena1")))
     }
 }

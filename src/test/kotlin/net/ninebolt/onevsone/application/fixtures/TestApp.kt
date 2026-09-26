@@ -14,6 +14,7 @@ import net.ninebolt.onevsone.application.PlayerStatsService
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.WorldPosition
+import net.ninebolt.onevsone.domain.fixtures.arenaId
 import kotlin.test.assertEquals
 
 class TestApp(val requiredWins: Int = 3) {
@@ -46,7 +47,7 @@ class TestApp(val requiredWins: Int = 3) {
     val statsService = PlayerStatsService(stats)
 
     fun newArena(name: String = "arena1", enabled: Boolean = true): Arena.Id {
-        val id = Arena.Id.new(name)
+        val id = arenaId(name)
         val spawn1 = WorldPosition.new("world", 1.0, 64.0, 1.0)
         val spawn2 = WorldPosition.new("world", 2.0, 64.0, 2.0)
         val arena = if (enabled) {
@@ -62,8 +63,8 @@ class TestApp(val requiredWins: Int = 3) {
         newArena(arenaName)
         val p1 = players.add("Alice")
         val p2 = players.add("Bob")
-        assertEquals(JoinOutput.JoinedWaiting, service.join(p1.id, p1.name, Arena.Id.new(arenaName)))
-        assertEquals(JoinOutput.JoinedStarting, service.join(p2.id, p2.name, Arena.Id.new(arenaName)))
+        assertEquals(JoinOutput.JoinedWaiting, service.join(p1.id, p1.name, arenaId(arenaName)))
+        assertEquals(JoinOutput.JoinedStarting, service.join(p2.id, p2.name, arenaId(arenaName)))
         return p1 to p2
     }
 

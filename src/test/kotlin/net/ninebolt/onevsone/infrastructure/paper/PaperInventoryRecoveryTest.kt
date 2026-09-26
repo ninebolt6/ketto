@@ -6,6 +6,7 @@ import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.MatchId
 import net.ninebolt.onevsone.domain.Participant
+import net.ninebolt.onevsone.domain.fixtures.arenaId
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.backupByName
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.genericDamage
@@ -85,11 +86,11 @@ class PaperInventoryRecoveryTest {
         p.disconnect()
         p.inventory.setItem(0, env.item(Material.STONE))
 
-        env.arenaRepo.save(Arena.Disabled.new(Arena.Id.new("a1")))
+        env.arenaRepo.save(Arena.Disabled.new(arenaId("a1")))
         val ref = BackupRef.new(MatchId.new(), participant.id, participant.name)
         env.matchStateRepo.persistMatch(
             ArenaMatch.restored(
-                Arena.Id.new("a1"),
+                arenaId("a1"),
                 requiredWins = 3,
                 state = ArenaState.OneMore(participant),
             ),

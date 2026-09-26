@@ -11,6 +11,7 @@ import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.BlockPosition
 import net.ninebolt.onevsone.domain.PlayerStats
 import net.ninebolt.onevsone.domain.WorldPosition
+import net.ninebolt.onevsone.domain.fixtures.arenaId
 import java.util.Locale
 import kotlin.uuid.Uuid
 
@@ -33,7 +34,7 @@ class InMemoryArenaRepository :
         }
     }
 
-    override fun find(name: String): Arena = definitions[name] ?: Arena.Disabled.new(Arena.Id.new(name))
+    override fun find(name: String): Arena = definitions[name] ?: Arena.Disabled.new(arenaId(name))
 
     override fun save(arena: Arena) {
         if (failOnSave) throw PersistenceFailure("save failed")

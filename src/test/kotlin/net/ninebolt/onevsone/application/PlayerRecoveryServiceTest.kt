@@ -2,12 +2,12 @@ package net.ninebolt.onevsone.application
 
 import net.ninebolt.onevsone.application.fixtures.TestApp
 import net.ninebolt.onevsone.application.port.BackupRef
-import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.domain.MatchId
 import net.ninebolt.onevsone.domain.Participant
 import net.ninebolt.onevsone.domain.WorldPosition
+import net.ninebolt.onevsone.domain.fixtures.arenaId
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -63,7 +63,7 @@ class PlayerRecoveryServiceTest {
         val app = TestApp()
         app.newArena()
         val p1 = app.players.add("Alice")
-        app.service.join(p1.id, p1.name, Arena.Id.new("arena1"))
+        app.service.join(p1.id, p1.name, arenaId("arena1"))
         app.players.disconnect(p1)
         app.players.quittingScope(p1) {
             app.service.quit(p1.id)
@@ -77,7 +77,7 @@ class PlayerRecoveryServiceTest {
         val app = TestApp()
         val (_, p2) = app.startMatch()
         app.players.disconnect(p2)
-        app.service.abort(Arena.Id.new("arena1"))
+        app.service.abort(arenaId("arena1"))
         assertEquals(1, app.equipment.restored.size)
         assertEquals(1, app.equipment.storedBackups.size)
 
@@ -178,7 +178,7 @@ class PlayerRecoveryServiceTest {
         p2.dead = true
         app.service.defeat(p2.id, DefeatCause.DEATH)
         val applies = app.equipment.kitApplies.count { it.second == p2.id }
-        app.service.abort(Arena.Id.new("arena1"))
+        app.service.abort(arenaId("arena1"))
         app.scheduler.runOneShots()
         val p2Restores = app.equipment.restored.count { it.playerId == p2.id }
         assertEquals(1, p2Restores)
@@ -362,10 +362,10 @@ class PlayerRecoveryServiceTest {
         app.recovery.loadPersisted()
 
         p.dead = true
-        assertEquals(JoinOutput.InMatch, app.service.join(p.id, p.name, Arena.Id.new("arena1")))
+        assertEquals(JoinOutput.InMatch, app.service.join(p.id, p.name, arenaId("arena1")))
         assertNull(app.service.arenaIdOf(p.id))
         p.dead = false
-        assertEquals(JoinOutput.JoinedWaiting, app.service.join(p.id, p.name, Arena.Id.new("arena1")))
+        assertEquals(JoinOutput.JoinedWaiting, app.service.join(p.id, p.name, arenaId("arena1")))
         assertTrue(app.equipment.restored.any { it.playerId == p.id })
         assertTrue(app.equipment.storedBackups.isEmpty())
     }

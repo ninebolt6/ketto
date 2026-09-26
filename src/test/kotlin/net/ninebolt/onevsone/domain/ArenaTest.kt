@@ -1,5 +1,6 @@
 package net.ninebolt.onevsone.domain
 
+import net.ninebolt.onevsone.domain.fixtures.arenaId
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -7,7 +8,7 @@ import kotlin.test.assertTrue
 
 class ArenaTest {
 
-    private val id = Arena.Id.new("arena1")
+    private val id = arenaId("arena1")
     private val pos1 = WorldPosition.new("world", 1.0, 64.0, 1.0)
     private val pos2 = WorldPosition.new("world", 2.0, 64.0, 2.0)
 

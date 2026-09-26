@@ -1,6 +1,7 @@
 package net.ninebolt.onevsone.domain
 
 import net.ninebolt.onevsone.domain.fixtures.alice
+import net.ninebolt.onevsone.domain.fixtures.arenaId
 import net.ninebolt.onevsone.domain.fixtures.bob
 import net.ninebolt.onevsone.domain.fixtures.carol
 import net.ninebolt.onevsone.domain.fixtures.match
@@ -274,7 +275,7 @@ class ArenaMatchTest {
     @Test
     fun `defeat is rejected while a round resolution is pending`() {
         val resolving = ArenaMatch.restored(
-            Arena.Id.new("a1"),
+            arenaId("a1"),
             3,
             ArenaState.RoundCountdown.of(alice, bob, firstWins = 1, secondWins = 0, resolving = true),
         )
@@ -285,10 +286,10 @@ class ArenaMatchTest {
     @Test
     fun `factories reject invalid construction`() {
         assertFailsWith<IllegalArgumentException> {
-            ArenaMatch.new(Arena.Id.new("a1"), 0)
+            ArenaMatch.new(arenaId("a1"), 0)
         }
         assertFailsWith<IllegalArgumentException> {
-            ArenaMatch.restored(Arena.Id.new("a1"), 0, ArenaState.Waiting)
+            ArenaMatch.restored(arenaId("a1"), 0, ArenaState.Waiting)
         }
         assertFailsWith<IllegalArgumentException> {
             ArenaState.Countdown.of(alice, alice)
@@ -297,7 +298,7 @@ class ArenaMatchTest {
             ArenaState.InGame.of(alice, bob, -1, 0)
         }
         assertFailsWith<IllegalArgumentException> {
-            ArenaMatch.restored(Arena.Id.new("a1"), 3, ArenaState.Waiting, epoch = -1)
+            ArenaMatch.restored(arenaId("a1"), 3, ArenaState.Waiting, epoch = -1)
         }
     }
 }

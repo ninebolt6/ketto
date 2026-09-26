@@ -9,7 +9,9 @@ internal val bob = Participant.new("Bob")
 internal val carol = Participant.new("Carol")
 internal val dave = Participant.new("Dave")
 
-internal fun match(requiredWins: Int = 3) = ArenaMatch.new(Arena.Id.new("arena1"), requiredWins)
+internal fun arenaId(name: String): Arena.Id = Arena.Id.of(name) ?: error("invalid arena name: '$name'")
+
+internal fun match(requiredWins: Int = 3) = ArenaMatch.new(arenaId("arena1"), requiredWins)
 
 internal fun startedMatch(requiredWins: Int = 3): ArenaMatch {
     var m = match(requiredWins)
