@@ -2,8 +2,8 @@
 
 ## Architecture
 
-- Dependency direction is `infrastructure → application → domain` (inward only,
-  enforced by `ArchitectureTest`). Wire dependencies manually in
+- Dependency direction is `infrastructure → application → domain` (inward
+  only). Wire dependencies manually in
   `OneVsOnePlugin` (the composition root); application code reaches the
   outside only through interfaces declared in `port/`
 - One repository port method is one atomic persistence unit; cross-table
@@ -39,11 +39,9 @@
 
 ## Tests
 
-- `ArchitectureTest` enforces the layer boundaries for this section. Use
-  `kotlin.test` assertions; domain/application tests are pure with fakes via
-  `TestApp`; infrastructure tests use MockBukkit via `TestEnv` (listeners
-  self-register on creation). Isolated persistence tests may use `@TempDir`
-  without a server
+- Domain/application tests are pure with fakes via `TestApp`; infrastructure
+  tests use MockBukkit via `TestEnv` (listeners self-register on creation).
+  Isolated persistence tests may use `@TempDir` without a server
 - Drive event-driven behavior through real player actions (`disconnect()`,
   `reconnect()`, `teleport()`), then `PlayerSimulation`/`simulateDamage`
   with a real `DamageSource.builder`, then `env.fire(event)` — in that
@@ -56,6 +54,9 @@
   interactions
 - Test helpers (fakes, `TestApp`, `TestEnv`, etc.) go in each layer's
   `fixtures/` subpackage
+- A test file mirrors the class under test (`Foo` -> `FooTest`, or
+  `FooMeaningTest` for splits); scenario flows spanning multiple components
+  (E2E) are exempt
 
 ## Style
 

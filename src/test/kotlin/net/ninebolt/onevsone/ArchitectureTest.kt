@@ -1,8 +1,10 @@
 package net.ninebolt.onevsone
 
+import com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage
 import com.tngtech.archunit.core.importer.ClassFileImporter
 import com.tngtech.archunit.core.importer.ImportOption
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
+import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noFields
 import org.junit.jupiter.api.Test
 import java.io.File
 import kotlin.test.assertTrue
@@ -110,6 +112,51 @@ class ArchitectureTest {
         noClasses().should().dependOnClassesThat()
             .haveFullyQualifiedName("org.junit.jupiter.api.Assertions")
             .check(testClasses)
+    }
+
+    @Test
+    fun `domain values are immutable`() {
+        noFields().that().areDeclaredInClassesThat(resideInAPackage("net.ninebolt.onevsone.domain.."))
+            .should().notBeFinal()
+            .check(classes)
+    }
+
+    @Test
+    fun `test files mirror a main class`() {
+        val mainNames = classes.map { it.simpleName }
+            .filter { it.firstOrNull()?.isUpperCase() == true }
+            .toSet()
+        val metaTests = setOf("ArchitectureTest", "DependencyAlignmentTest")
+        val scenarioTests = setOf(
+            "MatchScenarioTest",
+            "PaperArenaFailureTest",
+            "PaperArenaMembershipTest",
+            "PaperInventoryRecoveryTest",
+            "PaperMatchProgressionTest",
+        )
+        val offenders = File("src/test/kotlin").walkTopDown()
+            .filter { it.isFile && it.name.endsWith("Test.kt") }
+            .filterNot { it.nameWithoutExtension in metaTests + scenarioTests }
+            .filter { file ->
+                val base = file.nameWithoutExtension.removeSuffix("Test")
+                "/fixtures/" in file.path ||
+                    mainNames.none { base == it || (base.startsWith(it) && base[it.length].isUpperCase()) }
+            }
+            .map { it.path }
+            .toList()
+        assertTrue(offenders.isEmpty(), "test files not mirroring a main class: $offenders")
+    }
+
+    @Test
+    fun `test helpers live in a fixtures package`() {
+        val testInfra = setOf("FailOnAbortedTestExtension.kt")
+        val offenders = File("src/test/kotlin").walkTopDown()
+            .filter { it.isFile && it.extension == "kt" }
+            .filterNot { it.name.endsWith("Test.kt") || it.name in testInfra }
+            .filterNot { "/fixtures/" in it.path }
+            .map { it.path }
+            .toList()
+        assertTrue(offenders.isEmpty(), "test helper files outside a fixtures package: $offenders")
     }
 
     @Test
