@@ -43,7 +43,7 @@ class ArenaApplicationService(
         val handle = players.handle(playerId)
         recovery.pending(playerId)?.let { ticket ->
             if (handle == null || handle.dead) return JoinOutput.InMatch
-            recovery.restoreNow(handle, ticket)
+            if (!recovery.restoreNow(handle, ticket)) return JoinOutput.RestorePending
         }
 
         registry.putMatch(step.match, persist = sync::persistMatch)
@@ -141,6 +141,7 @@ sealed interface JoinOutput {
     data object AlreadyJoined : JoinOutput
     data object NotEnabled : JoinOutput
     data object InMatch : JoinOutput
+    data object RestorePending : JoinOutput
     data object NotFound : JoinOutput
 }
 

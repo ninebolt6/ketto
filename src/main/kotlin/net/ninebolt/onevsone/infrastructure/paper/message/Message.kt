@@ -58,6 +58,7 @@ sealed class Message(val key: MessageKey, vararg val args: Arg) {
     data object MatchWaitOneMore : Message(MessageKey.MATCH_WAIT_ONE_MORE)
     data object MatchAlreadyJoined : Message(MessageKey.MATCH_ALREADY_JOINED)
     data object MatchInGame : Message(MessageKey.MATCH_IN_GAME)
+    data object MatchRestorePending : Message(MessageKey.MATCH_RESTORE_PENDING)
     data object MatchLeft : Message(MessageKey.MATCH_LEFT)
     data object MatchCannotLeave : Message(MessageKey.MATCH_CANNOT_LEAVE)
     data object MatchNotJoined : Message(MessageKey.MATCH_NOT_JOINED)
@@ -138,6 +139,7 @@ enum class MessageKey {
     MATCH_WAIT_ONE_MORE,
     MATCH_ALREADY_JOINED,
     MATCH_IN_GAME,
+    MATCH_RESTORE_PENDING,
     MATCH_LEFT,
     MATCH_CANNOT_LEAVE,
     MATCH_NOT_JOINED,

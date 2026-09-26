@@ -153,6 +153,25 @@ class PlayerRecoveryServiceTest {
     }
 
     @Test
+    fun `restore failure returns recovery rejection and keeps ticket`() {
+        val app = TestApp()
+        val arenaId = app.newArena()
+        val p = app.players.add("Alice")
+        val ref = backupRef(p.id, p.name)
+        app.equipment.seedBackup(ref)
+        app.recovery.loadPersisted()
+        val ticket = assertNotNull(app.service.pendingRestore(p.id))
+        app.equipment.failOnRestore = true
+
+        assertEquals(JoinOutput.RestorePending, app.service.join(p.id, p.name, arenaId))
+
+        assertNull(app.service.arenaIdOf(p.id))
+        assertTrue(app.registry.match(arenaId)!!.participants.isEmpty())
+        assertEquals(ticket, app.service.pendingRestore(p.id))
+        assertTrue(app.equipment.storedBackups.containsKey(ref.backupId))
+    }
+
+    @Test
     fun `stale deferred callback after abort cannot reapply`() {
         val app = TestApp()
         val (_, p2) = app.startMatch()

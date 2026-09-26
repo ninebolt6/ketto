@@ -74,6 +74,8 @@ class ArenaSignListener(
 
             JoinOutput.InMatch -> messenger.send(player, Message.MatchInGame)
 
+            JoinOutput.RestorePending -> messenger.send(player, Message.MatchRestorePending)
+
             JoinOutput.NotFound -> messenger.send(player, Message.ArenaNotFound)
         }
     }

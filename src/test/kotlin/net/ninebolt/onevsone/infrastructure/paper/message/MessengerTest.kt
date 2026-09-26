@@ -48,6 +48,20 @@ class MessengerTest {
     }
 
     @Test
+    fun `restore pending message explains the join restriction in both languages`() {
+        val messenger = load()
+
+        assertEquals(
+            "前回のインベントリ復元が完了していないため、アリーナに参加できません。解消しない場合は管理者に連絡してください。",
+            plain.serialize(messenger.render(Message.MatchRestorePending, "ja")),
+        )
+        assertEquals(
+            "You cannot join until your previous inventory has been restored. Contact an administrator if this continues.",
+            plain.serialize(messenger.render(Message.MatchRestorePending, "en")),
+        )
+    }
+
+    @Test
     fun `every bundled template parses and differs from its key`() {
         val mini = MiniMessage.miniMessage()
         listOf("ja", "en").forEach { lang ->

@@ -1,6 +1,7 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
+import net.ninebolt.onevsone.application.JoinOutput
 import net.ninebolt.onevsone.domain.BlockPosition
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.breakBlock
@@ -86,6 +87,17 @@ class ArenaListenerSignTest {
         val messages = p2.drainMessages()
         assertTrue(messages.any { it.contains("Joined arena") })
         assertTrue(messages.none { it.contains("one more") })
+    }
+
+    @Test
+    fun `pending restore join output explains why joining is blocked`() {
+        val player = env.player("Alice")
+
+        env.signListener.renderJoin(player, "arena1", JoinOutput.RestorePending)
+
+        val message = player.drainMessages().single()
+        assertTrue(message.contains("previous inventory has been restored"))
+        assertTrue(message.contains("administrator"))
     }
 
     @Test
