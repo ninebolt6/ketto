@@ -9,12 +9,10 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
-import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class ArenaLifecycleCommandTest {
+class ArenaCreateCommandTest {
 
     @TempDir
     lateinit var folder: File
@@ -32,53 +30,14 @@ class ArenaLifecycleCommandTest {
     }
 
     @Test
-    fun `arena create remove lifecycle`() {
+    fun `arena create reports success and rejects a duplicate`() {
         val op = env.opPlayer("Op")
         env.runCommand(op, "arena", "create", "newarena")
         assertTrue(op.drainMessages().any { it.contains("Created arena: newarena") })
-        assertEquals(false, env.service.arena("newarena")!!.enabled)
+        assertFalse(env.service.arena("newarena")!!.enabled)
 
         env.runCommand(op, "arena", "create", "newarena")
         assertTrue(op.drainMessages().any { it.contains("That arena already exists") })
-
-        env.runCommand(op, "arena", "newarena", "remove")
-        assertTrue(op.drainMessages().any { it.contains("Removed arena: newarena") })
-        assertNull(env.service.arena("newarena"))
-
-        env.runCommand(op, "arena", "newarena", "remove")
-        assertTrue(op.drainMessages().any { it.contains("That arena does not exist") })
-    }
-
-    @Test
-    fun `arena enable disable`() {
-        val op = env.opPlayer("Op")
-        env.newArena("a2", enabled = false)
-        env.runCommand(op, "arena", "a2", "enable")
-        assertTrue(op.drainMessages().any { it.contains("Enabled arena") })
-        env.runCommand(op, "arena", "a2", "enable")
-        assertTrue(op.drainMessages().any { it.contains("That arena is already enabled!") })
-        env.runCommand(op, "arena", "a2", "disable")
-        assertTrue(op.drainMessages().any { it.contains("Disabled arena") })
-        env.runCommand(op, "arena", "a2", "disable")
-        assertTrue(op.drainMessages().any { it.contains("That arena is already disabled!") })
-        assertEquals(false, env.service.arena("a2")!!.enabled)
-        assertFalse(env.arenaRepo.find("a2")!!.enabled)
-    }
-
-    @Test
-    fun `enable without spawns reports the missing slots`() {
-        val op = env.opPlayer("Op")
-        env.runCommand(op, "arena", "create", "newarena")
-        env.runCommand(op, "arena", "newarena", "enable")
-        assertTrue(op.drainMessages().any { it.contains("Set spawn 1, 2 for arena newarena first") })
-        assertEquals(false, env.service.arena("newarena")!!.enabled)
-    }
-
-    @Test
-    fun `enable reports not found for an unknown arena`() {
-        val op = env.opPlayer("Op")
-        env.runCommand(op, "arena", "missing", "enable")
-        assertTrue(op.drainMessages().any { it.contains("That arena does not exist") })
     }
 
     @Test

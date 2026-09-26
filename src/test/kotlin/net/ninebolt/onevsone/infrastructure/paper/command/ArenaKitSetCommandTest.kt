@@ -1,10 +1,11 @@
 package net.ninebolt.onevsone.infrastructure.paper.command
 
+import net.ninebolt.onevsone.domain.fixtures.arenaId
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.opPlayer
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.runCommand
-import org.bukkit.Location
+import org.bukkit.Material
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -13,7 +14,7 @@ import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class LobbyCommandTest {
+class ArenaKitSetCommandTest {
 
     @TempDir
     lateinit var folder: File
@@ -31,20 +32,19 @@ class LobbyCommandTest {
     }
 
     @Test
-    fun `lobby set writes config`() {
-        val p = env.opPlayer("Alice")
-        p.setLocation(Location(env.world(), 7.5, 64.0, -2.5, 90f, 0f))
-        env.runCommand(p, "lobby", "set")
-        assertTrue(p.drainMessages().any { it.contains("Lobby location set") })
-        val lobby = env.lobbyRepo.lobby()!!
-        assertEquals(7.5, lobby.x)
-        assertEquals(90f, lobby.yaw, 0.001f)
+    fun `arena kit set saves kit`() {
+        val op = env.opPlayer("Op")
+        env.newArena()
+        op.inventory.setItem(0, env.item(Material.DIAMOND_SWORD))
+        env.runCommand(op, "arena", "arena1", "kit", "set")
+        assertTrue(op.drainMessages().any { it.contains("Set inventory for arena") })
+        assertEquals(Material.DIAMOND_SWORD, env.equipment.kitOf(arenaId("arena1"))?.items?.get(0)?.type)
     }
 
     @Test
-    fun `bare lobby shows usage`() {
-        val p = env.opPlayer("Alice")
-        env.runCommand(p, "lobby")
-        assertTrue(p.drainMessages().any { it.contains("/1vs1 lobby set") })
+    fun `kit set reports not found for an unknown arena`() {
+        val op = env.opPlayer("Op")
+        env.runCommand(op, "arena", "missing", "kit", "set")
+        assertTrue(op.drainMessages().any { it.contains("That arena does not exist") })
     }
 }

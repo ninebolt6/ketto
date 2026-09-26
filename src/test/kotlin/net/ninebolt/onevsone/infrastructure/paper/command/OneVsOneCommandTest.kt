@@ -139,4 +139,18 @@ class OneVsOneCommandTest {
         arenaArg.children.forEach { assertTrue(it.canUse(asOp), it.name) }
         assertTrue(env.tabComplete(p, "arena", "").contains("Arena1"))
     }
+
+    @Test
+    fun `bare lobby shows usage`() {
+        val p = env.opPlayer("Alice")
+        env.runCommand(p, "lobby")
+        assertTrue(p.drainMessages().any { it.contains("/1vs1 lobby set") })
+    }
+
+    @Test
+    fun `bare sign shows ops usage`() {
+        val op = env.opPlayer("Op")
+        env.runCommand(op, "arena", "x", "sign")
+        assertTrue(op.drainMessages().any { it.contains("/1vs1 arena <arena> sign <set|remove>") })
+    }
 }

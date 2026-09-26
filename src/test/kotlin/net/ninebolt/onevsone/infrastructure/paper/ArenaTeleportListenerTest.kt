@@ -23,7 +23,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class ArenaListenerTeleportTest {
+class ArenaTeleportListenerTest {
 
     @TempDir
     lateinit var folder: File

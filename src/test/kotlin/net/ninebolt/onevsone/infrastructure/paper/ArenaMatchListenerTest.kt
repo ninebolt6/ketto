@@ -29,7 +29,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class ArenaListenerCombatTest {
+class ArenaMatchListenerTest {
 
     @TempDir
     lateinit var folder: File

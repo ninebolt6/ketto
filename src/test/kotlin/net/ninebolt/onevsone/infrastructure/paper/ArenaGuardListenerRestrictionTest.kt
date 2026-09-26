@@ -22,7 +22,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class ArenaListenerRestrictionTest {
+class ArenaGuardListenerRestrictionTest {
 
     @TempDir
     lateinit var folder: File

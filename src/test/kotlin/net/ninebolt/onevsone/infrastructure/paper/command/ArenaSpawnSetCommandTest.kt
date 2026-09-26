@@ -13,7 +13,7 @@ import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class ArenaSpawnCommandTest {
+class ArenaSpawnSetCommandTest {
 
     @TempDir
     lateinit var folder: File

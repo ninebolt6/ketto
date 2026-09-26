@@ -33,7 +33,7 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class ArenaListenerSignTest {
+class ArenaSignListenerTest {
 
     @TempDir
     lateinit var folder: File

@@ -13,10 +13,9 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class ArenaSignCommandTest {
+class ArenaSignSetCommandTest {
 
     @TempDir
     lateinit var folder: File
@@ -87,30 +86,5 @@ class ArenaSignCommandTest {
         env.runCommand(op, "arena", "arena1", "sign", "set")
         assertTrue(op.drainMessages().none { it.contains("already registered") })
         assertEquals("arena1", env.signRepo.signOwner(BlockPosition.new("world", 4, 64, 4)))
-    }
-
-    @Test
-    fun `arena sign remove unregisters sign`() {
-        val op = env.opPlayer("Op")
-        env.newArena()
-        env.signRepo.setSign("arena1", BlockPosition.new("world", 4, 64, 4))
-
-        env.runCommand(op, "arena", "arena1", "sign", "remove")
-        assertTrue(op.drainMessages().any { it.contains("Unregistered sign for arena") })
-        assertNull(env.signRepo.signOwner(BlockPosition.new("world", 4, 64, 4)))
-        assertNull(env.signRepo.signLocation("arena1"))
-
-        env.runCommand(op, "arena", "arena1", "sign", "remove")
-        assertTrue(op.drainMessages().any { it.contains("No sign is registered for that arena") })
-
-        env.runCommand(op, "arena", "missing", "sign", "remove")
-        assertTrue(op.drainMessages().any { it.contains("That arena does not exist") })
-    }
-
-    @Test
-    fun `bare sign shows ops usage`() {
-        val op = env.opPlayer("Op")
-        env.runCommand(op, "arena", "x", "sign")
-        assertTrue(op.drainMessages().any { it.contains("/1vs1 arena <arena> sign <set|remove>") })
     }
 }

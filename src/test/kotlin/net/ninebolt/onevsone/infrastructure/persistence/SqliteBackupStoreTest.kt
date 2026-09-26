@@ -1,0 +1,94 @@
+package net.ninebolt.onevsone.infrastructure.persistence
+
+import net.ninebolt.onevsone.application.port.BackupRef
+import net.ninebolt.onevsone.application.port.PersistenceFailure
+import net.ninebolt.onevsone.domain.MatchId
+import net.ninebolt.onevsone.domain.Participant
+import net.ninebolt.onevsone.infrastructure.paper.PaperInventorySnapshot
+import net.ninebolt.onevsone.infrastructure.persistence.fixtures.withStore
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import java.io.File
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
+import kotlin.uuid.Uuid
+
+class SqliteBackupStoreTest {
+
+    @TempDir
+    lateinit var folder: File
+
+    @Test
+    fun `backup round trip and delete by backup id`() = withStore(folder) { store ->
+        val backups = SqliteBackupStore(store)
+        val p = Participant.new("Alice")
+        val ref = BackupRef.new(MatchId.new(), p.id, p.name)
+        backups.saveBackups(listOf(PersistedBackup(ref, PaperInventorySnapshot(items = listOf(null)))))
+
+        backups.deleteBackup(BackupRef.new(MatchId.new(), p.id, p.name))
+        assertEquals(1, backups.persistedBackups().size)
+
+        backups.deleteBackup(ref)
+        assertEquals(0, backups.persistedBackups().size)
+        assertNull(backups.backupFor(ref))
+    }
+
+    @Test
+    fun `same name backups coexist because backup_id is the identity`() = withStore(folder) { store ->
+        val backups = SqliteBackupStore(store)
+        val first = Participant.new("Alice")
+        val second = Participant.new("Alice")
+        val match = MatchId.new()
+        backups.saveBackups(
+            listOf(
+                PersistedBackup(BackupRef.new(match, first.id, first.name), PaperInventorySnapshot()),
+                PersistedBackup(BackupRef.new(match, second.id, second.name), PaperInventorySnapshot()),
+            ),
+        )
+        assertEquals(2, backups.persistedBackups().size)
+    }
+
+    @Test
+    fun `codec failure surfaces as PersistenceFailure`() {
+        withStore(folder) { store ->
+            store.exec(
+                "INSERT INTO backups(backup_id, match_id, player_uuid, player_name, payload) VALUES (?, ?, ?, ?, ?)",
+                Uuid.random().toString(),
+                Uuid.random().toString(),
+                null,
+                "Alice",
+                "not: [valid",
+            )
+            assertFailsWith<PersistenceFailure> { SqliteBackupStore(store).persistedBackups() }
+        }
+    }
+
+    @Test
+    fun `backup rows with an unparseable player uuid yield a null player id`() = withStore(folder) { store ->
+        store.exec(
+            "INSERT INTO backups(backup_id, match_id, player_uuid, player_name, payload) VALUES (?, ?, ?, ?, ?)",
+            Uuid.random().toString(),
+            Uuid.random().toString(),
+            "not-a-uuid",
+            "Alice",
+            InventoryPayloadCodec.encode(PaperInventorySnapshot()),
+        )
+        assertNull(SqliteBackupStore(store).persistedBackups().single().ref.playerId)
+    }
+
+    @Test
+    fun `a backup row with a null owner uuid reads back as an ownerless ref`() = withStore(folder) { store ->
+        store.exec(
+            "INSERT INTO backups(backup_id, match_id, player_uuid, player_name, payload) VALUES (?, ?, ?, ?, ?)",
+            Uuid.random().toString(),
+            Uuid.random().toString(),
+            null,
+            "Alice",
+            InventoryPayloadCodec.encode(PaperInventorySnapshot()),
+        )
+        val ref = SqliteBackupStore(store).persistedBackups().single().ref
+        assertNull(ref.playerId)
+        assertEquals("Alice", ref.playerName)
+    }
+}

@@ -63,7 +63,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
-class ArenaListenerItemGuardTest {
+class ArenaGuardListenerInteractTest {
 
     @TempDir
     lateinit var folder: File

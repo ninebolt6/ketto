@@ -1,20 +1,19 @@
 package net.ninebolt.onevsone.infrastructure.paper.command
 
-import net.ninebolt.onevsone.domain.fixtures.arenaId
+import net.ninebolt.onevsone.domain.BlockPosition
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.opPlayer
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.runCommand
-import org.bukkit.Material
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
-import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class ArenaKitCommandTest {
+class ArenaSignRemoveCommandTest {
 
     @TempDir
     lateinit var folder: File
@@ -32,19 +31,20 @@ class ArenaKitCommandTest {
     }
 
     @Test
-    fun `arena kit set saves kit`() {
+    fun `arena sign remove unregisters sign`() {
         val op = env.opPlayer("Op")
         env.newArena()
-        op.inventory.setItem(0, env.item(Material.DIAMOND_SWORD))
-        env.runCommand(op, "arena", "arena1", "kit", "set")
-        assertTrue(op.drainMessages().any { it.contains("Set inventory for arena") })
-        assertEquals(Material.DIAMOND_SWORD, env.equipment.kitOf(arenaId("arena1"))?.items?.get(0)?.type)
-    }
+        env.signRepo.setSign("arena1", BlockPosition.new("world", 4, 64, 4))
 
-    @Test
-    fun `kit set reports not found for an unknown arena`() {
-        val op = env.opPlayer("Op")
-        env.runCommand(op, "arena", "missing", "kit", "set")
+        env.runCommand(op, "arena", "arena1", "sign", "remove")
+        assertTrue(op.drainMessages().any { it.contains("Unregistered sign for arena") })
+        assertNull(env.signRepo.signOwner(BlockPosition.new("world", 4, 64, 4)))
+        assertNull(env.signRepo.signLocation("arena1"))
+
+        env.runCommand(op, "arena", "arena1", "sign", "remove")
+        assertTrue(op.drainMessages().any { it.contains("No sign is registered for that arena") })
+
+        env.runCommand(op, "arena", "missing", "sign", "remove")
         assertTrue(op.drainMessages().any { it.contains("That arena does not exist") })
     }
 }
