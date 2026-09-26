@@ -64,7 +64,9 @@ data class ArenaMatch private constructor(
     val inProgress: Boolean get() =
         (state == ArenaState.INGAME || state == ArenaState.ROUNDCOUNTDOWN) && full
 
-    fun matchup(): Pair<Participant, Participant>? = if (inProgress) participants[SpawnSlot.FIRST.index] to participants[SpawnSlot.SECOND.index] else null
+    fun matchup(): Pair<Participant, Participant>? = if (inProgress) fullMatchup() else null
+
+    fun fullMatchup(): Pair<Participant, Participant>? = if (full) participants[SpawnSlot.FIRST.index] to participants[SpawnSlot.SECOND.index] else null
 
     fun participant(id: Uuid): Participant? = participants.firstOrNull { it.id == id }
 

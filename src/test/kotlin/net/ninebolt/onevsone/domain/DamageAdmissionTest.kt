@@ -18,39 +18,37 @@ class DamageAdmissionTest {
 
     @Test
     fun `both unrestricted passes through`() {
-        assertTrue(DamageAdmission.allows(alice.id, bob.id, waiting, null))
-        assertTrue(DamageAdmission.allows(carol.id, carol.id, null, null))
+        assertTrue(DamageAdmission.allows(side(alice, waiting), null))
+        assertTrue(DamageAdmission.allows(null, null))
     }
 
     @Test
     fun `opponent or self allowed while ingame`() {
-        assertTrue(DamageAdmission.allows(alice.id, bob.id, ingame, ingame))
-        assertTrue(DamageAdmission.allows(alice.id, alice.id, ingame, ingame))
+        assertTrue(DamageAdmission.allows(side(alice, ingame), side(bob, ingame)))
+        assertTrue(DamageAdmission.allows(side(alice, ingame), side(alice, ingame)))
     }
 
     @Test
     fun `third party and mob damage denied while ingame`() {
-        assertFalse(DamageAdmission.allows(alice.id, carol.id, ingame, null))
-        assertFalse(DamageAdmission.allows(alice.id, null, ingame, null))
+        assertFalse(DamageAdmission.allows(side(alice, ingame), null))
     }
 
     @Test
     fun `participant cannot damage outsiders or mobs`() {
-        assertFalse(DamageAdmission.allows(carol.id, alice.id, null, ingame))
-        assertFalse(DamageAdmission.allows(null, alice.id, null, ingame))
+        assertFalse(DamageAdmission.allows(null, side(alice, ingame)))
     }
 
     @Test
     fun `everything denied while damage cancelled`() {
         val roundCountdown = ingame.recordDefeat(bob.id, DefeatCause.FALL).match
         assertEquals(ArenaState.ROUNDCOUNTDOWN, roundCountdown.state)
-        assertFalse(DamageAdmission.allows(alice.id, bob.id, roundCountdown, roundCountdown))
-        assertFalse(DamageAdmission.allows(alice.id, alice.id, roundCountdown, roundCountdown))
+        assertFalse(DamageAdmission.allows(side(alice, roundCountdown), side(bob, roundCountdown)))
+        assertFalse(DamageAdmission.allows(side(alice, roundCountdown), side(alice, roundCountdown)))
     }
 
     @Test
     fun `non player victim does not bypass attacker restriction`() {
-        assertFalse(DamageAdmission.allows(null, alice.id, null, ingame))
+        assertFalse(DamageAdmission.allows(null, side(alice, ingame)))
     }
 
     @Test
@@ -60,8 +58,10 @@ class DamageAdmissionTest {
         check(began.outcome)
         val other = began.match
         assertEquals(ArenaState.INGAME, other.state)
-        assertTrue(DamageAdmission.allows(carol.id, dave.id, other, other))
-        assertFalse(DamageAdmission.allows(alice.id, carol.id, ingame, other))
-        assertFalse(DamageAdmission.allows(carol.id, alice.id, other, ingame))
+        assertTrue(DamageAdmission.allows(side(carol, other), side(dave, other)))
+        assertFalse(DamageAdmission.allows(side(alice, ingame), side(carol, other)))
+        assertFalse(DamageAdmission.allows(side(carol, other), side(alice, ingame)))
     }
+
+    private fun side(participant: Participant, match: ArenaMatch) = DamageAdmission.Side(participant.id, match)
 }

@@ -53,15 +53,16 @@ class ArenaMatchListener(
     }
 
     private fun onEntityDamage(event: EntityDamageByEntityEvent) {
-        val victim = event.entity as? Player
-        val attacker = event.damageSource.causingEntity as? Player
         val allowed = DamageAdmission.allows(
-            victimId = victim?.let { it.uniqueId.toKotlinUuid() },
-            attackerId = attacker?.let { it.uniqueId.toKotlinUuid() },
-            victimMatch = victim?.let { service.matchOf(it.uniqueId.toKotlinUuid()) },
-            attackerMatch = attacker?.let { service.matchOf(it.uniqueId.toKotlinUuid()) },
+            victim = sideOf(event.entity as? Player),
+            attacker = sideOf(event.damageSource.causingEntity as? Player),
         )
         if (!allowed) event.isCancelled = true
+    }
+
+    private fun sideOf(player: Player?): DamageAdmission.Side? {
+        val id = player?.uniqueId?.toKotlinUuid() ?: return null
+        return service.matchOf(id)?.let { DamageAdmission.Side(id, it) }
     }
 
     @EventHandler

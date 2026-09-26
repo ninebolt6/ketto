@@ -80,17 +80,17 @@ class MatchProgressionService(
                     registry.match(arenaId)?.epoch == gen
                 }) { h ->
                     rearm(arenaId, outcome.loser, h)
-                    registry.match(arenaId)?.let { teleportToSlot(it, outcome.loser, h) }
+                    registry.match(arenaId)?.slotOf(outcome.loser.id)?.let { teleportToSlot(arenaId, it, h) }
                     release()
                 }
             } else if (loserHandle != null) {
                 rearm(arenaId, outcome.loser, loserHandle)
-                teleportToSlot(match, outcome.loser, loserHandle)
+                match.slotOf(outcome.loser.id)?.let { teleportToSlot(arenaId, it, loserHandle) }
                 scheduler.schedule(0) { release() }
             } else {
                 release()
             }
-            winnerHandle?.let { teleportToSlot(match, outcome.winner, it) }
+            winnerHandle?.let { h -> match.slotOf(outcome.winner.id)?.let { teleportToSlot(arenaId, it, h) } }
 
             sync.refreshSign(match)
             startRoundCountdown(arenaId, gen)
@@ -177,8 +177,8 @@ class MatchProgressionService(
             try {
                 rearm(arenaId, first, p1)
                 rearm(arenaId, second, p2)
-                teleportToSlot(match, first, p1)
-                teleportToSlot(match, second, p2)
+                teleportToSlot(arenaId, SpawnSlot.FIRST, p1)
+                teleportToSlot(arenaId, SpawnSlot.SECOND, p2)
                 presentation.matchStart(participantIds)
                 val began = registry.transact(arenaId, persist = sync::persistMatch) { it.beginMatch() }
                     ?: run {
@@ -232,9 +232,11 @@ class MatchProgressionService(
                 task.cancel()
                 return@repeat
             }
-            // stillCounting implies a full lobby, so both participant slots are populated
-            val first = match.participants[SpawnSlot.FIRST.index]
-            val second = match.participants[SpawnSlot.SECOND.index]
+            // stillCounting implies a full lobby, so the pair is present in practice
+            val (first, second) = match.fullMatchup() ?: run {
+                task.cancel()
+                return@repeat
+            }
             val p1 = players.handle(first.id)
             val p2 = players.handle(second.id)
             if (p1 == null || p2 == null) {
@@ -307,12 +309,10 @@ class MatchProgressionService(
         action: (PlayerHandle) -> Unit,
     ) = scheduleDeferred(playerId, { recovery.pending(playerId) === ticket }, action)
 
-    private fun teleportToSlot(match: ArenaMatch, participant: Participant, handle: PlayerHandle) {
-        // Callers pass only match participants, so the id is always found
-        val slot = SpawnSlot.entries[match.participants.indexOfFirst { it.id == participant.id }]
-        val spawn = registry.enabledArena(match.arenaId)?.spawn(slot)
+    private fun teleportToSlot(arenaId: Arena.Id, slot: SpawnSlot, handle: PlayerHandle) {
+        val spawn = registry.enabledArena(arenaId)?.spawn(slot)
         if (spawn == null) {
-            logger.warning("Arena ${match.arenaId.name} is not enabled during an active match; skipping teleport")
+            logger.warning("Arena ${arenaId.name} is not enabled during an active match; skipping teleport")
             return
         }
         handle.teleport(spawn)
