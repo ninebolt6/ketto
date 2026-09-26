@@ -11,14 +11,27 @@ data class ArenaMatch private constructor(
     val resolving: Boolean = false,
     val epoch: Long = 0L,
 ) {
+    init {
+        require(requiredWins >= 1) { "requiredWins must be >= 1 (was $requiredWins)" }
+        require(participants.size == expectedParticipants(state)) {
+            "state $state expects ${expectedParticipants(state)} participants (was ${participants.size})"
+        }
+        require(participants.distinctBy { it.id }.size == participants.size) {
+            "duplicate participant ids"
+        }
+        val ids = participants.mapTo(HashSet()) { it.id }
+        require(wins.keys.all { it in ids }) { "wins recorded for non-participant" }
+        require(!resolving || state == ArenaState.ROUNDCOUNTDOWN) {
+            "resolving is only valid in ROUNDCOUNTDOWN (was $state)"
+        }
+        require(epoch >= 0) { "epoch must be >= 0 (was $epoch)" }
+    }
+
     companion object {
         // participants[i] teleports to the spawn slot with index i, so capacity equals the spawn slot count
         val MAX_PARTICIPANTS = SpawnSlot.entries.size
 
-        fun new(arenaId: Arena.Id, requiredWins: Int): ArenaMatch {
-            require(requiredWins >= 1) { "requiredWins must be >= 1 (was $requiredWins)" }
-            return ArenaMatch(arenaId, requiredWins)
-        }
+        fun new(arenaId: Arena.Id, requiredWins: Int): ArenaMatch = ArenaMatch(arenaId, requiredWins)
 
         fun restored(
             arenaId: Arena.Id,
@@ -28,22 +41,7 @@ data class ArenaMatch private constructor(
             wins: Map<Uuid, Int>,
             resolving: Boolean = false,
             epoch: Long = 0L,
-        ): ArenaMatch {
-            require(requiredWins >= 1) { "requiredWins must be >= 1 (was $requiredWins)" }
-            require(participants.size == expectedParticipants(state)) {
-                "state $state expects ${expectedParticipants(state)} participants (was ${participants.size})"
-            }
-            require(participants.distinctBy { it.id }.size == participants.size) {
-                "duplicate participant ids"
-            }
-            val ids = participants.mapTo(HashSet()) { it.id }
-            require(wins.keys.all { it in ids }) { "wins recorded for non-participant" }
-            require(!resolving || state == ArenaState.ROUNDCOUNTDOWN) {
-                "resolving is only valid in ROUNDCOUNTDOWN (was $state)"
-            }
-            require(epoch >= 0) { "epoch must be >= 0 (was $epoch)" }
-            return ArenaMatch(arenaId, requiredWins, state, participants, wins, resolving, epoch)
-        }
+        ): ArenaMatch = ArenaMatch(arenaId, requiredWins, state, participants, wins, resolving, epoch)
 
         private fun expectedParticipants(state: ArenaState): Int = when (state) {
             ArenaState.WAITING -> 0
