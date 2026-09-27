@@ -66,6 +66,13 @@ class ArenaRegistry(private val requiredWins: Int) {
         return transition
     }
 
+    fun matchOf(playerId: Uuid): ArenaMatch? = arenaOf(playerId)?.let(::match)
+
+    fun <O> transactFor(
+        playerId: Uuid,
+        operation: (ArenaMatch) -> Transition<O>,
+    ): Transition<O>? = arenaOf(playerId)?.let { transact(it, operation) }
+
     fun arenaOf(playerId: Uuid): Arena.Id? = playerArena[playerId]
 
     fun isJoined(playerId: Uuid): Boolean = playerId in playerArena

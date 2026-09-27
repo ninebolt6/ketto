@@ -115,7 +115,6 @@ private class PluginModule(
         recovery = recovery,
         progression = progression,
         signs = signs,
-        logger = plugin.logger,
     )
     val lifecycle = ArenaLifecycleService(
         registry = registry,

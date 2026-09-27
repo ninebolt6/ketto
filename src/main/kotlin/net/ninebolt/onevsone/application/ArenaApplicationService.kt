@@ -9,7 +9,6 @@ import net.ninebolt.onevsone.domain.JoinOutcome
 import net.ninebolt.onevsone.domain.LeaveOutcome
 import net.ninebolt.onevsone.domain.Participant
 import net.ninebolt.onevsone.domain.QuitOutcome
-import java.util.logging.Logger
 import kotlin.uuid.Uuid
 
 class ArenaApplicationService(
@@ -18,10 +17,9 @@ class ArenaApplicationService(
     private val recovery: PlayerRecoveryService,
     private val progression: MatchProgressionService,
     private val signs: ArenaSignService,
-    private val logger: Logger,
 ) {
 
-    fun matchOf(playerId: Uuid): ArenaMatch? = registry.arenaOf(playerId)?.let { registry.match(it) }
+    fun matchOf(playerId: Uuid): ArenaMatch? = registry.matchOf(playerId)
 
     fun arena(name: String): Arena? = registry.resolveArena(name)
 
@@ -53,11 +51,8 @@ class ArenaApplicationService(
     }
 
     fun leave(playerId: Uuid): LeaveError? {
-        val arenaId = registry.arenaOf(playerId) ?: return LeaveError.NotJoined
-        val step = registry.transact(arenaId) { it.leaveWaiting(playerId) } ?: run {
-            logger.severe("Player $playerId is indexed into arena ${arenaId.name} but no match exists; reporting not joined")
-            return LeaveError.NotJoined
-        }
+        val step = registry.transactFor(playerId) { it.leaveWaiting(playerId) }
+            ?: return LeaveError.NotJoined
         when (val outcome = step.outcome) {
             LeaveOutcome.NotWaiting -> return LeaveError.NotWaiting
 
@@ -70,12 +65,8 @@ class ArenaApplicationService(
 
     // During QuitEvent the adapter provides the disconnecting player's handle, so only the UUID is needed
     fun quit(playerId: Uuid) {
-        val arenaId = registry.arenaOf(playerId)
-        val step = arenaId?.let { registry.transact(it) { m -> m.forfeit(playerId) } }
+        val step = registry.transactFor(playerId) { it.forfeit(playerId) }
         if (step == null) {
-            if (arenaId != null) {
-                logger.severe("Player $playerId is indexed into arena ${arenaId.name} but no match exists; restoring pending backup")
-            }
             recovery.pending(playerId)?.let { ticket ->
                 players.handle(playerId)?.let { handle ->
                     recovery.restoreNow(handle, ticket)
@@ -106,11 +97,7 @@ class ArenaApplicationService(
     }
 
     fun defeat(playerId: Uuid, cause: DefeatCause): Boolean {
-        val arenaId = registry.arenaOf(playerId) ?: return false
-        val step = registry.transact(arenaId) { it.recordDefeat(playerId, cause) } ?: run {
-            logger.severe("Player $playerId is indexed into arena ${arenaId.name} but no match exists; defeat ignored")
-            return false
-        }
+        val step = registry.transactFor(playerId) { it.recordDefeat(playerId, cause) } ?: return false
         return when (val outcome = step.outcome) {
             DefeatOutcome.Rejected -> false
 
