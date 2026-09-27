@@ -1,6 +1,6 @@
 package net.ninebolt.onevsone.infrastructure.persistence
 
-import net.ninebolt.onevsone.application.port.PersistenceFailure
+import net.ninebolt.onevsone.application.port.PersistenceException
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.BlockPosition
 import net.ninebolt.onevsone.domain.WorldPosition
@@ -33,7 +33,7 @@ class SqliteStoreTest {
 
     @Test
     fun `atomic rolls back every statement on failure`() = withStore(folder) { store ->
-        assertFailsWith<PersistenceFailure> {
+        assertFailsWith<PersistenceException> {
             store.atomic {
                 store.exec("INSERT INTO lobby(id, world, x, y, z, yaw, pitch) VALUES (1, 'w', 0, 0, 0, 0, 0)")
                 store.exec("INSERT INTO definitely_not_a_table VALUES (1)")
@@ -44,7 +44,7 @@ class SqliteStoreTest {
 
     @Test
     fun `nested atomic is rejected and rolls back the outer transaction`() = withStore(folder) { store ->
-        assertFailsWith<PersistenceFailure> {
+        assertFailsWith<PersistenceException> {
             store.atomic {
                 store.exec("INSERT INTO lobby(id, world, x, y, z, yaw, pitch) VALUES (1, 'w', 0, 0, 0, 0, 0)")
                 store.atomic {
@@ -58,7 +58,7 @@ class SqliteStoreTest {
 
     @Test
     fun `store stays usable after a rejected nested atomic`() = withStore(folder) { store ->
-        assertFailsWith<PersistenceFailure> {
+        assertFailsWith<PersistenceException> {
             store.atomic { store.atomic { } }
         }
         store.atomic {

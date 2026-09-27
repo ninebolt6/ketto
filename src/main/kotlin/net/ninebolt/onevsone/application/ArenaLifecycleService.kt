@@ -1,7 +1,7 @@
 package net.ninebolt.onevsone.application
 
 import net.ninebolt.onevsone.application.port.ArenaRepository
-import net.ninebolt.onevsone.application.port.PersistenceFailure
+import net.ninebolt.onevsone.application.port.PersistenceException
 import net.ninebolt.onevsone.domain.ArenaState
 import java.util.logging.Level
 import java.util.logging.Logger
@@ -18,7 +18,7 @@ class ArenaLifecycleService(
     fun load() {
         val loaded = try {
             arenas.loadAll()
-        } catch (e: PersistenceFailure) {
+        } catch (e: PersistenceException) {
             logger.warning("Arena definitions are unreadable; no arenas loaded this session")
             emptyList()
         }
@@ -26,7 +26,7 @@ class ArenaLifecycleService(
             registry.installArena(arena)
             try {
                 signs.refreshSign(arena.id, ArenaState.Waiting)
-            } catch (e: PersistenceFailure) {
+            } catch (e: PersistenceException) {
                 logger.log(Level.WARNING, "Could not update sign for arena ${arena.id.name}; continuing startup", e)
             }
         }

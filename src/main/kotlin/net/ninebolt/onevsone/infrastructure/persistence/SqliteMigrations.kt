@@ -1,6 +1,6 @@
 package net.ninebolt.onevsone.infrastructure.persistence
 
-import net.ninebolt.onevsone.application.port.PersistenceFailure
+import net.ninebolt.onevsone.application.port.PersistenceException
 import java.sql.Connection
 import java.sql.SQLException
 
@@ -11,7 +11,7 @@ internal class SqliteMigrations(private val connection: Connection) {
     fun checkSupported() {
         val version = userVersion()
         if (version > LATEST_VERSION) {
-            throw PersistenceFailure(
+            throw PersistenceException(
                 "data.db has schema version $version, newer than supported $LATEST_VERSION; not modifying it",
             )
         }
@@ -30,7 +30,7 @@ internal class SqliteMigrations(private val connection: Connection) {
     // migration SQL: '--' lines are stripped and statements are split on ';'
     private fun loadStatements(target: Int): List<String> {
         val text = SqliteMigrations::class.java.getResource("/db/migration/V$target.sql")?.readText()
-            ?: throw PersistenceFailure("Migration resource db/migration/V$target.sql is missing")
+            ?: throw PersistenceException("Migration resource db/migration/V$target.sql is missing")
         return text
             .lineSequence()
             .filterNot { it.trimStart().startsWith("--") }
@@ -51,7 +51,7 @@ internal class SqliteMigrations(private val connection: Connection) {
             } catch (_: SQLException) {
             }
             throw if (e is Exception) {
-                e as? PersistenceFailure ?: PersistenceFailure("Schema migration failed", e)
+                e as? PersistenceException ?: PersistenceException("Schema migration failed", e)
             } else {
                 e
             }

@@ -2,7 +2,7 @@ package net.ninebolt.onevsone.infrastructure.paper
 
 import io.mockk.every
 import io.mockk.spyk
-import net.ninebolt.onevsone.application.port.PersistenceFailure
+import net.ninebolt.onevsone.application.port.PersistenceException
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.genericDamage
@@ -57,7 +57,7 @@ class PaperArenaFailureTest {
         env.join(p1, arena)
         env.join(p2, arena)
         env.tick(6)
-        every { spyStats.recordWin(p1.uuid) } throws PersistenceFailure("disk gone")
+        every { spyStats.recordWin(p1.uuid) } throws PersistenceException("disk gone")
         p2.simulateDamage(100.0, genericDamage())
         assertEquals(ArenaState.Kind.WAITING, env.view().state.kind)
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
@@ -70,7 +70,7 @@ class PaperArenaFailureTest {
         assertEquals(1, env.statsRepo.find(p2.uuid)!!.losses)
         val failedLog = records.single { it.message.contains("Failed to record") }
         assertEquals(Level.SEVERE, failedLog.level)
-        assertTrue(failedLog.thrown is PersistenceFailure)
+        assertTrue(failedLog.thrown is PersistenceException)
     }
 
     private fun capturePluginLog(): MutableList<LogRecord> {

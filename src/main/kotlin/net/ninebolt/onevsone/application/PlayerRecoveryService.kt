@@ -3,7 +3,7 @@ package net.ninebolt.onevsone.application
 import net.ninebolt.onevsone.application.port.BackupRef
 import net.ninebolt.onevsone.application.port.InventoryBackupPort
 import net.ninebolt.onevsone.application.port.LobbyRepository
-import net.ninebolt.onevsone.application.port.PersistenceFailure
+import net.ninebolt.onevsone.application.port.PersistenceException
 import net.ninebolt.onevsone.application.port.PlayerHandle
 import net.ninebolt.onevsone.application.port.PlayerPort
 import net.ninebolt.onevsone.application.port.PresentationPort
@@ -32,7 +32,7 @@ class PlayerRecoveryService(
         if (!restorePayload(handle, ref)) return false
         try {
             backups.acknowledge(ref)
-        } catch (e: PersistenceFailure) {
+        } catch (e: PersistenceException) {
             // A failed delete leaves the record on disk; re-restoring on next startup is the safe side
             logger.log(Level.SEVERE, "Could not discard restored backup for ${handle.name} (${handle.id}); record retained", e)
         }
@@ -42,7 +42,7 @@ class PlayerRecoveryService(
     private fun restorePayload(handle: PlayerHandle, ref: BackupRef): Boolean {
         try {
             backups.restore(ref)
-        } catch (e: PersistenceFailure) {
+        } catch (e: PersistenceException) {
             logger.log(Level.SEVERE, "Could not restore inventory for ${handle.name} (${handle.id}); backup retained", e)
             return false
         }
@@ -68,7 +68,7 @@ class PlayerRecoveryService(
     fun restoreAllOnline() {
         val refs = try {
             backups.pendingRefs()
-        } catch (e: PersistenceFailure) {
+        } catch (e: PersistenceException) {
             logger.log(Level.WARNING, "Could not list pending backups; leaving records for next startup", e)
             return
         }

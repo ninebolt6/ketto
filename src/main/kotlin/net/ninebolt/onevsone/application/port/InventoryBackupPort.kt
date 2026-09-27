@@ -5,7 +5,7 @@ import net.ninebolt.onevsone.domain.Participant
 import kotlin.uuid.Uuid
 
 interface InventoryBackupPort {
-    // on failure throws PersistenceFailure leaving both inventories untouched
+    // on failure throws PersistenceException leaving both inventories untouched
     fun backupBeforeMatch(match: MatchId, participants: List<Participant>): List<BackupRef>
 
     // on failure the backup record is kept

@@ -1,6 +1,6 @@
 package net.ninebolt.onevsone.infrastructure.persistence
 
-import net.ninebolt.onevsone.application.port.PersistenceFailure
+import net.ninebolt.onevsone.application.port.PersistenceException
 import net.ninebolt.onevsone.infrastructure.persistence.fixtures.store
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -24,7 +24,7 @@ class SqliteMigrationsTest {
         DriverManager.getConnection("jdbc:sqlite:${File(folder, "data.db").absolutePath}").use { conn ->
             conn.createStatement().use { it.execute("PRAGMA user_version=99") }
         }
-        assertFailsWith<PersistenceFailure> { store(folder) }
+        assertFailsWith<PersistenceException> { store(folder) }
         DriverManager.getConnection("jdbc:sqlite:${File(folder, "data.db").absolutePath}").use { conn ->
             conn.createStatement().use { st ->
                 st.executeQuery("PRAGMA user_version").use { rs ->
@@ -36,11 +36,11 @@ class SqliteMigrationsTest {
     }
 
     @Test
-    fun `missing migration resource surfaces as PersistenceFailure`() {
+    fun `missing migration resource surfaces as PersistenceException`() {
         DriverManager.getConnection("jdbc:sqlite:${File(folder, "data.db").absolutePath}").use { conn ->
             conn.createStatement().use { it.execute("PRAGMA user_version=-1") }
         }
-        assertFailsWith<PersistenceFailure> { store(folder) }
+        assertFailsWith<PersistenceException> { store(folder) }
     }
 
     @Test
@@ -48,7 +48,7 @@ class SqliteMigrationsTest {
         val file = File(folder, "data.db")
         DriverManager.getConnection("jdbc:sqlite:${file.absolutePath}").use { real ->
             val conn = sabotagedConnection(real, "player_stats")
-            assertFailsWith<PersistenceFailure> { SqliteMigrations(conn).migrate() }
+            assertFailsWith<PersistenceException> { SqliteMigrations(conn).migrate() }
         }
         DriverManager.getConnection("jdbc:sqlite:${file.absolutePath}").use { conn ->
             conn.createStatement().use { st ->
@@ -65,10 +65,10 @@ class SqliteMigrationsTest {
     }
 
     @Test
-    fun `a PersistenceFailure inside a migration is rethrown without rewrapping`() {
+    fun `a PersistenceException inside a migration is rethrown without rewrapping`() {
         DriverManager.getConnection("jdbc:sqlite:${File(folder, "data.db").absolutePath}").use { real ->
-            val conn = sabotagedConnection(real, "player_stats") { PersistenceFailure("inner failure") }
-            val failure = assertFailsWith<PersistenceFailure> { SqliteMigrations(conn).migrate() }
+            val conn = sabotagedConnection(real, "player_stats") { PersistenceException("inner failure") }
+            val failure = assertFailsWith<PersistenceException> { SqliteMigrations(conn).migrate() }
             assertEquals("inner failure", failure.message)
         }
     }

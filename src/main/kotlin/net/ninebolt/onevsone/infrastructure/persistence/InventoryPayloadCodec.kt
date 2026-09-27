@@ -1,6 +1,6 @@
 package net.ninebolt.onevsone.infrastructure.persistence
 
-import net.ninebolt.onevsone.application.port.PersistenceFailure
+import net.ninebolt.onevsone.application.port.PersistenceException
 import net.ninebolt.onevsone.infrastructure.paper.PaperInventorySnapshot
 import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.inventory.ItemStack
@@ -14,7 +14,7 @@ internal object InventoryPayloadCodec {
         return yaml.saveToString()
     }
 
-    // stored payloads are untrusted: any decode problem exits as PersistenceFailure
+    // stored payloads are untrusted: any decode problem exits as PersistenceException
     fun decode(payload: String): PaperInventorySnapshot {
         try {
             val yaml = YamlConfiguration()
@@ -23,7 +23,7 @@ internal object InventoryPayloadCodec {
             val items = (yaml.getList("item") ?: emptyList()).map { it as? ItemStack }
             return PaperInventorySnapshot(armor, items)
         } catch (e: Exception) {
-            throw PersistenceFailure("Could not decode inventory payload", e)
+            throw PersistenceException("Could not decode inventory payload", e)
         }
     }
 }

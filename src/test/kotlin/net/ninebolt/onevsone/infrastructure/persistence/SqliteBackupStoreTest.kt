@@ -1,7 +1,7 @@
 package net.ninebolt.onevsone.infrastructure.persistence
 
 import net.ninebolt.onevsone.application.port.BackupRef
-import net.ninebolt.onevsone.application.port.PersistenceFailure
+import net.ninebolt.onevsone.application.port.PersistenceException
 import net.ninebolt.onevsone.domain.MatchId
 import net.ninebolt.onevsone.domain.Participant
 import net.ninebolt.onevsone.infrastructure.paper.PaperInventorySnapshot
@@ -64,7 +64,7 @@ class SqliteBackupStoreTest {
     }
 
     @Test
-    fun `codec failure surfaces as PersistenceFailure`() {
+    fun `codec failure surfaces as PersistenceException`() {
         withStore(folder) { store ->
             store.exec(
                 "INSERT INTO backups(backup_id, match_id, player_uuid, player_name, payload) VALUES (?, ?, ?, ?, ?)",
@@ -75,7 +75,7 @@ class SqliteBackupStoreTest {
                 "not: [valid",
             )
             val ref = SqliteBackupStore(store).pendingRefs().single()
-            assertFailsWith<PersistenceFailure> { SqliteBackupStore(store).backupFor(ref) }
+            assertFailsWith<PersistenceException> { SqliteBackupStore(store).backupFor(ref) }
         }
     }
 

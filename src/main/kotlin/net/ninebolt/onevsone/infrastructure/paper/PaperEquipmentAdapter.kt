@@ -3,7 +3,7 @@ package net.ninebolt.onevsone.infrastructure.paper
 import net.ninebolt.onevsone.application.port.BackupRef
 import net.ninebolt.onevsone.application.port.InventoryBackupPort
 import net.ninebolt.onevsone.application.port.KitPort
-import net.ninebolt.onevsone.application.port.PersistenceFailure
+import net.ninebolt.onevsone.application.port.PersistenceException
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.MatchId
 import net.ninebolt.onevsone.domain.Participant
@@ -29,7 +29,7 @@ class PaperEquipmentAdapter(
     override fun backupBeforeMatch(match: MatchId, participants: List<Participant>): List<BackupRef> {
         val captured = participants.map { participant ->
             val player = lookup.resolve(participant.id)
-                ?: throw PersistenceFailure("Player ${participant.name} (${participant.id}) is not available for inventory backup")
+                ?: throw PersistenceException("Player ${participant.name} (${participant.id}) is not available for inventory backup")
             PersistedBackup(
                 BackupRef.new(
                     matchId = match,
@@ -45,9 +45,9 @@ class PaperEquipmentAdapter(
 
     override fun restore(backup: BackupRef) {
         val snapshot = backups.backupFor(backup)?.snapshot
-            ?: throw PersistenceFailure("No stored backup ${backup.backupId} for ${backup.playerName}")
+            ?: throw PersistenceException("No stored backup ${backup.backupId} for ${backup.playerName}")
         val player = lookup.resolve(backup.playerId)
-            ?: throw PersistenceFailure("Player ${backup.playerName} is not available for restore")
+            ?: throw PersistenceException("Player ${backup.playerName} is not available for restore")
         snapshot.apply(player.inventory)
     }
 
@@ -61,13 +61,13 @@ class PaperEquipmentAdapter(
 
     override fun applyKit(arena: Arena.Id, playerId: Uuid) {
         val player = lookup.resolve(playerId)
-            ?: throw PersistenceFailure("Player $playerId is not available for kit apply")
+            ?: throw PersistenceException("Player $playerId is not available for kit apply")
         kit(arena).apply(player.inventory)
     }
 
     override fun saveKit(arena: Arena.Id, playerId: Uuid) {
         val player = lookup.resolve(playerId)
-            ?: throw PersistenceFailure("Player $playerId is not available for kit capture")
+            ?: throw PersistenceException("Player $playerId is not available for kit capture")
         val kit = PaperInventorySnapshot.capture(player.inventory)
         kitStore.saveArenaKit(arena.name, kit)
         kits[arena] = kit

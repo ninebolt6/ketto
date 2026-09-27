@@ -1,7 +1,7 @@
 package net.ninebolt.onevsone.application
 
 import net.ninebolt.onevsone.application.fixtures.TestApp
-import net.ninebolt.onevsone.application.port.PersistenceFailure
+import net.ninebolt.onevsone.application.port.PersistenceException
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatCause
@@ -34,7 +34,7 @@ class ArenaApplicationServiceResilienceTest {
     @Test
     fun `backup persistence failure aborts before any equipment change`() {
         val app = TestApp()
-        app.equipment.failOnBackup = PersistenceFailure("disk full")
+        app.equipment.failOnBackup = PersistenceException("disk full")
         val (p1, p2) = app.joinedTwo()
         app.scheduler.tick(6)
         assertEquals(ArenaState.Kind.WAITING, app.state())
@@ -88,7 +88,7 @@ class ArenaApplicationServiceResilienceTest {
     fun `stats failure for winner does not block loser record or restores`() {
         val app = TestApp(requiredWins = 1)
         val (p1, p2) = app.startMatch()
-        app.stats.failOnWin = PersistenceFailure("write failed")
+        app.stats.failOnWin = PersistenceException("write failed")
         assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
         assertEquals(ArenaState.Kind.WAITING, app.state())
         assertEquals(1, app.stats.stats[p2.id]?.losses)
@@ -101,7 +101,7 @@ class ArenaApplicationServiceResilienceTest {
     fun `stats failure for loser does not block winner record`() {
         val app = TestApp(requiredWins = 1)
         val (p1, p2) = app.startMatch()
-        app.stats.failOnLoss = PersistenceFailure("write failed")
+        app.stats.failOnLoss = PersistenceException("write failed")
         assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
         assertEquals(1, app.stats.stats[p1.id]?.wins)
         assertTrue(app.logger.reports.any { it.message.startsWith("Failed to record loss") })

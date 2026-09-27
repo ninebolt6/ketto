@@ -3,7 +3,7 @@ package net.ninebolt.onevsone.application.fixtures
 import net.ninebolt.onevsone.application.port.ArenaRepository
 import net.ninebolt.onevsone.application.port.ArenaSignRepository
 import net.ninebolt.onevsone.application.port.LobbyRepository
-import net.ninebolt.onevsone.application.port.PersistenceFailure
+import net.ninebolt.onevsone.application.port.PersistenceException
 import net.ninebolt.onevsone.application.port.PlayerStatsRepository
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.BlockPosition
@@ -25,7 +25,7 @@ class InMemoryArenaRepository :
     var failOnLoad = false
 
     override fun loadAll(): List<Arena> {
-        if (failOnLoad) throw PersistenceFailure("load failed")
+        if (failOnLoad) throw PersistenceException("load failed")
         val seen = mutableSetOf<String>()
         return names.mapNotNull { name ->
             if (Arena.Id.of(name) == null || !seen.add(name.lowercase(Locale.ROOT))) null else find(name)
@@ -35,7 +35,7 @@ class InMemoryArenaRepository :
     fun find(name: String): Arena = definitions[name] ?: Arena.Disabled.new(arenaId(name))
 
     override fun save(arena: Arena) {
-        if (failOnSave) throw PersistenceFailure("save failed")
+        if (failOnSave) throw PersistenceException("save failed")
         definitions[arena.name] = arena
         if (names.none { it.equals(arena.name, ignoreCase = true) }) names += arena.name
     }

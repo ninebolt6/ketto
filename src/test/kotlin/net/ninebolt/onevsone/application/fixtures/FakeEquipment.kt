@@ -3,7 +3,7 @@ package net.ninebolt.onevsone.application.fixtures
 import net.ninebolt.onevsone.application.port.BackupRef
 import net.ninebolt.onevsone.application.port.InventoryBackupPort
 import net.ninebolt.onevsone.application.port.KitPort
-import net.ninebolt.onevsone.application.port.PersistenceFailure
+import net.ninebolt.onevsone.application.port.PersistenceException
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.MatchId
 import net.ninebolt.onevsone.domain.Participant
@@ -20,7 +20,7 @@ class FakeEquipment(var players: FakePlayers? = null) :
     val forgottenKits = mutableListOf<Arena.Id>()
     var backupCalls = 0
     var applyCalls = 0
-    var failOnBackup: PersistenceFailure? = null
+    var failOnBackup: PersistenceException? = null
     var failOnApplyAt: Int = -1
     var failOnAcknowledge = false
     var failOnRestore = false
@@ -34,13 +34,13 @@ class FakeEquipment(var players: FakePlayers? = null) :
     }
 
     override fun restore(backup: BackupRef) {
-        if (failOnRestore) throw PersistenceFailure("restore failed")
+        if (failOnRestore) throw PersistenceException("restore failed")
         restored += backup
         players?.players?.get(backup.playerId)?.events?.add("restore")
     }
 
     override fun acknowledge(backup: BackupRef) {
-        if (failOnAcknowledge) throw PersistenceFailure("acknowledge failed")
+        if (failOnAcknowledge) throw PersistenceException("acknowledge failed")
         acknowledged += backup
         storedBackups.remove(backup.backupId)
     }
@@ -60,7 +60,7 @@ class FakeEquipment(var players: FakePlayers? = null) :
 
     override fun applyKit(arena: Arena.Id, playerId: Uuid) {
         applyCalls++
-        if (applyCalls == failOnApplyAt) throw PersistenceFailure("kit apply failed")
+        if (applyCalls == failOnApplyAt) throw PersistenceException("kit apply failed")
         kitApplies += arena to playerId
     }
 

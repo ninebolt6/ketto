@@ -1,7 +1,7 @@
 package net.ninebolt.onevsone.application
 
 import net.ninebolt.onevsone.application.fixtures.TestApp
-import net.ninebolt.onevsone.application.port.PersistenceFailure
+import net.ninebolt.onevsone.application.port.PersistenceException
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.BlockPosition
 import net.ninebolt.onevsone.domain.DefeatCause
@@ -148,13 +148,13 @@ class ArenaAdministrationServiceTest {
     @Test
     fun `authoritative persist failure propagates and leaves the registry unchanged`() {
         app.arenas.failOnSave = true
-        assertFailsWith<PersistenceFailure> { app.admin.create("arena1") }
+        assertFailsWith<PersistenceException> { app.admin.create("arena1") }
         assertNull(app.registry.resolveArena("arena1"))
 
         app.arenas.failOnSave = false
         app.newArena()
         app.arenas.failOnSave = true
-        assertFailsWith<PersistenceFailure> { app.admin.disable("arena1") }
+        assertFailsWith<PersistenceException> { app.admin.disable("arena1") }
         assertTrue(app.registry.resolveArena("arena1")!!.enabled)
     }
 
@@ -164,7 +164,7 @@ class ArenaAdministrationServiceTest {
         app.signs.setSign(arenaId("arena1"), BlockPosition.new("world", 3, 64, 3))
         val signWrites = app.presentation.signUpdates.size
         app.arenas.failOnSave = true
-        assertFailsWith<PersistenceFailure> { app.admin.enable("arena1") }
+        assertFailsWith<PersistenceException> { app.admin.enable("arena1") }
         assertFalse(app.registry.resolveArena("arena1")!!.enabled)
         assertEquals(signWrites, app.presentation.signUpdates.size)
     }

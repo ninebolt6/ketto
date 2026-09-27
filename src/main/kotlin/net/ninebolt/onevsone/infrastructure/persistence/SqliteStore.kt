@@ -1,6 +1,6 @@
 package net.ninebolt.onevsone.infrastructure.persistence
 
-import net.ninebolt.onevsone.application.port.PersistenceFailure
+import net.ninebolt.onevsone.application.port.PersistenceException
 import java.io.File
 import java.sql.Connection
 import java.sql.DriverManager
@@ -9,7 +9,7 @@ import java.sql.ResultSet
 import java.sql.SQLException
 import java.util.logging.Logger
 
-// every exception crossing the store boundary exits as PersistenceFailure so lenient callers cannot be bypassed
+// every exception crossing the store boundary exits as PersistenceException so lenient callers cannot be bypassed
 // WAL leaves recent commits in data.db-wal/-shm; back up all three files or copy after a clean shutdown
 class SqliteStore(folder: File, private val logger: Logger) : AutoCloseable {
 
@@ -20,14 +20,14 @@ class SqliteStore(folder: File, private val logger: Logger) : AutoCloseable {
         try {
             Class.forName("org.sqlite.JDBC")
         } catch (e: ClassNotFoundException) {
-            throw PersistenceFailure("sqlite-jdbc driver not found (Paper bundles it); SQLite persistence unavailable", e)
+            throw PersistenceException("sqlite-jdbc driver not found (Paper bundles it); SQLite persistence unavailable", e)
         }
         folder.mkdirs()
         val file = File(folder, "data.db")
         connection = try {
             DriverManager.getConnection("jdbc:sqlite:${file.absolutePath}")
         } catch (e: SQLException) {
-            throw PersistenceFailure("Could not open database ${file.path}", e)
+            throw PersistenceException("Could not open database ${file.path}", e)
         }
         try {
             logger.info("SQLite ${connection.metaData.driverVersion} at ${file.name}")
@@ -54,7 +54,7 @@ class SqliteStore(folder: File, private val logger: Logger) : AutoCloseable {
 
     internal fun <T> atomic(block: () -> T): T {
         if (txActive) {
-            throw PersistenceFailure("atomic blocks must not nest")
+            throw PersistenceException("atomic blocks must not nest")
         }
         txActive = true
         connection.autoCommit = false
@@ -118,7 +118,7 @@ class SqliteStore(folder: File, private val logger: Logger) : AutoCloseable {
         }
     }
 
-    private fun asFailure(e: Throwable): Throwable = if (e is Exception) e as? PersistenceFailure ?: PersistenceFailure("SQLite operation failed", e) else e
+    private fun asFailure(e: Throwable): Throwable = if (e is Exception) e as? PersistenceException ?: PersistenceException("SQLite operation failed", e) else e
 
     override fun close() {
         try {

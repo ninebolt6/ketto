@@ -10,7 +10,7 @@
   writes are grouped inside the implementation. Application code never opens
   a transaction itself, and atomic blocks must not nest — a nested call is
   rejected and aborts the in-flight transaction
-- `PersistenceFailure` is the only exception type allowed to cross a
+- `PersistenceException` is the only exception type allowed to cross a
   persistence implementation boundary; JDBC, codec, and stored-data
   validation failures are all converted at the seam so lenient callers cannot
   be bypassed
@@ -19,7 +19,7 @@
   outcomes or carries data; declare them at the bottom of the service file.
   Binary accept/reject checks return Boolean and
   lookups return null. Persistence and external-reference failures throw
-  `PersistenceFailure`. Domain state-machine transition results are `*Outcome`
+  `PersistenceException`. Domain state-machine transition results are `*Outcome`
   types, kept distinct from application-level `Output`/`Error` results
 
 ## Domain

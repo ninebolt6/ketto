@@ -3,7 +3,7 @@ package net.ninebolt.onevsone.application
 import net.ninebolt.onevsone.application.port.BackupRef
 import net.ninebolt.onevsone.application.port.Cancellation
 import net.ninebolt.onevsone.application.port.KitPort
-import net.ninebolt.onevsone.application.port.PersistenceFailure
+import net.ninebolt.onevsone.application.port.PersistenceException
 import net.ninebolt.onevsone.application.port.PlayerHandle
 import net.ninebolt.onevsone.application.port.PlayerPort
 import net.ninebolt.onevsone.application.port.PlayerStatsRepository
@@ -142,7 +142,7 @@ class MatchProgressionService(
         listOf(winner to true, loser to false).forEach { (participant, win) ->
             try {
                 if (win) stats.recordWin(participant.id) else stats.recordLoss(participant.id)
-            } catch (e: PersistenceFailure) {
+            } catch (e: PersistenceException) {
                 logger.log(
                     Level.SEVERE,
                     "Failed to record ${if (win) "win" else "loss"} for ${participant.name} (${participant.id}); " +
@@ -162,7 +162,7 @@ class MatchProgressionService(
             if (p1.dead || p2.dead) return@runCountdown false
             try {
                 recovery.backupBeforeMatch(match.participants)
-            } catch (e: PersistenceFailure) {
+            } catch (e: PersistenceException) {
                 logger.log(Level.SEVERE, "Could not save inventories before starting arena ${arenaId.name}; match aborted", e)
                 abort(arenaId)
                 return@runCountdown true

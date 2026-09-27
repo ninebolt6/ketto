@@ -1,7 +1,7 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
 import net.ninebolt.onevsone.application.port.BackupRef
-import net.ninebolt.onevsone.application.port.PersistenceFailure
+import net.ninebolt.onevsone.application.port.PersistenceException
 import net.ninebolt.onevsone.domain.MatchId
 import net.ninebolt.onevsone.domain.Participant
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.ArenaPlayerMock
@@ -46,7 +46,7 @@ class PaperEquipmentAdapterTest {
 
     @Test
     fun `backup fails when a participant is offline`() {
-        assertFailsWith<PersistenceFailure> {
+        assertFailsWith<PersistenceException> {
             env.equipment.backupBeforeMatch(MatchId.new(), listOf(Participant.new("Ghost")))
         }
     }
@@ -55,7 +55,7 @@ class PaperEquipmentAdapterTest {
     fun `restore fails when nothing is stored for the backup`() {
         val p = env.player("Alice")
         val ref = BackupRef.new(MatchId.new(), p.uuid, "Alice")
-        assertFailsWith<PersistenceFailure> { env.equipment.restore(ref) }
+        assertFailsWith<PersistenceException> { env.equipment.restore(ref) }
     }
 
     @Test
@@ -63,7 +63,7 @@ class PaperEquipmentAdapterTest {
         val p = env.player("Alice")
         val ref = env.equipment.backupBeforeMatch(MatchId.new(), listOf(Participant.new(p.uuid, "Alice"))).single()
         env.disconnectWithoutQuitHandler(p)
-        assertFailsWith<PersistenceFailure> { env.equipment.restore(ref) }
+        assertFailsWith<PersistenceException> { env.equipment.restore(ref) }
     }
 
     @Test
@@ -77,13 +77,13 @@ class PaperEquipmentAdapterTest {
     @Test
     fun `apply kit fails when the player is offline`() {
         val arena = env.newArena()
-        assertFailsWith<PersistenceFailure> { env.equipment.applyKit(arena, Uuid.random()) }
+        assertFailsWith<PersistenceException> { env.equipment.applyKit(arena, Uuid.random()) }
     }
 
     @Test
     fun `save kit fails when the player is offline`() {
         val arena = env.newArena()
-        assertFailsWith<PersistenceFailure> { env.equipment.saveKit(arena, Uuid.random()) }
+        assertFailsWith<PersistenceException> { env.equipment.saveKit(arena, Uuid.random()) }
     }
 
     @Test

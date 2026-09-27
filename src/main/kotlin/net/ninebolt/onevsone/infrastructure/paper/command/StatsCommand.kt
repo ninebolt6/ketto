@@ -1,7 +1,7 @@
 package net.ninebolt.onevsone.infrastructure.paper.command
 
 import net.ninebolt.onevsone.application.PlayerStatsService
-import net.ninebolt.onevsone.application.port.PersistenceFailure
+import net.ninebolt.onevsone.application.port.PersistenceException
 import net.ninebolt.onevsone.application.port.PlayerPort
 import net.ninebolt.onevsone.infrastructure.paper.message.Message
 import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
@@ -39,7 +39,7 @@ internal class StatsCommand(
     private fun showStats(sender: CommandSender, uuid: Uuid) {
         val stats = try {
             statsService.statsFor(uuid)
-        } catch (e: PersistenceFailure) {
+        } catch (e: PersistenceException) {
             logger.warning("Could not read stats for $uuid: ${e.message}")
             null
         }
