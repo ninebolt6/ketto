@@ -80,7 +80,7 @@ class ArenaApplicationService(
             }
 
             is QuitOutcome.MatchEnded -> {
-                progression.finishMatch(step.match, outcome.winner, outcome.loser, forfeit = true, death = false)
+                progression.finishMatch(step.match, outcome.winner, outcome.loser, MatchEnd.FORFEITED)
             }
 
             QuitOutcome.NotParticipant -> Unit
@@ -107,7 +107,8 @@ class ArenaApplicationService(
             }
 
             is DefeatOutcome.MatchFinished -> {
-                progression.finishMatch(step.match, outcome.winner, outcome.loser, forfeit = false, death = cause == DefeatCause.DEATH)
+                val end = if (cause == DefeatCause.DEATH) MatchEnd.KILLED else MatchEnd.FELL
+                progression.finishMatch(step.match, outcome.winner, outcome.loser, end)
                 true
             }
         }

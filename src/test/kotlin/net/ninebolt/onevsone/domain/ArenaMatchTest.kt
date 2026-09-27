@@ -182,8 +182,7 @@ class ArenaMatchTest {
         fun assertRestrictions(
             state: ArenaState.Kind,
             horizontalMoveFrozen: Boolean,
-            damageCancelled: Boolean,
-            opponentDamageOnly: Boolean,
+            damagePolicy: DamagePolicy,
             teleportRestriction: TeleportRestriction,
             blockBreakCancelled: Boolean,
             blockPlaceCancelled: Boolean,
@@ -194,8 +193,7 @@ class ArenaMatchTest {
         ) {
             val r = ParticipantRestrictions.forState(state)
             assertEquals(horizontalMoveFrozen, r.horizontalMoveFrozen, "$state.horizontalMoveFrozen")
-            assertEquals(damageCancelled, r.damageCancelled, "$state.damageCancelled")
-            assertEquals(opponentDamageOnly, r.opponentDamageOnly, "$state.opponentDamageOnly")
+            assertEquals(damagePolicy, r.damagePolicy, "$state.damagePolicy")
             assertEquals(teleportRestriction, r.teleportRestriction, "$state.teleportRestriction")
             assertEquals(blockBreakCancelled, r.blockBreakCancelled, "$state.blockBreakCancelled")
             assertEquals(blockPlaceCancelled, r.blockPlaceCancelled, "$state.blockPlaceCancelled")
@@ -212,8 +210,7 @@ class ArenaMatchTest {
         assertRestrictions(
             ArenaState.Kind.WAITING,
             horizontalMoveFrozen = false,
-            damageCancelled = false,
-            opponentDamageOnly = false,
+            damagePolicy = DamagePolicy.UNRESTRICTED,
             teleportRestriction = TeleportRestriction.UNRESTRICTED,
             blockBreakCancelled = false,
             blockPlaceCancelled = false,
@@ -225,8 +222,7 @@ class ArenaMatchTest {
         assertRestrictions(
             ArenaState.Kind.ONEMORE,
             horizontalMoveFrozen = false,
-            damageCancelled = false,
-            opponentDamageOnly = false,
+            damagePolicy = DamagePolicy.UNRESTRICTED,
             teleportRestriction = TeleportRestriction.UNRESTRICTED,
             blockBreakCancelled = false,
             blockPlaceCancelled = false,
@@ -238,8 +234,7 @@ class ArenaMatchTest {
         assertRestrictions(
             ArenaState.Kind.COUNTDOWN,
             horizontalMoveFrozen = false,
-            damageCancelled = false,
-            opponentDamageOnly = false,
+            damagePolicy = DamagePolicy.UNRESTRICTED,
             teleportRestriction = TeleportRestriction.ENDER_PEARL_ONLY,
             blockBreakCancelled = false,
             blockPlaceCancelled = false,
@@ -251,8 +246,7 @@ class ArenaMatchTest {
         assertRestrictions(
             ArenaState.Kind.ROUNDCOUNTDOWN,
             horizontalMoveFrozen = true,
-            damageCancelled = true,
-            opponentDamageOnly = false,
+            damagePolicy = DamagePolicy.BLOCKED,
             teleportRestriction = TeleportRestriction.PLUGIN_ONLY,
             blockBreakCancelled = true,
             blockPlaceCancelled = true,
@@ -264,8 +258,7 @@ class ArenaMatchTest {
         assertRestrictions(
             ArenaState.Kind.INGAME,
             horizontalMoveFrozen = false,
-            damageCancelled = false,
-            opponentDamageOnly = true,
+            damagePolicy = DamagePolicy.OPPONENT_ONLY,
             teleportRestriction = TeleportRestriction.ENDER_PEARL_ONLY,
             blockBreakCancelled = true,
             blockPlaceCancelled = true,

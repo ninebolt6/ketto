@@ -3,8 +3,7 @@ package net.ninebolt.onevsone.domain
 // Out of scope by design: third-party potion effects, unattributable interference (e.g. third-party lava), and igniting pre-existing TNT; wind-charge knockback can remain though its damage is blocked.
 data class ParticipantRestrictions private constructor(
     val horizontalMoveFrozen: Boolean,
-    val damageCancelled: Boolean,
-    val opponentDamageOnly: Boolean,
+    val damagePolicy: DamagePolicy,
     val teleportRestriction: TeleportRestriction,
     val blockBreakCancelled: Boolean,
     // Placing is cancelled because placed blocks could not be removed while breaking is denied.
@@ -19,8 +18,7 @@ data class ParticipantRestrictions private constructor(
         fun forState(kind: ArenaState.Kind): ParticipantRestrictions = when (kind) {
             ArenaState.Kind.ROUNDCOUNTDOWN -> ParticipantRestrictions(
                 horizontalMoveFrozen = true,
-                damageCancelled = true,
-                opponentDamageOnly = false,
+                damagePolicy = DamagePolicy.BLOCKED,
                 teleportRestriction = TeleportRestriction.PLUGIN_ONLY,
                 blockBreakCancelled = true,
                 blockPlaceCancelled = true,
@@ -32,8 +30,7 @@ data class ParticipantRestrictions private constructor(
 
             ArenaState.Kind.INGAME -> ParticipantRestrictions(
                 horizontalMoveFrozen = false,
-                damageCancelled = false,
-                opponentDamageOnly = true,
+                damagePolicy = DamagePolicy.OPPONENT_ONLY,
                 teleportRestriction = TeleportRestriction.ENDER_PEARL_ONLY,
                 blockBreakCancelled = true,
                 blockPlaceCancelled = true,
@@ -45,8 +42,7 @@ data class ParticipantRestrictions private constructor(
 
             ArenaState.Kind.COUNTDOWN -> ParticipantRestrictions(
                 horizontalMoveFrozen = false,
-                damageCancelled = false,
-                opponentDamageOnly = false,
+                damagePolicy = DamagePolicy.UNRESTRICTED,
                 teleportRestriction = TeleportRestriction.ENDER_PEARL_ONLY,
                 blockBreakCancelled = false,
                 blockPlaceCancelled = false,
@@ -59,8 +55,7 @@ data class ParticipantRestrictions private constructor(
             // No transition leaves participants in WAITING; commands are denied in every state except ONEMORE.
             ArenaState.Kind.ONEMORE -> ParticipantRestrictions(
                 horizontalMoveFrozen = false,
-                damageCancelled = false,
-                opponentDamageOnly = false,
+                damagePolicy = DamagePolicy.UNRESTRICTED,
                 teleportRestriction = TeleportRestriction.UNRESTRICTED,
                 blockBreakCancelled = false,
                 blockPlaceCancelled = false,
@@ -72,8 +67,7 @@ data class ParticipantRestrictions private constructor(
 
             ArenaState.Kind.WAITING -> ParticipantRestrictions(
                 horizontalMoveFrozen = false,
-                damageCancelled = false,
-                opponentDamageOnly = false,
+                damagePolicy = DamagePolicy.UNRESTRICTED,
                 teleportRestriction = TeleportRestriction.UNRESTRICTED,
                 blockBreakCancelled = false,
                 blockPlaceCancelled = false,

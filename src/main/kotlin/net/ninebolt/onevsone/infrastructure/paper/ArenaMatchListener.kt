@@ -2,6 +2,7 @@ package net.ninebolt.onevsone.infrastructure.paper
 
 import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.domain.DamageAdmission
+import net.ninebolt.onevsone.domain.DamagePolicy
 import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.domain.ParticipantRestrictions
 import net.ninebolt.onevsone.infrastructure.paper.message.Message
@@ -47,7 +48,7 @@ class ArenaMatchListener(
             return
         }
         val player = event.entity as? Player ?: return
-        if (service.restrictionsOf(player)?.damageCancelled == true) {
+        if (service.restrictionsOf(player)?.damagePolicy == DamagePolicy.BLOCKED) {
             event.isCancelled = true
         }
     }

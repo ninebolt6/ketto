@@ -99,8 +99,7 @@ class MatchProgressionService(
         match: ArenaMatch,
         winner: Participant,
         loser: Participant,
-        forfeit: Boolean,
-        death: Boolean,
+        end: MatchEnd,
     ) {
         val arenaId = match.arenaId
         cancelCountdown(arenaId)
@@ -116,17 +115,17 @@ class MatchProgressionService(
 
         runNowOrAfterRespawn(winner.id, winnerRef) { h ->
             resetAndRestore(h, winnerRef)
-            if (!forfeit) presentation.championFirework(winner.id)
+            if (end != MatchEnd.FORFEITED) presentation.championFirework(winner.id)
         }
 
-        if (death) {
+        if (end == MatchEnd.KILLED) {
             runAfterRespawn(loser.id, loserRef) { h ->
                 resetAndRestore(h, loserRef)
             }
         } else {
             // Losers who died via quit arrive here dead, so do not defer on a dead check
             players.handle(loser.id)?.let { h ->
-                if (forfeit) {
+                if (end == MatchEnd.FORFEITED) {
                     loserRef?.let { recovery.restoreNow(h, it) }
                 } else {
                     resetAndRestore(h, loserRef)
@@ -308,4 +307,12 @@ class MatchProgressionService(
         }
         handle.teleport(spawn)
     }
+}
+
+internal enum class MatchEnd {
+    KILLED,
+
+    FELL,
+
+    FORFEITED,
 }

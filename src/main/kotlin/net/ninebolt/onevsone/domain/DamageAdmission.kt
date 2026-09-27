@@ -9,14 +9,14 @@ object DamageAdmission {
     data class Side(val id: Uuid, val match: ArenaMatch)
 
     fun allows(victim: Side?, attacker: Side?): Boolean {
-        fun limits(side: Side?) = side?.match?.let {
-            ParticipantRestrictions.forState(it.state.kind).let { r -> r.damageCancelled || r.opponentDamageOnly }
-        } == true
+        val victimPolicy = victim?.policy() ?: DamagePolicy.UNRESTRICTED
+        val attackerPolicy = attacker?.policy() ?: DamagePolicy.UNRESTRICTED
 
-        if (!limits(victim) && !limits(attacker)) return true
+        if (victimPolicy == DamagePolicy.UNRESTRICTED && attackerPolicy == DamagePolicy.UNRESTRICTED) return true
         if (victim == null || attacker == null) return false
-        if (!ParticipantRestrictions.forState(victim.match.state.kind).opponentDamageOnly) return false
-        return attacker.id == victim.id ||
-            victim.match.participants.any { it.id == attacker.id && it.id != victim.id }
+        if (victimPolicy != DamagePolicy.OPPONENT_ONLY) return false
+        return attacker.id == victim.id || victim.match.participants.any { it.id == attacker.id }
     }
+
+    private fun Side.policy(): DamagePolicy = ParticipantRestrictions.forState(match.state.kind).damagePolicy
 }
