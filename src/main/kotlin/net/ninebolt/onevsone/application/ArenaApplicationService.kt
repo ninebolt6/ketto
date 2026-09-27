@@ -21,8 +21,6 @@ class ArenaApplicationService(
 
     fun matchOf(playerId: Uuid): ArenaMatch? = registry.matchOf(playerId)
 
-    fun arena(name: String): Arena? = registry.resolveArena(name)
-
     fun matchOf(name: String): ArenaMatch? = registry.resolveArenaId(name)?.let { registry.match(it) }
 
     fun join(playerId: Uuid, playerName: String, arenaId: Arena.Id): JoinOutput {

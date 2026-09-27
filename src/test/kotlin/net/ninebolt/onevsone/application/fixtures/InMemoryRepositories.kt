@@ -32,7 +32,7 @@ class InMemoryArenaRepository :
         }
     }
 
-    override fun find(name: String): Arena = definitions[name] ?: Arena.Disabled.new(arenaId(name))
+    fun find(name: String): Arena = definitions[name] ?: Arena.Disabled.new(arenaId(name))
 
     override fun save(arena: Arena) {
         if (failOnSave) throw PersistenceFailure("save failed")

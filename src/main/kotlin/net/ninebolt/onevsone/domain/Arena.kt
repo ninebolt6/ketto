@@ -71,12 +71,11 @@ sealed interface Arena {
         override fun toString(): String = name
 
         companion object {
-            // The name is used as a persistence file name; "players" and the "create" command keyword are reserved.
+            // "create" collides with the arena command's create literal
             private fun isValidName(name: String): Boolean = name.isNotBlank() &&
                 name.length <= 64 &&
                 name.trim() == name &&
-                name.none { it == '/' || it == '\\' || it == '.' || it == ':' || it.isISOControl() } &&
-                !name.equals("players", ignoreCase = true) &&
+                name.none { it.isISOControl() } &&
                 !name.equals("create", ignoreCase = true)
 
             fun of(name: String): Id? = if (isValidName(name)) Id(name) else null

@@ -35,8 +35,8 @@ class ArenaDisableCommandTest {
         env.newArena("a2")
         env.runCommand(op, "arena", "a2", "disable")
         assertTrue(op.drainMessages().any { it.contains("Disabled arena") })
-        assertFalse(env.service.arena("a2")!!.enabled)
-        assertFalse(env.arenaRepo.find("a2")!!.enabled)
+        assertFalse(env.registry.resolveArena("a2")!!.enabled)
+        assertFalse(env.arenaRepo.loadAll().first { it.name == "a2" }.enabled)
 
         env.runCommand(op, "arena", "a2", "disable")
         assertTrue(op.drainMessages().any { it.contains("That arena is already disabled!") })

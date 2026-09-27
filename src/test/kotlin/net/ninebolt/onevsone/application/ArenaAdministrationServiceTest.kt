@@ -32,9 +32,10 @@ class ArenaAdministrationServiceTest {
         assertEquals(ArenaState.Kind.WAITING, app.state())
 
         assertEquals(CreateError.AlreadyExists, app.admin.create("Arena1"))
-        assertEquals(CreateError.InvalidName, app.admin.create("bad/name"))
-        assertEquals(CreateError.InvalidName, app.admin.create("players"))
-        assertNull(app.service.arena("bad/name"))
+        assertEquals(CreateError.InvalidName, app.admin.create(" bad"))
+        assertEquals(CreateError.InvalidName, app.admin.create("create"))
+        assertNull(app.admin.create("players"))
+        assertNull(app.registry.resolveArena("bad/name"))
     }
 
     @Test
@@ -43,7 +44,7 @@ class ArenaAdministrationServiceTest {
         val (p1, p2) = app.joinedTwo()
         app.signs.setSign(arenaId("arena1"), BlockPosition.new("world", 3, 64, 3))
         assertNull(app.admin.remove("arena1"))
-        assertNull(app.service.arena("arena1"))
+        assertNull(app.registry.resolveArena("arena1"))
         assertNull(app.registry.arenaOf(p1.id))
         assertNull(app.registry.arenaOf(p2.id))
         assertNull(app.arenas.signLocation("arena1"))
@@ -62,7 +63,7 @@ class ArenaAdministrationServiceTest {
         assertEquals(ArenaState.Kind.COUNTDOWN, app.state())
 
         assertNull(app.admin.disable("arena1"))
-        assertFalse(app.service.arena("arena1")!!.enabled)
+        assertFalse(app.registry.resolveArena("arena1")!!.enabled)
         assertEquals(ArenaState.Kind.WAITING, app.state())
         assertFalse(app.arenas.find("arena1").enabled)
 
@@ -118,11 +119,11 @@ class ArenaAdministrationServiceTest {
     fun `arena name lookup ignores case`() {
         app.newArena("Arena1")
         assertEquals("Arena1", app.admin.resolveArenaId("arena1")?.name)
-        assertEquals("Arena1", app.service.arena("ARENA1")?.name)
+        assertEquals("Arena1", app.registry.resolveArena("ARENA1")?.name)
         assertEquals(ArenaState.Kind.WAITING, app.service.matchOf("ArEnA1")?.state?.kind)
 
         assertNull(app.admin.disable("ARENA1"))
-        assertFalse(app.service.arena("Arena1")!!.enabled)
+        assertFalse(app.registry.resolveArena("Arena1")!!.enabled)
         assertEquals(DisableError.AlreadyDisabled, app.admin.disable("arena1"))
 
         app.admin.setSpawn(app.admin.resolveArenaId("ARENA1")!!, SpawnSlot.FIRST, WorldPosition.new("world", 1.0, 64.0, 1.0))
@@ -130,7 +131,7 @@ class ArenaAdministrationServiceTest {
         assertEquals("Arena1", app.signs.signOwner(BlockPosition.new("world", 3, 64, 3)))
 
         assertNull(app.admin.remove("aReNa1"))
-        assertNull(app.service.arena("Arena1"))
+        assertNull(app.registry.resolveArena("Arena1"))
         assertNull(app.arenas.signLocation("Arena1"))
         assertNull(app.arenas.signs["Arena1"])
     }
@@ -148,13 +149,13 @@ class ArenaAdministrationServiceTest {
     fun `authoritative persist failure propagates and leaves the registry unchanged`() {
         app.arenas.failOnSave = true
         assertFailsWith<PersistenceFailure> { app.admin.create("arena1") }
-        assertNull(app.service.arena("arena1"))
+        assertNull(app.registry.resolveArena("arena1"))
 
         app.arenas.failOnSave = false
         app.newArena()
         app.arenas.failOnSave = true
         assertFailsWith<PersistenceFailure> { app.admin.disable("arena1") }
-        assertTrue(app.service.arena("arena1")!!.enabled)
+        assertTrue(app.registry.resolveArena("arena1")!!.enabled)
     }
 
     @Test
@@ -164,7 +165,7 @@ class ArenaAdministrationServiceTest {
         val signWrites = app.presentation.signUpdates.size
         app.arenas.failOnSave = true
         assertFailsWith<PersistenceFailure> { app.admin.enable("arena1") }
-        assertFalse(app.service.arena("arena1")!!.enabled)
+        assertFalse(app.registry.resolveArena("arena1")!!.enabled)
         assertEquals(signWrites, app.presentation.signUpdates.size)
     }
 }

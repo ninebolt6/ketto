@@ -217,6 +217,6 @@ class PaperArenaMembershipTest {
             ),
         )
         env.lifecycle.load()
-        assertTrue(env.service.arena("arena1")!!.enabled)
+        assertTrue(env.registry.resolveArena("arena1")!!.enabled)
     }
 }

@@ -26,11 +26,6 @@ class SqliteArenaRepository(
         }
     }.filterNotNull()
 
-    override fun find(name: String): Arena? {
-        val id = Arena.Id.of(name) ?: return null
-        return store.queryOne("SELECT * FROM arenas WHERE name = ?", name) { toArena(it) } ?: Arena.Disabled.new(id)
-    }
-
     // seq is assigned only on first insert so updates keep the registration slot and stored casing
     override fun save(arena: Arena) {
         store.exec(

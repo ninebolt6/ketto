@@ -36,19 +36,12 @@ class SqliteArenaRepositoryTest {
         )
         repo.save(def)
 
-        val loaded = repo.find("a1")!!
+        val loaded = repo.loadAll().single()
         assertTrue(loaded.enabled)
         val spawn1 = loaded.spawn1!!
         assertEquals(1.5, spawn1.x)
         assertEquals(12.34f, spawn1.yaw, 0.001f)
         assertEquals(-56.78f, spawn1.pitch, 0.001f)
-    }
-
-    @Test
-    fun `missing arena row loads disabled defaults`() = withStore(folder) { store ->
-        val arena = SqliteArenaRepository(store).find("ghost")!!
-        assertFalse(arena.enabled)
-        assertNull(arena.spawn1)
     }
 
     @Test
@@ -89,11 +82,10 @@ class SqliteArenaRepositoryTest {
     }
 
     @Test
-    fun `corrupt arena row surfaces as PersistenceFailure`() = withStore(folder) { store ->
+    fun `corrupt arena row is skipped on load`() = withStore(folder) { store ->
         store.exec(
             "INSERT INTO arenas(name, enabled, spawn1_world, spawn1_x, spawn1_y, spawn1_z, seq) VALUES ('a1', 1, '', 0, 0, 0, 1)",
         )
-        assertFailsWith<PersistenceFailure> { SqliteArenaRepository(store).find("a1") }
         assertEquals(emptyList(), SqliteArenaRepository(store).loadAll())
     }
 
@@ -117,7 +109,7 @@ class SqliteArenaRepositoryTest {
         }
         val repo = SqliteArenaRepository(store, logger)
 
-        val arena = repo.find("a1")!!
+        val arena = repo.loadAll().single()
         assertFalse(arena.enabled)
         assertEquals("world", arena.spawn1?.world)
         assertNull(arena.spawn2)
@@ -131,10 +123,5 @@ class SqliteArenaRepositoryTest {
         repo.save(Arena.Disabled.new(arenaId("a1")))
         store.exec("UPDATE arenas SET name='create' WHERE name='a1'")
         assertEquals(emptyList(), repo.loadAll())
-    }
-
-    @Test
-    fun `find returns null for a name that is not a valid arena id`() = withStore(folder) { store ->
-        assertNull(SqliteArenaRepository(store).find("create"))
     }
 }

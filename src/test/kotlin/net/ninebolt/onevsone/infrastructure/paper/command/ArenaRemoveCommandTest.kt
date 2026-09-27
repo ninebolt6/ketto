@@ -36,7 +36,7 @@ class ArenaRemoveCommandTest {
 
         env.runCommand(op, "arena", "newarena", "remove")
         assertTrue(op.drainMessages().any { it.contains("Removed arena: newarena") })
-        assertNull(env.service.arena("newarena"))
+        assertNull(env.registry.resolveArena("newarena"))
 
         env.runCommand(op, "arena", "newarena", "remove")
         assertTrue(op.drainMessages().any { it.contains("That arena does not exist") })

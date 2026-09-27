@@ -37,7 +37,7 @@ class ArenaSpawnSetCommandTest {
         op.setLocation(Location(env.world(), 1.5, 65.25, -3.0, 33.3f, 12.5f))
         env.runCommand(op, "arena", "arena1", "spawn", "set", "1")
         assertTrue(op.drainMessages().any { it.contains("Set spawn 1") })
-        val spawn1 = env.arenaRepo.find("arena1")!!.spawn1!!
+        val spawn1 = env.arenaRepo.loadAll().first { it.name == "arena1" }.spawn1!!
         assertEquals(33.3f, spawn1.yaw, 0.001f)
         assertEquals(65.25, spawn1.y)
     }

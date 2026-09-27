@@ -57,7 +57,7 @@ class PaperPresentationTest {
     @Test
     fun `sign update for an unloaded world warns and leaves other worlds untouched`() {
         env.newArena()
-        val arena = env.service.arena("arena1")!!
+        val arena = env.registry.resolveArena("arena1")!!
         val sign = env.signBlock(1, 64, 1)
         val warnings = captureLog()
 
@@ -70,7 +70,7 @@ class PaperPresentationTest {
     @Test
     fun `sign update on a non sign block is ignored`() {
         env.newArena()
-        val arena = env.service.arena("arena1")!!
+        val arena = env.registry.resolveArena("arena1")!!
         val block = env.plainBlock()
         val warnings = captureLog()
 

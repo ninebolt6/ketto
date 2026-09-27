@@ -35,8 +35,8 @@ class ArenaEnableCommandTest {
         env.newArena("a2", enabled = false)
         env.runCommand(op, "arena", "a2", "enable")
         assertTrue(op.drainMessages().any { it.contains("Enabled arena") })
-        assertTrue(env.service.arena("a2")!!.enabled)
-        assertTrue(env.arenaRepo.find("a2")!!.enabled)
+        assertTrue(env.registry.resolveArena("a2")!!.enabled)
+        assertTrue(env.arenaRepo.loadAll().first { it.name == "a2" }.enabled)
 
         env.runCommand(op, "arena", "a2", "enable")
         assertTrue(op.drainMessages().any { it.contains("That arena is already enabled!") })
@@ -48,7 +48,7 @@ class ArenaEnableCommandTest {
         env.runCommand(op, "arena", "create", "newarena")
         env.runCommand(op, "arena", "newarena", "enable")
         assertTrue(op.drainMessages().any { it.contains("Set spawn 1, 2 for arena newarena first") })
-        assertFalse(env.service.arena("newarena")!!.enabled)
+        assertFalse(env.registry.resolveArena("newarena")!!.enabled)
     }
 
     @Test
