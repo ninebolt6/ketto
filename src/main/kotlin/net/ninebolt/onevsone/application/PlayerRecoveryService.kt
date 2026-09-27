@@ -13,7 +13,7 @@ import java.util.logging.Level
 import java.util.logging.Logger
 import kotlin.uuid.Uuid
 
-// Deferred callbacks are validated by ticket identity
+// Deferred callbacks are validated by comparing the still-pending BackupRef
 class PlayerRecoveryService(
     private val backups: InventoryBackupPort,
     private val players: PlayerPort,
@@ -21,19 +21,17 @@ class PlayerRecoveryService(
     private val presentation: PresentationPort,
     private val logger: Logger,
 ) {
-    class RestoreTicket(val ref: BackupRef)
-
-    private val tickets = mutableMapOf<Uuid, RestoreTicket>()
+    private val pendingBackups = mutableMapOf<Uuid, BackupRef>()
 
     fun loadPersisted() {
-        backups.pendingBackups().forEach(::registerTicket)
+        backups.pendingBackups().forEach(::register)
     }
 
     fun backupBeforeMatch(participants: List<Participant>) {
-        backups.backupBeforeMatch(MatchId.new(), participants).forEach(::registerTicket)
+        backups.backupBeforeMatch(MatchId.new(), participants).forEach(::register)
     }
 
-    private fun registerTicket(ref: BackupRef) {
+    private fun register(ref: BackupRef) {
         val owner = ref.playerId
         if (owner == null) {
             logger.warning(
@@ -42,25 +40,17 @@ class PlayerRecoveryService(
             )
             return
         }
-        tickets[owner] = RestoreTicket(ref)
+        pendingBackups[owner] = ref
     }
 
-    fun pending(playerId: Uuid): RestoreTicket? = tickets[playerId]
+    fun pending(playerId: Uuid): BackupRef? = pendingBackups[playerId]
 
-    private fun ownedBy(handle: PlayerHandle, ticket: RestoreTicket): Boolean = tickets[handle.id] === ticket
-
-    fun restoreNow(handle: PlayerHandle, ticket: RestoreTicket): Boolean {
-        if (!ownedBy(handle, ticket)) return false
+    fun restoreNow(handle: PlayerHandle, ref: BackupRef): Boolean {
+        if (pendingBackups[handle.id] != ref) return false
+        if (!restorePayload(handle, ref)) return false
+        forget(ref)
         try {
-            backups.restore(ticket.ref)
-        } catch (e: PersistenceFailure) {
-            logger.log(Level.SEVERE, "Could not restore inventory for ${handle.name} (${handle.id}); backup retained", e)
-            return false
-        }
-        presentation.clearScoreboard(handle.id)
-        forget(ticket)
-        try {
-            backups.acknowledge(ticket.ref)
+            backups.acknowledge(ref)
         } catch (e: PersistenceFailure) {
             // A failed delete leaves the record on disk; re-restoring on next startup is the safe side
             logger.log(Level.SEVERE, "Could not discard restored backup for ${handle.name} (${handle.id}); record retained", e)
@@ -68,13 +58,24 @@ class PlayerRecoveryService(
         return true
     }
 
-    fun restoreToLobby(handle: PlayerHandle, ticket: RestoreTicket?) {
-        if (ticket != null && !restoreNow(handle, ticket)) return
+    private fun restorePayload(handle: PlayerHandle, ref: BackupRef): Boolean {
+        try {
+            backups.restore(ref)
+        } catch (e: PersistenceFailure) {
+            logger.log(Level.SEVERE, "Could not restore inventory for ${handle.name} (${handle.id}); backup retained", e)
+            return false
+        }
+        presentation.clearScoreboard(handle.id)
+        return true
+    }
+
+    fun restoreToLobby(handle: PlayerHandle, ref: BackupRef?) {
+        if (ref != null && !restoreNow(handle, ref)) return
         teleportLobby(handle)
     }
 
-    private fun forget(ticket: RestoreTicket) {
-        tickets.values.remove(ticket)
+    private fun forget(ref: BackupRef) {
+        pendingBackups.values.remove(ref)
     }
 
     private fun teleportLobby(handle: PlayerHandle) {
@@ -88,18 +89,12 @@ class PlayerRecoveryService(
 
     // Shutdown runs no future ticks, so restores are synchronous; dead players cannot be teleported and keep their record for next login
     fun restoreAllOnline() {
-        tickets.toList().forEach { (id, ticket) ->
+        pendingBackups.toList().forEach { (id, ref) ->
             val handle = players.handle(id) ?: return@forEach
             if (handle.dead) {
-                try {
-                    backups.restore(ticket.ref)
-                } catch (e: PersistenceFailure) {
-                    logger.log(Level.SEVERE, "Could not restore inventory for ${handle.name} (${handle.id}); backup retained", e)
-                    return@forEach
-                }
-                presentation.clearScoreboard(id)
+                restorePayload(handle, ref)
             } else {
-                restoreNow(handle, ticket)
+                restoreNow(handle, ref)
             }
         }
     }

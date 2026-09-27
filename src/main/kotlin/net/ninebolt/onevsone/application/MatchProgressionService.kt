@@ -1,5 +1,6 @@
 package net.ninebolt.onevsone.application
 
+import net.ninebolt.onevsone.application.port.BackupRef
 import net.ninebolt.onevsone.application.port.Cancellation
 import net.ninebolt.onevsone.application.port.KitPort
 import net.ninebolt.onevsone.application.port.PersistenceFailure
@@ -42,10 +43,10 @@ class MatchProgressionService(
         cancelCountdown(arenaId)
         val step = registry.transact(arenaId) { it.abort() } ?: return
         val left = step.outcome
-        val tickets = left.map { it to recovery.pending(it.id) }
-        tickets.forEach { (participant, ticket) ->
-            runNowOrAfterRespawn(participant.id, ticket) { h ->
-                ticket?.let { recovery.restoreNow(h, it) }
+        val pendingRefs = left.map { it to recovery.pending(it.id) }
+        pendingRefs.forEach { (participant, ref) ->
+            runNowOrAfterRespawn(participant.id, ref) { h ->
+                ref?.let { recovery.restoreNow(h, it) }
             }
         }
         signs.refreshSign(step.match)
@@ -104,31 +105,31 @@ class MatchProgressionService(
         val arenaId = match.arenaId
         cancelCountdown(arenaId)
 
-        // Tickets must be secured first: the committing transition has already unregistered both participants
-        val winnerTicket = recovery.pending(winner.id)
-        val loserTicket = recovery.pending(loser.id)
-        if (winnerTicket == null || loserTicket == null) {
+        // Backup refs must be secured first: the committing transition has already unregistered both participants
+        val winnerRef = recovery.pending(winner.id)
+        val loserRef = recovery.pending(loser.id)
+        if (winnerRef == null || loserRef == null) {
             logger.severe("Match in arena ${arenaId.name} ended without a pending backup; retained rows restore on next login")
         }
 
         presentation.champion(arenaId, winner.name)
 
-        runNowOrAfterRespawn(winner.id, winnerTicket) { h ->
-            resetAndRestore(h, winnerTicket)
+        runNowOrAfterRespawn(winner.id, winnerRef) { h ->
+            resetAndRestore(h, winnerRef)
             if (!forfeit) presentation.championFirework(winner.id)
         }
 
         if (death) {
-            runAfterRespawn(loser.id, loserTicket) { h ->
-                resetAndRestore(h, loserTicket)
+            runAfterRespawn(loser.id, loserRef) { h ->
+                resetAndRestore(h, loserRef)
             }
         } else {
             // Losers who died via quit arrive here dead, so do not defer on a dead check
             players.handle(loser.id)?.let { h ->
                 if (forfeit) {
-                    loserTicket?.let { recovery.restoreNow(h, it) }
+                    loserRef?.let { recovery.restoreNow(h, it) }
                 } else {
-                    resetAndRestore(h, loserTicket)
+                    resetAndRestore(h, loserRef)
                 }
             }
         }
@@ -255,15 +256,15 @@ class MatchProgressionService(
         kit.applyKit(arenaId, participant.id)
     }
 
-    private fun resetAndRestore(handle: PlayerHandle, ticket: PlayerRecoveryService.RestoreTicket?) {
+    private fun resetAndRestore(handle: PlayerHandle, ref: BackupRef?) {
         handle.resetVitals()
-        recovery.restoreToLobby(handle, ticket)
+        recovery.restoreToLobby(handle, ref)
     }
 
     // A dead player cannot be acted on until it respawns, so dead handles defer to next tick
     private fun runNowOrAfterRespawn(
         playerId: Uuid,
-        ticket: PlayerRecoveryService.RestoreTicket?,
+        ref: BackupRef?,
         action: (PlayerHandle) -> Unit,
     ) {
         val handle = players.handle(playerId) ?: return
@@ -271,8 +272,8 @@ class MatchProgressionService(
             action(handle)
             return
         }
-        if (ticket != null) {
-            scheduleTicketed(playerId, ticket, action)
+        if (ref != null) {
+            scheduleWithRef(playerId, ref, action)
         } else {
             scheduleDeferred(playerId, { true }, action)
         }
@@ -288,16 +289,16 @@ class MatchProgressionService(
     }
 
     // A killed participant must wait for the respawn tick even if the handle still reports alive
-    private fun runAfterRespawn(playerId: Uuid, ticket: PlayerRecoveryService.RestoreTicket?, action: (PlayerHandle) -> Unit) {
-        if (ticket != null) scheduleTicketed(playerId, ticket, action) else scheduleDeferred(playerId, { true }, action)
+    private fun runAfterRespawn(playerId: Uuid, ref: BackupRef?, action: (PlayerHandle) -> Unit) {
+        if (ref != null) scheduleWithRef(playerId, ref, action) else scheduleDeferred(playerId, { true }, action)
     }
 
-    // A deferred restore is valid only while the exact same ticket is still pending
-    private fun scheduleTicketed(
+    // A deferred restore is valid only while the exact same backup is still pending
+    private fun scheduleWithRef(
         playerId: Uuid,
-        ticket: PlayerRecoveryService.RestoreTicket,
+        ref: BackupRef,
         action: (PlayerHandle) -> Unit,
-    ) = scheduleDeferred(playerId, { recovery.pending(playerId) === ticket }, action)
+    ) = scheduleDeferred(playerId, { recovery.pending(playerId) == ref }, action)
 
     private fun teleportToSlot(arenaId: Arena.Id, slot: SpawnSlot, handle: PlayerHandle) {
         val spawn = registry.enabledArena(arenaId)?.spawn(slot)

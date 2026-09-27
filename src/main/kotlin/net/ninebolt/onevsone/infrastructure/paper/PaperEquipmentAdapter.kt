@@ -22,8 +22,6 @@ class PaperEquipmentAdapter(
 
     private val kits = mutableMapOf<Arena.Id, PaperInventorySnapshot>()
 
-    private val pendingSnapshots = mutableMapOf<Uuid, PaperInventorySnapshot>()
-
     override fun forgetKit(arena: Arena.Id) {
         kits.remove(arena)
     }
@@ -42,13 +40,11 @@ class PaperEquipmentAdapter(
             )
         }
         backups.saveBackups(captured)
-        captured.forEach { (ref, snapshot) -> pendingSnapshots[ref.backupId] = snapshot }
         return captured.map { it.ref }
     }
 
     override fun restore(backup: BackupRef) {
-        val snapshot = pendingSnapshots[backup.backupId]
-            ?: backups.backupFor(backup)?.snapshot
+        val snapshot = backups.backupFor(backup)?.snapshot
             ?: throw PersistenceFailure("No stored backup ${backup.backupId} for ${backup.playerName}")
         val player = resolve(backup)
             ?: throw PersistenceFailure("Player ${backup.playerName} is not available for restore")
@@ -59,10 +55,9 @@ class PaperEquipmentAdapter(
 
     override fun acknowledge(backup: BackupRef) {
         backups.deleteBackup(backup)
-        pendingSnapshots.remove(backup.backupId)
     }
 
-    override fun pendingBackups(): List<BackupRef> = backups.persistedBackups().onEach { pendingSnapshots[it.ref.backupId] = it.snapshot }.map { it.ref }
+    override fun pendingBackups(): List<BackupRef> = backups.persistedBackups().map { it.ref }
 
     override fun applyKit(arena: Arena.Id, playerId: Uuid) {
         val player = lookup.resolve(playerId)

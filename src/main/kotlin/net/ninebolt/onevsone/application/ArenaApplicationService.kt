@@ -35,9 +35,9 @@ class ArenaApplicationService(
         if (step.outcome == JoinOutcome.Rejected) return JoinOutput.InMatch
 
         val handle = players.handle(playerId)
-        recovery.pending(playerId)?.let { ticket ->
+        recovery.pending(playerId)?.let { ref ->
             if (handle == null || handle.dead) return JoinOutput.InMatch
-            if (!recovery.restoreNow(handle, ticket)) return JoinOutput.RestorePending
+            if (!recovery.restoreNow(handle, ref)) return JoinOutput.RestorePending
         }
 
         registry.putMatch(step.match)
@@ -67,9 +67,9 @@ class ArenaApplicationService(
     fun quit(playerId: Uuid) {
         val step = registry.transactFor(playerId) { it.forfeit(playerId) }
         if (step == null) {
-            recovery.pending(playerId)?.let { ticket ->
+            recovery.pending(playerId)?.let { ref ->
                 players.handle(playerId)?.let { handle ->
-                    recovery.restoreNow(handle, ticket)
+                    recovery.restoreNow(handle, ref)
                 }
             }
             return
@@ -89,11 +89,11 @@ class ArenaApplicationService(
 
     fun restorePending(playerId: Uuid) {
         if (registry.isJoined(playerId)) return
-        val ticket = recovery.pending(playerId) ?: return
+        val ref = recovery.pending(playerId) ?: return
         val handle = players.handle(playerId) ?: return
         // A login can arrive dead; revive first so the restore lands on a live player
         handle.respawn()
-        recovery.restoreNow(handle, ticket)
+        recovery.restoreNow(handle, ref)
     }
 
     fun defeat(playerId: Uuid, cause: DefeatCause): Boolean {
