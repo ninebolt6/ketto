@@ -27,8 +27,9 @@ class TestApp(val requiredWins: Int = 3) {
     val presentation = RecordingPresentation()
     val recovery = PlayerRecoveryService(equipment, players, arenas, presentation, logger)
     val signs = ArenaSignService(registry, arenas, presentation)
+    val statsService = PlayerStatsService(stats)
     val progression = MatchProgressionService(
-        registry, signs, stats, equipment, players, scheduler, presentation, recovery, logger,
+        registry, signs, statsService, equipment, players, scheduler, presentation, recovery, logger,
     )
     val service = ArenaApplicationService(
         registry,
@@ -40,7 +41,6 @@ class TestApp(val requiredWins: Int = 3) {
     val lifecycle = ArenaLifecycleService(registry, arenas, signs, recovery, progression, logger)
     val admin = ArenaAdministrationService(registry, arenas, arenas, equipment, progression, signs)
     val lobby = LobbyService(arenas)
-    val statsService = PlayerStatsService(stats)
 
     fun newArena(name: String = "arena1", enabled: Boolean = true): Arena.Id {
         val id = arenaId(name)

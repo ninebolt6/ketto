@@ -192,8 +192,9 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         val registry = ArenaRegistry(requiredWins)
         val signs = ArenaSignService(registry, signRepo, presentation)
         val recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepo, presentation, logger)
+        val statsService = PlayerStatsService(statsRepo)
         val progression = MatchProgressionService(
-            registry, signs, statsRepo,
+            registry, signs, statsService,
             equipment, playerPort, schedulerPort, presentation, recovery, logger,
         )
         val service = ArenaApplicationService(
@@ -219,7 +220,6 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
             progression,
             signs,
         )
-        val statsService = PlayerStatsService(statsRepo)
         val lobby = LobbyService(lobbyRepo)
         return Deps(
             store, backupStore, kitStore, arenaRepo, lobbyRepo, signRepo, statsRepo,

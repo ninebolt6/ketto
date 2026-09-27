@@ -64,8 +64,7 @@ class InMemoryArenaRepository :
 
 class InMemoryPlayerStatsRepository : PlayerStatsRepository {
     val stats = mutableMapOf<Uuid, PlayerStats>()
-    var failOnWin: Throwable? = null
-    var failOnLoss: Throwable? = null
+    var failOnSaveFor: Uuid? = null
     var failOnFind: Throwable? = null
 
     override fun find(playerId: Uuid): PlayerStats? {
@@ -73,15 +72,8 @@ class InMemoryPlayerStatsRepository : PlayerStatsRepository {
         return stats[playerId]
     }
 
-    override fun recordWin(playerId: Uuid) {
-        failOnWin?.let { throw it }
-        val s = stats[playerId] ?: PlayerStats.new(0, 0)
-        stats[playerId] = PlayerStats.new(s.wins + 1, s.losses)
-    }
-
-    override fun recordLoss(playerId: Uuid) {
-        failOnLoss?.let { throw it }
-        val s = stats[playerId] ?: PlayerStats.new(0, 0)
-        stats[playerId] = PlayerStats.new(s.wins, s.losses + 1)
+    override fun save(stats: PlayerStats) {
+        if (stats.playerId == failOnSaveFor) throw PersistenceException("save failed")
+        this.stats[stats.playerId] = stats
     }
 }

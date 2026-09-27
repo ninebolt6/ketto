@@ -1,12 +1,12 @@
 package net.ninebolt.onevsone.infrastructure.paper.command
 
 import io.mockk.every
+import net.ninebolt.onevsone.domain.PlayerStats
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.offlineId
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.runCommand
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.writeStats
 import org.bukkit.Server
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import kotlin.test.assertTrue
+import kotlin.uuid.Uuid
 
 class StatsCommandTest {
 
@@ -136,4 +137,8 @@ class StatsCommandTest {
         env.runCommand(p, "stats")
         assertTrue(p.drainMessages().any { it.contains("No stats found") })
     }
+}
+
+private fun TestEnv.writeStats(uuid: Uuid, win: Int, lose: Int) {
+    statsRepo.save(PlayerStats.restored(uuid, win, lose))
 }

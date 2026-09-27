@@ -88,7 +88,7 @@ class ArenaApplicationServiceResilienceTest {
     fun `stats failure for winner does not block loser record or restores`() {
         val app = TestApp(requiredWins = 1)
         val (p1, p2) = app.startMatch()
-        app.stats.failOnWin = PersistenceException("write failed")
+        app.stats.failOnSaveFor = p1.id
         assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
         assertEquals(ArenaState.Kind.WAITING, app.state())
         assertEquals(1, app.stats.stats[p2.id]?.losses)
@@ -101,7 +101,7 @@ class ArenaApplicationServiceResilienceTest {
     fun `stats failure for loser does not block winner record`() {
         val app = TestApp(requiredWins = 1)
         val (p1, p2) = app.startMatch()
-        app.stats.failOnLoss = PersistenceException("write failed")
+        app.stats.failOnSaveFor = p2.id
         assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
         assertEquals(1, app.stats.stats[p1.id]?.wins)
         assertTrue(app.logger.reports.any { it.message.startsWith("Failed to record loss") })

@@ -20,11 +20,6 @@ internal fun TestEnv.tabComplete(sender: CommandSender, vararg args: String): Li
     return dispatcher.getCompletionSuggestions(parsed).join().list.map { it.text }
 }
 
-internal fun TestEnv.writeStats(uuid: Uuid, win: Int, lose: Int) {
-    repeat(win) { statsRepo.recordWin(uuid) }
-    repeat(lose) { statsRepo.recordLoss(uuid) }
-}
-
 internal fun TestEnv.opPlayer(name: String): ArenaPlayerMock = player(name).also { it.isOp = true }
 
 // ServerMock carries the upstream @Deprecated on getOfflinePlayer(name) that Paper removed, so call it through the Server type

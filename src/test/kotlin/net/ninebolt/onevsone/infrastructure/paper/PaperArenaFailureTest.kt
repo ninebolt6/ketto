@@ -57,7 +57,7 @@ class PaperArenaFailureTest {
         env.join(p1, arena)
         env.join(p2, arena)
         env.tick(6)
-        every { spyStats.recordWin(p1.uuid) } throws PersistenceException("disk gone")
+        every { spyStats.save(match { it.playerId == p1.uuid }) } throws PersistenceException("disk gone")
         p2.simulateDamage(100.0, genericDamage())
         assertEquals(ArenaState.Kind.WAITING, env.view().state.kind)
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)

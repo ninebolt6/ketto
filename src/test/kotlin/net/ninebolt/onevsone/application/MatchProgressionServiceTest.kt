@@ -132,6 +132,21 @@ class MatchProgressionServiceTest {
     }
 
     @Test
+    fun `match results accumulate in persisted stats across matches`() {
+        val app = TestApp(requiredWins = 1)
+        val (p1, p2) = app.startMatch()
+        assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
+
+        assertEquals(JoinOutput.JoinedWaiting, app.service.join(p1.id, p1.name, arenaId("arena1")))
+        assertEquals(JoinOutput.JoinedStarting, app.service.join(p2.id, p2.name, arenaId("arena1")))
+        app.scheduler.tick(6)
+        assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
+
+        assertEquals(2, app.stats.stats[p1.id]?.wins)
+        assertEquals(2, app.stats.stats[p2.id]?.losses)
+    }
+
+    @Test
     fun `the countdown waits while the first player is dead`() {
         val app = TestApp()
         val (p1, _) = app.joinedTwo()

@@ -9,6 +9,16 @@ class PlayerStatsService(private val stats: PlayerStatsRepository) {
 
     fun statsFor(playerId: Uuid): PlayerStats? = stats.find(playerId)
 
+    fun recordWin(playerId: Uuid) {
+        val current = stats.find(playerId) ?: PlayerStats.new(playerId)
+        stats.save(current.recordWin())
+    }
+
+    fun recordLoss(playerId: Uuid) {
+        val current = stats.find(playerId) ?: PlayerStats.new(playerId)
+        stats.save(current.recordLoss())
+    }
+
     // Named-stats lookups resolve uncached names through an external call, hence the cooldown
     private val statsLookupThrottle = RequestThrottle(STATS_LOOKUP_COOLDOWN_NANOS)
 

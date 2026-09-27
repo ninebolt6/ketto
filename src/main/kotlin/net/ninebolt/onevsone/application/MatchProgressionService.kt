@@ -6,7 +6,6 @@ import net.ninebolt.onevsone.application.port.KitPort
 import net.ninebolt.onevsone.application.port.PersistenceException
 import net.ninebolt.onevsone.application.port.PlayerHandle
 import net.ninebolt.onevsone.application.port.PlayerPort
-import net.ninebolt.onevsone.application.port.PlayerStatsRepository
 import net.ninebolt.onevsone.application.port.PresentationPort
 import net.ninebolt.onevsone.application.port.SchedulerPort
 import net.ninebolt.onevsone.domain.Arena
@@ -23,7 +22,7 @@ import kotlin.uuid.Uuid
 class MatchProgressionService(
     private val registry: ArenaRegistry,
     private val signs: ArenaSignService,
-    private val stats: PlayerStatsRepository,
+    private val stats: PlayerStatsService,
     private val kit: KitPort,
     private val players: PlayerPort,
     private val scheduler: SchedulerPort,

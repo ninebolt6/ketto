@@ -98,10 +98,11 @@ private class PluginModule(
         presentation = presentation,
         logger = plugin.logger,
     )
+    private val statsService = PlayerStatsService(stats = stats)
     private val progression = MatchProgressionService(
         registry = registry,
         signs = signs,
-        stats = stats,
+        stats = statsService,
         kit = equipment,
         players = players,
         scheduler = PaperScheduler(plugin),
@@ -133,7 +134,6 @@ private class PluginModule(
         signs = signs,
     )
     private val lobby = LobbyService(lobby = lobbyRepository)
-    private val statsService = PlayerStatsService(stats = stats)
 
     init {
         lifecycle.load()
