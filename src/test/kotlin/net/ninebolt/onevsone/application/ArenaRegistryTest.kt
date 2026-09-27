@@ -1,6 +1,5 @@
 package net.ninebolt.onevsone.application
 
-import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.ArenaState
@@ -10,7 +9,6 @@ import net.ninebolt.onevsone.domain.WorldPosition
 import net.ninebolt.onevsone.domain.fixtures.arenaId
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertSame
@@ -25,7 +23,6 @@ class ArenaRegistryTest {
             WorldPosition.new("world", 1.0, 64.0, 1.0),
             WorldPosition.new("world", 2.0, 64.0, 2.0),
         ),
-        persist = {},
     )
 
     private fun match(name: String, state: ArenaState) = ArenaMatch.restored(
@@ -79,13 +76,11 @@ class ArenaRegistryTest {
     fun `mutators on an unknown arena are no-ops`() {
         val registry = ArenaRegistry(3)
         val id = arenaId("nope")
-        var persists = 0
-        registry.removeArena(id, persist = { persists++ })
-        assertNull(registry.updateArena(id, persist = { persists++ }) { it })
+        registry.removeArena(id)
+        registry.replaceArena(Arena.Disabled.new(id))
         registry.putMatch(match("nope", ArenaState.Waiting))
         assertNull(registry.updateMatch(id) { it })
         assertNull(registry.transact(id) { it.abort() })
-        assertEquals(0, persists)
         assertTrue(registry.arenaIds().isEmpty())
     }
 
@@ -118,20 +113,10 @@ class ArenaRegistryTest {
         val p = Participant.new("Alice")
         registry.putMatch(match("a1", ArenaState.OneMore(p)))
 
-        registry.removeArena(arenaId("a1"), persist = {})
+        registry.removeArena(arenaId("a1"))
 
         assertNull(registry.arena(arenaId("a1")))
         assertFalse(registry.isJoined(p.id))
         assertNull(registry.arenaOf(p.id))
-    }
-
-    @Test
-    fun `persist failure leaves registry untouched`() {
-        val registry = ArenaRegistry(3)
-        assertFailsWith<PersistenceFailure> {
-            registry.installArena(Arena.Disabled.new(arenaId("a1"))) { throw PersistenceFailure("disk") }
-        }
-        assertNull(registry.arena(arenaId("a1")))
-        assertTrue(registry.arenaIds().isEmpty())
     }
 }

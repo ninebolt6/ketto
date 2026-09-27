@@ -5,7 +5,6 @@ import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.Transition
 import kotlin.uuid.Uuid
 
-// Ordering contract: each arena mutator's persist hook runs before the in-memory write and touches persistence only; persist failures propagate
 class ArenaRegistry(private val requiredWins: Int) {
 
     private data class Slot(val arena: Arena, val match: ArenaMatch)
@@ -27,27 +26,21 @@ class ArenaRegistry(private val requiredWins: Int) {
 
     fun arenaIds(): List<Arena.Id> = slots.keys.toList()
 
-    fun installArena(arena: Arena, persist: (Arena) -> Unit): ArenaMatch {
-        persist(arena)
+    fun installArena(arena: Arena): ArenaMatch {
         val match = ArenaMatch.new(arena.id, requiredWins)
         val previous = slots.put(arena.id, Slot(arena, match))
         reconcileIndex(arena.id, previous?.match, match)
         return match
     }
 
-    fun removeArena(id: Arena.Id, persist: (Arena) -> Unit) {
-        val previous = slots[id] ?: return
-        persist(previous.arena)
-        slots.remove(id)
+    fun removeArena(id: Arena.Id) {
+        val previous = slots.remove(id) ?: return
         reconcileIndex(id, previous.match, null)
     }
 
-    fun updateArena(id: Arena.Id, persist: (Arena) -> Unit, transform: (Arena) -> Arena): Arena? {
-        val slot = slots[id] ?: return null
-        val next = transform(slot.arena)
-        persist(next)
-        slots[id] = slot.copy(arena = next)
-        return next
+    fun replaceArena(arena: Arena) {
+        val slot = slots[arena.id] ?: return
+        slots[arena.id] = slot.copy(arena = arena)
     }
 
     fun match(id: Arena.Id): ArenaMatch? = slots[id]?.match

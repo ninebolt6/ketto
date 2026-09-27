@@ -25,15 +25,16 @@ class ArenaAdministrationService(
         val id = Arena.Id.of(name) ?: return CreateError.InvalidName
         if (registry.resolveArenaId(name) != null) return CreateError.AlreadyExists
         val arena = Arena.Disabled.new(id)
-        // Authoritative data: a save failure propagates and the arena is never registered
-        registry.installArena(arena, persist = arenas::save)
+        arenas.save(arena)
+        registry.installArena(arena)
         return null
     }
 
     fun remove(name: String): RemoveError? {
         val arena = arena(name) ?: return RemoveError.NotFound
         progression.abort(arena.id)
-        registry.removeArena(arena.id, persist = { arenas.delete(it.name) })
+        arenas.delete(arena.name)
+        registry.removeArena(arena.id)
         signRepo.clearSign(arena.name)
         kit.forgetKit(arena.id)
         return null
@@ -49,7 +50,8 @@ class ArenaAdministrationService(
                 is EnableOutcome.Ready -> outcome.arena
             }
         }
-        registry.updateArena(arena.id, persist = arenas::save) { next }
+        arenas.save(next)
+        registry.replaceArena(next)
         registry.match(arena.id)?.let(signs::refreshSign)
         return null
     }
@@ -60,14 +62,17 @@ class ArenaAdministrationService(
             is Arena.Disabled -> return DisableError.AlreadyDisabled
             is Arena.Enabled -> arena.disable()
         }
-        registry.updateArena(arena.id, persist = arenas::save) { next }
+        arenas.save(next)
+        registry.replaceArena(next)
         progression.abort(arena.id)
         return null
     }
 
     fun setSpawn(name: String, slot: SpawnSlot, position: WorldPosition): SetSpawnError? {
-        val id = registry.resolveArenaId(name) ?: return SetSpawnError.NotFound
-        registry.updateArena(id, persist = arenas::save) { it.withSpawn(slot, position) }
+        val arena = registry.resolveArena(name) ?: return SetSpawnError.NotFound
+        val next = arena.withSpawn(slot, position)
+        arenas.save(next)
+        registry.replaceArena(next)
         return null
     }
 

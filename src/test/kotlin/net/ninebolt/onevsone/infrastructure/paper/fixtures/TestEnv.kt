@@ -293,7 +293,8 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         } else {
             Arena.Disabled.restored(id, spawn1, spawn2)
         }
-        registry.installArena(arena, persist = arenaRepo::save)
+        arenaRepo.save(arena)
+        registry.installArena(arena)
         return id
     }
 

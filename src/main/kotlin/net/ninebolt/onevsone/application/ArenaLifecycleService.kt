@@ -23,8 +23,7 @@ class ArenaLifecycleService(
             emptyList()
         }
         loaded.forEach { arena ->
-            // Loaded definitions are already persisted, so install saves nothing
-            registry.installArena(arena, persist = {})
+            registry.installArena(arena)
             logger.warnOnFailure("Could not update sign for arena ${arena.id.name}; continuing startup") {
                 signs.refreshSign(arena.id, ArenaState.Waiting)
             }

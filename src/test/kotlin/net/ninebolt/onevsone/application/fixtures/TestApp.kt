@@ -52,7 +52,7 @@ class TestApp(val requiredWins: Int = 3) {
         } else {
             Arena.Disabled.restored(id, spawn1, spawn2)
         }
-        registry.installArena(arena, persist = {})
+        registry.installArena(arena)
         return id
     }
 
