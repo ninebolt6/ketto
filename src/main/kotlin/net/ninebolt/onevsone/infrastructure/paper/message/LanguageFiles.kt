@@ -54,5 +54,7 @@ internal object LanguageFiles {
         return added
     }
 
-    private fun flatten(config: YamlConfiguration): Map<String, String> = config.getKeys(true).mapNotNull { key -> config.getString(key)?.let { key to it } }.toMap()
+    private fun flatten(config: YamlConfiguration): Map<String, String> = config.getValues(true)
+        .mapNotNull { (key, value) -> (value as? String)?.let { key to it } }
+        .toMap()
 }

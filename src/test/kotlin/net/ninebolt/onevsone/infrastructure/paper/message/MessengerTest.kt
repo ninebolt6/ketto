@@ -161,6 +161,17 @@ class MessengerTest {
     }
 
     @Test
+    fun `key missing from a partial language file falls back to the fallback bundle`() {
+        File(folder, "messages").mkdirs()
+        File(folder, "messages/de.yaml").writeText("MATCH_JOINED: \"<green>Beigetreten: <name>\"\n")
+        val messenger = load()
+        assertEquals(
+            plain.serialize(messenger.render(Message.MatchGameStart, "en")),
+            plain.serialize(messenger.render(Message.MatchGameStart, "de")),
+        )
+    }
+
+    @Test
     fun `yml extension is also accepted`() {
         File(folder, "messages").mkdirs()
         File(folder, "messages/de.yml").writeText("MATCH_JOINED: \"<green>Beigetreten: <name>\"\n")
@@ -293,10 +304,12 @@ class MessengerTest {
     @Test
     fun `override entries without a string value are skipped`() {
         File(folder, "messages").mkdirs()
-        File(folder, "messages/de.yaml").writeText("MATCH_JOINED: \"<green>Beigetreten: <name>\"\nEMPTY_KEY:\n")
+        File(folder, "messages/de.yaml").writeText("MATCH_JOINED: \"<green>Beigetreten: <name>\"\nEMPTY_KEY:\nsection:\n  child: \"v\"\n")
         val bundles = LanguageFiles.loadBundles(File(folder, "messages"), "en", logger)
         assertEquals("<green>Beigetreten: <name>", bundles["de"]?.get("MATCH_JOINED"))
         assertFalse("EMPTY_KEY" in bundles["de"]!!)
+        assertFalse("section" in bundles["de"]!!)
+        assertEquals("v", bundles["de"]?.get("section.child"))
     }
 
     @Test
