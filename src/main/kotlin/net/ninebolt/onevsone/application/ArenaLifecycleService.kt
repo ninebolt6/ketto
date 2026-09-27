@@ -2,8 +2,8 @@ package net.ninebolt.onevsone.application
 
 import net.ninebolt.onevsone.application.port.ArenaRepository
 import net.ninebolt.onevsone.application.port.PersistenceFailure
-import net.ninebolt.onevsone.application.port.warnOnFailure
 import net.ninebolt.onevsone.domain.ArenaState
+import java.util.logging.Level
 import java.util.logging.Logger
 
 class ArenaLifecycleService(
@@ -24,8 +24,10 @@ class ArenaLifecycleService(
         }
         loaded.forEach { arena ->
             registry.installArena(arena)
-            logger.warnOnFailure("Could not update sign for arena ${arena.id.name}; continuing startup") {
+            try {
                 signs.refreshSign(arena.id, ArenaState.Waiting)
+            } catch (e: PersistenceFailure) {
+                logger.log(Level.WARNING, "Could not update sign for arena ${arena.id.name}; continuing startup", e)
             }
         }
     }

@@ -7,7 +7,6 @@ import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.application.port.PlayerHandle
 import net.ninebolt.onevsone.application.port.PlayerPort
 import net.ninebolt.onevsone.application.port.PresentationPort
-import net.ninebolt.onevsone.application.port.warnOnFailure
 import net.ninebolt.onevsone.domain.MatchId
 import net.ninebolt.onevsone.domain.Participant
 import java.util.logging.Level
@@ -67,7 +66,12 @@ class PlayerRecoveryService(
 
     // Shutdown runs no future ticks, so restores are synchronous; dead players cannot be teleported and keep their record for next login
     fun restoreAllOnline() {
-        val refs = logger.warnOnFailure("Could not list pending backups; leaving records for next startup") { backups.pendingRefs() } ?: return
+        val refs = try {
+            backups.pendingRefs()
+        } catch (e: PersistenceFailure) {
+            logger.log(Level.WARNING, "Could not list pending backups; leaving records for next startup", e)
+            return
+        }
         refs.forEach { ref ->
             val handle = players.handle(ref.playerId) ?: return@forEach
             if (handle.dead) {
