@@ -7,6 +7,7 @@ import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.application.port.PlayerHandle
 import net.ninebolt.onevsone.application.port.PlayerPort
 import net.ninebolt.onevsone.application.port.PresentationPort
+import net.ninebolt.onevsone.application.port.warnOnFailure
 import net.ninebolt.onevsone.domain.MatchId
 import net.ninebolt.onevsone.domain.Participant
 import java.util.logging.Level
@@ -21,26 +22,15 @@ class PlayerRecoveryService(
     private val presentation: PresentationPort,
     private val logger: Logger,
 ) {
-    private val pendingBackups = mutableMapOf<Uuid, BackupRef>()
-
-    fun loadPersisted() {
-        backups.pendingBackups().forEach(::register)
-    }
-
     fun backupBeforeMatch(participants: List<Participant>) {
-        backups.backupBeforeMatch(MatchId.new(), participants).forEach(::register)
+        backups.backupBeforeMatch(MatchId.new(), participants)
     }
 
-    private fun register(ref: BackupRef) {
-        pendingBackups[ref.playerId] = ref
-    }
-
-    fun pending(playerId: Uuid): BackupRef? = pendingBackups[playerId]
+    fun pending(playerId: Uuid): BackupRef? = backups.pendingFor(playerId)
 
     fun restoreNow(handle: PlayerHandle, ref: BackupRef): Boolean {
-        if (pendingBackups[handle.id] != ref) return false
+        if (backups.pendingFor(handle.id) != ref) return false
         if (!restorePayload(handle, ref)) return false
-        forget(ref)
         try {
             backups.acknowledge(ref)
         } catch (e: PersistenceFailure) {
@@ -66,10 +56,6 @@ class PlayerRecoveryService(
         teleportLobby(handle)
     }
 
-    private fun forget(ref: BackupRef) {
-        pendingBackups.values.remove(ref)
-    }
-
     private fun teleportLobby(handle: PlayerHandle) {
         val lobby = lobby.lobby()
         if (lobby == null) {
@@ -81,8 +67,9 @@ class PlayerRecoveryService(
 
     // Shutdown runs no future ticks, so restores are synchronous; dead players cannot be teleported and keep their record for next login
     fun restoreAllOnline() {
-        pendingBackups.toList().forEach { (id, ref) ->
-            val handle = players.handle(id) ?: return@forEach
+        val refs = logger.warnOnFailure("Could not list pending backups; leaving records for next startup") { backups.pendingRefs() } ?: return
+        refs.forEach { ref ->
+            val handle = players.handle(ref.playerId) ?: return@forEach
             if (handle.dead) {
                 restorePayload(handle, ref)
             } else {

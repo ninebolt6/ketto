@@ -6,10 +6,11 @@ import java.util.logging.Logger
 // corrupt files and I/O errors; user-facing rejections are use-case results, not this
 class PersistenceFailure(message: String, cause: Throwable? = null) : IllegalStateException(message, cause)
 
-internal inline fun Logger.warnOnFailure(message: String, block: () -> Unit) {
+internal inline fun <T> Logger.warnOnFailure(message: String, block: () -> T): T? {
     try {
-        block()
+        return block()
     } catch (e: PersistenceFailure) {
         log(Level.WARNING, message, e)
+        return null
     }
 }

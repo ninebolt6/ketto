@@ -27,10 +27,10 @@ class SqliteBackupStoreTest {
         backups.saveBackups(listOf(PersistedBackup(ref, PaperInventorySnapshot(items = listOf(null)))))
 
         backups.deleteBackup(BackupRef.new(MatchId.new(), p.id, p.name))
-        assertEquals(1, backups.persistedBackups().size)
+        assertEquals(1, backups.pendingRefs().size)
 
         backups.deleteBackup(ref)
-        assertEquals(0, backups.persistedBackups().size)
+        assertEquals(0, backups.pendingRefs().size)
         assertNull(backups.backupFor(ref))
     }
 
@@ -46,7 +46,21 @@ class SqliteBackupStoreTest {
                 PersistedBackup(BackupRef.new(match, second.id, second.name), PaperInventorySnapshot()),
             ),
         )
-        assertEquals(2, backups.persistedBackups().size)
+        assertEquals(2, backups.pendingRefs().size)
+    }
+
+    @Test
+    fun `a second backup for the same player replaces the pending row`() = withStore(folder) { store ->
+        val backups = SqliteBackupStore(store)
+        val p = Participant.new("Alice")
+        val first = BackupRef.new(MatchId.new(), p.id, p.name)
+        val second = BackupRef.new(MatchId.new(), p.id, p.name)
+        backups.saveBackups(listOf(PersistedBackup(first, PaperInventorySnapshot())))
+        backups.saveBackups(listOf(PersistedBackup(second, PaperInventorySnapshot())))
+
+        assertEquals(second, backups.pendingFor(p.id))
+        assertEquals(listOf(second), backups.pendingRefs())
+        assertNull(backups.backupFor(first))
     }
 
     @Test
@@ -60,7 +74,8 @@ class SqliteBackupStoreTest {
                 "Alice",
                 "not: [valid",
             )
-            assertFailsWith<PersistenceFailure> { SqliteBackupStore(store).persistedBackups() }
+            val ref = SqliteBackupStore(store).pendingRefs().single()
+            assertFailsWith<PersistenceFailure> { SqliteBackupStore(store).backupFor(ref) }
         }
     }
 
@@ -74,6 +89,6 @@ class SqliteBackupStoreTest {
             "Alice",
             InventoryPayloadCodec.encode(PaperInventorySnapshot()),
         )
-        assertEquals(0, SqliteBackupStore(store).persistedBackups().size)
+        assertEquals(0, SqliteBackupStore(store).pendingRefs().size)
     }
 }

@@ -2,6 +2,7 @@ package net.ninebolt.onevsone.application.port
 
 import net.ninebolt.onevsone.domain.MatchId
 import net.ninebolt.onevsone.domain.Participant
+import kotlin.uuid.Uuid
 
 interface InventoryBackupPort {
     // on failure throws PersistenceFailure leaving both inventories untouched
@@ -12,5 +13,7 @@ interface InventoryBackupPort {
 
     fun acknowledge(backup: BackupRef)
 
-    fun pendingBackups(): List<BackupRef>
+    fun pendingFor(playerId: Uuid): BackupRef?
+
+    fun pendingRefs(): List<BackupRef>
 }

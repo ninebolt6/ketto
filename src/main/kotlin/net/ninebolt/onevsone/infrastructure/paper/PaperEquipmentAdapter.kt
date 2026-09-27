@@ -55,7 +55,9 @@ class PaperEquipmentAdapter(
         backups.deleteBackup(backup)
     }
 
-    override fun pendingBackups(): List<BackupRef> = backups.persistedBackups().map { it.ref }
+    override fun pendingFor(playerId: Uuid): BackupRef? = backups.pendingFor(playerId)
+
+    override fun pendingRefs(): List<BackupRef> = backups.pendingRefs()
 
     override fun applyKit(arena: Arena.Id, playerId: Uuid) {
         val player = lookup.resolve(playerId)

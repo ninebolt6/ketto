@@ -25,7 +25,6 @@ class PlayerRecoveryServiceTest {
         val app = TestApp()
         val ref = backupRef(Uuid.random(), "Alice")
         app.equipment.seedBackup(ref)
-        app.recovery.loadPersisted()
         assertNotNull(app.recovery.pending(ref.playerId))
     }
 
@@ -94,7 +93,6 @@ class PlayerRecoveryServiceTest {
         val original = app.players.add("Alice")
         val ref = backupRef(original.id, "Alice")
         app.equipment.seedBackup(ref)
-        app.recovery.loadPersisted()
 
         val squatter = app.players.add("Alice")
         app.service.restorePending(squatter.id)
@@ -112,7 +110,6 @@ class PlayerRecoveryServiceTest {
         val p = app.players.add("Alice")
         val ref = backupRef(p.id, "Alice")
         app.equipment.seedBackup(ref)
-        app.recovery.loadPersisted()
         app.equipment.failOnAcknowledge = true
 
         app.service.restorePending(p.id)
@@ -127,7 +124,6 @@ class PlayerRecoveryServiceTest {
         val p = app.players.add("Alice")
         val ref = backupRef(p.id, "Alice")
         app.equipment.seedBackup(ref)
-        app.recovery.loadPersisted()
         app.equipment.failOnRestore = true
 
         app.service.restorePending(p.id)
@@ -145,7 +141,6 @@ class PlayerRecoveryServiceTest {
         val p = app.players.add("Alice")
         val ref = backupRef(p.id, p.name)
         app.equipment.seedBackup(ref)
-        app.recovery.loadPersisted()
         val ticket = assertNotNull(app.recovery.pending(p.id))
         app.equipment.failOnRestore = true
 
@@ -249,7 +244,6 @@ class PlayerRecoveryServiceTest {
         val app = TestApp()
         val p = app.players.add("Alice")
         app.equipment.seedBackup(backupRef(p.id, p.name))
-        app.recovery.loadPersisted()
         app.players.disconnect(p)
         app.players.quittingScope(p) {
             app.service.quit(p.id)
@@ -263,7 +257,6 @@ class PlayerRecoveryServiceTest {
         val app = TestApp()
         val p = app.players.add("Alice")
         app.equipment.seedBackup(backupRef(p.id, p.name))
-        app.recovery.loadPersisted()
         app.players.disconnect(p)
 
         app.service.quit(p.id)
@@ -317,7 +310,6 @@ class PlayerRecoveryServiceTest {
         val app = TestApp()
         val p = app.players.add("Alice")
         app.equipment.seedBackup(backupRef(p.id, p.name))
-        app.recovery.loadPersisted()
         app.arenas.lobbyPosition = WorldPosition.new("world", 0.0, 64.0, 0.0)
         app.equipment.failOnRestore = true
 
@@ -345,7 +337,6 @@ class PlayerRecoveryServiceTest {
         val p = app.players.add("Alice")
         val ref = backupRef(p.id, "Alice")
         app.equipment.seedBackup(ref)
-        app.recovery.loadPersisted()
 
         p.dead = true
         assertEquals(JoinOutput.InMatch, app.service.join(p.id, p.name, arenaId("arena1")))

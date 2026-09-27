@@ -28,9 +28,6 @@ class ArenaLifecycleService(
                 signs.refreshSign(arena.id, ArenaState.Waiting)
             }
         }
-        logger.warnOnFailure("Persisted backups are unreadable; pending restores unavailable this session") {
-            recovery.loadPersisted()
-        }
     }
 
     fun shutdown() {

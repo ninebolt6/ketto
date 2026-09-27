@@ -30,7 +30,7 @@ class FakeEquipment(var players: FakePlayers? = null) :
         failOnBackup?.let { throw it }
         return participants.map { p ->
             BackupRef.new(match, p.id, p.name)
-        }.onEach { storedBackups[it.backupId] = it }
+        }.onEach(::putBackup)
     }
 
     override fun restore(backup: BackupRef) {
@@ -45,9 +45,16 @@ class FakeEquipment(var players: FakePlayers? = null) :
         storedBackups.remove(backup.backupId)
     }
 
-    override fun pendingBackups(): List<BackupRef> = storedBackups.values.toList()
+    override fun pendingFor(playerId: Uuid): BackupRef? = storedBackups.values.firstOrNull { it.playerId == playerId }
+
+    override fun pendingRefs(): List<BackupRef> = storedBackups.values.toList()
 
     fun seedBackup(ref: BackupRef) {
+        putBackup(ref)
+    }
+
+    private fun putBackup(ref: BackupRef) {
+        storedBackups.values.removeIf { it.playerId == ref.playerId }
         storedBackups[ref.backupId] = ref
     }
 

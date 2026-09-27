@@ -250,7 +250,6 @@ class ArenaApplicationServiceTest {
         app.newArena()
         val p = app.players.add("Alice")
         app.equipment.seedBackup(BackupRef.new(MatchId.new(), p.id, p.name))
-        app.recovery.loadPersisted()
         app.players.disconnect(p)
 
         assertEquals(JoinOutput.InMatch, app.service.join(p.id, p.name, arenaId("arena1")))
@@ -286,7 +285,6 @@ class ArenaApplicationServiceTest {
         val app = TestApp()
         val p = app.players.add("Alice")
         app.equipment.seedBackup(BackupRef.new(MatchId.new(), p.id, p.name))
-        app.recovery.loadPersisted()
         app.players.disconnect(p)
 
         app.service.restorePending(p.id)

@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS lobby(
 CREATE TABLE IF NOT EXISTS backups(
   backup_id TEXT PRIMARY KEY,
   match_id TEXT NOT NULL,
-  player_uuid TEXT NOT NULL,
+  player_uuid TEXT NOT NULL UNIQUE,
   player_name TEXT NOT NULL,
   payload TEXT NOT NULL
 );
