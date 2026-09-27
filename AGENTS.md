@@ -8,9 +8,8 @@
   outside only through interfaces declared in `port/`
 - One repository port method is one atomic persistence unit; cross-table
   writes are grouped inside the implementation. Application code never opens
-  a transaction itself, and code inside a nested atomic section must not
-  catch an inner persistence failure and continue — the unit is rollback-only
-  from that point
+  a transaction itself, and atomic blocks must not nest — a nested call is
+  rejected and aborts the in-flight transaction
 - `PersistenceFailure` is the only exception type allowed to cross a
   persistence implementation boundary; JDBC, codec, and stored-data
   validation failures are all converted at the seam so lenient callers cannot

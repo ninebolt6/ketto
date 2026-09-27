@@ -9,14 +9,12 @@ import java.sql.ResultSet
 import java.sql.SQLException
 import java.util.logging.Logger
 
-// nested atomic joins the ambient transaction and an inner failure marks it rollback-only — never catch inside and continue
 // every exception crossing the store boundary exits as PersistenceFailure so lenient callers cannot be bypassed
 // WAL leaves recent commits in data.db-wal/-shm; back up all three files or copy after a clean shutdown
 class SqliteStore(folder: File, private val logger: Logger) : AutoCloseable {
 
     private val connection: Connection
-    private var txDepth = 0
-    private var txRollbackOnly = false
+    private var txActive = false
 
     init {
         try {
@@ -55,35 +53,20 @@ class SqliteStore(folder: File, private val logger: Logger) : AutoCloseable {
     }
 
     internal fun <T> atomic(block: () -> T): T {
-        if (txDepth > 0) {
-            txDepth++
-            try {
-                return block()
-            } catch (e: Throwable) {
-                txRollbackOnly = true
-                throw asFailure(e)
-            } finally {
-                txDepth--
-            }
+        if (txActive) {
+            throw PersistenceFailure("atomic blocks must not nest")
         }
-        txDepth = 1
-        txRollbackOnly = false
+        txActive = true
         connection.autoCommit = false
         try {
             val result = block()
-            if (txRollbackOnly) {
-                // a swallowed inner failure must surface as rollback, not a silent successful commit
-                rollbackQuietly()
-                throw PersistenceFailure("Transaction rolled back: an inner operation failed")
-            }
             connection.commit()
             return result
         } catch (e: Throwable) {
             rollbackQuietly()
             throw asFailure(e)
         } finally {
-            txDepth = 0
-            txRollbackOnly = false
+            txActive = false
             try {
                 connection.autoCommit = true
             } catch (_: SQLException) {

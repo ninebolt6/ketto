@@ -43,29 +43,28 @@ class SqliteStoreTest {
     }
 
     @Test
-    fun `nested atomic joins the outer transaction`() = withStore(folder) { store ->
-        store.atomic {
-            store.exec("INSERT INTO lobby(id, world, x, y, z, yaw, pitch) VALUES (1, 'w', 0, 0, 0, 0, 0)")
-            store.atomic {
-                store.exec("INSERT INTO arenas(name, seq) VALUES ('a', 1)")
-            }
-        }
-        assertEquals(1, countRows(store, "lobby"))
-        assertEquals(1, countRows(store, "arenas"))
-    }
-
-    @Test
-    fun `inner failure marks the transaction rollback only even when caught`() = withStore(folder) { store ->
+    fun `nested atomic is rejected and rolls back the outer transaction`() = withStore(folder) { store ->
         assertFailsWith<PersistenceFailure> {
             store.atomic {
                 store.exec("INSERT INTO lobby(id, world, x, y, z, yaw, pitch) VALUES (1, 'w', 0, 0, 0, 0, 0)")
-                try {
-                    store.atomic { store.exec("INSERT INTO definitely_not_a_table VALUES (1)") }
-                } catch (e: PersistenceFailure) {
+                store.atomic {
+                    store.exec("INSERT INTO arenas(name, seq) VALUES ('a', 1)")
                 }
             }
         }
         assertEquals(0, countRows(store, "lobby"))
+        assertEquals(0, countRows(store, "arenas"))
+    }
+
+    @Test
+    fun `store stays usable after a rejected nested atomic`() = withStore(folder) { store ->
+        assertFailsWith<PersistenceFailure> {
+            store.atomic { store.atomic { } }
+        }
+        store.atomic {
+            store.exec("INSERT INTO lobby(id, world, x, y, z, yaw, pitch) VALUES (1, 'w', 0, 0, 0, 0, 0)")
+        }
+        assertEquals(1, countRows(store, "lobby"))
     }
 
     @Test
