@@ -21,14 +21,6 @@ data class ArenaMatch private constructor(
 
     val participants: List<Participant> get() = state.participants
 
-    val wins: Map<Uuid, Int>
-        get() = when (val s = state) {
-            is ArenaState.Active ->
-                mapOf(s.first.id to s.firstWins, s.second.id to s.secondWins).filterValues { it > 0 }
-
-            else -> emptyMap()
-        }
-
     val resolving: Boolean get() = (state as? ArenaState.RoundCountdown)?.resolving == true
 
     val resolvesVoidFall: Boolean get() = state is ArenaState.Active
@@ -37,11 +29,7 @@ data class ArenaMatch private constructor(
 
     val canResumeRound: Boolean get() = state is ArenaState.RoundCountdown
 
-    val inProgress: Boolean get() = state is ArenaState.Active
-
     fun matchup(): Pair<Participant, Participant>? = (state as? ArenaState.Active)?.pair
-
-    fun fullMatchup(): Pair<Participant, Participant>? = (state as? ArenaState.Paired)?.pair
 
     fun participant(id: Uuid): Participant? = participants.firstOrNull { it.id == id }
 

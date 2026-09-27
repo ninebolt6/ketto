@@ -6,8 +6,6 @@ sealed interface ArenaState {
     val kind: Kind
     val participants: List<Participant>
 
-    val joinable: Boolean get() = kind.isJoinable()
-
     enum class Kind {
         WAITING,
         ONEMORE,

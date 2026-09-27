@@ -40,7 +40,6 @@ class ArenaMatchDefeatTest {
         val step = m.recordDefeat(bob.id, DefeatCause.FALL)
         assertTrue(step.outcome is DefeatOutcome.MatchFinished)
         assertEquals(ArenaState.Kind.WAITING, step.match.state.kind)
-        assertTrue(step.match.wins.isEmpty())
         assertTrue(step.match.participants.isEmpty())
     }
 

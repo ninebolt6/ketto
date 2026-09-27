@@ -108,6 +108,18 @@ class ArenaMatchTest {
     }
 
     @Test
+    fun `forfeit by second participant during countdown keeps first waiting`() {
+        var countdown = match()
+        countdown = countdown.join(alice).match
+        countdown = countdown.join(bob).match
+        val step = countdown.forfeit(bob.id)
+        assertTrue(step.outcome is QuitOutcome.WaitingExit)
+        assertEquals(bob, step.outcome.participant)
+        assertEquals(ArenaState.Kind.ONEMORE, step.match.state.kind)
+        assertEquals(listOf(alice), step.match.participants)
+    }
+
+    @Test
     fun `forfeit during ingame ends match for opponent`() {
         val ingame = startedMatch()
         val finished = ingame.forfeit(alice.id)
@@ -124,7 +136,6 @@ class ArenaMatchTest {
         assertEquals(listOf(alice, bob), step.outcome)
         assertEquals(ArenaState.Kind.WAITING, step.match.state.kind)
         assertEquals(0, step.match.participants.size)
-        assertTrue(step.match.wins.isEmpty())
     }
 
     @Test
@@ -295,7 +306,22 @@ class ArenaMatchTest {
             ArenaState.Countdown.of(alice, alice)
         }
         assertFailsWith<IllegalArgumentException> {
+            ArenaState.InGame.of(alice, alice, 0, 0)
+        }
+        assertFailsWith<IllegalArgumentException> {
             ArenaState.InGame.of(alice, bob, -1, 0)
+        }
+        assertFailsWith<IllegalArgumentException> {
+            ArenaState.InGame.of(alice, bob, 0, -1)
+        }
+        assertFailsWith<IllegalArgumentException> {
+            ArenaState.RoundCountdown.of(alice, alice, 0, 0, resolving = true)
+        }
+        assertFailsWith<IllegalArgumentException> {
+            ArenaState.RoundCountdown.of(alice, bob, -1, 0, resolving = true)
+        }
+        assertFailsWith<IllegalArgumentException> {
+            ArenaState.RoundCountdown.of(alice, bob, 0, -1, resolving = true)
         }
         assertFailsWith<IllegalArgumentException> {
             ArenaMatch.restored(arenaId("a1"), 3, ArenaState.Waiting, epoch = -1)

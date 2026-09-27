@@ -41,4 +41,11 @@ class ArenaDisableCommandTest {
         env.runCommand(op, "arena", "a2", "disable")
         assertTrue(op.drainMessages().any { it.contains("That arena is already disabled!") })
     }
+
+    @Test
+    fun `disable reports not found for an unknown arena`() {
+        val op = env.opPlayer("Op")
+        env.runCommand(op, "arena", "missing", "disable")
+        assertTrue(op.drainMessages().any { it.contains("That arena does not exist") })
+    }
 }

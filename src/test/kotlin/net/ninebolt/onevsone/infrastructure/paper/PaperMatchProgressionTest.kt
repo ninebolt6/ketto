@@ -148,7 +148,6 @@ class PaperMatchProgressionTest {
         fallIntoVoid(p2)
 
         assertEquals(ArenaState.Kind.WAITING, env.view().state.kind)
-        assertTrue(env.view().wins.isEmpty())
         assertTrue(env.view().participants.isEmpty())
         assertNull(env.service.arenaIdOf(p1.uuid))
         assertNull(env.service.arenaIdOf(p2.uuid))
