@@ -66,11 +66,8 @@ sealed interface ArenaState {
         override val second: Participant,
         override val firstWins: Int,
         override val secondWins: Int,
-        val resolving: Boolean,
     ) : Active {
         override val kind = Kind.ROUNDCOUNTDOWN
-
-        fun released(): RoundCountdown = copy(resolving = false)
 
         companion object {
             fun of(
@@ -78,13 +75,12 @@ sealed interface ArenaState {
                 second: Participant,
                 firstWins: Int,
                 secondWins: Int,
-                resolving: Boolean,
             ): RoundCountdown {
                 require(first.id != second.id) { "duplicate participant ids" }
                 require(firstWins >= 0 && secondWins >= 0) {
                     "wins must be >= 0 (was $firstWins, $secondWins)"
                 }
-                return RoundCountdown(first, second, firstWins, secondWins, resolving)
+                return RoundCountdown(first, second, firstWins, secondWins)
             }
         }
     }

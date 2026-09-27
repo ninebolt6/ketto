@@ -21,8 +21,6 @@ data class ArenaMatch private constructor(
 
     val participants: List<Participant> get() = state.participants
 
-    val resolving: Boolean get() = (state as? ArenaState.RoundCountdown)?.resolving == true
-
     val resolvesVoidFall: Boolean get() = state is ArenaState.Active
 
     val canBeginMatch: Boolean get() = state is ArenaState.Countdown
@@ -85,7 +83,7 @@ data class ArenaMatch private constructor(
         is ArenaState.InGame -> defeat(id, s)
 
         is ArenaState.RoundCountdown ->
-            if (cause == DefeatCause.FALL && !s.resolving) {
+            if (cause == DefeatCause.FALL) {
                 defeat(id, s)
             } else {
                 Transition(this, DefeatOutcome.Rejected)
@@ -107,7 +105,6 @@ data class ArenaMatch private constructor(
             second = state.second,
             firstWins = state.firstWins + if (state.first.id == winner.id) 1 else 0,
             secondWins = state.secondWins + if (state.second.id == winner.id) 1 else 0,
-            resolving = true,
         )
         return Transition(
             copy(state = next, epoch = epoch + 1),
@@ -131,12 +128,6 @@ data class ArenaMatch private constructor(
             Transition(copy(state = ArenaState.InGame.of(s.first, s.second, s.firstWins, s.secondWins)), true)
 
         else -> Transition(this, false)
-    }
-
-    // A release callback is stale once the match has advanced, so an epoch mismatch must be a no-op.
-    fun releaseResolution(epoch: Long): ArenaMatch {
-        val s = state as? ArenaState.RoundCountdown ?: return this
-        return if (this.epoch == epoch) copy(state = s.released()) else this
     }
 
     // Advancing the epoch invalidates running countdowns and pending resolution callbacks.

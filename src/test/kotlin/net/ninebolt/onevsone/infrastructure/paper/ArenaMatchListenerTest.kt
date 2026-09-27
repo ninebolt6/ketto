@@ -207,12 +207,11 @@ class ArenaMatchListenerTest {
     }
 
     @Test
-    fun `void fall in ROUNDCOUNTDOWN scores again after resolving guard released`() {
+    fun `void fall in ROUNDCOUNTDOWN scores again`() {
         val (p1, p2) = env.twoPlayerIngame()
         fallIntoVoid(p2)
         assertEquals(ArenaState.Kind.ROUNDCOUNTDOWN, env.state())
 
-        env.runOneShots()
         val sim = p2.simulation()
         val base = p2.location
         sim.simulatePlayerMove(Location(base.world, base.x, -1.0, base.z))

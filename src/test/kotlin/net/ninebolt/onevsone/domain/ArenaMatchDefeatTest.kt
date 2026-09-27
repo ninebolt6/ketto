@@ -24,7 +24,6 @@ class ArenaMatchDefeatTest {
         assertEquals(bob, outcome.loser)
         assertEquals(m.epoch + 1, step.match.epoch)
         assertEquals(ArenaState.Kind.ROUNDCOUNTDOWN, step.match.state.kind)
-        assertTrue(step.match.resolving)
         assertEquals(1, step.match.winsOf(alice.id))
     }
 
@@ -32,10 +31,8 @@ class ArenaMatchDefeatTest {
     fun `requiredWins 3 ends on third defeat without counting final kill`() {
         var m = startedMatch()
         m = m.recordDefeat(bob.id, DefeatCause.FALL).match
-        m = m.releaseResolution(m.epoch)
         m = m.resumeRound().match
         m = m.recordDefeat(bob.id, DefeatCause.FALL).match
-        m = m.releaseResolution(m.epoch)
         m = m.resumeRound().match
         val step = m.recordDefeat(bob.id, DefeatCause.FALL)
         assertTrue(step.outcome is DefeatOutcome.MatchFinished)
@@ -61,8 +58,7 @@ class ArenaMatchDefeatTest {
             outcome = step.outcome
             if (i < 4) {
                 assertTrue(outcome is DefeatOutcome.RoundWon)
-                m = step.match.releaseResolution(step.match.epoch)
-                val resumed = m.resumeRound()
+                val resumed = step.match.resumeRound()
                 assertTrue(resumed.outcome)
                 m = resumed.match
             } else {
@@ -82,47 +78,27 @@ class ArenaMatchDefeatTest {
     }
 
     @Test
-    fun `fall allowed in ROUNDCOUNTDOWN but death is not`() {
+    fun `each fall in ROUNDCOUNTDOWN scores but death is not`() {
         var m = startedMatch()
         var step = m.recordDefeat(bob.id, DefeatCause.FALL)
-        m = step.match.releaseResolution(step.match.epoch)
+        m = step.match
         step = m.recordDefeat(bob.id, DefeatCause.FALL)
         assertTrue(step.outcome is DefeatOutcome.RoundWon)
-        m = step.match.releaseResolution(step.match.epoch)
+        m = step.match
         assertEquals(DefeatOutcome.Rejected, m.recordDefeat(alice.id, DefeatCause.DEATH).outcome)
     }
 
     @Test
-    fun `duplicate defeat notification while resolving is rejected`() {
-        var m = startedMatch()
+    fun `death in ROUNDCOUNTDOWN is rejected`() {
+        val m = startedMatch()
         val step = m.recordDefeat(bob.id, DefeatCause.DEATH)
         assertTrue(step.outcome is DefeatOutcome.RoundWon)
-        m = step.match
-        assertEquals(DefeatOutcome.Rejected, m.recordDefeat(bob.id, DefeatCause.DEATH).outcome)
-        assertEquals(DefeatOutcome.Rejected, m.recordDefeat(bob.id, DefeatCause.FALL).outcome)
-        assertEquals(1, m.winsOf(alice.id))
+        assertEquals(DefeatOutcome.Rejected, step.match.recordDefeat(bob.id, DefeatCause.DEATH).outcome)
+        assertEquals(1, step.match.winsOf(alice.id))
     }
 
     @Test
-    fun `releaseResolution with stale epoch is a no-op`() {
-        var m = startedMatch()
-        val step = m.recordDefeat(bob.id, DefeatCause.FALL)
-        assertTrue(step.outcome is DefeatOutcome.RoundWon)
-        m = step.match
-        assertTrue(m.resolving)
-        val after = ArenaMatch.restored(
-            m.arenaId,
-            m.requiredWins,
-            m.state,
-            epoch = m.epoch + 1,
-        )
-        assertSame(after, after.releaseResolution(m.epoch))
-        assertTrue(after.resolving)
-        assertFalse(m.releaseResolution(m.epoch).resolving)
-    }
-
-    @Test
-    fun `resumeRound returns to INGAME and releases resolution`() {
+    fun `resumeRound returns to INGAME`() {
         var m = startedMatch()
         m = m.recordDefeat(bob.id, DefeatCause.FALL).match
         val resumed = m.resumeRound()

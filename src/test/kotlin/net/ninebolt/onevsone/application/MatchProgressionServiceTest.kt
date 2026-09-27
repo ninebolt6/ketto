@@ -70,7 +70,7 @@ class MatchProgressionServiceTest {
     }
 
     @Test
-    fun `round win with the loser offline releases the resolution without a sound`() {
+    fun `round win with the loser offline enters round countdown without a sound`() {
         val app = TestApp()
         val (_, p2) = app.startMatch()
         app.players.disconnect(p2)
@@ -78,7 +78,6 @@ class MatchProgressionServiceTest {
         assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
 
         assertTrue(app.presentation.roundEndSounds.isEmpty())
-        assertFalse(app.service.matchOf("arena1")!!.resolving)
         assertEquals(ArenaState.Kind.ROUNDCOUNTDOWN, app.state())
 
         app.scheduler.tick()
@@ -217,7 +216,6 @@ class MatchProgressionServiceTest {
 
         assertEquals(applies, app.equipment.kitApplies.count { it.second == p2.id })
         assertEquals(teleports, p2.teleports.size)
-        assertTrue(app.service.matchOf("arena1")!!.resolving)
     }
 
     @Test
@@ -309,7 +307,6 @@ class MatchProgressionServiceTest {
         assertTrue("respawn" in p2.events)
         assertEquals(applies + 1, app.equipment.kitApplies.count { it.second == p2.id })
         assertEquals(teleports + 1, p2.teleports.size)
-        assertFalse(app.service.matchOf("arena1")!!.resolving)
     }
 
     @Test

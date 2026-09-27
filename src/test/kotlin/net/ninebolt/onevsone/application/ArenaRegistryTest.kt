@@ -79,7 +79,6 @@ class ArenaRegistryTest {
         registry.removeArena(id)
         registry.replaceArena(Arena.Disabled.new(id))
         registry.putMatch(match("nope", ArenaState.Waiting))
-        assertNull(registry.updateMatch(id) { it })
         assertNull(registry.transact(id) { it.abort() })
         assertTrue(registry.arenaIds().isEmpty())
     }

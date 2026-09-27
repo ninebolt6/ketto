@@ -74,13 +74,12 @@ class ArenaApplicationServiceResilienceTest {
     }
 
     @Test
-    fun `same tick duplicate defeat does not double score`() {
+    fun `same tick duplicate death does not double score`() {
         val app = TestApp()
         val (p1, p2) = app.startMatch()
         p2.dead = true
         assertTrue(app.service.defeat(p2.id, DefeatCause.DEATH))
         assertFalse(app.service.defeat(p2.id, DefeatCause.DEATH))
-        assertFalse(app.service.defeat(p2.id, DefeatCause.FALL))
         assertEquals(1, app.service.matchOf("arena1")!!.winsOf(p1.id))
         assertTrue(app.stats.stats.isEmpty())
     }

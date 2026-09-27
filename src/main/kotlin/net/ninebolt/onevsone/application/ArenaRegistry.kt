@@ -55,14 +55,6 @@ class ArenaRegistry(private val requiredWins: Int) {
         reconcileIndex(match.arenaId, slot.match, match)
     }
 
-    fun updateMatch(id: Arena.Id, transform: (ArenaMatch) -> ArenaMatch): ArenaMatch? {
-        val slot = slots[id] ?: return null
-        val next = transform(slot.match)
-        slots[id] = slot.copy(match = next)
-        reconcileIndex(id, slot.match, next)
-        return next
-    }
-
     fun <O> transact(
         id: Arena.Id,
         operation: (ArenaMatch) -> Transition<O>,

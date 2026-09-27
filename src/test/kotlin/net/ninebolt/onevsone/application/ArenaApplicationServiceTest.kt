@@ -127,7 +127,7 @@ class ArenaApplicationServiceTest {
     }
 
     @Test
-    fun `round countdown timing and release resolution`() {
+    fun `round countdown accepts repeated falls`() {
         val app = TestApp()
         val (p1, p2) = app.startMatch()
         assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
@@ -135,8 +135,6 @@ class ArenaApplicationServiceTest {
         assertEquals(1, app.presentation.roundWins.size)
         assertEquals(Triple(listOf(p1.id, p2.id), 1, "Alice"), app.presentation.roundWins.last())
 
-        assertFalse(app.service.defeat(p2.id, DefeatCause.FALL))
-        app.scheduler.runOneShots()
         assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
         assertEquals(2, app.service.matchOf("arena1")!!.winsOf(p1.id))
     }

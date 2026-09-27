@@ -284,14 +284,14 @@ class ArenaMatchTest {
     }
 
     @Test
-    fun `defeat is rejected while a round resolution is pending`() {
-        val resolving = ArenaMatch.restored(
+    fun `a death defeat is rejected in ROUNDCOUNTDOWN`() {
+        val waiting = ArenaMatch.restored(
             arenaId("a1"),
             3,
-            ArenaState.RoundCountdown.of(alice, bob, firstWins = 1, secondWins = 0, resolving = true),
+            ArenaState.RoundCountdown.of(alice, bob, firstWins = 1, secondWins = 0),
         )
-        assertEquals(DefeatOutcome.Rejected, resolving.recordDefeat(bob.id, DefeatCause.FALL).outcome)
-        assertSame(resolving, resolving.recordDefeat(bob.id, DefeatCause.FALL).match)
+        assertEquals(DefeatOutcome.Rejected, waiting.recordDefeat(bob.id, DefeatCause.DEATH).outcome)
+        assertSame(waiting, waiting.recordDefeat(bob.id, DefeatCause.DEATH).match)
     }
 
     @Test
@@ -315,13 +315,13 @@ class ArenaMatchTest {
             ArenaState.InGame.of(alice, bob, 0, -1)
         }
         assertFailsWith<IllegalArgumentException> {
-            ArenaState.RoundCountdown.of(alice, alice, 0, 0, resolving = true)
+            ArenaState.RoundCountdown.of(alice, alice, 0, 0)
         }
         assertFailsWith<IllegalArgumentException> {
-            ArenaState.RoundCountdown.of(alice, bob, -1, 0, resolving = true)
+            ArenaState.RoundCountdown.of(alice, bob, -1, 0)
         }
         assertFailsWith<IllegalArgumentException> {
-            ArenaState.RoundCountdown.of(alice, bob, 0, -1, resolving = true)
+            ArenaState.RoundCountdown.of(alice, bob, 0, -1)
         }
         assertFailsWith<IllegalArgumentException> {
             ArenaMatch.restored(arenaId("a1"), 3, ArenaState.Waiting, epoch = -1)

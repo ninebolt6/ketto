@@ -72,24 +72,16 @@ class MatchProgressionService(
             presentation.updateScoreboard(match)
 
             val loserHandle = players.handle(outcome.loser.id)
-            val release = {
-                // The resolution marker is memory-only coordination metadata, so nothing is persisted
-                registry.updateMatch(arenaId) { it.releaseResolution(gen) }
-            }
             if (death) {
                 scheduleDeferred(outcome.loser.id, {
                     registry.match(arenaId)?.epoch == gen
                 }) { h ->
                     rearm(arenaId, outcome.loser, h)
                     registry.match(arenaId)?.slotOf(outcome.loser.id)?.let { teleportToSlot(arenaId, it, h) }
-                    release()
                 }
             } else if (loserHandle != null) {
                 rearm(arenaId, outcome.loser, loserHandle)
                 match.slotOf(outcome.loser.id)?.let { teleportToSlot(arenaId, it, loserHandle) }
-                scheduler.schedule(0) { release() }
-            } else {
-                release()
             }
             winnerHandle?.let { h -> match.slotOf(outcome.winner.id)?.let { teleportToSlot(arenaId, it, h) } }
 
