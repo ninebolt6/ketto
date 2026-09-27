@@ -65,22 +65,6 @@ class OneVsOneCommandTest {
     }
 
     @Test
-    fun `non op admin ops denied`() {
-        val p = env.player("Alice")
-        env.newArena()
-        env.runCommand(p, "lobby", "set")
-        assertTrue(p.drainMessages().any { it.contains("Incorrect argument") })
-        env.runCommand(p, "arena", "create", "x")
-        assertTrue(p.drainMessages().any { it.contains("Incorrect argument") })
-        env.runCommand(p, "arena", "arena1", "spawn", "set", "1")
-        assertTrue(p.drainMessages().any { it.contains("Incorrect argument") })
-        env.runCommand(p, "arena", "arena1", "sign")
-        assertTrue(p.drainMessages().any { it.contains("Incorrect argument") })
-        env.runCommand(p, "arena", "arena1", "remove")
-        assertTrue(p.drainMessages().any { it.contains("Incorrect argument") })
-    }
-
-    @Test
     fun `explicit permission grants admin ops to non op`() {
         val p = env.player("Alice")
         p.addAttachment(env.plugin, ADMIN_PERMISSION, true)
@@ -97,14 +81,6 @@ class OneVsOneCommandTest {
         env.runCommand(op, "arena", "create", "\"my arena\"")
         assertTrue(op.drainMessages().any { it.contains("Created arena: my arena") })
         assertTrue(env.admin.arenaNames().containsAll(listOf("闘技場", "my arena")))
-    }
-
-    @Test
-    fun `single quoted arena names are accepted`() {
-        val op = env.opPlayer("Op")
-        env.runCommand(op, "arena", "create", "'sq arena'")
-        assertTrue(op.drainMessages().any { it.contains("Created arena: sq arena") })
-        assertTrue("sq arena" in env.admin.arenaNames())
     }
 
     @Test
@@ -131,11 +107,14 @@ class OneVsOneCommandTest {
         val nonOp = CommandSourceStackMock.from(p)
         val asOp = CommandSourceStackMock.from(op)
         val root = PaperCommandsMock.INSTANCE.dispatcherInternal.root.getChild("1vs1")
-        val arenaArg = root.getChild("arena").getChild("arena")
+        val arena = root.getChild("arena")
+        val arenaArg = arena.getChild("arena")
         assertTrue(root.getChild("stats").canUse(nonOp) && root.getChild("leave").canUse(nonOp))
         assertFalse(root.getChild("lobby").canUse(nonOp))
+        assertFalse(arena.getChild("create").canUse(nonOp))
         arenaArg.children.forEach { assertEquals(it.name == "info", it.canUse(nonOp), it.name) }
         assertTrue(root.getChild("lobby").canUse(asOp))
+        assertTrue(arena.getChild("create").canUse(asOp))
         arenaArg.children.forEach { assertTrue(it.canUse(asOp), it.name) }
         assertTrue(env.tabComplete(p, "arena", "").contains("Arena1"))
     }

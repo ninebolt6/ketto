@@ -54,6 +54,13 @@ class ArenaMatchTest {
     }
 
     @Test
+    fun `winsOf is zero for a foreign id and before the match starts`() {
+        val m = match().join(alice).match.join(bob).match
+        assertEquals(0, m.winsOf(alice.id))
+        assertEquals(0, startedMatch().winsOf(carol.id))
+    }
+
+    @Test
     fun `leaveWaiting only allowed while ONEMORE`() {
         var m = match()
         m = m.join(alice).match

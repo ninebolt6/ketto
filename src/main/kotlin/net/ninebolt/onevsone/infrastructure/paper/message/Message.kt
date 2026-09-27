@@ -60,7 +60,6 @@ sealed class Message(val key: MessageKey, vararg val args: Arg) {
     data object MatchInGame : Message(MessageKey.MATCH_IN_GAME)
     data object MatchRestorePending : Message(MessageKey.MATCH_RESTORE_PENDING)
     data object MatchLeft : Message(MessageKey.MATCH_LEFT)
-    data object MatchCannotLeave : Message(MessageKey.MATCH_CANNOT_LEAVE)
     data object MatchNotJoined : Message(MessageKey.MATCH_NOT_JOINED)
     class MatchTeleportIn(n: Int) : Message(MessageKey.MATCH_TELEPORT_IN, Str("n", "$n"))
     data object MatchGameStart : Message(MessageKey.MATCH_GAME_START)
@@ -141,7 +140,6 @@ enum class MessageKey {
     MATCH_IN_GAME,
     MATCH_RESTORE_PENDING,
     MATCH_LEFT,
-    MATCH_CANNOT_LEAVE,
     MATCH_NOT_JOINED,
     MATCH_TELEPORT_IN,
     MATCH_GAME_START,

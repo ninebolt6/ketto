@@ -23,6 +23,7 @@ class InMemoryArenaRepository :
     val signs = mutableMapOf<String, BlockPosition>()
     var failOnSave = false
     var failOnLoad = false
+    var failOnSignRead = false
 
     override fun loadAll(): List<Arena> {
         if (failOnLoad) throw PersistenceException("load failed")
@@ -50,7 +51,10 @@ class InMemoryArenaRepository :
         lobbyPosition = position
     }
 
-    override fun signLocation(arenaName: String): BlockPosition? = signs[arenaName]
+    override fun signLocation(arenaName: String): BlockPosition? {
+        if (failOnSignRead) throw PersistenceException("sign read failed")
+        return signs[arenaName]
+    }
     override fun setSign(arenaName: String, position: BlockPosition) {
         signs[arenaName] = position
     }

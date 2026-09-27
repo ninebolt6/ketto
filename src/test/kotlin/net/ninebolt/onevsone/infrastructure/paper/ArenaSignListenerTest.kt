@@ -1,7 +1,6 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
-import net.ninebolt.onevsone.application.JoinOutput
 import net.ninebolt.onevsone.domain.BlockPosition
 import net.ninebolt.onevsone.domain.fixtures.arenaId
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
@@ -33,6 +32,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.uuid.Uuid
 
 class ArenaSignListenerTest {
 
@@ -75,7 +75,7 @@ class ArenaSignListenerTest {
     }
 
     @Test
-    fun `second player joining by sign starts the match without the wait message`() {
+    fun `first join waits for one more and second sign join starts the match`() {
         env.newArena()
         env.signRepo.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
         val block = env.signBlock(3, 64, 3)
@@ -85,20 +85,36 @@ class ArenaSignListenerTest {
         env.fire(interact(p1, block))
         env.fire(interact(p2, block))
 
-        val messages = p2.drainMessages()
-        assertTrue(messages.any { it.contains("Joined arena") })
-        assertTrue(messages.none { it.contains("one more") })
+        val first = p1.drainMessages()
+        assertTrue(first.any { it.contains("Joined arena") })
+        assertTrue(first.any { it.contains("one more") })
+        val second = p2.drainMessages()
+        assertTrue(second.any { it.contains("Joined arena") })
+        assertTrue(second.none { it.contains("one more") })
     }
 
     @Test
     fun `pending restore join output explains why joining is blocked`() {
-        val player = env.player("Alice")
+        env.newArena()
+        env.signRepo.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
+        val p1 = env.player("Alice")
 
-        env.signListener.renderJoin(player, "arena1", JoinOutput.RestorePending)
+        // A pending row whose payload cannot decode fails the restore, which reports RestorePending
+        env.store.exec(
+            "INSERT INTO backups(backup_id, match_id, player_uuid, player_name, payload) VALUES (?, ?, ?, ?, ?)",
+            Uuid.random().toString(),
+            Uuid.random().toString(),
+            p1.uuid.toString(),
+            "Alice",
+            "not: [valid",
+        )
 
-        val message = player.drainMessages().single()
+        env.fire(interact(p1, env.signBlock(3, 64, 3)))
+
+        val message = p1.drainMessages().single()
         assertTrue(message.contains("previous inventory has been restored"))
         assertTrue(message.contains("administrator"))
+        assertNull(env.registry.arenaOf(p1.uuid))
     }
 
     @Test

@@ -1,8 +1,10 @@
 package net.ninebolt.onevsone.infrastructure.paper.command
 
 import com.mojang.brigadier.StringReader
+import com.mojang.brigadier.arguments.StringArgumentType
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 
 class ArenaNameArgumentTypeTest {
 
@@ -24,5 +26,10 @@ class ArenaNameArgumentTypeTest {
     @Test
     fun `exhausted input parses to an empty name`() {
         assertEquals("", ArenaNameArgumentType.parse(StringReader("")))
+    }
+
+    @Test
+    fun `native type delegates to a brigadier string type`() {
+        assertIs<StringArgumentType>(ArenaNameArgumentType.getNativeType())
     }
 }

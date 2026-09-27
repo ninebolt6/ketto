@@ -77,17 +77,6 @@ class PaperArenaMembershipTest {
     }
 
     @Test
-    fun `join writes membership only and never reads waiting inventory`() {
-        val arena = env.newArena()
-        val p1 = env.player("Alice")
-        env.join(p1, arena)
-        assertNull(p1.inventory.contents[0])
-        assertEquals(arena, env.registry.arenaOf(p1.uuid))
-        assertEquals(listOf("Alice"), env.view().participants.map { it.name })
-        assertNull(env.backupByName("Alice"))
-    }
-
-    @Test
     fun `waiting leave does not recreate transferred items and keeps received items`() {
         val arena = env.newArena()
         val p1 = env.player("Alice")

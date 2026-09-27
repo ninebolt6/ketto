@@ -6,6 +6,7 @@ import net.ninebolt.onevsone.domain.BlockPosition
 import net.ninebolt.onevsone.domain.WorldPosition
 import net.ninebolt.onevsone.domain.fixtures.arenaId
 import net.ninebolt.onevsone.infrastructure.persistence.fixtures.countRows
+import net.ninebolt.onevsone.infrastructure.persistence.fixtures.store
 import net.ninebolt.onevsone.infrastructure.persistence.fixtures.withStore
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -29,6 +30,13 @@ class SqliteStoreTest {
             ),
         )
         assertEquals("wal", store.queryOne("PRAGMA journal_mode") { it.getString(1) })
+    }
+
+    @Test
+    fun `store open failure surfaces as PersistenceException`() {
+        val blocker = File(folder, "not-a-dir")
+        blocker.writeText("x")
+        assertFailsWith<PersistenceException> { store(blocker) }
     }
 
     @Test

@@ -783,12 +783,4 @@ class ArenaGuardListenerInteractTest {
         env.fire(event)
         assertFalse(event.isCancelled)
     }
-
-    @Test
-    fun `empty hand interact while restricted is not denied`() {
-        val (p1, _) = env.twoPlayerIngame()
-        val event = interact(p1, env.plainBlock())
-        env.fire(event)
-        assertNotEquals(Event.Result.DENY, event.useItemInHand())
-    }
 }

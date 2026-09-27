@@ -24,6 +24,7 @@ class FakeEquipment(var players: FakePlayers? = null) :
     var failOnApplyAt: Int = -1
     var failOnAcknowledge = false
     var failOnRestore = false
+    var failOnPendingRefs: PersistenceException? = null
 
     override fun backupBeforeMatch(match: MatchId, participants: List<Participant>): List<BackupRef> {
         backupCalls++
@@ -47,7 +48,10 @@ class FakeEquipment(var players: FakePlayers? = null) :
 
     override fun pendingFor(playerId: Uuid): BackupRef? = storedBackups.values.firstOrNull { it.playerId == playerId }
 
-    override fun pendingRefs(): List<BackupRef> = storedBackups.values.toList()
+    override fun pendingRefs(): List<BackupRef> {
+        failOnPendingRefs?.let { throw it }
+        return storedBackups.values.toList()
+    }
 
     fun seedBackup(ref: BackupRef) {
         putBackup(ref)

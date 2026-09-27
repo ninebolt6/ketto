@@ -15,7 +15,7 @@ internal class LeaveCommand(
     fun execute(player: Player) {
         when (service.leave(player.uniqueId.toKotlinUuid())) {
             null -> messenger.send(player, Message.MatchLeft)
-            LeaveError.NotWaiting -> messenger.send(player, Message.MatchCannotLeave)
+            LeaveError.NotWaiting -> Unit
             LeaveError.NotJoined -> messenger.send(player, Message.MatchNotJoined)
         }
     }

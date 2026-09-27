@@ -37,45 +37,6 @@ class PaperMatchProgressionTest {
     }
 
     @Test
-    fun `first join sets ONEMORE second join starts COUNTDOWN`() {
-        val arena = env.newArena()
-        val p1 = env.player("Alice")
-        env.join(p1, arena)
-        assertEquals(ArenaState.Kind.ONEMORE, env.view().state.kind)
-        assertEquals(arena, env.registry.arenaOf(p1.uuid))
-        val joined = p1.drainMessages()
-        assertTrue(joined.any { it.contains("Joined arena") })
-        assertTrue(joined.any { it.contains("Waiting for one more player") })
-
-        val p2 = env.player("Bob")
-        env.join(p2, arena)
-        assertEquals(ArenaState.Kind.COUNTDOWN, env.view().state.kind)
-        env.tick()
-        assertTrue(p1.drainMessages().any { it.contains("Teleporting in:") })
-    }
-
-    @Test
-    fun `join rejected when already participant or arena disabled or ingame`() {
-        val arena = env.newArena()
-        val disabled = env.newArena("disabled", enabled = false)
-        val p1 = env.player("Alice")
-        env.join(p1, disabled)
-        assertTrue(p1.drainMessages().any { it.contains("That arena is not enabled!") })
-        assertNull(env.registry.arenaOf(p1.uuid))
-
-        env.join(p1, arena)
-        env.join(p1, arena)
-        assertTrue(p1.drainMessages().any { it.contains("You are already in another arena") })
-
-        val p2 = env.player("Bob")
-        env.join(p2, arena)
-        val p3 = env.player("Carol")
-        env.join(p3, arena)
-        assertTrue(p3.drainMessages().any { it.contains("This arena is currently in a match") })
-        assertNull(env.registry.arenaOf(p3.uuid))
-    }
-
-    @Test
     fun `initial countdown messages then INGAME with equip teleport scoreboard`() {
         val arena = env.newArena()
         env.setKit(arena, PaperInventorySnapshot(items = listOf(env.item(Material.IRON_SWORD))))

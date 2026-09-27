@@ -2,6 +2,7 @@ package net.ninebolt.onevsone.application
 
 import net.ninebolt.onevsone.application.fixtures.TestApp
 import net.ninebolt.onevsone.application.port.BackupRef
+import net.ninebolt.onevsone.application.port.PersistenceException
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.domain.MatchId
@@ -26,6 +27,17 @@ class PlayerRecoveryServiceTest {
         val ref = backupRef(Uuid.random(), "Alice")
         app.equipment.seedBackup(ref)
         assertNotNull(app.recovery.pending(ref.playerId))
+    }
+
+    @Test
+    fun `shutdown retains pending records when the backup listing fails`() {
+        val app = TestApp()
+        val ref = backupRef(Uuid.random(), "Alice")
+        app.equipment.seedBackup(ref)
+        app.equipment.failOnPendingRefs = PersistenceException("read failed")
+        app.lifecycle.shutdown()
+        assertTrue(app.logger.warnings.any { it.contains("Could not list pending backups") })
+        assertEquals(ref, app.equipment.pendingFor(ref.playerId))
     }
 
     @Test

@@ -124,6 +124,22 @@ class ArenaApplicationServiceResilienceTest {
     }
 
     @Test
+    fun `sign refresh failure during load does not block the arena install`() {
+        val app = TestApp()
+        app.arenas.save(
+            Arena.Enabled.restored(
+                arenaId("a1"),
+                WorldPosition.new("world", 1.0, 64.0, 1.0),
+                WorldPosition.new("world", 2.0, 64.0, 2.0),
+            ),
+        )
+        app.arenas.failOnSignRead = true
+        app.lifecycle.load()
+        assertTrue(arenaId("a1") in app.registry.arenaIds())
+        assertTrue(app.logger.warnings.any { it.contains("Could not update sign") })
+    }
+
+    @Test
     fun `stale countdown callback after abort does nothing`() {
         val app = TestApp()
         app.joinedTwo()
