@@ -19,7 +19,7 @@ class ArenaLifecycleService(
         val loaded = try {
             arenas.loadAll()
         } catch (e: PersistenceException) {
-            logger.warning("Arena definitions are unreadable; no arenas loaded this session")
+            logger.log(Level.WARNING, "Arena definitions are unreadable; no arenas loaded this session", e)
             emptyList()
         }
         loaded.forEach { arena ->

@@ -7,6 +7,7 @@ import java.sql.DriverManager
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.SQLException
+import java.util.logging.Level
 import java.util.logging.Logger
 
 // every exception crossing the store boundary exits as PersistenceException so lenient callers cannot be bypassed
@@ -125,7 +126,7 @@ class SqliteStore(folder: File, private val logger: Logger) : AutoCloseable {
             // fold the WAL back so the database directory is self-contained
             connection.createStatement().use { it.execute("PRAGMA wal_checkpoint(TRUNCATE)") }
         } catch (e: SQLException) {
-            logger.warning("WAL checkpoint failed on close: ${e.message}")
+            logger.log(Level.WARNING, "WAL checkpoint failed on close", e)
         }
         connection.close()
     }

@@ -7,6 +7,7 @@ import net.ninebolt.onevsone.infrastructure.paper.message.Message
 import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
+import java.util.logging.Level
 import java.util.logging.Logger
 import kotlin.uuid.Uuid
 import kotlin.uuid.toKotlinUuid
@@ -40,7 +41,7 @@ internal class StatsCommand(
         val stats = try {
             statsService.statsFor(uuid)
         } catch (e: PersistenceException) {
-            logger.warning("Could not read stats for $uuid: ${e.message}")
+            logger.log(Level.WARNING, "Could not read stats for $uuid", e)
             null
         }
         if (stats == null) {
