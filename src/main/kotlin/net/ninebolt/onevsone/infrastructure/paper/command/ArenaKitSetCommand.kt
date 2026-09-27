@@ -12,8 +12,11 @@ internal class ArenaKitSetCommand(
 ) {
 
     fun execute(player: Player, arenaName: String) {
-        val arena = arenaOrWarn(admin, messenger, player, arenaName) ?: return
-        admin.setKit(arena.name, player.uniqueId.toKotlinUuid())
-        messenger.send(player, Message.ArenaInventorySet(arena.name))
+        val id = admin.resolveArenaId(arenaName) ?: run {
+            messenger.send(player, Message.ArenaNotFound)
+            return
+        }
+        admin.setKit(id, player.uniqueId.toKotlinUuid())
+        messenger.send(player, Message.ArenaInventorySet(id.name))
     }
 }

@@ -3,6 +3,7 @@ package net.ninebolt.onevsone.infrastructure.paper
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import net.ninebolt.onevsone.application.JoinOutput
 import net.ninebolt.onevsone.domain.BlockPosition
+import net.ninebolt.onevsone.domain.fixtures.arenaId
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.breakBlock
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
@@ -178,7 +179,7 @@ class ArenaSignListenerTest {
         val unregistered = sim.breakBlock(env.signBlock(9, 64, 9))
         assertFalse(unregistered.isCancelled)
 
-        env.signs.clearSign("arena1")
+        env.signs.clearSign(arenaId("arena1"))
         val freed = sim.breakBlock(env.signBlock(3, 64, 3))
         assertFalse(freed.isCancelled)
     }
@@ -231,7 +232,7 @@ class ArenaSignListenerTest {
     fun `registered sign renders arena name and state`() {
         env.newArena()
         val block = env.signBlock(3, 64, 3)
-        env.signs.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
+        env.signs.setSign(arenaId("arena1"), BlockPosition.new("world", 3, 64, 3))
 
         val plain = PlainTextComponentSerializer.plainText()
         fun lines() = (0..3).map {
@@ -250,7 +251,7 @@ class ArenaSignListenerTest {
     fun `disabled arena sign shows cannot join and returns to join on enable`() {
         env.newArena("arena1", enabled = false)
         val block = env.signBlock(3, 64, 3)
-        env.signs.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
+        env.signs.setSign(arenaId("arena1"), BlockPosition.new("world", 3, 64, 3))
 
         val plain = PlainTextComponentSerializer.plainText()
         fun lines() = (0..3).map {

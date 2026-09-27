@@ -67,7 +67,6 @@ class ArenaRegistryTest {
         assertNull(registry.entry(id))
         assertNull(registry.resolveArenaId("nope"))
         assertNull(registry.resolveArena("nope"))
-        assertNull(registry.resolveEntry("nope"))
         assertNull(registry.arenaOf(Uuid.random()))
         assertFalse(registry.isJoined(Uuid.random()))
     }

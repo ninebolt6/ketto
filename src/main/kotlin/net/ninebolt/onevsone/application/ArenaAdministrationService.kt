@@ -19,7 +19,7 @@ class ArenaAdministrationService(
 ) {
     fun arenaNames(): List<String> = registry.arenaIds().map { it.name }
 
-    fun arena(name: String): Arena? = registry.resolveArena(name)
+    fun resolveArenaId(name: String): Arena.Id? = registry.resolveArenaId(name)
 
     fun create(name: String): CreateError? {
         val id = Arena.Id.of(name) ?: return CreateError.InvalidName
@@ -31,7 +31,7 @@ class ArenaAdministrationService(
     }
 
     fun remove(name: String): RemoveError? {
-        val arena = arena(name) ?: return RemoveError.NotFound
+        val arena = registry.resolveArena(name) ?: return RemoveError.NotFound
         progression.abort(arena.id)
         arenas.delete(arena.name)
         registry.removeArena(arena.id)
@@ -68,18 +68,16 @@ class ArenaAdministrationService(
         return null
     }
 
-    fun setSpawn(name: String, slot: SpawnSlot, position: WorldPosition): SetSpawnError? {
-        val arena = registry.resolveArena(name) ?: return SetSpawnError.NotFound
+    fun setSpawn(id: Arena.Id, slot: SpawnSlot, position: WorldPosition) {
+        val arena = registry.arena(id) ?: return
         val next = arena.withSpawn(slot, position)
         arenas.save(next)
         registry.replaceArena(next)
-        return null
     }
 
-    fun setKit(name: String, playerId: Uuid): SetKitError? {
-        val arena = arena(name) ?: return SetKitError.NotFound
-        kit.saveKit(arena.id, playerId)
-        return null
+    fun setKit(id: Arena.Id, playerId: Uuid) {
+        if (registry.arena(id) == null) return
+        kit.saveKit(id, playerId)
     }
 }
 
@@ -101,12 +99,4 @@ sealed interface EnableError {
 sealed interface DisableError {
     data object AlreadyDisabled : DisableError
     data object NotFound : DisableError
-}
-
-sealed interface SetSpawnError {
-    data object NotFound : SetSpawnError
-}
-
-sealed interface SetKitError {
-    data object NotFound : SetKitError
 }

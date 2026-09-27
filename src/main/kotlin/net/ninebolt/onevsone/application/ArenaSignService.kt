@@ -12,15 +12,15 @@ class ArenaSignService(
     private val signs: ArenaSignRepository,
     private val presentation: PresentationPort,
 ) {
-    fun signLocation(arenaName: String): BlockPosition? = signs.signLocation(arenaName)
-
     fun signOwner(position: BlockPosition): String? = signs.signOwner(position)
 
-    fun setSign(name: String, position: BlockPosition): SetSignError? {
-        val (arena, match) = registry.resolveEntry(name) ?: return SetSignError.NotFound
+    fun setSign(id: Arena.Id, position: BlockPosition): Boolean {
+        val (arena, match) = registry.entry(id) ?: return false
+        val owner = signs.signOwner(position)
+        if (owner != null && owner != arena.name) return false
         signs.setSign(arena.name, position)
         presentation.updateSign(arena, position, match.state.kind)
-        return null
+        return true
     }
 
     fun refreshSign(arena: Arena.Id, state: ArenaState) {
@@ -31,19 +31,10 @@ class ArenaSignService(
 
     fun refreshSign(match: ArenaMatch) = refreshSign(match.arenaId, match.state)
 
-    fun clearSign(name: String): ClearSignError? {
-        val arena = arena(name) ?: return ClearSignError.NotFound
+    fun clearSign(id: Arena.Id): Boolean {
+        val arena = registry.arena(id) ?: return false
+        if (signs.signLocation(arena.name) == null) return false
         signs.clearSign(arena.name)
-        return null
+        return true
     }
-
-    private fun arena(name: String): Arena? = registry.resolveArena(name)
-}
-
-sealed interface SetSignError {
-    data object NotFound : SetSignError
-}
-
-sealed interface ClearSignError {
-    data object NotFound : ClearSignError
 }

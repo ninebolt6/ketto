@@ -14,8 +14,11 @@ internal class ArenaSpawnSetCommand(
 
     fun execute(player: Player, arenaName: String, slotNumber: Int) {
         val slot = SpawnSlot.ofNumber(slotNumber) ?: return
-        val arena = arenaOrWarn(admin, messenger, player, arenaName) ?: return
-        admin.setSpawn(arena.name, slot, player.toWorldPosition())
-        messenger.send(player, Message.ArenaSpawnSet(arena.name, slot.number))
+        val id = admin.resolveArenaId(arenaName) ?: run {
+            messenger.send(player, Message.ArenaNotFound)
+            return
+        }
+        admin.setSpawn(id, slot, player.toWorldPosition())
+        messenger.send(player, Message.ArenaSpawnSet(id.name, slot.number))
     }
 }

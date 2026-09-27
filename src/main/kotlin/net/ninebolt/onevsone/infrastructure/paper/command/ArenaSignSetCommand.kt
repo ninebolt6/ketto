@@ -15,18 +15,17 @@ internal class ArenaSignSetCommand(
 ) {
 
     fun execute(player: Player, arenaName: String) {
-        val arena = arenaOrWarn(admin, messenger, player, arenaName) ?: return
+        val id = admin.resolveArenaId(arenaName) ?: run {
+            messenger.send(player, Message.ArenaNotFound)
+            return
+        }
         val target = player.getTargetBlockExact(10)
         if (target == null || target.state !is Sign) {
             messenger.send(player, Message.SignLookAt)
             return
         }
-        val position = target.toBlockPosition()
-        val existing = signs.signOwner(position)
-        if (existing != null && existing != arena.name) {
+        if (!signs.setSign(id, target.toBlockPosition())) {
             messenger.send(player, Message.SignTaken)
-            return
         }
-        signs.setSign(arena.name, position)
     }
 }

@@ -22,8 +22,6 @@ class ArenaRegistry(private val requiredWins: Int) {
 
     fun resolveArena(name: String): Arena? = resolveArenaId(name)?.let { slots.getValue(it).arena }
 
-    fun resolveEntry(name: String): Pair<Arena, ArenaMatch>? = resolveArenaId(name)?.let(::entry)
-
     fun arenaIds(): List<Arena.Id> = slots.keys.toList()
 
     fun installArena(arena: Arena): ArenaMatch {

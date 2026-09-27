@@ -13,12 +13,14 @@ internal class ArenaSignRemoveCommand(
 ) {
 
     fun execute(sender: CommandSender, arenaName: String) {
-        val arena = arenaOrWarn(admin, messenger, sender, arenaName) ?: return
-        if (signs.signLocation(arena.name) == null) {
-            messenger.send(sender, Message.SignNotRegistered)
+        val id = admin.resolveArenaId(arenaName) ?: run {
+            messenger.send(sender, Message.ArenaNotFound)
             return
         }
-        signs.clearSign(arena.name)
-        messenger.send(sender, Message.SignRemoved(arena.name))
+        if (signs.clearSign(id)) {
+            messenger.send(sender, Message.SignRemoved(id.name))
+        } else {
+            messenger.send(sender, Message.SignNotRegistered)
+        }
     }
 }
