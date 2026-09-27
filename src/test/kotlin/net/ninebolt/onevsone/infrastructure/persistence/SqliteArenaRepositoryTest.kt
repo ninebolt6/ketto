@@ -2,7 +2,6 @@ package net.ninebolt.onevsone.infrastructure.persistence
 
 import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.domain.Arena
-import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.BlockPosition
 import net.ninebolt.onevsone.domain.WorldPosition
 import net.ninebolt.onevsone.domain.fixtures.arenaId
@@ -21,7 +20,6 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import kotlin.uuid.Uuid
 
 class SqliteArenaRepositoryTest {
 
@@ -79,25 +77,15 @@ class SqliteArenaRepositoryTest {
     }
 
     @Test
-    fun `arena delete cascades kit sign and status but not registrations`() = withStore(folder) { store ->
+    fun `arena delete cascades kit and sign`() = withStore(folder) { store ->
         val arenas = SqliteArenaRepository(store)
         arenas.save(enabledArena("a1"))
         SqliteKitStore(store).saveArenaKit("a1", PaperInventorySnapshot())
         SqliteArenaSignRepository(store).setSign("a1", BlockPosition.new("world", 1, 2, 3))
-        SqliteMatchStateRepository(store).saveStatus(ArenaMatch.new(arenaId("a1"), requiredWins = 3))
-        store.exec(
-            "INSERT INTO registrations(player_uuid, player_name, arena_name) VALUES (?, ?, ?)",
-            Uuid.random().toString(),
-            "Alice",
-            "a1",
-        )
 
         arenas.delete("a1")
         assertEquals(0, countRows(store, "arena_kits"))
         assertEquals(0, countRows(store, "arena_signs"))
-        assertEquals(0, countRows(store, "match_status"))
-        // registrations deliberately has no FK; the abort flow clears it before delete
-        assertEquals(1, countRows(store, "registrations"))
     }
 
     @Test

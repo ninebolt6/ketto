@@ -8,7 +8,6 @@ import net.ninebolt.onevsone.application.ArenaSignService
 import net.ninebolt.onevsone.application.JoinOutput
 import net.ninebolt.onevsone.application.LobbyService
 import net.ninebolt.onevsone.application.MatchProgressionService
-import net.ninebolt.onevsone.application.MatchStateSync
 import net.ninebolt.onevsone.application.PlayerRecoveryService
 import net.ninebolt.onevsone.application.PlayerStatsService
 import net.ninebolt.onevsone.domain.Arena
@@ -19,9 +18,8 @@ import kotlin.test.assertEquals
 
 class TestApp(val requiredWins: Int = 3) {
     val logger = RecordingLogger()
-    val registry = ArenaRegistry(requiredWins, logger)
+    val registry = ArenaRegistry(requiredWins)
     val arenas = InMemoryArenaRepository()
-    val matchState = InMemoryMatchStateRepository()
     val stats = InMemoryPlayerStatsRepository()
     val players = FakePlayers()
     val equipment = FakeEquipment(players)
@@ -29,20 +27,19 @@ class TestApp(val requiredWins: Int = 3) {
     val presentation = RecordingPresentation()
     val recovery = PlayerRecoveryService(equipment, players, arenas, presentation, logger)
     val signs = ArenaSignService(registry, arenas, presentation)
-    val stateSync = MatchStateSync(matchState, signs)
     val progression = MatchProgressionService(
-        registry, stateSync, stats, equipment, players, scheduler, presentation, recovery, logger,
+        registry, signs, stats, equipment, players, scheduler, presentation, recovery, logger,
     )
     val service = ArenaApplicationService(
         registry,
         players,
         recovery,
         progression,
-        stateSync,
+        signs,
         logger,
     )
-    val lifecycle = ArenaLifecycleService(registry, arenas, stateSync, recovery, progression, logger)
-    val admin = ArenaAdministrationService(registry, arenas, arenas, equipment, progression, stateSync)
+    val lifecycle = ArenaLifecycleService(registry, arenas, signs, recovery, progression, logger)
+    val admin = ArenaAdministrationService(registry, arenas, arenas, equipment, progression, signs)
     val lobby = LobbyService(arenas)
     val statsService = PlayerStatsService(stats)
 

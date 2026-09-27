@@ -3,11 +3,9 @@ package net.ninebolt.onevsone.application.fixtures
 import net.ninebolt.onevsone.application.port.ArenaRepository
 import net.ninebolt.onevsone.application.port.ArenaSignRepository
 import net.ninebolt.onevsone.application.port.LobbyRepository
-import net.ninebolt.onevsone.application.port.MatchStateRepository
 import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.application.port.PlayerStatsRepository
 import net.ninebolt.onevsone.domain.Arena
-import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.BlockPosition
 import net.ninebolt.onevsone.domain.PlayerStats
 import net.ninebolt.onevsone.domain.WorldPosition
@@ -62,35 +60,6 @@ class InMemoryArenaRepository :
     }
 
     override fun signOwner(position: BlockPosition): String? = signs.entries.firstOrNull { (_, pos) -> pos == position }?.key
-}
-
-class InMemoryMatchStateRepository : MatchStateRepository {
-    val savedViews = mutableListOf<ArenaMatch>()
-    val registrations = linkedMapOf<Uuid, Arena.Id>()
-    var failOnPersist = false
-    val failOnPersistFor = mutableSetOf<String>()
-    var failOnSaveStatus = false
-    val failOnSaveStatusFor = mutableSetOf<String>()
-
-    override fun persistMatch(match: ArenaMatch) {
-        if (failOnPersist || match.arenaId.name in failOnPersistFor) {
-            throw PersistenceFailure("persist failed")
-        }
-        registrations.entries.removeIf { it.value == match.arenaId }
-        match.participants.forEach { registrations[it.id] = match.arenaId }
-        saveStatus(match)
-    }
-
-    override fun saveStatus(match: ArenaMatch) {
-        if (failOnSaveStatus || match.arenaId.name in failOnSaveStatusFor) {
-            throw PersistenceFailure("status save failed")
-        }
-        savedViews += match
-    }
-
-    override fun clearRegistrations() {
-        registrations.clear()
-    }
 }
 
 class InMemoryPlayerStatsRepository : PlayerStatsRepository {

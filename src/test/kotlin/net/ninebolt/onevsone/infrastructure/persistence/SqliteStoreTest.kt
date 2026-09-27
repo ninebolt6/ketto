@@ -25,7 +25,7 @@ class SqliteStoreTest {
         val tables = store.query("SELECT name FROM sqlite_master WHERE type = 'table'") { it.getString(1) }
         assertTrue(
             tables.containsAll(
-                listOf("arenas", "arena_kits", "arena_signs", "match_status", "lobby", "registrations", "backups", "player_stats"),
+                listOf("arenas", "arena_kits", "arena_signs", "lobby", "backups", "player_stats"),
             ),
         )
         assertEquals("wal", store.queryOne("PRAGMA journal_mode") { it.getString(1) })
@@ -47,11 +47,11 @@ class SqliteStoreTest {
         store.atomic {
             store.exec("INSERT INTO lobby(id, world, x, y, z, yaw, pitch) VALUES (1, 'w', 0, 0, 0, 0, 0)")
             store.atomic {
-                store.exec("INSERT INTO registrations(player_uuid, player_name, arena_name) VALUES ('u', 'n', 'a')")
+                store.exec("INSERT INTO arenas(name, seq) VALUES ('a', 1)")
             }
         }
         assertEquals(1, countRows(store, "lobby"))
-        assertEquals(1, countRows(store, "registrations"))
+        assertEquals(1, countRows(store, "arenas"))
     }
 
     @Test

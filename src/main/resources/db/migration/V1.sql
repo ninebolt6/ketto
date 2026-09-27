@@ -2,12 +2,6 @@
 -- Statements are separated by ';' at end of line; '--' comment lines are
 -- stripped before execution. Keep every statement idempotent (IF NOT EXISTS)
 -- so an interrupted step can be retried on the next open.
---
--- Table layout follows the bounded contexts: match_status is a
--- lifecycle-dependent projection of arenas (ON DELETE CASCADE), while
--- registrations deliberately has no foreign key — membership is removed by
--- the abort/leave flow before arena deletion, and a registration must never
--- silently re-point at a recreated arena.
 
 CREATE TABLE IF NOT EXISTS arenas(
   name TEXT PRIMARY KEY COLLATE NOCASE,
@@ -29,23 +23,10 @@ CREATE TABLE IF NOT EXISTS arena_signs(
 
 CREATE INDEX IF NOT EXISTS arena_signs_pos ON arena_signs(world, x, y, z);
 
-CREATE TABLE IF NOT EXISTS match_status(
-  arena_name TEXT PRIMARY KEY REFERENCES arenas(name) ON DELETE CASCADE,
-  state TEXT NOT NULL,
-  players TEXT NOT NULL DEFAULT '',
-  wins TEXT NOT NULL DEFAULT ''
-);
-
 CREATE TABLE IF NOT EXISTS lobby(
   id INTEGER PRIMARY KEY CHECK (id = 1),
   world TEXT NOT NULL, x REAL NOT NULL, y REAL NOT NULL, z REAL NOT NULL,
   yaw REAL NOT NULL, pitch REAL NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS registrations(
-  player_uuid TEXT PRIMARY KEY,
-  player_name TEXT NOT NULL,
-  arena_name TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS backups(

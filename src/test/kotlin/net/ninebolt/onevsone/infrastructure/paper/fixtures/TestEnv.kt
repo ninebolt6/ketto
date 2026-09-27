@@ -15,10 +15,8 @@ import net.ninebolt.onevsone.application.ArenaSignService
 import net.ninebolt.onevsone.application.JoinOutput
 import net.ninebolt.onevsone.application.LobbyService
 import net.ninebolt.onevsone.application.MatchProgressionService
-import net.ninebolt.onevsone.application.MatchStateSync
 import net.ninebolt.onevsone.application.PlayerRecoveryService
 import net.ninebolt.onevsone.application.PlayerStatsService
-import net.ninebolt.onevsone.application.port.MatchStateRepository
 import net.ninebolt.onevsone.application.port.PlayerStatsRepository
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.WorldPosition
@@ -40,7 +38,6 @@ import net.ninebolt.onevsone.infrastructure.persistence.SqliteArenaSignRepositor
 import net.ninebolt.onevsone.infrastructure.persistence.SqliteBackupStore
 import net.ninebolt.onevsone.infrastructure.persistence.SqliteKitStore
 import net.ninebolt.onevsone.infrastructure.persistence.SqliteLobbyRepository
-import net.ninebolt.onevsone.infrastructure.persistence.SqliteMatchStateRepository
 import net.ninebolt.onevsone.infrastructure.persistence.SqlitePlayerStatsRepository
 import net.ninebolt.onevsone.infrastructure.persistence.SqliteStore
 import org.bukkit.Location
@@ -135,7 +132,6 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         val arenaRepo: SqliteArenaRepository,
         val lobbyRepo: SqliteLobbyRepository,
         val signRepo: SqliteArenaSignRepository,
-        val matchStateRepo: MatchStateRepository,
         val statsRepo: PlayerStatsRepository,
         val equipment: PaperEquipmentAdapter,
         val presentation: PaperPresentation,
@@ -154,7 +150,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
 
     private var deps = run {
         val store = SqliteStore(folder, Logger.getLogger("1vs1-test"))
-        makeDeps(store, SqliteBackupStore(store), SqliteMatchStateRepository(store), SqlitePlayerStatsRepository(store))
+        makeDeps(store, SqliteBackupStore(store), SqlitePlayerStatsRepository(store))
     }
 
     init {
@@ -167,7 +163,6 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     val arenaRepo get() = deps.arenaRepo
     val lobbyRepo get() = deps.lobbyRepo
     val signRepo get() = deps.signRepo
-    val matchStateRepo get() = deps.matchStateRepo
     val statsRepo get() = deps.statsRepo
     val equipment get() = deps.equipment
     val presentation get() = deps.presentation
@@ -186,7 +181,6 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     private fun makeDeps(
         store: SqliteStore,
         backupStore: SqliteBackupStore,
-        matchStateRepo: MatchStateRepository,
         statsRepo: PlayerStatsRepository,
     ): Deps {
         val kitStore = SqliteKitStore(store)
@@ -195,11 +189,11 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         val signRepo = SqliteArenaSignRepository(store)
         val equipment = PaperEquipmentAdapter(backupStore, kitStore, lookup)
         val presentation = PaperPresentation(server, messenger, logger)
-        val registry = ArenaRegistry(requiredWins, logger)
+        val registry = ArenaRegistry(requiredWins)
         val signs = ArenaSignService(registry, signRepo, presentation)
         val recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepo, presentation, logger)
         val progression = MatchProgressionService(
-            registry, MatchStateSync(matchStateRepo, signs), statsRepo,
+            registry, signs, statsRepo,
             equipment, playerPort, schedulerPort, presentation, recovery, logger,
         )
         val service = ArenaApplicationService(
@@ -207,13 +201,13 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
             playerPort,
             recovery,
             progression,
-            MatchStateSync(matchStateRepo, signs),
+            signs,
             logger,
         )
         val lifecycle = ArenaLifecycleService(
             registry,
             arenaRepo,
-            MatchStateSync(matchStateRepo, signs),
+            signs,
             recovery,
             progression,
             logger,
@@ -224,12 +218,12 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
             signRepo,
             equipment,
             progression,
-            MatchStateSync(matchStateRepo, signs),
+            signs,
         )
         val statsService = PlayerStatsService(statsRepo)
         val lobby = LobbyService(lobbyRepo)
         return Deps(
-            store, backupStore, kitStore, arenaRepo, lobbyRepo, signRepo, matchStateRepo, statsRepo,
+            store, backupStore, kitStore, arenaRepo, lobbyRepo, signRepo, statsRepo,
             equipment, presentation, registry, recovery, progression, service, lifecycle, admin,
             statsService, signs, lobby,
             ArenaSignListener(service, signs, messenger),
@@ -240,10 +234,9 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     fun rebuildWith(
         newStore: SqliteStore = deps.store,
         backupStore: SqliteBackupStore = SqliteBackupStore(newStore),
-        matchState: MatchStateRepository = SqliteMatchStateRepository(newStore),
         statsRepo: PlayerStatsRepository = SqlitePlayerStatsRepository(newStore),
     ) {
-        deps = makeDeps(newStore, backupStore, matchState, statsRepo)
+        deps = makeDeps(newStore, backupStore, statsRepo)
         registerListeners()
     }
 

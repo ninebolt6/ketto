@@ -11,9 +11,6 @@
   a transaction itself, and code inside a nested atomic section must not
   catch an inner persistence failure and continue — the unit is rollback-only
   from that point
-- `ArenaRegistry` mutators run the required `persist` hook before writing
-  back in-memory state, so a strict failure leaves memory and indexes
-  untouched. Callers that deliberately persist nothing write `persist = {}`
 - `PersistenceFailure` is the only exception type allowed to cross a
   persistence implementation boundary; JDBC, codec, and stored-data
   validation failures are all converted at the seam so lenient callers cannot

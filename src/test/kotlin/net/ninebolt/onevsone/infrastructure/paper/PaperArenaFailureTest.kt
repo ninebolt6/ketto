@@ -2,13 +2,10 @@ package net.ninebolt.onevsone.infrastructure.paper
 
 import io.mockk.every
 import io.mockk.spyk
-import net.ninebolt.onevsone.application.JoinOutput
 import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.genericDamage
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.registrations
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.statusOf
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.view
 import org.bukkit.Material
@@ -45,47 +42,6 @@ class PaperArenaFailureTest {
     }
 
     @Test
-    fun `join commits with a report when the projection cannot be persisted`() {
-        env.close()
-        env = TestEnv(folder)
-        val spyState = spyk(env.matchStateRepo)
-        every { spyState.persistMatch(any()) } throws PersistenceFailure("disk gone")
-        env.rebuildWith(matchState = spyState)
-        val records = capturePluginLog()
-        val arena = env.newArena()
-        val p = env.player("Alice")
-        assertEquals(JoinOutput.JoinedWaiting, env.service.join(p.uuid, p.name, arena))
-        assertEquals(arena, env.registry.arenaOf(p.uuid))
-        assertEquals(ArenaState.Kind.ONEMORE, env.view().state.kind)
-        assertTrue(records.any { it.message.contains("match projection") && it.thrown is PersistenceFailure })
-    }
-
-    @Test
-    fun `next projection write converges the ledger after a lenient failure`() {
-        env.close()
-        env = TestEnv(folder)
-        val spyState = spyk(env.matchStateRepo)
-        var failing = true
-        every { spyState.persistMatch(any()) } answers {
-            if (failing) throw PersistenceFailure("disk gone") else callOriginal()
-        }
-        env.rebuildWith(matchState = spyState)
-        val arena = env.newArena()
-        val p1 = env.player("Alice")
-        val p2 = env.player("Bob")
-
-        env.join(p1, arena)
-        assertTrue(env.registrations().isEmpty())
-
-        failing = false
-        env.join(p2, arena)
-        assertEquals(
-            setOf(p1.uniqueId.toString() to "Alice", p2.uniqueId.toString() to "Bob"),
-            env.registrations().map { it.playerUuid to it.playerName }.toSet(),
-        )
-    }
-
-    @Test
     fun `winner stats failure does not prevent final death cleanup`() {
         env.close()
         env = TestEnv(folder, requiredWins = 1)
@@ -115,9 +71,6 @@ class PaperArenaFailureTest {
         val failedLog = records.single { it.message.contains("Failed to record") }
         assertEquals(Level.SEVERE, failedLog.level)
         assertTrue(failedLog.thrown is PersistenceFailure)
-        val status = env.statusOf("arena1")!!
-        assertEquals("WAITING", status.state)
-        assertTrue(status.players.isEmpty())
     }
 
     private fun capturePluginLog(): MutableList<LogRecord> {

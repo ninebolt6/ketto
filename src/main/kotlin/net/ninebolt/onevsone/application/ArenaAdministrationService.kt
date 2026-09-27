@@ -12,10 +12,10 @@ import kotlin.uuid.Uuid
 class ArenaAdministrationService(
     private val registry: ArenaRegistry,
     private val arenas: ArenaRepository,
-    private val signs: ArenaSignRepository,
+    private val signRepo: ArenaSignRepository,
     private val kit: KitPort,
     private val progression: MatchProgressionService,
-    private val sync: MatchStateSync,
+    private val signs: ArenaSignService,
 ) {
     fun arenaNames(): List<String> = registry.arenaIds().map { it.name }
 
@@ -34,7 +34,7 @@ class ArenaAdministrationService(
         val arena = arena(name) ?: return RemoveError.NotFound
         progression.abort(arena.id)
         registry.removeArena(arena.id, persist = { arenas.delete(it.name) })
-        signs.clearSign(arena.name)
+        signRepo.clearSign(arena.name)
         kit.forgetKit(arena.id)
         return null
     }
@@ -50,7 +50,7 @@ class ArenaAdministrationService(
             }
         }
         registry.updateArena(arena.id, persist = arenas::save) { next }
-        registry.match(arena.id)?.let(sync::refreshSign)
+        registry.match(arena.id)?.let(signs::refreshSign)
         return null
     }
 

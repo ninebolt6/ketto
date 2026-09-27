@@ -3,6 +3,7 @@ package net.ninebolt.onevsone.application
 import net.ninebolt.onevsone.application.port.ArenaSignRepository
 import net.ninebolt.onevsone.application.port.PresentationPort
 import net.ninebolt.onevsone.domain.Arena
+import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.BlockPosition
 
@@ -27,6 +28,8 @@ class ArenaSignService(
         val resolved = registry.arena(arena) ?: return
         presentation.updateSign(resolved, position, state.kind)
     }
+
+    fun refreshSign(match: ArenaMatch) = refreshSign(match.arenaId, match.state)
 
     fun clearSign(name: String): ClearSignError? {
         val arena = arena(name) ?: return ClearSignError.NotFound

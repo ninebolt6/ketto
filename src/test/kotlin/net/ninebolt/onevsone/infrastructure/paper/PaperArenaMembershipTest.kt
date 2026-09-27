@@ -8,7 +8,6 @@ import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.backupByName
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.fallIntoVoid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.lastBroadcast
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.registrations
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.runCommand
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.view
@@ -83,9 +82,8 @@ class PaperArenaMembershipTest {
         val p1 = env.player("Alice")
         env.join(p1, arena)
         assertNull(p1.inventory.contents[0])
-        val registration = env.registrations().single { it.playerName == "Alice" }
-        assertEquals(p1.uniqueId.toString(), registration.playerUuid)
-        assertEquals("arena1", registration.arenaName)
+        assertEquals(arena, env.registry.arenaOf(p1.uuid))
+        assertEquals(listOf("Alice"), env.view().participants.map { it.name })
         assertNull(env.backupByName("Alice"))
     }
 

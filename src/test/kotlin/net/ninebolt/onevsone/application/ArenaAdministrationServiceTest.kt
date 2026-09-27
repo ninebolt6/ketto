@@ -141,8 +141,6 @@ class ArenaAdministrationServiceTest {
         assertNull(app.admin.remove("arena1"))
         assertNull(app.registry.arenaOf(p1.id))
         assertNull(app.registry.arenaOf(p2.id))
-        assertNull(app.matchState.registrations[p1.id])
-        assertNull(app.matchState.registrations[p2.id])
     }
 
     @Test

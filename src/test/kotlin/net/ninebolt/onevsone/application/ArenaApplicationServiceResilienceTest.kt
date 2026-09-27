@@ -109,19 +109,6 @@ class ArenaApplicationServiceResilienceTest {
     }
 
     @Test
-    fun `projection failure during abort degrades to report and still commits`() {
-        val app = TestApp()
-        val (p1, _) = app.startMatch()
-        app.matchState.failOnPersist = true
-        app.progression.abort(arenaId("arena1"))
-        assertNull(app.registry.arenaOf(p1.id))
-        assertTrue(app.logger.reports.any { it.message.contains("match projection") })
-        app.matchState.failOnPersist = false
-        app.matchState.persistMatch(app.service.matchOf("arena1")!!)
-        assertTrue(app.matchState.registrations.isEmpty())
-    }
-
-    @Test
     fun `load skips every arena when definitions are unreadable`() {
         val app = TestApp()
         app.arenas.save(
@@ -135,30 +122,6 @@ class ArenaApplicationServiceResilienceTest {
         app.lifecycle.load()
         assertTrue(app.registry.arenaIds().isEmpty())
         assertTrue(app.logger.warnings.any { it.contains("unreadable") })
-    }
-
-    @Test
-    fun `load isolates per arena status persistence failure`() {
-        val app = TestApp()
-        app.arenas.save(Arena.Disabled.new(arenaId("broken")))
-        app.arenas.save(Arena.Disabled.new(arenaId("healthy")))
-        app.matchState.failOnSaveStatusFor += "broken"
-        app.lifecycle.load()
-        assertEquals(ArenaState.Kind.WAITING, app.service.matchOf("broken")!!.state.kind)
-        assertEquals(ArenaState.Kind.WAITING, app.service.matchOf("healthy")!!.state.kind)
-        assertTrue(app.logger.warnings.any { it.contains("broken") })
-    }
-
-    @Test
-    fun `shutdown restores backups even when a status save fails`() {
-        val app = TestApp()
-        app.startMatch("arena1")
-        val (q1, q2) = app.startMatch("arena2")
-        app.matchState.failOnSaveStatusFor += "arena1"
-        app.lifecycle.shutdown()
-        assertNull(app.registry.arenaOf(q1.id))
-        assertNull(app.registry.arenaOf(q2.id))
-        assertEquals(4, app.equipment.restored.size)
     }
 
     @Test

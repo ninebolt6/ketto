@@ -1,18 +1,12 @@
 package net.ninebolt.onevsone.application
 
-import net.ninebolt.onevsone.application.port.PersistenceFailure
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.Transition
-import java.util.logging.Level
-import java.util.logging.Logger
 import kotlin.uuid.Uuid
 
-// Ordering contract: each mutator's persist hook runs before the in-memory write and touches persistence only; arena persist failures propagate, match persist failures are only reported
-class ArenaRegistry(
-    private val requiredWins: Int,
-    private val logger: Logger,
-) {
+// Ordering contract: each arena mutator's persist hook runs before the in-memory write and touches persistence only; persist failures propagate
+class ArenaRegistry(private val requiredWins: Int) {
 
     private data class Slot(val arena: Arena, val match: ArenaMatch)
 
@@ -62,51 +56,29 @@ class ArenaRegistry(
 
     fun matches(): List<ArenaMatch> = slots.values.map { it.match }
 
-    fun putMatch(match: ArenaMatch, persist: (ArenaMatch) -> Unit) {
+    fun putMatch(match: ArenaMatch) {
         val slot = slots[match.arenaId] ?: return
-        if (match !== slot.match) persistProjection(match.arenaId, match, persist)
         slots[match.arenaId] = slot.copy(match = match)
         reconcileIndex(match.arenaId, slot.match, match)
     }
 
-    fun updateMatch(
-        id: Arena.Id,
-        persist: (ArenaMatch) -> Unit,
-        transform: (ArenaMatch) -> ArenaMatch,
-    ): ArenaMatch? {
+    fun updateMatch(id: Arena.Id, transform: (ArenaMatch) -> ArenaMatch): ArenaMatch? {
         val slot = slots[id] ?: return null
         val next = transform(slot.match)
-        if (next !== slot.match) persistProjection(id, next, persist)
         slots[id] = slot.copy(match = next)
         reconcileIndex(id, slot.match, next)
         return next
     }
 
-    // Rejected transitions return the same match instance, so the identity check skips persistence
     fun <O> transact(
         id: Arena.Id,
-        persist: (ArenaMatch) -> Unit,
         operation: (ArenaMatch) -> Transition<O>,
     ): Transition<O>? {
         val slot = slots[id] ?: return null
         val transition = operation(slot.match)
-        if (transition.match !== slot.match) persistProjection(id, transition.match, persist)
         slots[id] = slot.copy(match = transition.match)
         reconcileIndex(id, slot.match, transition.match)
         return transition
-    }
-
-    // The match projection is write-only forensic data: a persist failure is reported and the commit proceeds; the next write converges the ledger
-    private fun persistProjection(id: Arena.Id, match: ArenaMatch, persist: (ArenaMatch) -> Unit) {
-        try {
-            persist(match)
-        } catch (e: PersistenceFailure) {
-            logger.log(
-                Level.SEVERE,
-                "Could not persist match projection for arena ${id.name}; in-memory state committed",
-                e,
-            )
-        }
     }
 
     fun arenaOf(playerId: Uuid): Arena.Id? = playerArena[playerId]

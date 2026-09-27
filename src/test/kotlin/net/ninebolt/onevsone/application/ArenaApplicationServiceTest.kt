@@ -104,7 +104,7 @@ class ArenaApplicationServiceTest {
         assertEquals(1, app.presentation.matchStarts.size)
         assertTrue(p1.events.contains("teleport"))
         assertTrue(p2.events.contains("teleport"))
-        assertEquals(2, app.matchState.registrations.size)
+        assertEquals(2, app.service.matchOf("arena1")!!.participants.size)
         assertNotNull(app.recovery.pending(p1.id))
         assertNotNull(app.recovery.pending(p2.id))
     }
@@ -169,8 +169,6 @@ class ArenaApplicationServiceTest {
         assertEquals(ArenaState.Kind.ONEMORE, app.state())
         assertNull(app.registry.arenaOf(p1.id))
         assertEquals(arenaId("arena1"), app.registry.arenaOf(p2.id))
-        assertFalse(app.matchState.registrations.containsKey(p1.id))
-        assertTrue(app.matchState.registrations.containsKey(p2.id))
         assertTrue(app.stats.stats.isEmpty())
         assertTrue(app.equipment.restored.isEmpty())
         assertTrue(app.presentation.champions.isEmpty())
@@ -190,7 +188,6 @@ class ArenaApplicationServiceTest {
         }
         assertEquals(ArenaState.Kind.WAITING, app.state())
         assertNull(app.registry.arenaOf(p1.id))
-        assertFalse(app.matchState.registrations.containsKey(p1.id))
         assertTrue(app.stats.stats.isEmpty())
         assertTrue(app.equipment.restored.isEmpty())
     }
@@ -217,7 +214,6 @@ class ArenaApplicationServiceTest {
         assertNull(app.service.leave(p1.id))
         assertEquals(ArenaState.Kind.WAITING, app.state())
         assertNull(app.registry.arenaOf(p1.id))
-        assertFalse(app.matchState.registrations.containsKey(p1.id))
         assertTrue(app.equipment.restored.isEmpty())
     }
 
@@ -230,7 +226,6 @@ class ArenaApplicationServiceTest {
         assertTrue(app.service.arena("arena1")!!.enabled)
         assertNull(app.registry.arenaOf(p1.id))
         assertEquals(2, app.equipment.restored.size)
-        assertTrue(app.matchState.registrations.isEmpty())
     }
 
     @Test

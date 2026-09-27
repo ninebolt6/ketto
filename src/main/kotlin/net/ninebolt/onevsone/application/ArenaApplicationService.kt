@@ -17,7 +17,7 @@ class ArenaApplicationService(
     private val players: PlayerPort,
     private val recovery: PlayerRecoveryService,
     private val progression: MatchProgressionService,
-    private val sync: MatchStateSync,
+    private val signs: ArenaSignService,
     private val logger: Logger,
 ) {
 
@@ -42,9 +42,9 @@ class ArenaApplicationService(
             if (!recovery.restoreNow(handle, ticket)) return JoinOutput.RestorePending
         }
 
-        registry.putMatch(step.match, persist = sync::persistMatch)
+        registry.putMatch(step.match)
         if (step.outcome == JoinOutcome.MatchReady) progression.startInitialCountdown(arenaId, step.match.epoch)
-        sync.refreshSign(step.match)
+        signs.refreshSign(step.match)
         return when (step.outcome) {
             JoinOutcome.FirstJoined -> JoinOutput.JoinedWaiting
             JoinOutcome.MatchReady -> JoinOutput.JoinedStarting
@@ -54,7 +54,7 @@ class ArenaApplicationService(
 
     fun leave(playerId: Uuid): LeaveError? {
         val arenaId = registry.arenaOf(playerId) ?: return LeaveError.NotJoined
-        val step = registry.transact(arenaId, persist = sync::persistMatch) { it.leaveWaiting(playerId) } ?: run {
+        val step = registry.transact(arenaId) { it.leaveWaiting(playerId) } ?: run {
             logger.severe("Player $playerId is indexed into arena ${arenaId.name} but no match exists; reporting not joined")
             return LeaveError.NotJoined
         }
@@ -62,7 +62,7 @@ class ArenaApplicationService(
             LeaveOutcome.NotWaiting -> return LeaveError.NotWaiting
 
             is LeaveOutcome.Left -> {
-                sync.refreshSign(step.match)
+                signs.refreshSign(step.match)
                 return null
             }
         }
@@ -71,7 +71,7 @@ class ArenaApplicationService(
     // During QuitEvent the adapter provides the disconnecting player's handle, so only the UUID is needed
     fun quit(playerId: Uuid) {
         val arenaId = registry.arenaOf(playerId)
-        val step = arenaId?.let { registry.transact(it, persist = sync::persistMatch) { m -> m.forfeit(playerId) } }
+        val step = arenaId?.let { registry.transact(it) { m -> m.forfeit(playerId) } }
         if (step == null) {
             if (arenaId != null) {
                 logger.severe("Player $playerId is indexed into arena ${arenaId.name} but no match exists; restoring pending backup")
@@ -85,7 +85,7 @@ class ArenaApplicationService(
         }
         when (val outcome = step.outcome) {
             is QuitOutcome.WaitingExit -> {
-                sync.refreshSign(step.match)
+                signs.refreshSign(step.match)
             }
 
             is QuitOutcome.MatchEnded -> {
@@ -107,7 +107,7 @@ class ArenaApplicationService(
 
     fun defeat(playerId: Uuid, cause: DefeatCause): Boolean {
         val arenaId = registry.arenaOf(playerId) ?: return false
-        val step = registry.transact(arenaId, persist = sync::persistMatch) { it.recordDefeat(playerId, cause) } ?: run {
+        val step = registry.transact(arenaId) { it.recordDefeat(playerId, cause) } ?: run {
             logger.severe("Player $playerId is indexed into arena ${arenaId.name} but no match exists; defeat ignored")
             return false
         }

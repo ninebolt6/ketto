@@ -21,7 +21,7 @@ import kotlin.uuid.Uuid
 // ArenaMatch is immutable: never capture it inside a deferred callback — re-read via registry.match(arenaId) and validate by epoch
 class MatchProgressionService(
     private val registry: ArenaRegistry,
-    private val sync: MatchStateSync,
+    private val signs: ArenaSignService,
     private val stats: PlayerStatsRepository,
     private val kit: KitPort,
     private val players: PlayerPort,
@@ -40,7 +40,7 @@ class MatchProgressionService(
 
     fun abort(arenaId: Arena.Id) {
         cancelCountdown(arenaId)
-        val step = registry.transact(arenaId, persist = sync::persistMatch) { it.abort() } ?: return
+        val step = registry.transact(arenaId) { it.abort() } ?: return
         val left = step.outcome
         val tickets = left.map { it to recovery.pending(it.id) }
         tickets.forEach { (participant, ticket) ->
@@ -48,7 +48,7 @@ class MatchProgressionService(
                 ticket?.let { recovery.restoreNow(h, it) }
             }
         }
-        sync.refreshSign(step.match)
+        signs.refreshSign(step.match)
     }
 
     internal fun cancelCountdown(arenaId: Arena.Id) {
@@ -74,7 +74,7 @@ class MatchProgressionService(
             val loserHandle = players.handle(outcome.loser.id)
             val release = {
                 // The resolution marker is memory-only coordination metadata, so nothing is persisted
-                registry.updateMatch(arenaId, persist = {}) { it.releaseResolution(gen) }
+                registry.updateMatch(arenaId) { it.releaseResolution(gen) }
             }
             if (death) {
                 scheduleDeferred(outcome.loser.id, {
@@ -93,7 +93,7 @@ class MatchProgressionService(
             }
             winnerHandle?.let { h -> match.slotOf(outcome.winner.id)?.let { teleportToSlot(arenaId, it, h) } }
 
-            sync.refreshSign(match)
+            signs.refreshSign(match)
             startRoundCountdown(arenaId, gen)
         } catch (e: Exception) {
             // A failure after the resolution commit would leave a timer-less ROUNDCOUNTDOWN stuck, so abort
@@ -141,7 +141,7 @@ class MatchProgressionService(
             }
         }
 
-        sync.refreshSign(match)
+        signs.refreshSign(match)
         recordResult(winner, loser)
     }
 
@@ -181,14 +181,14 @@ class MatchProgressionService(
                 teleportToSlot(arenaId, SpawnSlot.FIRST, p1)
                 teleportToSlot(arenaId, SpawnSlot.SECOND, p2)
                 presentation.matchStart(participantIds)
-                val began = registry.transact(arenaId, persist = sync::persistMatch) { it.beginMatch() }
+                val began = registry.transact(arenaId) { it.beginMatch() }
                     ?: run {
                         logger.severe("Arena ${arenaId.name} vanished before the match could begin; aborting")
                         abort(arenaId)
                         return@runCountdown true
                     }
                 presentation.updateScoreboard(began.match)
-                sync.refreshSign(began.match)
+                signs.refreshSign(began.match)
             } catch (e: Exception) {
                 // Mid-swap failure: abort restores the players from the backups already taken
                 logger.log(Level.SEVERE, "Could not apply equipment before starting arena ${arenaId.name}; match aborted", e)
@@ -210,8 +210,8 @@ class MatchProgressionService(
 
                 0 -> {
                     presentation.roundStart(participantIds)
-                    registry.transact(arenaId, persist = sync::persistMatch) { it.resumeRound() }
-                        ?.let { sync.refreshSign(it.match) }
+                    registry.transact(arenaId) { it.resumeRound() }
+                        ?.let { signs.refreshSign(it.match) }
                         ?: logger.severe("Arena ${arenaId.name} vanished while resuming a round")
                 }
             }

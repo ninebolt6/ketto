@@ -8,7 +8,6 @@ import net.ninebolt.onevsone.application.ArenaRegistry
 import net.ninebolt.onevsone.application.ArenaSignService
 import net.ninebolt.onevsone.application.LobbyService
 import net.ninebolt.onevsone.application.MatchProgressionService
-import net.ninebolt.onevsone.application.MatchStateSync
 import net.ninebolt.onevsone.application.PlayerRecoveryService
 import net.ninebolt.onevsone.application.PlayerStatsService
 import net.ninebolt.onevsone.infrastructure.paper.ArenaGuardListener
@@ -29,7 +28,6 @@ import net.ninebolt.onevsone.infrastructure.persistence.SqliteArenaSignRepositor
 import net.ninebolt.onevsone.infrastructure.persistence.SqliteBackupStore
 import net.ninebolt.onevsone.infrastructure.persistence.SqliteKitStore
 import net.ninebolt.onevsone.infrastructure.persistence.SqliteLobbyRepository
-import net.ninebolt.onevsone.infrastructure.persistence.SqliteMatchStateRepository
 import net.ninebolt.onevsone.infrastructure.persistence.SqlitePlayerStatsRepository
 import net.ninebolt.onevsone.infrastructure.persistence.SqliteStore
 import org.bukkit.plugin.java.JavaPlugin
@@ -80,7 +78,6 @@ private class PluginModule(
     private val arenaRepository = SqliteArenaRepository(store, plugin.logger)
     private val lobbyRepository = SqliteLobbyRepository(store)
     private val signRepository = SqliteArenaSignRepository(store)
-    private val matchState = SqliteMatchStateRepository(store)
     private val stats = SqlitePlayerStatsRepository(store)
 
     private val lookup = PaperPlayerLookup(plugin.server)
@@ -92,7 +89,7 @@ private class PluginModule(
     )
     private val presentation = PaperPresentation(server = plugin.server, messenger = messenger, logger = plugin.logger)
 
-    private val registry = ArenaRegistry(requiredWins, plugin.logger)
+    private val registry = ArenaRegistry(requiredWins)
     private val signs = ArenaSignService(registry = registry, signs = signRepository, presentation = presentation)
     private val recovery = PlayerRecoveryService(
         backups = equipment,
@@ -101,10 +98,9 @@ private class PluginModule(
         presentation = presentation,
         logger = plugin.logger,
     )
-    private val stateSync = MatchStateSync(matchState = matchState, signs = signs)
     private val progression = MatchProgressionService(
         registry = registry,
-        sync = stateSync,
+        signs = signs,
         stats = stats,
         kit = equipment,
         players = players,
@@ -118,24 +114,24 @@ private class PluginModule(
         players = players,
         recovery = recovery,
         progression = progression,
-        sync = stateSync,
+        signs = signs,
         logger = plugin.logger,
     )
     val lifecycle = ArenaLifecycleService(
         registry = registry,
         arenas = arenaRepository,
-        sync = stateSync,
         recovery = recovery,
         progression = progression,
+        signs = signs,
         logger = plugin.logger,
     )
     private val admin = ArenaAdministrationService(
         registry = registry,
         arenas = arenaRepository,
-        signs = signRepository,
+        signRepo = signRepository,
         kit = equipment,
         progression = progression,
-        sync = stateSync,
+        signs = signs,
     )
     private val lobby = LobbyService(lobby = lobbyRepository)
     private val statsService = PlayerStatsService(stats = stats)
