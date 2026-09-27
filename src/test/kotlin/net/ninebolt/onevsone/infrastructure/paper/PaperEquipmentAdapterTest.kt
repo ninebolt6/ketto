@@ -75,13 +75,6 @@ class PaperEquipmentAdapterTest {
     }
 
     @Test
-    fun `restore of an ownerless backup fails as an unavailable player`() {
-        val ref = BackupRef.new(MatchId.new(), null, "Alice")
-        env.backupStore.saveBackups(listOf(PersistedBackup(ref, PaperInventorySnapshot())))
-        assertFailsWith<PersistenceFailure> { env.equipment.restore(ref) }
-    }
-
-    @Test
     fun `apply kit fails when the player is offline`() {
         val arena = env.newArena()
         assertFailsWith<PersistenceFailure> { env.equipment.applyKit(arena, Uuid.random()) }

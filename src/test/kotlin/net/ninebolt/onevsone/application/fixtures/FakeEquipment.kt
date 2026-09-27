@@ -36,7 +36,7 @@ class FakeEquipment(var players: FakePlayers? = null) :
     override fun restore(backup: BackupRef) {
         if (failOnRestore) throw PersistenceFailure("restore failed")
         restored += backup
-        backup.playerId?.let { players?.players?.get(it)?.events?.add("restore") }
+        players?.players?.get(backup.playerId)?.events?.add("restore")
     }
 
     override fun acknowledge(backup: BackupRef) {

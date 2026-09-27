@@ -56,7 +56,7 @@ class SqliteBackupStoreTest {
                 "INSERT INTO backups(backup_id, match_id, player_uuid, player_name, payload) VALUES (?, ?, ?, ?, ?)",
                 Uuid.random().toString(),
                 Uuid.random().toString(),
-                null,
+                Uuid.random().toString(),
                 "Alice",
                 "not: [valid",
             )
@@ -65,7 +65,7 @@ class SqliteBackupStoreTest {
     }
 
     @Test
-    fun `backup rows with an unparseable player uuid yield a null player id`() = withStore(folder) { store ->
+    fun `backup rows with an unparseable player uuid are skipped`() = withStore(folder) { store ->
         store.exec(
             "INSERT INTO backups(backup_id, match_id, player_uuid, player_name, payload) VALUES (?, ?, ?, ?, ?)",
             Uuid.random().toString(),
@@ -74,21 +74,6 @@ class SqliteBackupStoreTest {
             "Alice",
             InventoryPayloadCodec.encode(PaperInventorySnapshot()),
         )
-        assertNull(SqliteBackupStore(store).persistedBackups().single().ref.playerId)
-    }
-
-    @Test
-    fun `a backup row with a null owner uuid reads back as an ownerless ref`() = withStore(folder) { store ->
-        store.exec(
-            "INSERT INTO backups(backup_id, match_id, player_uuid, player_name, payload) VALUES (?, ?, ?, ?, ?)",
-            Uuid.random().toString(),
-            Uuid.random().toString(),
-            null,
-            "Alice",
-            InventoryPayloadCodec.encode(PaperInventorySnapshot()),
-        )
-        val ref = SqliteBackupStore(store).persistedBackups().single().ref
-        assertNull(ref.playerId)
-        assertEquals("Alice", ref.playerName)
+        assertEquals(0, SqliteBackupStore(store).persistedBackups().size)
     }
 }

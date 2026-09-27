@@ -83,7 +83,7 @@ private class PluginModule(
     private val lookup = PaperPlayerLookup(plugin.server)
     private val players = PaperPlayerAdapter(lookup = lookup, server = plugin.server, plugin = plugin, logger = plugin.logger)
     private val equipment = PaperEquipmentAdapter(
-        backups = SqliteBackupStore(store),
+        backups = SqliteBackupStore(store, plugin.logger),
         kitStore = SqliteKitStore(store),
         lookup = lookup,
     )

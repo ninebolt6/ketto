@@ -32,15 +32,7 @@ class PlayerRecoveryService(
     }
 
     private fun register(ref: BackupRef) {
-        val owner = ref.playerId
-        if (owner == null) {
-            logger.warning(
-                "Backup ${ref.backupId} for ${ref.playerName} has no owner uuid and cannot be restored; " +
-                    "remove the stale row from the backups table",
-            )
-            return
-        }
-        pendingBackups[owner] = ref
+        pendingBackups[ref.playerId] = ref
     }
 
     fun pending(playerId: Uuid): BackupRef? = pendingBackups[playerId]

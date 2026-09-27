@@ -26,7 +26,7 @@ class PlayerRecoveryServiceTest {
         val ref = backupRef(Uuid.random(), "Alice")
         app.equipment.seedBackup(ref)
         app.recovery.loadPersisted()
-        assertNotNull(app.recovery.pending(ref.playerId!!))
+        assertNotNull(app.recovery.pending(ref.playerId))
     }
 
     @Test
@@ -104,20 +104,6 @@ class PlayerRecoveryServiceTest {
         app.service.restorePending(renamed.id)
         assertEquals(1, app.equipment.restored.size)
         assertTrue(app.equipment.storedBackups.isEmpty())
-    }
-
-    @Test
-    fun `backup without uuid is not restored`() {
-        val app = TestApp()
-        val p = app.players.add("Alice")
-        val ref = BackupRef.new(MatchId.new(), null, "Alice")
-        app.equipment.seedBackup(ref)
-        app.recovery.loadPersisted()
-        assertTrue(app.logger.warnings.any { it.contains("no owner uuid") })
-
-        app.service.restorePending(p.id)
-        assertTrue(app.equipment.restored.isEmpty())
-        assertTrue(app.equipment.storedBackups.containsKey(ref.backupId))
     }
 
     @Test

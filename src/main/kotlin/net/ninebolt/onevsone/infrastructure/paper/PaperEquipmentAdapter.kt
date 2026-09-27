@@ -46,12 +46,10 @@ class PaperEquipmentAdapter(
     override fun restore(backup: BackupRef) {
         val snapshot = backups.backupFor(backup)?.snapshot
             ?: throw PersistenceFailure("No stored backup ${backup.backupId} for ${backup.playerName}")
-        val player = resolve(backup)
+        val player = lookup.resolve(backup.playerId)
             ?: throw PersistenceFailure("Player ${backup.playerName} is not available for restore")
         snapshot.apply(player.inventory)
     }
-
-    private fun resolve(backup: BackupRef): Player? = backup.playerId?.let(lookup::resolve)
 
     override fun acknowledge(backup: BackupRef) {
         backups.deleteBackup(backup)
