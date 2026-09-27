@@ -24,7 +24,7 @@ class ArenaApplicationServiceTest {
         val p1 = app.players.add("Alice")
         assertEquals(JoinOutput.JoinedWaiting, app.service.join(p1.id, p1.name, arenaId("arena1")))
         assertEquals(ArenaState.Kind.ONEMORE, app.state())
-        assertEquals(arenaId("arena1"), app.service.arenaIdOf(p1.id))
+        assertEquals(arenaId("arena1"), app.registry.arenaOf(p1.id))
 
         val p2 = app.players.add("Bob")
         assertEquals(JoinOutput.JoinedStarting, app.service.join(p2.id, p2.name, arenaId("arena1")))
@@ -40,7 +40,7 @@ class ArenaApplicationServiceTest {
         app.newArena()
         val p = app.players.add("Alice")
         assertEquals(JoinOutput.NotFound, app.service.join(p.id, p.name, arenaId("ghost")))
-        assertNull(app.service.arenaIdOf(p.id))
+        assertNull(app.registry.arenaOf(p.id))
     }
 
     @Test
@@ -51,7 +51,7 @@ class ArenaApplicationServiceTest {
         val p = app.players.add("Alice")
         assertEquals(JoinOutput.JoinedWaiting, app.service.join(p.id, p.name, arenaId("a1")))
         assertEquals(JoinOutput.AlreadyJoined, app.service.join(p.id, p.name, arenaId("a2")))
-        assertEquals(arenaId("a1"), app.service.arenaIdOf(p.id))
+        assertEquals(arenaId("a1"), app.registry.arenaOf(p.id))
         assertEquals(ArenaState.Kind.WAITING, app.service.matchOf("a2")!!.state.kind)
     }
 
@@ -62,14 +62,14 @@ class ArenaApplicationServiceTest {
         app.newArena("disabled", enabled = false)
         val p1 = app.players.add("Alice")
         assertEquals(JoinOutput.NotEnabled, app.service.join(p1.id, p1.name, arenaId("disabled")))
-        assertNull(app.service.arenaIdOf(p1.id))
+        assertNull(app.registry.arenaOf(p1.id))
 
         app.service.join(p1.id, p1.name, arenaId("enabled"))
         val p2 = app.players.add("Bob")
         app.service.join(p2.id, p2.name, arenaId("enabled"))
         val p3 = app.players.add("Carol")
         assertEquals(JoinOutput.InMatch, app.service.join(p3.id, p3.name, arenaId("enabled")))
-        assertNull(app.service.arenaIdOf(p3.id))
+        assertNull(app.registry.arenaOf(p3.id))
     }
 
     @Test
@@ -105,8 +105,8 @@ class ArenaApplicationServiceTest {
         assertTrue(p1.events.contains("teleport"))
         assertTrue(p2.events.contains("teleport"))
         assertEquals(2, app.matchState.registrations.size)
-        assertNotNull(app.service.pendingRestore(p1.id))
-        assertNotNull(app.service.pendingRestore(p2.id))
+        assertNotNull(app.recovery.pending(p1.id))
+        assertNotNull(app.recovery.pending(p2.id))
     }
 
     @Test
@@ -147,8 +147,8 @@ class ArenaApplicationServiceTest {
         val (p1, p2) = app.startMatch()
         assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
         assertEquals(ArenaState.Kind.WAITING, app.state())
-        assertNull(app.service.arenaIdOf(p1.id))
-        assertNull(app.service.arenaIdOf(p2.id))
+        assertNull(app.registry.arenaOf(p1.id))
+        assertNull(app.registry.arenaOf(p2.id))
         assertEquals(listOf(arenaId("arena1") to "Alice"), app.presentation.champions)
         assertEquals(1, app.stats.stats[p1.id]?.wins)
         assertEquals(1, app.stats.stats[p2.id]?.losses)
@@ -167,8 +167,8 @@ class ArenaApplicationServiceTest {
             app.service.quit(p1.id)
         }
         assertEquals(ArenaState.Kind.ONEMORE, app.state())
-        assertNull(app.service.arenaIdOf(p1.id))
-        assertEquals(arenaId("arena1"), app.service.arenaIdOf(p2.id))
+        assertNull(app.registry.arenaOf(p1.id))
+        assertEquals(arenaId("arena1"), app.registry.arenaOf(p2.id))
         assertFalse(app.matchState.registrations.containsKey(p1.id))
         assertTrue(app.matchState.registrations.containsKey(p2.id))
         assertTrue(app.stats.stats.isEmpty())
@@ -189,7 +189,7 @@ class ArenaApplicationServiceTest {
             app.service.quit(p1.id)
         }
         assertEquals(ArenaState.Kind.WAITING, app.state())
-        assertNull(app.service.arenaIdOf(p1.id))
+        assertNull(app.registry.arenaOf(p1.id))
         assertFalse(app.matchState.registrations.containsKey(p1.id))
         assertTrue(app.stats.stats.isEmpty())
         assertTrue(app.equipment.restored.isEmpty())
@@ -205,7 +205,7 @@ class ArenaApplicationServiceTest {
         val p2 = app.players.add("Bob")
         app.service.join(p2.id, p2.name, arenaId("arena1"))
         assertEquals(LeaveError.NotWaiting, app.service.leave(p1.id))
-        assertEquals(arenaId("arena1"), app.service.arenaIdOf(p1.id))
+        assertEquals(arenaId("arena1"), app.registry.arenaOf(p1.id))
     }
 
     @Test
@@ -216,7 +216,7 @@ class ArenaApplicationServiceTest {
         app.service.join(p1.id, p1.name, arenaId("arena1"))
         assertNull(app.service.leave(p1.id))
         assertEquals(ArenaState.Kind.WAITING, app.state())
-        assertNull(app.service.arenaIdOf(p1.id))
+        assertNull(app.registry.arenaOf(p1.id))
         assertFalse(app.matchState.registrations.containsKey(p1.id))
         assertTrue(app.equipment.restored.isEmpty())
     }
@@ -228,7 +228,7 @@ class ArenaApplicationServiceTest {
         app.lifecycle.shutdown()
         assertEquals(ArenaState.Kind.WAITING, app.state())
         assertTrue(app.service.arena("arena1")!!.enabled)
-        assertNull(app.service.arenaIdOf(p1.id))
+        assertNull(app.registry.arenaOf(p1.id))
         assertEquals(2, app.equipment.restored.size)
         assertTrue(app.matchState.registrations.isEmpty())
     }
@@ -261,7 +261,7 @@ class ArenaApplicationServiceTest {
         app.players.disconnect(p)
 
         assertEquals(JoinOutput.InMatch, app.service.join(p.id, p.name, arenaId("arena1")))
-        assertNull(app.service.arenaIdOf(p.id))
+        assertNull(app.registry.arenaOf(p.id))
         assertTrue(app.equipment.restored.isEmpty())
     }
 
@@ -276,7 +276,7 @@ class ArenaApplicationServiceTest {
         app.service.restorePending(p.id)
 
         assertTrue(app.equipment.restored.isEmpty())
-        assertNotNull(app.service.pendingRestore(p.id))
+        assertNotNull(app.recovery.pending(p.id))
     }
 
     @Test
@@ -299,7 +299,7 @@ class ArenaApplicationServiceTest {
         app.service.restorePending(p.id)
 
         assertTrue(app.equipment.restored.isEmpty())
-        assertNotNull(app.service.pendingRestore(p.id))
+        assertNotNull(app.recovery.pending(p.id))
     }
 
     @Test

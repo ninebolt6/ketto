@@ -21,15 +21,11 @@ class ArenaApplicationService(
     private val logger: Logger,
 ) {
 
-    fun arenaIdOf(playerId: Uuid): Arena.Id? = registry.arenaOf(playerId)
-
     fun matchOf(playerId: Uuid): ArenaMatch? = registry.arenaOf(playerId)?.let { registry.match(it) }
 
     fun arena(name: String): Arena? = registry.resolveArena(name)
 
     fun matchOf(name: String): ArenaMatch? = registry.resolveArenaId(name)?.let { registry.match(it) }
-
-    fun pendingRestore(playerId: Uuid) = recovery.pending(playerId)
 
     fun join(playerId: Uuid, playerName: String, arenaId: Arena.Id): JoinOutput {
         if (registry.isJoined(playerId)) return JoinOutput.AlreadyJoined
@@ -131,8 +127,6 @@ class ArenaApplicationService(
     }
 
     fun requestRespawn(playerId: Uuid) = progression.requestRespawn(playerId)
-
-    fun abort(arenaId: Arena.Id) = progression.abort(arenaId)
 }
 
 sealed interface JoinOutput {

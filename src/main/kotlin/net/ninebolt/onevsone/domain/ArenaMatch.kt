@@ -35,8 +35,6 @@ data class ArenaMatch private constructor(
 
     fun slotOf(id: Uuid): SpawnSlot? = SpawnSlot.ofIndex(participants.indexOfFirst { it.id == id })
 
-    fun participantAt(slot: SpawnSlot): Participant? = participants.getOrNull(slot.index)
-
     fun winsOf(id: Uuid): Int = (state as? ArenaState.Active)?.winsOf(id) ?: 0
 
     fun join(participant: Participant): Transition<JoinOutcome> = when (val s = state) {

@@ -15,13 +15,11 @@ class SqliteKitStoreTest {
     lateinit var folder: File
 
     @Test
-    fun `kit round trips and deletes`() = withStore(folder) { store ->
+    fun `kit round trips`() = withStore(folder) { store ->
         SqliteArenaRepository(store).save(Arena.Disabled.new(arenaId("a1")))
         val kits = SqliteKitStore(store)
         assertEquals(PaperInventorySnapshot(), kits.loadArenaKit("a1"))
         kits.saveArenaKit("a1", PaperInventorySnapshot(items = listOf(null, null)))
         assertEquals(2, kits.loadArenaKit("a1").items.size)
-        kits.deleteArenaKit("a1")
-        assertEquals(PaperInventorySnapshot(), kits.loadArenaKit("a1"))
     }
 }

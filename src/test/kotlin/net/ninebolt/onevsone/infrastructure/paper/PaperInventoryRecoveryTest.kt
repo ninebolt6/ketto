@@ -172,7 +172,7 @@ class PaperInventoryRecoveryTest {
         assertEquals(Material.IRON_SWORD, p1.inventory.contents[0]?.type)
         assertEquals(p1.uniqueId.toString(), env.backupByName("Alice")!!.playerUuid)
         assertEquals(p2.uniqueId.toString(), env.backupByName("Bob")!!.playerUuid)
-        env.service.abort(arena)
+        env.progression.abort(arena)
         assertEquals(Material.APPLE, p1.inventory.contents[0]?.type)
     }
 }

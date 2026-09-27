@@ -45,7 +45,7 @@ class MatchProgressionServiceTest {
     @Test
     fun `abort on an unknown arena is a no-op`() {
         val app = TestApp()
-        app.service.abort(arenaId("nope"))
+        app.progression.abort(arenaId("nope"))
         assertTrue(app.scheduler.timers.isEmpty())
         assertTrue(app.presentation.signUpdates.isEmpty())
         assertTrue(app.logger.records.isEmpty())
@@ -127,7 +127,7 @@ class MatchProgressionServiceTest {
         assertEquals(ArenaState.Kind.WAITING, app.state())
         assertTrue(app.equipment.restored.any { it.playerId == p1.id })
         assertTrue(app.equipment.restored.none { it.playerId == p2.id })
-        assertNotNull(app.service.pendingRestore(p2.id))
+        assertNotNull(app.recovery.pending(p2.id))
         assertEquals(1, app.stats.stats[p1.id]?.wins)
         assertEquals(1, app.stats.stats[p2.id]?.losses)
     }
@@ -179,7 +179,7 @@ class MatchProgressionServiceTest {
         val (p1, _) = app.joinedTwo()
         p1.dead = true
 
-        app.service.abort(arenaId("arena1"))
+        app.progression.abort(arenaId("arena1"))
 
         assertTrue(app.equipment.restored.isEmpty())
         app.scheduler.runOneShots()
@@ -196,7 +196,7 @@ class MatchProgressionServiceTest {
         val applies = app.equipment.kitApplies.count { it.second == p2.id }
         val teleports = p2.teleports.size
 
-        app.service.abort(arenaId("arena1"))
+        app.progression.abort(arenaId("arena1"))
         app.scheduler.runOneShots()
 
         assertEquals(applies, app.equipment.kitApplies.count { it.second == p2.id })
@@ -268,7 +268,7 @@ class MatchProgressionServiceTest {
         app.scheduler.runOneShots()
 
         assertEquals(restored, app.equipment.restored.size)
-        assertEquals(arena2, app.service.arenaIdOf(p2.id))
+        assertEquals(arena2, app.registry.arenaOf(p2.id))
     }
 
     @Test
@@ -359,7 +359,7 @@ class MatchProgressionServiceTest {
         p2.dead = true
         assertTrue(app.service.defeat(p2.id, DefeatCause.DEATH))
 
-        app.service.abort(arenaId("arena1"))
+        app.progression.abort(arenaId("arena1"))
         app.scheduler.runOneShots()
 
         assertTrue("respawn" in p2.events)

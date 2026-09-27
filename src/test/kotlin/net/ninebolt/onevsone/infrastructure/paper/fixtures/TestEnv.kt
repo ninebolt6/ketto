@@ -304,7 +304,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         return id
     }
 
-    fun setKit(arena: Arena.Id, snapshot: PaperInventorySnapshot) = equipment.putKit(arena, snapshot)
+    fun setKit(arena: Arena.Id, snapshot: PaperInventorySnapshot) = kitStore.saveArenaKit(arena.name, snapshot)
 
     fun join(player: Player, arena: Arena.Id = arenaId("arena1")): JoinOutput {
         val output = service.join(player.uuid, player.name, arena)

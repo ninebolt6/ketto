@@ -173,8 +173,8 @@ class ArenaMatchTest {
         assertEquals(SpawnSlot.SECOND, m.slotOf(bob.id))
         assertNull(m.slotOf(carol.id))
         assertNull(m.participant(carol.id))
-        assertEquals(alice, m.participantAt(SpawnSlot.FIRST))
-        assertEquals(bob, m.participantAt(SpawnSlot.SECOND))
+        assertEquals(alice, m.participants[SpawnSlot.FIRST.index])
+        assertEquals(bob, m.participants[SpawnSlot.SECOND.index])
     }
 
     @Test

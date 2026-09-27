@@ -42,7 +42,7 @@ class PaperMatchProgressionTest {
         val p1 = env.player("Alice")
         env.join(p1, arena)
         assertEquals(ArenaState.Kind.ONEMORE, env.view().state.kind)
-        assertEquals(arena, env.service.arenaIdOf(p1.uuid))
+        assertEquals(arena, env.registry.arenaOf(p1.uuid))
         val joined = p1.drainMessages()
         assertTrue(joined.any { it.contains("Joined arena") })
         assertTrue(joined.any { it.contains("Waiting for one more player") })
@@ -61,7 +61,7 @@ class PaperMatchProgressionTest {
         val p1 = env.player("Alice")
         env.join(p1, disabled)
         assertTrue(p1.drainMessages().any { it.contains("That arena is not enabled!") })
-        assertNull(env.service.arenaIdOf(p1.uuid))
+        assertNull(env.registry.arenaOf(p1.uuid))
 
         env.join(p1, arena)
         env.join(p1, arena)
@@ -72,7 +72,7 @@ class PaperMatchProgressionTest {
         val p3 = env.player("Carol")
         env.join(p3, arena)
         assertTrue(p3.drainMessages().any { it.contains("This arena is currently in a match") })
-        assertNull(env.service.arenaIdOf(p3.uuid))
+        assertNull(env.registry.arenaOf(p3.uuid))
     }
 
     @Test
@@ -149,8 +149,8 @@ class PaperMatchProgressionTest {
 
         assertEquals(ArenaState.Kind.WAITING, env.view().state.kind)
         assertTrue(env.view().participants.isEmpty())
-        assertNull(env.service.arenaIdOf(p1.uuid))
-        assertNull(env.service.arenaIdOf(p2.uuid))
+        assertNull(env.registry.arenaOf(p1.uuid))
+        assertNull(env.registry.arenaOf(p2.uuid))
         assertTrue(env.lastBroadcast().contains("won the match"))
         assertEquals(1, env.statsRepo.find(p1.uuid)!!.wins)
         assertEquals(1, env.statsRepo.find(p2.uuid)!!.losses)

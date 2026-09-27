@@ -20,9 +20,9 @@ class ArenaApplicationServiceResilienceTest {
         val app = TestApp()
         val (p1, p2) = app.joinedTwo()
         app.scheduler.tick(2)
-        app.service.abort(arenaId("arena1"))
+        app.progression.abort(arenaId("arena1"))
         assertEquals(ArenaState.Kind.WAITING, app.state())
-        assertNull(app.service.arenaIdOf(p1.id))
+        assertNull(app.registry.arenaOf(p1.id))
         app.scheduler.tick(6)
         assertEquals(0, app.equipment.backupCalls)
         assertTrue(app.equipment.kitApplies.isEmpty())
@@ -38,8 +38,8 @@ class ArenaApplicationServiceResilienceTest {
         val (p1, p2) = app.joinedTwo()
         app.scheduler.tick(6)
         assertEquals(ArenaState.Kind.WAITING, app.state())
-        assertNull(app.service.arenaIdOf(p1.id))
-        assertNull(app.service.arenaIdOf(p2.id))
+        assertNull(app.registry.arenaOf(p1.id))
+        assertNull(app.registry.arenaOf(p2.id))
         assertTrue(app.equipment.kitApplies.isEmpty())
         assertTrue(app.equipment.restored.isEmpty())
         assertTrue(app.logger.reports.any { it.message.contains("Could not save inventories") })
@@ -54,7 +54,7 @@ class ArenaApplicationServiceResilienceTest {
         val (p1, _) = app.joinedTwo()
         app.scheduler.tick(6)
         assertEquals(ArenaState.Kind.WAITING, app.state())
-        assertNull(app.service.arenaIdOf(p1.id))
+        assertNull(app.registry.arenaOf(p1.id))
         assertEquals(2, app.equipment.restored.size)
         assertTrue(app.logger.reports.any { it.message.contains("Could not apply equipment") })
     }
@@ -67,8 +67,8 @@ class ArenaApplicationServiceResilienceTest {
 
         assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
         assertEquals(ArenaState.Kind.WAITING, app.state())
-        assertNull(app.service.arenaIdOf(p1.id))
-        assertNull(app.service.arenaIdOf(p2.id))
+        assertNull(app.registry.arenaOf(p1.id))
+        assertNull(app.registry.arenaOf(p2.id))
         assertEquals(2, app.equipment.restored.size)
         assertTrue(app.logger.reports.any { it.message.contains("Could not finish round") })
     }
@@ -113,8 +113,8 @@ class ArenaApplicationServiceResilienceTest {
         val app = TestApp()
         val (p1, _) = app.startMatch()
         app.matchState.failOnPersist = true
-        app.service.abort(arenaId("arena1"))
-        assertNull(app.service.arenaIdOf(p1.id))
+        app.progression.abort(arenaId("arena1"))
+        assertNull(app.registry.arenaOf(p1.id))
         assertTrue(app.logger.reports.any { it.message.contains("match projection") })
         app.matchState.failOnPersist = false
         app.matchState.persistMatch(app.service.matchOf("arena1")!!)
@@ -156,8 +156,8 @@ class ArenaApplicationServiceResilienceTest {
         val (q1, q2) = app.startMatch("arena2")
         app.matchState.failOnSaveStatusFor += "arena1"
         app.lifecycle.shutdown()
-        assertNull(app.service.arenaIdOf(q1.id))
-        assertNull(app.service.arenaIdOf(q2.id))
+        assertNull(app.registry.arenaOf(q1.id))
+        assertNull(app.registry.arenaOf(q2.id))
         assertEquals(4, app.equipment.restored.size)
     }
 
@@ -166,7 +166,7 @@ class ArenaApplicationServiceResilienceTest {
         val app = TestApp()
         app.joinedTwo()
         val timer = app.scheduler.timers.last()
-        app.service.abort(arenaId("arena1"))
+        app.progression.abort(arenaId("arena1"))
         timer.run()
         assertTrue(timer.cancelled)
         assertTrue(app.equipment.kitApplies.isEmpty())

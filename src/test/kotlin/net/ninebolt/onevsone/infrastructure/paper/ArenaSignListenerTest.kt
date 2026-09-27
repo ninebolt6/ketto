@@ -58,11 +58,11 @@ class ArenaSignListenerTest {
 
         val unregistered = interact(p1, env.signBlock(9, 64, 9))
         env.fire(unregistered)
-        assertNull(env.service.arenaIdOf(p1.uuid))
+        assertNull(env.registry.arenaOf(p1.uuid))
 
         val registered = interact(p1, env.signBlock(3, 64, 3))
         env.fire(registered)
-        assertEquals(arena, env.service.arenaIdOf(p1.uuid))
+        assertEquals(arena, env.registry.arenaOf(p1.uuid))
         assertEquals(Event.Result.DENY, registered.useInteractedBlock())
         assertEquals(Event.Result.DENY, registered.useItemInHand())
         assertNotEquals(Event.Result.DENY, unregistered.useInteractedBlock())
@@ -70,7 +70,7 @@ class ArenaSignListenerTest {
         val bob = env.player("Bob")
         val offhand = interact(bob, env.signBlock(3, 64, 3), EquipmentSlot.OFF_HAND)
         env.fire(offhand)
-        assertNull(env.service.arenaIdOf(bob.uuid))
+        assertNull(env.registry.arenaOf(bob.uuid))
     }
 
     @Test
@@ -123,7 +123,7 @@ class ArenaSignListenerTest {
 
         env.fire(interact(p1, env.signBlock(3, 64, 3)))
         assertTrue(p1.drainMessages().any { it.contains("not enabled") })
-        assertNull(env.service.arenaIdOf(p1.uuid))
+        assertNull(env.registry.arenaOf(p1.uuid))
     }
 
     @Test
@@ -149,7 +149,7 @@ class ArenaSignListenerTest {
 
         env.fire(interact(p1, env.signBlock(3, 64, 3)))
         assertTrue(p1.drainMessages().any { it.contains("does not exist") })
-        assertNull(env.service.arenaIdOf(p1.uuid))
+        assertNull(env.registry.arenaOf(p1.uuid))
     }
 
     @Test
@@ -162,7 +162,7 @@ class ArenaSignListenerTest {
 
         val leftClick = interact(p1, env.signBlock(3, 64, 3), action = Action.LEFT_CLICK_BLOCK)
         env.fire(leftClick)
-        assertNull(env.service.arenaIdOf(p1.uuid))
+        assertNull(env.registry.arenaOf(p1.uuid))
     }
 
     @Test
@@ -223,7 +223,7 @@ class ArenaSignListenerTest {
 
         val event = PlayerInteractEvent(p1, Action.RIGHT_CLICK_BLOCK, null, null, BlockFace.SELF, EquipmentSlot.HAND)
         env.fire(event)
-        assertNull(env.service.arenaIdOf(p1.uuid))
+        assertNull(env.registry.arenaOf(p1.uuid))
         assertTrue(p1.drainMessages().isEmpty())
     }
 

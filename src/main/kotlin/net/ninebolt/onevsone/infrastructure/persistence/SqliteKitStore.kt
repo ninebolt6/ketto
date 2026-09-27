@@ -16,9 +16,4 @@ class SqliteKitStore(private val store: SqliteStore) {
             InventoryPayloadCodec.encode(kit),
         )
     }
-
-    // redundant with the arena's cascade but kept for explicit cleanup
-    fun deleteArenaKit(arenaName: String) {
-        store.exec("DELETE FROM arena_kits WHERE arena_name = ?", arenaName)
-    }
 }

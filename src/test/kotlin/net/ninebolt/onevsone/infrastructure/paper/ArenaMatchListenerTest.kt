@@ -76,7 +76,7 @@ class ArenaMatchListenerTest {
         p1.simulateDamage(100.0, genericDamage())
         env.assertFired<PlayerDeathEvent> { event -> event.keepInventory && event.keepLevel }
         assertEquals(ArenaState.Kind.COUNTDOWN, env.state())
-        assertEquals(arena, env.service.arenaIdOf(p1.uuid))
+        assertEquals(arena, env.registry.arenaOf(p1.uuid))
 
         env.tick(6)
         assertEquals(ArenaState.Kind.INGAME, env.state())

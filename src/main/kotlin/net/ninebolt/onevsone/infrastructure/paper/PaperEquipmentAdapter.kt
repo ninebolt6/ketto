@@ -24,12 +24,6 @@ class PaperEquipmentAdapter(
 
     private val pendingSnapshots = mutableMapOf<Uuid, PaperInventorySnapshot>()
 
-    internal fun putKit(arena: Arena.Id, kit: PaperInventorySnapshot) {
-        kits[arena] = kit
-    }
-
-    internal fun kitOf(arena: Arena.Id): PaperInventorySnapshot? = kits[arena]
-
     override fun forgetKit(arena: Arena.Id) {
         kits.remove(arena)
     }
