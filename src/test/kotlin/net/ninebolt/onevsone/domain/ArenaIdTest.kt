@@ -1,18 +1,29 @@
 package net.ninebolt.onevsone.domain
 
-import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.MethodSource
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 class ArenaIdTest {
 
-    @Test
-    fun `invalid arena names rejected`() {
-        for (bad in listOf("", "create", "CREATE", "Create", "a\u0000b", "a\u0007b", "x".repeat(65), " ab", "ab ")) {
-            assertNull(Arena.Id.of(bad))
-        }
-        for (good in listOf("arena-1_2", "a/b", "a.b", "players", "a:b")) {
-            assertNotNull(Arena.Id.of(good))
-        }
+    @ParameterizedTest(name = "rejects '{0}'")
+    @MethodSource("invalidNames")
+    fun `invalid arena names rejected`(name: String) {
+        assertNull(Arena.Id.of(name))
+    }
+
+    @ParameterizedTest(name = "accepts '{0}'")
+    @MethodSource("validNames")
+    fun `valid arena names accepted`(name: String) {
+        assertNotNull(Arena.Id.of(name))
+    }
+
+    private companion object {
+        @JvmStatic
+        fun invalidNames() = listOf("", "create", "CREATE", "Create", "a\u0000b", "a\u0007b", "x".repeat(65), " ab", "ab ")
+
+        @JvmStatic
+        fun validNames() = listOf("arena-1_2", "a/b", "a.b", "players", "a:b")
     }
 }
