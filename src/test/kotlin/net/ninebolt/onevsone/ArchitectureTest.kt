@@ -1,8 +1,10 @@
 package net.ninebolt.onevsone
 
+import com.tngtech.archunit.base.DescribedPredicate
+import com.tngtech.archunit.core.domain.JavaClass
 import com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage
+import com.tngtech.archunit.core.domain.JavaClasses
 import com.tngtech.archunit.core.importer.ClassFileImporter
-import com.tngtech.archunit.core.importer.ImportOption
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noFields
 import org.junit.jupiter.api.Test
@@ -11,14 +13,18 @@ import kotlin.test.assertTrue
 
 class ArchitectureTest {
 
-    private val classes by lazy {
-        ClassFileImporter()
-            .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
-            .importPackages("net.ninebolt.onevsone")
-    }
+    companion object {
+        // One import keeps dependency resolution shared between main and test rule sets
+        private val allClasses: JavaClasses by lazy {
+            ClassFileImporter().importPaths("build/classes/kotlin/main", "build/classes/kotlin/test")
+        }
 
-    private val testClasses by lazy {
-        ClassFileImporter().importPath("build/classes/kotlin/test")
+        private val inTestOutput = object : DescribedPredicate<JavaClass>("in test output") {
+            override fun test(input: JavaClass): Boolean = input.source.map { "/classes/kotlin/test/" in it.uri.toString() }.orElse(false)
+        }
+
+        val classes: JavaClasses by lazy { allClasses.that(DescribedPredicate.not(inTestOutput)) }
+        val testClasses: JavaClasses by lazy { allClasses.that(inTestOutput) }
     }
 
     // Allow compiler-generated references such as java.lang, kotlin.jvm.internal, @NotNull
