@@ -77,15 +77,13 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
 
     // Lifecycle registration is only allowed inside onEnable, so the handler is attached via the builder's enable callback.
     // COMMANDS fires once per server: after the first dispatch the tree is frozen to the deps that were current then.
-    val plugin: PluginMock = spyk(
-        PluginMock.builder()
-            .withOnEnable { host ->
-                host.lifecycleManager.registerEventHandler(LifecycleEvents.COMMANDS) { event ->
-                    event.registrar().register(deps.command.node(), "1vs1 arena command")
-                }
+    val plugin: PluginMock = PluginMock.builder()
+        .withOnEnable { host ->
+            host.lifecycleManager.registerEventHandler(LifecycleEvents.COMMANDS) { event ->
+                event.registrar().register(deps.command.node(), "1vs1 arena command")
             }
-            .build(),
-    )
+        }
+        .build()
     val asyncScheduler: AsyncScheduler = mockk(relaxed = true)
 
     // ScoreMock.customName is unimplemented in MockBukkit 4.15, so only the scoreboard boundary is a narrow stub
@@ -116,7 +114,6 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
             boards += board
             board
         }
-        every { plugin.isEnabled } returns true
     }
 
     val messenger = Messenger.load(File(folder, "messages"), "en", "auto", Logger.getLogger("1vs1-test"))

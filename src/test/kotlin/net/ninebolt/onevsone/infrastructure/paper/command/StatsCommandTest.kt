@@ -100,7 +100,7 @@ class StatsCommandTest {
     @Test
     fun `stats offline callback skipped when plugin disabled`() {
         val viewer = env.player("Viewer")
-        every { env.plugin.isEnabled } returns false
+        env.server.pluginManager.disablePlugin(env.plugin)
         env.runCommand(viewer, "stats", "Ghost")
         env.runOneShots()
         assertTrue(viewer.drainMessages().isEmpty())
