@@ -42,7 +42,7 @@ class ArenaInfoCommandTest {
         env.tick(6)
         fallIntoVoid(p2)
 
-        env.runCommand(viewer, "arena", "arena1", "info")
+        env.runCommand(viewer, "arena", "arena1")
         val msgs = viewer.drainMessages()
         assertTrue(msgs.any { it.contains("=== Arena[arena1] ===") })
         assertTrue(msgs.any { it.contains("State: Ingame") })

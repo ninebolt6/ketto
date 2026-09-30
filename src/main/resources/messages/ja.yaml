@@ -4,7 +4,7 @@ PREFIX: "<dark_gray>[<gold>1vs1<dark_gray>] "
 
 USAGE_ROOT: "<yellow>/1vs1 stats [player] | /1vs1 leave | /1vs1 arena <arena>"
 USAGE_ARENA: "<yellow>/1vs1 arena <arena>"
-USAGE_ARENA_OPS: "<red>/1vs1 arena create <arena> | /1vs1 arena <arena> <info|remove|enable|disable|spawn|kit|sign>"
+USAGE_ARENA_OPS: "<red>/1vs1 arena create <arena> | /1vs1 arena <arena> <remove|enable|disable|spawn|kit|sign>"
 USAGE_LOBBY: "<red>/1vs1 lobby set"
 USAGE_CREATE: "<red>/1vs1 arena create <arena>"
 USAGE_SPAWN: "<red>/1vs1 arena <arena> spawn set <1|2>"

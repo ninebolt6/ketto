@@ -90,10 +90,6 @@ class OneVsOneCommand(
                 }
                 .executes(exec { ctx -> info.execute(ctx.source.sender, ctx.arenaName()) })
                 .then(
-                    Commands.literal("info")
-                        .executes(exec { ctx -> info.execute(ctx.source.sender, ctx.arenaName()) }),
-                )
-                .then(
                     Commands.literal("remove").requires(adminOnly)
                         .executes(exec { ctx -> remove.execute(ctx.source.sender, ctx.arenaName()) }),
                 )

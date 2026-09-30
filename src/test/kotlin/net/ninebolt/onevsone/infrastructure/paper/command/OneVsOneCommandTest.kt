@@ -91,7 +91,7 @@ class OneVsOneCommandTest {
         assertEquals(listOf("Arena1", "create").sorted(), env.tabComplete(op, "arena", "").sorted())
         assertEquals(listOf("Arena1"), env.tabComplete(op, "arena", "arena"))
         assertEquals(
-            listOf("info", "remove", "enable", "disable", "spawn", "kit", "sign").sorted(),
+            listOf("remove", "enable", "disable", "spawn", "kit", "sign").sorted(),
             env.tabComplete(op, "arena", "Arena1", "").sorted(),
         )
         assertEquals(listOf("sign", "spawn"), env.tabComplete(op, "arena", "Arena1", "s").sorted())
@@ -112,11 +112,21 @@ class OneVsOneCommandTest {
         assertTrue(root.getChild("stats").canUse(nonOp) && root.getChild("leave").canUse(nonOp))
         assertFalse(root.getChild("lobby").canUse(nonOp))
         assertFalse(arena.getChild("create").canUse(nonOp))
-        arenaArg.children.forEach { assertEquals(it.name == "info", it.canUse(nonOp), it.name) }
+        arenaArg.children.forEach { assertFalse(it.canUse(nonOp), it.name) }
         assertTrue(root.getChild("lobby").canUse(asOp))
         assertTrue(arena.getChild("create").canUse(asOp))
         arenaArg.children.forEach { assertTrue(it.canUse(asOp), it.name) }
         assertTrue(env.tabComplete(p, "arena", "").contains("Arena1"))
+    }
+
+    @Test
+    fun `non op create is rejected like other gated literals`() {
+        val p = env.player("Alice")
+        env.runCommand(p, "arena", "create")
+        assertTrue(p.drainMessages().any { it.contains("Incorrect argument") })
+        env.runCommand(p, "arena", "create", "x")
+        assertTrue(p.drainMessages().any { it.contains("Incorrect argument") })
+        assertTrue(env.admin.arenaNames().isEmpty())
     }
 
     @Test

@@ -46,7 +46,7 @@ a second player starts the countdown.
 | -------------------------------------- | ------------ | -------------------------------------------------- |
 | `/1vs1 stats [player]`                 | everyone     | Show your own or another player's stats            |
 | `/1vs1 leave`                          | everyone     | Leave while waiting for an opponent                |
-| `/1vs1 arena <arena> [info]`           | everyone     | Show arena state and current matchup               |
+| `/1vs1 arena <arena>`                  | everyone     | Show arena state and current matchup               |
 | `/1vs1 lobby set`                      | `1vs1.admin` | Save your position as the lobby                    |
 | `/1vs1 arena create <arena>`           | `1vs1.admin` | Create an arena                                    |
 | `/1vs1 arena <arena> remove`           | `1vs1.admin` | Remove an arena (aborts any match)                 |
@@ -58,7 +58,7 @@ a second player starts the countdown.
 
 Admin commands require the `1vs1.admin` permission (default: server operators).
 `create` is a reserved word and cannot be used as an arena name.
-Arena names containing spaces can be used by quoting them, e.g. `/1vs1 arena "my arena" info`.
+Arena names containing spaces can be used by quoting them, e.g. `/1vs1 arena "my arena"`.
 
 ## Configuration (`config.yml`)
 
