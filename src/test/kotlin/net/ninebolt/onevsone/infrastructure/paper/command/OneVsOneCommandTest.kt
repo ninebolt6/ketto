@@ -122,11 +122,16 @@ class OneVsOneCommandTest {
     @Test
     fun `non op create is rejected like other gated literals`() {
         val p = env.player("Alice")
+        env.newArena()
         env.runCommand(p, "arena", "create")
         assertTrue(p.drainMessages().any { it.contains("Incorrect argument") })
         env.runCommand(p, "arena", "create", "x")
         assertTrue(p.drainMessages().any { it.contains("Incorrect argument") })
-        assertTrue(env.admin.arenaNames().isEmpty())
+        env.runCommand(p, "arena", "arena1", "remove")
+        assertTrue(p.drainMessages().any { it.contains("Incorrect argument") })
+        env.runCommand(p, "lobby", "set")
+        assertTrue(p.drainMessages().any { it.contains("Incorrect argument") })
+        assertEquals(listOf("arena1"), env.admin.arenaNames())
     }
 
     @Test
