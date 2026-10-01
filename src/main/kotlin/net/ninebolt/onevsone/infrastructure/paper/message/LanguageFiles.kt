@@ -18,8 +18,9 @@ internal object LanguageFiles {
         BUNDLED_LANGS.forEach { lang ->
             val path = "messages/$lang.yaml"
             val bundled = bundledYaml(lang) ?: return@forEach
-            saveResource(path)
-            val added = backfill(File(dataFolder, path), bundled)
+            val target = File(dataFolder, path)
+            if (!target.exists()) saveResource(path)
+            val added = backfill(target, bundled)
             if (added > 0) logger.info("$path: appended $added new message key(s)")
         }
     }

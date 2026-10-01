@@ -268,6 +268,17 @@ class MessengerTest {
     }
 
     @Test
+    fun `syncBundled does not save resources over files that already exist`() {
+        File(folder, "messages").mkdirs()
+        File(folder, "messages/ja.yaml").writeText("MATCH_JOINED: \"x\"")
+        val saved = mutableListOf<String>()
+
+        LanguageFiles.syncBundled(folder, RecordingLogger()) { saved.add(it) }
+
+        assertEquals(listOf("messages/en.yaml"), saved)
+    }
+
+    @Test
     fun `a player whose locale lookup fails falls back to the default language`() {
         val messenger = load()
         val player = mockk<Player>()
