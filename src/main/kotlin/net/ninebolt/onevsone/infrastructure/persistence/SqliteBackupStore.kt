@@ -33,13 +33,13 @@ class SqliteBackupStore(
         playerId.toString(),
     ) { toRef(it) }
 
-    // Databases created before player_uuid went NOT NULL may hold ownerless rows; they cannot be restored
+    // pendingRefs feeds startup recovery; a single corrupt row must not abort the whole scan
     fun pendingRefs(): List<BackupRef> = store.query("SELECT backup_id, match_id, player_uuid, player_name FROM backups ORDER BY rowid") { row ->
         toRef(row)
     }.filterNotNull()
 
     private fun toRef(row: ResultSet): BackupRef? {
-        val playerId = row.getString("player_uuid")?.let(Uuid::parseOrNull)
+        val playerId = Uuid.parseOrNull(row.getString("player_uuid"))
         if (playerId == null) {
             logger.warning("Ignoring backup row ${row.getString("backup_id")} for ${row.getString("player_name")}: no owner uuid")
             return null
