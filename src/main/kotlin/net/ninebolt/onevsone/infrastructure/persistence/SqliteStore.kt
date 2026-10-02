@@ -91,9 +91,9 @@ class SqliteStore(folder: File, private val logger: Logger) : AutoCloseable {
             connection.prepareStatement(sql).use { ps ->
                 bind(ps, params)
                 ps.executeQuery().use { rs ->
-                    val rows = ArrayList<T>()
-                    while (rs.next()) rows += map(rs)
-                    return rows
+                    return buildList {
+                        while (rs.next()) add(map(rs))
+                    }
                 }
             }
         } catch (e: Throwable) {

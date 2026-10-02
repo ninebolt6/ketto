@@ -18,12 +18,9 @@ internal class SqliteMigrations(private val connection: Connection) {
     }
 
     fun migrate() {
-        var version = userVersion()
-        while (version < LATEST_VERSION) {
-            val target = version + 1
+        for (target in (userVersion() + 1)..LATEST_VERSION) {
             applyStep(loadStatements(target))
             connection.createStatement().use { it.execute("PRAGMA user_version=$target") }
-            version = target
         }
     }
 

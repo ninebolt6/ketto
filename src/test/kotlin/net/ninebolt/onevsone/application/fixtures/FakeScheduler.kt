@@ -9,10 +9,12 @@ class FakeScheduler : SchedulerPort {
         val delay: Long,
         val period: Long,
         private val owner: FakeScheduler,
-        private val action: (Cancellation) -> Unit,
+        private val action: (Cancellation, Int) -> Unit,
     ) : Cancellation {
         var cancelled = false
             private set
+
+        private var runs = 0
 
         override fun cancel() {
             if (!cancelled) {
@@ -21,7 +23,7 @@ class FakeScheduler : SchedulerPort {
             }
         }
 
-        fun run() = action(this)
+        fun run() = action(this, runs++)
     }
 
     class OneShot(val action: () -> Unit) : Cancellation {
@@ -44,7 +46,7 @@ class FakeScheduler : SchedulerPort {
 
     override fun schedule(delayTicks: Long, action: () -> Unit): Cancellation = OneShot(action).also { oneShots += it }
 
-    override fun repeat(initialDelayTicks: Long, periodTicks: Long, action: (Cancellation) -> Unit): Cancellation = Timer(nextId++, initialDelayTicks, periodTicks, this, action).also { timers += it }
+    override fun repeat(initialDelayTicks: Long, periodTicks: Long, action: (Cancellation, Int) -> Unit): Cancellation = Timer(nextId++, initialDelayTicks, periodTicks, this, action).also { timers += it }
 
     fun tick(times: Int = 1) {
         repeat(times) { timers.lastOrNull()?.run() }

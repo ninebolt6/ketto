@@ -36,7 +36,7 @@ class PaperSchedulerTest {
     fun `a throwing repeating action is logged and the task is cancelled`() {
         val records = capturePluginLog()
         var runs = 0
-        env.schedulerPort.repeat(0, 1) {
+        env.schedulerPort.repeat(0, 1) { _, _ ->
             runs++
             throw IllegalStateException("boom")
         }

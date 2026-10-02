@@ -10,7 +10,6 @@ class ArenaRegistry(private val requiredWins: Int) {
     private data class Slot(val arena: Arena, val match: ArenaMatch)
 
     private val slots = linkedMapOf<Arena.Id, Slot>()
-    private val playerArena = mutableMapOf<Uuid, Arena.Id>()
 
     fun arena(id: Arena.Id): Arena? = slots[id]?.arena
 
@@ -26,14 +25,12 @@ class ArenaRegistry(private val requiredWins: Int) {
 
     fun installArena(arena: Arena): ArenaMatch {
         val match = ArenaMatch.new(arena.id, requiredWins)
-        val previous = slots.put(arena.id, Slot(arena, match))
-        reconcileIndex(arena.id, previous?.match, match)
+        slots[arena.id] = Slot(arena, match)
         return match
     }
 
     fun removeArena(id: Arena.Id) {
-        val previous = slots.remove(id) ?: return
-        reconcileIndex(id, previous.match, null)
+        slots.remove(id)
     }
 
     fun replaceArena(arena: Arena) {
@@ -50,7 +47,6 @@ class ArenaRegistry(private val requiredWins: Int) {
     fun putMatch(match: ArenaMatch) {
         val slot = slots[match.arenaId] ?: return
         slots[match.arenaId] = slot.copy(match = match)
-        reconcileIndex(match.arenaId, slot.match, match)
     }
 
     fun <O> transact(
@@ -60,7 +56,6 @@ class ArenaRegistry(private val requiredWins: Int) {
         val slot = slots[id] ?: return null
         val transition = operation(slot.match)
         slots[id] = slot.copy(match = transition.match)
-        reconcileIndex(id, slot.match, transition.match)
         return transition
     }
 
@@ -71,19 +66,8 @@ class ArenaRegistry(private val requiredWins: Int) {
         operation: (ArenaMatch) -> Transition<O>,
     ): Transition<O>? = arenaOf(playerId)?.let { transact(it, operation) }
 
-    fun arenaOf(playerId: Uuid): Arena.Id? = playerArena[playerId]
+    // the last slot in insertion order wins if a player somehow appears in two matches
+    fun arenaOf(playerId: Uuid): Arena.Id? = slots.values.lastOrNull { slot -> slot.match.participants.any { it.id == playerId } }?.arena?.id
 
-    fun isJoined(playerId: Uuid): Boolean = playerId in playerArena
-
-    // Leave-side removals only apply to entries still pointing at this arena, so a stale diff never unregisters participation in another arena
-    private fun reconcileIndex(id: Arena.Id, before: ArenaMatch?, after: ArenaMatch?) {
-        val beforeIds = before?.participants?.map { it.id }?.toSet() ?: emptySet()
-        val afterIds = after?.participants?.map { it.id }?.toSet() ?: emptySet()
-        for (playerId in beforeIds - afterIds) {
-            if (playerArena[playerId] == id) playerArena.remove(playerId)
-        }
-        for (playerId in afterIds - beforeIds) {
-            playerArena[playerId] = id
-        }
-    }
+    fun isJoined(playerId: Uuid): Boolean = arenaOf(playerId) != null
 }

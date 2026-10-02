@@ -4,10 +4,10 @@ import net.ninebolt.onevsone.application.port.Cancellation
 import net.ninebolt.onevsone.application.port.SchedulerPort
 import org.bukkit.Bukkit
 import org.bukkit.plugin.java.JavaPlugin
-import org.bukkit.scheduler.BukkitTask
+import org.bukkit.scheduler.BukkitRunnable
 import java.util.logging.Level
 
-// BukkitTask is confined to this class
+// Bukkit scheduler types are confined to this class
 class PaperScheduler(private val plugin: JavaPlugin) : SchedulerPort {
 
     override fun schedule(delayTicks: Long, action: () -> Unit): Cancellation {
@@ -25,22 +25,21 @@ class PaperScheduler(private val plugin: JavaPlugin) : SchedulerPort {
         return Cancellation { task.cancel() }
     }
 
-    override fun repeat(initialDelayTicks: Long, periodTicks: Long, action: (Cancellation) -> Unit): Cancellation {
-        var task: BukkitTask? = null
-        val cancellation = Cancellation { task?.cancel() }
-        task = Bukkit.getScheduler().runTaskTimer(
-            plugin,
-            Runnable {
+    override fun repeat(initialDelayTicks: Long, periodTicks: Long, action: (Cancellation, Int) -> Unit): Cancellation {
+        val runnable = object : BukkitRunnable() {
+            private val self = Cancellation { this.cancel() }
+            private var runs = 0
+
+            override fun run() {
                 try {
-                    action(cancellation)
+                    action(self, runs++)
                 } catch (e: Exception) {
                     plugin.logger.log(Level.SEVERE, "Repeating task failed; cancelling", e)
-                    cancellation.cancel()
+                    cancel()
                 }
-            },
-            initialDelayTicks,
-            periodTicks,
-        )
-        return cancellation
+            }
+        }
+        runnable.runTaskTimer(plugin, initialDelayTicks, periodTicks)
+        return Cancellation { runnable.cancel() }
     }
 }

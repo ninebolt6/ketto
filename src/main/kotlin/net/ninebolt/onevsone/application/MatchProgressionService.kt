@@ -217,8 +217,7 @@ class MatchProgressionService(
         stillCounting: (ArenaMatch) -> Boolean,
         onTick: CountdownTick.() -> Boolean,
     ) {
-        var remaining = ticks
-        timers[arenaId] = scheduler.repeat(10, 20) { task ->
+        timers[arenaId] = scheduler.repeat(10, 20) { task, iteration ->
             val match = registry.match(arenaId)
             val paired = match?.state as? ArenaState.Paired
             if (match == null || match.epoch != gen || !stillCounting(match) || paired == null) {
@@ -233,8 +232,7 @@ class MatchProgressionService(
                 abort(arenaId)
                 return@repeat
             }
-            if (CountdownTick(match, first, second, p1, p2, remaining).onTick()) task.cancel()
-            remaining--
+            if (CountdownTick(match, first, second, p1, p2, ticks - iteration).onTick()) task.cancel()
         }
     }
 
