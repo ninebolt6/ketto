@@ -3,10 +3,13 @@ package net.ninebolt.onevsone.infrastructure.paper
 import net.kyori.adventure.text.Component
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.BlockPosition
+import net.ninebolt.onevsone.domain.WorldPosition
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.plainBlock
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.signBlock
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.twoPlayerIngame
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import org.bukkit.block.Sign
 import org.bukkit.block.sign.Side
 import org.junit.jupiter.api.AfterEach
@@ -78,6 +81,25 @@ class PaperPresentationTest {
 
         assertFalse(block.state is Sign)
         assertTrue(warnings.none { "not loaded" in it })
+    }
+
+    @Test
+    fun `calls with unresolvable players or worlds are ignored`() {
+        val (p1, p2) = env.twoPlayerIngame()
+        p1.drainMessages()
+        env.disconnectWithoutQuitHandler(p2)
+        val ids = listOf(p1.uuid, p2.uuid)
+
+        env.presentation.countdownTick(ids, 3)
+        env.presentation.roundCountdownTick(ids, 3)
+        env.presentation.matchStart(ids)
+        env.presentation.roundStart(ids)
+        env.presentation.roundWon(ids, 1, p1.name)
+        env.presentation.championFirework(p2.uuid)
+        env.presentation.clearScoreboard(p2.uuid)
+        env.presentation.roundEndSound(WorldPosition.new("missing-world", 0.0, 64.0, 0.0))
+
+        assertEquals(5, p1.drainMessages().size)
     }
 
     @Test
