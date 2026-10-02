@@ -32,53 +32,28 @@ class PaperPresentation(
 
     private fun player(id: Uuid): Player? = server.getPlayer(id.toJavaUuid())
 
+    private fun online(ids: List<Uuid>): List<Player> = ids.mapNotNull(::player)
+
     private fun pling(player: Player, pitch: Float) {
         player.playSound(player.location, Sound.BLOCK_NOTE_BLOCK_PLING, 5f, pitch)
     }
 
-    override fun countdownTick(participantIds: List<Uuid>, secondsLeft: Int) {
-        val message = Message.MatchTeleportIn(secondsLeft)
-        participantIds.forEach { id ->
-            player(id)?.let { p ->
-                messenger.send(p, message)
-                pling(p, 1f)
-            }
-        }
+    private fun announce(ids: List<Uuid>, message: Message, pitch: Float) = online(ids).forEach { p ->
+        messenger.send(p, message)
+        pling(p, pitch)
     }
 
-    override fun roundCountdownTick(participantIds: List<Uuid>, secondsLeft: Int) {
-        val message = Message.MatchStartIn(secondsLeft)
-        participantIds.forEach { id ->
-            player(id)?.let { p ->
-                messenger.send(p, message)
-                pling(p, 1f)
-            }
-        }
-    }
+    override fun countdownTick(participantIds: List<Uuid>, secondsLeft: Int) = announce(participantIds, Message.MatchTeleportIn(secondsLeft), 1f)
 
-    override fun matchStart(participantIds: List<Uuid>) {
-        participantIds.forEach { id ->
-            player(id)?.let { p ->
-                pling(p, 2f)
-                messenger.send(p, Message.MatchGameStart)
-            }
-        }
-    }
+    override fun roundCountdownTick(participantIds: List<Uuid>, secondsLeft: Int) = announce(participantIds, Message.MatchStartIn(secondsLeft), 1f)
 
-    override fun roundStart(participantIds: List<Uuid>) {
-        participantIds.forEach { id ->
-            player(id)?.let { p ->
-                pling(p, 2f)
-                messenger.send(p, Message.MatchRoundStart)
-            }
-        }
-    }
+    override fun matchStart(participantIds: List<Uuid>) = announce(participantIds, Message.MatchGameStart, 2f)
+
+    override fun roundStart(participantIds: List<Uuid>) = announce(participantIds, Message.MatchRoundStart, 2f)
 
     override fun roundWon(participantIds: List<Uuid>, round: Int, winnerName: String) {
         val message = Message.MatchRoundWinner(round, winnerName)
-        participantIds.forEach { id ->
-            player(id)?.let { messenger.send(it, message) }
-        }
+        online(participantIds).forEach { messenger.send(it, message) }
     }
 
     override fun roundEndSound(position: WorldPosition) {
