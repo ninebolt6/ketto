@@ -51,6 +51,22 @@ class SqliteStoreTest {
     }
 
     @Test
+    fun `atomic rolls back and preserves errors`() = withStore(folder) { store ->
+        assertFailsWith<AssertionError> {
+            store.atomic {
+                store.exec("INSERT INTO lobby(id, world, x, y, z, yaw, pitch) VALUES (1, 'w', 0, 0, 0, 0, 0)")
+                throw AssertionError("boom")
+            }
+        }
+        assertEquals(0, countRows(store, "lobby"))
+
+        store.atomic {
+            store.exec("INSERT INTO lobby(id, world, x, y, z, yaw, pitch) VALUES (1, 'w', 0, 0, 0, 0, 0)")
+        }
+        assertEquals(1, countRows(store, "lobby"))
+    }
+
+    @Test
     fun `nested atomic is rejected and rolls back the outer transaction`() = withStore(folder) { store ->
         assertFailsWith<PersistenceException> {
             store.atomic {
