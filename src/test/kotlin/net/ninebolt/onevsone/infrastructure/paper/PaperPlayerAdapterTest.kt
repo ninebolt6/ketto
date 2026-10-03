@@ -1,5 +1,8 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
+import io.mockk.every
+import io.mockk.mockk
+import io.papermc.paper.threadedregions.scheduler.ScheduledTask
 import net.ninebolt.onevsone.domain.WorldPosition
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.genericDamage
@@ -9,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
+import java.util.function.Consumer
 import java.util.logging.Handler
 import java.util.logging.LogRecord
 import kotlin.test.assertEquals
@@ -54,6 +58,26 @@ class PaperPlayerAdapterTest {
 
         assertTrue(called)
         assertNotNull(resolved)
+    }
+
+    @Test
+    fun `offline id resolution skips callback if plugin is disabled before the async result`() {
+        var called = false
+        var asyncResult: Consumer<ScheduledTask>? = null
+        every { env.asyncScheduler.runNow(any(), any<Consumer<ScheduledTask>>()) } answers {
+            asyncResult = arg(1)
+            mockk(relaxed = true)
+        }
+
+        assertTrue(env.plugin.isEnabled)
+        env.playerPort.resolveOfflineId("Ghost") { called = true }
+        val result = requireNotNull(asyncResult)
+        env.server.pluginManager.disablePlugin(env.plugin)
+        assertFalse(env.plugin.isEnabled)
+
+        result.accept(mockk(relaxed = true))
+
+        assertFalse(called)
     }
 
     @Test
