@@ -143,7 +143,6 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         val statsService: PlayerStatsService,
         val signs: ArenaSignService,
         val lobby: LobbyService,
-        val signListener: ArenaSignListener,
         val command: OneVsOneCommand,
     )
 
@@ -174,7 +173,6 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     val statsService get() = deps.statsService
     val signs get() = deps.signs
     val lobby get() = deps.lobby
-    val signListener get() = deps.signListener
     val command get() = deps.command
 
     private fun makeDeps(
@@ -224,7 +222,6 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
             store, backupStore, kitStore, arenaRepo, lobbyRepo, signRepo, statsRepo,
             equipment, presentation, registry, recovery, progression, service, lifecycle, admin,
             statsService, signs, lobby,
-            ArenaSignListener(service, signs, messenger),
             OneVsOneCommand(service, admin, statsService, signs, lobby, playerPort, logger, messenger),
         )
     }
@@ -298,11 +295,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
 
     fun setKit(arena: Arena.Id, snapshot: PaperInventorySnapshot) = kitStore.saveArenaKit(arena.name, snapshot)
 
-    fun join(player: Player, arena: Arena.Id = arenaId("arena1")): JoinOutput {
-        val output = service.join(player.uuid, player.name, arena)
-        signListener.renderJoin(player, arena.name, output)
-        return output
-    }
+    fun join(player: Player, arena: Arena.Id = arenaId("arena1")): JoinOutput = service.join(player.uuid, player.name, arena)
 
     fun state(name: String = "arena1") = service.matchOf(name)?.state?.kind
 

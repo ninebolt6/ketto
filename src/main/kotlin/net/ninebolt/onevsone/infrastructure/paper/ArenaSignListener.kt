@@ -56,7 +56,7 @@ class ArenaSignListener(
 
     private fun isRegisteredSign(block: Block): Boolean = block.state is Sign && signs.signOwner(block.toBlockPosition()) != null
 
-    fun renderJoin(player: Player, arenaName: String, output: JoinOutput) {
+    private fun renderJoin(player: Player, arenaName: String, output: JoinOutput) {
         when (output) {
             JoinOutput.JoinedWaiting -> {
                 messenger.send(player, Message.MatchJoined(arenaName))
