@@ -15,11 +15,12 @@ class SqliteArenaRepository(
 
     override fun loadAll(): List<Arena> = store.query("SELECT * FROM arenas ORDER BY seq") { row ->
         val name = row.getString("name")
-        if (Arena.Id.of(name) == null) {
+        val id = Arena.Id.of(name)
+        if (id == null) {
             logger.warning("Ignoring invalid arena name '$name' in arenas table")
             null
         } else {
-            decode(row) ?: run {
+            decode(row, id) ?: run {
                 logger.warning("Arena '$name' could not be loaded; skipping")
                 null
             }
@@ -55,16 +56,13 @@ class SqliteArenaRepository(
         store.exec("DELETE FROM arenas WHERE name = ?", name)
     }
 
-    // corrupt rows are skipped on load; direct reads let the store wrap the failure
-    private fun decode(row: ResultSet): Arena? = try {
-        toArena(row)
+    private fun decode(row: ResultSet, id: Arena.Id): Arena? = try {
+        toArena(row, id)
     } catch (e: IllegalArgumentException) {
         null
     }
 
-    private fun toArena(row: ResultSet): Arena {
-        val name = row.getString("name")
-        val id = Arena.Id.of(name) ?: throw IllegalArgumentException("invalid arena name: '$name'")
+    private fun toArena(row: ResultSet, id: Arena.Id): Arena {
         val disabled = Arena.Disabled.restored(
             id,
             readLocation(row, "spawn1"),
