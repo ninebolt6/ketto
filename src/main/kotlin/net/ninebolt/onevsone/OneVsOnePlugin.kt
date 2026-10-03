@@ -63,8 +63,11 @@ open class OneVsOnePlugin : JavaPlugin() {
 
     override fun onDisable() {
         if (::module.isInitialized) {
-            module.lifecycle.shutdown()
-            module.store.close()
+            try {
+                module.lifecycle.shutdown()
+            } finally {
+                module.store.close()
+            }
         }
     }
 }
