@@ -201,13 +201,12 @@ class ArenaMatchTest {
     }
 
     @Test
-    fun `slotOf maps join order to spawn slots`() {
+    fun `participant lookup and roster ordering follow join order`() {
         var m = match()
         m = m.join(alice).match
         m = m.join(bob).match
-        assertEquals(SpawnSlot.FIRST, m.slotOf(alice.id))
-        assertEquals(SpawnSlot.SECOND, m.slotOf(bob.id))
-        assertNull(m.slotOf(carol.id))
+
+        assertEquals(alice, m.participant(alice.id))
         assertNull(m.participant(carol.id))
         assertEquals(alice, m.participants[SpawnSlot.FIRST.index])
         assertEquals(bob, m.participants[SpawnSlot.SECOND.index])

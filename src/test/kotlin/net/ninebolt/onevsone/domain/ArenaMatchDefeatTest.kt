@@ -28,6 +28,17 @@ class ArenaMatchDefeatTest {
     }
 
     @Test
+    fun `round won carries spawn slots for either winner`() {
+        val firstWins = startedMatch().recordDefeat(bob.id, DefeatCause.FALL).outcome as DefeatOutcome.RoundWon
+        val secondWins = startedMatch().recordDefeat(alice.id, DefeatCause.FALL).outcome as DefeatOutcome.RoundWon
+
+        assertEquals(SpawnSlot.FIRST, firstWins.winnerSlot)
+        assertEquals(SpawnSlot.SECOND, firstWins.loserSlot)
+        assertEquals(SpawnSlot.SECOND, secondWins.winnerSlot)
+        assertEquals(SpawnSlot.FIRST, secondWins.loserSlot)
+    }
+
+    @Test
     fun `requiredWins 3 ends on third defeat without counting final kill`() {
         var m = startedMatch()
         m = m.recordDefeat(bob.id, DefeatCause.FALL).match

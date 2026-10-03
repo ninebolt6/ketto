@@ -77,13 +77,13 @@ class MatchProgressionService(
                     registry.match(arenaId)?.epoch == gen
                 }) { h ->
                     rearm(arenaId, outcome.loser, h)
-                    registry.match(arenaId)?.slotOf(outcome.loser.id)?.let { teleportToSlot(arenaId, it, h) }
+                    teleportToSlot(arenaId, outcome.loserSlot, h)
                 }
             } else if (loserHandle != null) {
                 rearm(arenaId, outcome.loser, loserHandle)
-                match.slotOf(outcome.loser.id)?.let { teleportToSlot(arenaId, it, loserHandle) }
+                teleportToSlot(arenaId, outcome.loserSlot, loserHandle)
             }
-            winnerHandle?.let { h -> match.slotOf(outcome.winner.id)?.let { teleportToSlot(arenaId, it, h) } }
+            winnerHandle?.let { h -> teleportToSlot(arenaId, outcome.winnerSlot, h) }
 
             signs.refreshSign(match)
             startRoundCountdown(arenaId, gen)

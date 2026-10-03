@@ -6,8 +6,4 @@ enum class SpawnSlot(val index: Int) {
     ;
 
     val number: Int get() = index + 1
-
-    companion object {
-        fun ofIndex(index: Int): SpawnSlot? = entries.getOrNull(index)
-    }
 }

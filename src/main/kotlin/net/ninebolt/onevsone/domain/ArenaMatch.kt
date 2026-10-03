@@ -27,8 +27,6 @@ data class ArenaMatch private constructor(
 
     fun participant(id: Uuid): Participant? = participants.firstOrNull { it.id == id }
 
-    fun slotOf(id: Uuid): SpawnSlot? = SpawnSlot.ofIndex(participants.indexOfFirst { it.id == id })
-
     fun winsOf(id: Uuid): Int = (state as? ArenaState.Active)?.winsOf(id) ?: 0
 
     // Advancing the epoch invalidates running countdowns and pending resolution callbacks.
@@ -105,6 +103,8 @@ data class ArenaMatch private constructor(
                 round = next.firstWins + next.secondWins,
                 winner = winner,
                 loser = loser,
+                winnerSlot = if (state.first.id == winner.id) SpawnSlot.FIRST else SpawnSlot.SECOND,
+                loserSlot = if (state.first.id == loser.id) SpawnSlot.FIRST else SpawnSlot.SECOND,
             ),
         )
     }
