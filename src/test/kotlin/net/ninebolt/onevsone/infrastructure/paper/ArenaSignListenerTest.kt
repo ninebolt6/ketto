@@ -1,6 +1,7 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
+import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.BlockPosition
 import net.ninebolt.onevsone.domain.fixtures.arenaId
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
@@ -140,6 +141,20 @@ class ArenaSignListenerTest {
 
         env.fire(interact(p1, env.signBlock(3, 64, 3)))
         assertTrue(p1.drainMessages().any { it.contains("not enabled") })
+        assertNull(env.registry.arenaOf(p1.uuid))
+    }
+
+    @Test
+    fun `registered sign for an unloaded arena reports not found`() {
+        val id = arenaId("arena1")
+        val position = BlockPosition.new("world", 3, 64, 3)
+        env.arenaRepo.save(Arena.Disabled.new(id))
+        env.signRepo.setSign(id, position)
+        val p1 = env.player("Alice")
+
+        env.fire(interact(p1, env.signBlock(3, 64, 3)))
+
+        assertTrue(p1.drainMessages().any { it.contains("That arena does not exist") })
         assertNull(env.registry.arenaOf(p1.uuid))
     }
 
