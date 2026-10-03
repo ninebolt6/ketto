@@ -44,7 +44,7 @@ class ArenaApplicationServiceTest {
     }
 
     @Test
-    fun `double join across arenas is rejected by index`() {
+    fun `double join across arenas is rejected`() {
         val app = TestApp()
         app.newArena("a1")
         app.newArena("a2")
@@ -261,7 +261,7 @@ class ArenaApplicationServiceTest {
     }
 
     @Test
-    fun `restorePending without a ticket does nothing`() {
+    fun `restorePending without a pending backup does nothing`() {
         val app = TestApp()
         val p = app.players.add("Alice")
         app.service.restorePending(p.id)
@@ -270,7 +270,7 @@ class ArenaApplicationServiceTest {
     }
 
     @Test
-    fun `restorePending keeps the ticket when no handle exists`() {
+    fun `restorePending keeps the pending backup when no handle exists`() {
         val app = TestApp()
         val p = app.players.add("Alice")
         app.equipment.seedBackup(BackupRef.new(MatchId.new(), p.id, p.name))
@@ -283,7 +283,7 @@ class ArenaApplicationServiceTest {
     }
 
     @Test
-    fun `quit without a match or pending ticket is a no-op`() {
+    fun `quit without a match or pending backup is a no-op`() {
         val app = TestApp()
         app.service.quit(Uuid.random())
         assertTrue(app.equipment.restored.isEmpty())

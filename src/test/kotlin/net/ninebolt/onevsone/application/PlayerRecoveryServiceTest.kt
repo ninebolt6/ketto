@@ -40,8 +40,8 @@ class PlayerRecoveryServiceTest {
         app.service.defeat(p2.id, DefeatCause.DEATH)
         assertEquals(ArenaState.Kind.WAITING, app.state())
 
-        val ticket = app.recovery.pending(p2.id)
-        assertNotNull(ticket)
+        val pending = app.recovery.pending(p2.id)
+        assertNotNull(pending)
         app.players.disconnect(p2)
         app.players.quittingScope(p2) {
             app.service.quit(p2.id)
@@ -123,7 +123,7 @@ class PlayerRecoveryServiceTest {
     }
 
     @Test
-    fun `restore failure retains ticket and record`() {
+    fun `restore failure retains the pending backup and record`() {
         val app = TestApp()
         val p = app.players.add("Alice")
         val ref = backupRef(p.id, "Alice")
@@ -139,20 +139,20 @@ class PlayerRecoveryServiceTest {
     }
 
     @Test
-    fun `restore failure returns recovery rejection and keeps ticket`() {
+    fun `restore failure returns recovery rejection and keeps the pending backup`() {
         val app = TestApp()
         val arenaId = app.newArena()
         val p = app.players.add("Alice")
         val ref = backupRef(p.id, p.name)
         app.equipment.seedBackup(ref)
-        val ticket = assertNotNull(app.recovery.pending(p.id))
+        val pending = assertNotNull(app.recovery.pending(p.id))
         app.equipment.failOnRestore = true
 
         assertEquals(JoinOutput.RestorePending, app.service.join(p.id, p.name, arenaId))
 
         assertNull(app.registry.arenaOf(p.id))
         assertTrue(app.registry.match(arenaId)!!.participants.isEmpty())
-        assertEquals(ticket, app.recovery.pending(p.id))
+        assertEquals(pending, app.recovery.pending(p.id))
         assertTrue(app.equipment.storedBackups.containsKey(ref.backupId))
     }
 
@@ -172,7 +172,7 @@ class PlayerRecoveryServiceTest {
     }
 
     @Test
-    fun `restore ticket survives abort and completes on rejoin`() {
+    fun `pending backup survives abort and completes on rejoin`() {
         val app = TestApp()
         val (_, p2) = app.startMatch()
         p2.dead = true
@@ -206,7 +206,7 @@ class PlayerRecoveryServiceTest {
     }
 
     @Test
-    fun `failed restore during finish keeps position and ticket`() {
+    fun `failed restore during finish keeps position and pending backup`() {
         val app = TestApp(requiredWins = 1)
         val lobby = WorldPosition.new("world", 9.0, 64.0, 9.0)
         app.arenas.lobbyPosition = lobby
@@ -244,7 +244,7 @@ class PlayerRecoveryServiceTest {
     }
 
     @Test
-    fun `quit by an unjoined player with a pending ticket restores at quit`() {
+    fun `quit by an unjoined player with a pending backup restores at quit`() {
         val app = TestApp()
         val p = app.players.add("Alice")
         app.equipment.seedBackup(backupRef(p.id, p.name))
@@ -257,7 +257,7 @@ class PlayerRecoveryServiceTest {
     }
 
     @Test
-    fun `quit with a pending ticket but no handle keeps the restore`() {
+    fun `quit with a pending backup but no handle keeps the restore`() {
         val app = TestApp()
         val p = app.players.add("Alice")
         app.equipment.seedBackup(backupRef(p.id, p.name))
@@ -270,7 +270,7 @@ class PlayerRecoveryServiceTest {
     }
 
     @Test
-    fun `a stale ticket cannot be restored`() {
+    fun `a stale pending backup cannot be restored`() {
         val app = TestApp()
         val p = app.players.add("Alice")
         val participant = Participant.new(p.id, p.name)
@@ -324,7 +324,7 @@ class PlayerRecoveryServiceTest {
     }
 
     @Test
-    fun `restore to lobby without a ticket teleports to the lobby`() {
+    fun `restore to lobby without a pending backup teleports to the lobby`() {
         val app = TestApp()
         val p = app.players.add("Alice")
         app.arenas.lobbyPosition = WorldPosition.new("world", 9.0, 64.0, 9.0)

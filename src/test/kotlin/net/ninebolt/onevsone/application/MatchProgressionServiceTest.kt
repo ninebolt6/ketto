@@ -116,7 +116,7 @@ class MatchProgressionServiceTest {
     }
 
     @Test
-    fun `quit by an offline loser finishes the match and keeps their ticket`() {
+    fun `quit by an offline loser finishes the match and keeps their pending backup`() {
         val app = TestApp()
         val (p1, p2) = app.startMatch()
         app.players.disconnect(p2)
@@ -188,7 +188,7 @@ class MatchProgressionServiceTest {
     }
 
     @Test
-    fun `aborting before backups defers a dead participant without a ticket`() {
+    fun `aborting before backups defers a dead participant without a pending backup`() {
         val app = TestApp()
         val (p1, _) = app.joinedTwo()
         p1.dead = true
