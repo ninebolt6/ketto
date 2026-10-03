@@ -20,8 +20,8 @@ class ArenaMatchDefeatTest {
         assertTrue(step.outcome is DefeatOutcome.RoundWon)
         val outcome = step.outcome
         assertEquals(1, outcome.round)
-        assertEquals(alice, outcome.winner)
-        assertEquals(bob, outcome.loser)
+        assertEquals(alice, outcome.winner.participant)
+        assertEquals(bob, outcome.loser.participant)
         assertEquals(m.epoch + 1, step.match.epoch)
         assertEquals(ArenaState.Kind.ROUNDCOUNTDOWN, step.match.state.kind)
         assertEquals(1, step.match.winsOf(alice.id))
@@ -32,10 +32,10 @@ class ArenaMatchDefeatTest {
         val firstWins = startedMatch().recordDefeat(bob.id, DefeatCause.FALL).outcome as DefeatOutcome.RoundWon
         val secondWins = startedMatch().recordDefeat(alice.id, DefeatCause.FALL).outcome as DefeatOutcome.RoundWon
 
-        assertEquals(SpawnSlot.FIRST, firstWins.winnerSlot)
-        assertEquals(SpawnSlot.SECOND, firstWins.loserSlot)
-        assertEquals(SpawnSlot.SECOND, secondWins.winnerSlot)
-        assertEquals(SpawnSlot.FIRST, secondWins.loserSlot)
+        assertEquals(SpawnSlot.FIRST, firstWins.winner.slot)
+        assertEquals(SpawnSlot.SECOND, firstWins.loser.slot)
+        assertEquals(SpawnSlot.SECOND, secondWins.winner.slot)
+        assertEquals(SpawnSlot.FIRST, secondWins.loser.slot)
     }
 
     @Test
@@ -85,7 +85,7 @@ class ArenaMatchDefeatTest {
         val m = startedMatch()
         val step = m.recordDefeat(bob.id, DefeatCause.DEATH)
         assertTrue(step.outcome is DefeatOutcome.RoundWon)
-        assertEquals(alice, step.outcome.winner)
+        assertEquals(alice, step.outcome.winner.participant)
     }
 
     @Test

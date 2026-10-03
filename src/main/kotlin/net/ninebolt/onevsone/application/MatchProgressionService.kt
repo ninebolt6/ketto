@@ -62,7 +62,7 @@ class MatchProgressionService(
         try {
             val winnerHandle = players.handle(outcome.winner.id)
             if (winnerHandle != null) {
-                rearm(arenaId, outcome.winner, winnerHandle)
+                rearm(arenaId, outcome.winner.participant, winnerHandle)
             }
 
             players.handle(outcome.loser.id)?.let { presentation.roundEndSound(it.position()) }
@@ -76,14 +76,14 @@ class MatchProgressionService(
                 scheduleDeferred(outcome.loser.id, {
                     registry.match(arenaId)?.epoch == gen
                 }) { h ->
-                    rearm(arenaId, outcome.loser, h)
-                    teleportToSlot(arenaId, outcome.loserSlot, h)
+                    rearm(arenaId, outcome.loser.participant, h)
+                    teleportToSlot(arenaId, outcome.loser.slot, h)
                 }
             } else if (loserHandle != null) {
-                rearm(arenaId, outcome.loser, loserHandle)
-                teleportToSlot(arenaId, outcome.loserSlot, loserHandle)
+                rearm(arenaId, outcome.loser.participant, loserHandle)
+                teleportToSlot(arenaId, outcome.loser.slot, loserHandle)
             }
-            winnerHandle?.let { h -> teleportToSlot(arenaId, outcome.winnerSlot, h) }
+            winnerHandle?.let { h -> teleportToSlot(arenaId, outcome.winner.slot, h) }
 
             signs.refreshSign(match)
             startRoundCountdown(arenaId, gen)

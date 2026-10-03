@@ -97,14 +97,14 @@ data class ArenaMatch private constructor(
             firstWins = state.firstWins + if (state.first.id == winner.id) 1 else 0,
             secondWins = state.secondWins + if (state.second.id == winner.id) 1 else 0,
         )
+        val winnerSlot = if (state.first.id == winner.id) SpawnSlot.FIRST else SpawnSlot.SECOND
+        val loserSlot = if (state.first.id == loser.id) SpawnSlot.FIRST else SpawnSlot.SECOND
         return Transition(
             advance(next),
             DefeatOutcome.RoundWon(
                 round = next.firstWins + next.secondWins,
-                winner = winner,
-                loser = loser,
-                winnerSlot = if (state.first.id == winner.id) SpawnSlot.FIRST else SpawnSlot.SECOND,
-                loserSlot = if (state.first.id == loser.id) SpawnSlot.FIRST else SpawnSlot.SECOND,
+                winner = SlottedParticipant(winner, winnerSlot),
+                loser = SlottedParticipant(loser, loserSlot),
             ),
         )
     }
