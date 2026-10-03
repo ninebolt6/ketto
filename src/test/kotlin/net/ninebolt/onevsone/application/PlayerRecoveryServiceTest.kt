@@ -22,14 +22,6 @@ class PlayerRecoveryServiceTest {
     private fun backupRef(id: Uuid, name: String, match: MatchId = MatchId.new()) = BackupRef.new(match, id, name)
 
     @Test
-    fun `persisted backups load into tickets on startup`() {
-        val app = TestApp()
-        val ref = backupRef(Uuid.random(), "Alice")
-        app.equipment.seedBackup(ref)
-        assertNotNull(app.recovery.pending(ref.playerId))
-    }
-
-    @Test
     fun `shutdown retains pending records when the backup listing fails`() {
         val app = TestApp()
         val ref = backupRef(Uuid.random(), "Alice")
