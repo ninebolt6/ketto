@@ -53,6 +53,14 @@ class DamageAdmissionTest {
     }
 
     @Test
+    fun `waiting and countdown participants do not restrict damage`() {
+        assertTrue(DamageAdmission.allows(side(alice, match()), side(bob, match())))
+        val countdown = waiting.join(bob).match
+        assertEquals(ArenaState.Kind.COUNTDOWN, countdown.state.kind)
+        assertTrue(DamageAdmission.allows(side(alice, countdown), side(bob, countdown)))
+    }
+
+    @Test
     fun `participants of different matches cannot hurt each other`() {
         val joined = ArenaMatch.new(arenaId("arena2"), 3).join(carol).match.join(dave).match
         val began = joined.beginMatch()

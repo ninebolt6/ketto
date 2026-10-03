@@ -37,8 +37,10 @@ class PaperEquipmentAdapterTest {
 
     private fun storeBackup(p: ArenaPlayerMock): BackupRef {
         p.inventory.setItem(0, env.item(Material.DIAMOND))
+        p.inventory.setChestplate(env.item(Material.DIAMOND_CHESTPLATE))
         val snapshot = PaperInventorySnapshot.capture(p.inventory)
         p.inventory.clear()
+        p.inventory.armorContents = arrayOfNulls(4)
         val ref = BackupRef.new(MatchId.new(), p.uuid, p.name)
         env.backupStore.saveBackups(listOf(PersistedBackup(ref, snapshot)))
         return ref
@@ -72,6 +74,7 @@ class PaperEquipmentAdapterTest {
         val ref = storeBackup(p)
         env.equipment.restore(ref)
         assertEquals(Material.DIAMOND, p.inventory.getItem(0)?.type)
+        assertEquals(Material.DIAMOND_CHESTPLATE, p.inventory.chestplate?.type)
     }
 
     @Test

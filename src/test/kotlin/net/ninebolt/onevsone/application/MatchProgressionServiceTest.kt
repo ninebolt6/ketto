@@ -365,6 +365,60 @@ class MatchProgressionServiceTest {
     }
 
     @Test
+    fun `forfeit by an already offline loser skips the restore but still finishes the match`() {
+        val app = TestApp()
+        val (p1, p2) = app.startMatch()
+        app.players.disconnect(p2)
+        val events = p2.events.size
+
+        app.service.quit(p2.id)
+
+        assertEquals(ArenaState.Kind.WAITING, app.state())
+        assertEquals(events, p2.events.size)
+        assertTrue(app.equipment.restored.any { it.playerId == p1.id })
+    }
+
+    @Test
+    fun `forfeit with the loser's backup missing skips the restore`() {
+        val app = TestApp()
+        val (p1, p2) = app.startMatch()
+        app.equipment.storedBackups.values.removeIf { it.playerId == p2.id }
+
+        app.service.quit(p2.id)
+
+        assertEquals(ArenaState.Kind.WAITING, app.state())
+        assertTrue(app.logger.reports.any { it.message.contains("without a pending backup") })
+        assertTrue(app.equipment.restored.none { it.playerId == p2.id })
+        assertTrue(app.equipment.restored.any { it.playerId == p1.id })
+    }
+
+    @Test
+    fun `match finish warns when the winner's backup is missing`() {
+        val app = TestApp(requiredWins = 1)
+        val (p1, p2) = app.startMatch()
+        app.equipment.storedBackups.values.removeIf { it.playerId == p1.id }
+
+        assertTrue(app.service.defeat(p2.id, DefeatCause.DEATH))
+        app.scheduler.runOneShots()
+
+        assertTrue(app.logger.reports.any { it.message.contains("without a pending backup") })
+    }
+
+    @Test
+    fun `match finish warns and still respawns the loser when the loser's backup is missing`() {
+        val app = TestApp(requiredWins = 1)
+        val (_, p2) = app.startMatch()
+        app.equipment.storedBackups.values.removeIf { it.playerId == p2.id }
+        p2.dead = true
+
+        assertTrue(app.service.defeat(p2.id, DefeatCause.DEATH))
+        app.scheduler.runOneShots()
+
+        assertTrue(app.logger.reports.any { it.message.contains("without a pending backup") })
+        assertTrue("respawn" in p2.events)
+    }
+
+    @Test
     fun `an aborted match still completes a pending deferred restore`() {
         val app = TestApp(requiredWins = 1)
         val (_, p2) = app.startMatch()

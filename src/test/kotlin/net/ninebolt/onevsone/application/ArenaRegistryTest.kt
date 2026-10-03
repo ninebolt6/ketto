@@ -67,8 +67,45 @@ class ArenaRegistryTest {
         assertNull(registry.entry(id))
         assertNull(registry.resolveArenaId("nope"))
         assertNull(registry.resolveArena("nope"))
+        assertNull(registry.enabledArena(id))
         assertNull(registry.arenaOf(Uuid.random()))
         assertFalse(registry.isJoined(Uuid.random()))
+    }
+
+    @Test
+    fun `resolveArenaId tolerates names that are not valid arena ids`() {
+        val registry = ArenaRegistry(3)
+        registry.install("a1")
+        assertNull(registry.resolveArenaId("create"))
+        assertNull(registry.resolveArenaId("  "))
+    }
+
+    @Test
+    fun `resolveArenaId falls back to a case-insensitive match`() {
+        val registry = ArenaRegistry(3)
+        registry.install("a1")
+        assertEquals(arenaId("a1"), registry.resolveArenaId("A1"))
+        assertEquals(arenaId("a1"), registry.resolveArena("A1")?.id)
+    }
+
+    @Test
+    fun `arenaOf returns null for a player outside every match`() {
+        val registry = ArenaRegistry(3)
+        registry.install("a1")
+        assertNull(registry.arenaOf(Uuid.random()))
+        val p = Participant.new("Alice")
+        registry.putMatch(match("a1", ArenaState.OneMore(p)))
+        assertNull(registry.arenaOf(Uuid.random()))
+        assertFalse(registry.isJoined(Uuid.random()))
+        assertEquals(arenaId("a1"), registry.arenaOf(Uuid.parse(p.id.toString())))
+    }
+
+    @Test
+    fun `enabledArena returns null for a disabled arena`() {
+        val registry = ArenaRegistry(3)
+        val id = arenaId("a1")
+        registry.installArena(Arena.Disabled.new(id))
+        assertNull(registry.enabledArena(id))
     }
 
     @Test

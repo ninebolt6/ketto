@@ -116,6 +116,15 @@ class ArenaAdministrationServiceTest {
     }
 
     @Test
+    fun `setSpawn and setKit ignore an unknown arena id`() {
+        val missing = arenaId("missing")
+        app.admin.setSpawn(missing, SpawnSlot.FIRST, WorldPosition.new("world", 0.0, 64.0, 0.0))
+        app.admin.setKit(missing, app.players.add("Alice").id)
+        assertTrue(app.equipment.savedKits.isEmpty())
+        assertFalse("missing" in app.arenas.names)
+    }
+
+    @Test
     fun `arena name lookup ignores case`() {
         app.newArena("Arena1")
         assertEquals("Arena1", app.admin.resolveArenaId("arena1")?.name)
