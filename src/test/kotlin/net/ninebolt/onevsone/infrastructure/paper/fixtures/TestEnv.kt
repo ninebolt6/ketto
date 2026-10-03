@@ -88,6 +88,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
 
     // ScoreMock.customName is unimplemented in MockBukkit 4.15, so only the scoreboard boundary is a narrow stub
     val scoreboardManager: ScoreboardManagerMock = mockk(relaxed = true)
+    val mainBoard = ScoreboardMock()
     val boards = mutableListOf<Scoreboard>()
 
     init {
@@ -99,6 +100,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
             mockk(relaxed = true)
         }
         every { server.scoreboardManager } returns scoreboardManager
+        every { scoreboardManager.mainScoreboard } returns mainBoard
         every { scoreboardManager.newScoreboard } answers {
             // ScoreMock.customName is unimplemented in MockBukkit, so objective/score are anonymous subclasses that never call validate
             val board = spyk(ScoreboardMock())

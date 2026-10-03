@@ -19,8 +19,8 @@ import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNotSame
 import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class PaperArenaMembershipTest {
@@ -69,11 +69,10 @@ class PaperArenaMembershipTest {
         env.join(p1, arena)
         env.join(p2, arena)
         env.tick(6)
-        val ingameBoard = p1.scoreboard
-        assertTrue(env.boards.contains(ingameBoard))
+        assertTrue(env.boards.contains(p1.scoreboard))
         env.progression.abort(arena)
-        assertNotSame(ingameBoard, p1.scoreboard)
-        assertNotSame(ingameBoard, p2.scoreboard)
+        assertSame(env.mainBoard, p1.scoreboard)
+        assertSame(env.mainBoard, p2.scoreboard)
     }
 
     @Test

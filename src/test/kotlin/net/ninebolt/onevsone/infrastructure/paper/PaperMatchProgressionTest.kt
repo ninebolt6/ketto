@@ -15,8 +15,8 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import kotlin.test.assertEquals
-import kotlin.test.assertNotSame
 import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class PaperMatchProgressionTest {
@@ -146,13 +146,12 @@ class PaperMatchProgressionTest {
         env.join(p2, arena)
         env.tick(6)
 
-        val ingameBoard = p1.scoreboard
         fallIntoVoid(p2)
         assertEquals(20.0, p1.health)
         assertEquals(20, p1.foodLevel)
         assertEquals(0, p1.fireTicks)
         assertEquals(20.0, p2.health)
-        assertNotSame(ingameBoard, p1.scoreboard)
-        assertNotSame(ingameBoard, p2.scoreboard)
+        assertSame(env.mainBoard, p1.scoreboard)
+        assertSame(env.mainBoard, p2.scoreboard)
     }
 }

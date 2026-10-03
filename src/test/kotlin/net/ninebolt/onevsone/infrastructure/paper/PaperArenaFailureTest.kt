@@ -20,6 +20,7 @@ import java.util.logging.LogRecord
 import java.util.logging.Logger
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class PaperArenaFailureTest {
@@ -65,7 +66,7 @@ class PaperArenaFailureTest {
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
         assertNull(env.registry.arenaOf(p1.uuid))
         assertNull(env.registry.arenaOf(p2.uuid))
-        assertTrue(env.boards.contains(p1.scoreboard))
+        assertSame(env.mainBoard, p1.scoreboard)
         assertNull(env.statsRepo.find(p1.uuid))
         assertEquals(1, env.statsRepo.find(p2.uuid)!!.losses)
         val failedLog = records.single { it.message.contains("Failed to record") }

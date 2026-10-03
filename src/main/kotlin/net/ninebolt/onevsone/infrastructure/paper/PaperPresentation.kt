@@ -98,8 +98,7 @@ class PaperPresentation(
     }
 
     override fun clearScoreboard(playerId: Uuid) {
-        val manager = server.scoreboardManager
-        player(playerId)?.scoreboard = manager.newScoreboard
+        player(playerId)?.scoreboard = server.scoreboardManager.mainScoreboard
     }
 
     override fun updateSign(arena: Arena, position: BlockPosition, kind: ArenaState.Kind) {
