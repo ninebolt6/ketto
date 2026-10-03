@@ -10,7 +10,6 @@ import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
-import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
@@ -148,16 +147,46 @@ class ArenaMatchTest {
     @Test
     fun `epoch advances on transitions and abort`() {
         var m = match()
-        val t0 = m.epoch
+        var previousEpoch = m.epoch
+        fun assertAdvanced() {
+            assertTrue(m.epoch > previousEpoch)
+            previousEpoch = m.epoch
+        }
+
         m = m.join(alice).match
+        assertAdvanced()
         m = m.join(bob).match
+        assertAdvanced()
         m = m.beginMatch().match
-        assertEquals(t0, m.epoch)
+        assertAdvanced()
         m = m.recordDefeat(bob.id, DefeatCause.FALL).match
-        val t1 = m.epoch
-        assertNotEquals(t0, t1)
+        assertAdvanced()
         m = m.abort().match
-        assertNotEquals(t1, m.epoch)
+        assertAdvanced()
+    }
+
+    @Test
+    fun `epoch advances when resuming a round`() {
+        val waiting = ArenaMatch.new(arenaId("a1"), requiredWins = 3)
+        val roundCountdown = waiting.join(alice).match
+            .join(bob).match
+            .beginMatch().match
+            .recordDefeat(bob.id, DefeatCause.FALL).match
+
+        val resumed = roundCountdown.resumeRound()
+
+        assertTrue(resumed.outcome)
+        assertTrue(resumed.match.epoch > roundCountdown.epoch)
+    }
+
+    @Test
+    fun `rejected join does not advance the epoch`() {
+        val waiting = match().join(alice).match
+
+        val rejected = waiting.join(alice)
+
+        assertEquals(JoinOutcome.Rejected, rejected.outcome)
+        assertEquals(waiting.epoch, rejected.match.epoch)
     }
 
     @Test

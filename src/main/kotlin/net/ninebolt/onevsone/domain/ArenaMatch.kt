@@ -23,10 +23,6 @@ data class ArenaMatch private constructor(
 
     val resolvesVoidFall: Boolean get() = state is ArenaState.Active
 
-    val canBeginMatch: Boolean get() = state is ArenaState.Countdown
-
-    val canResumeRound: Boolean get() = state is ArenaState.RoundCountdown
-
     fun matchup(): Pair<Participant, Participant>? = (state as? ArenaState.Active)?.pair
 
     fun participant(id: Uuid): Participant? = participants.firstOrNull { it.id == id }
@@ -35,16 +31,19 @@ data class ArenaMatch private constructor(
 
     fun winsOf(id: Uuid): Int = (state as? ArenaState.Active)?.winsOf(id) ?: 0
 
+    // Advancing the epoch invalidates running countdowns and pending resolution callbacks.
+    private fun advance(next: ArenaState) = copy(state = next, epoch = epoch + 1)
+
     fun join(participant: Participant): Transition<JoinOutcome> = when (val s = state) {
         ArenaState.Waiting ->
-            Transition(copy(state = ArenaState.OneMore(participant)), JoinOutcome.FirstJoined)
+            Transition(advance(ArenaState.OneMore(participant)), JoinOutcome.FirstJoined)
 
         is ArenaState.OneMore ->
             if (s.participant.id == participant.id) {
                 Transition(this, JoinOutcome.Rejected)
             } else {
                 Transition(
-                    copy(state = ArenaState.Countdown.of(s.participant, participant)),
+                    advance(ArenaState.Countdown.of(s.participant, participant)),
                     JoinOutcome.MatchReady,
                 )
             }
@@ -55,10 +54,7 @@ data class ArenaMatch private constructor(
     fun leaveWaiting(id: Uuid): Transition<LeaveOutcome> {
         val s = state as? ArenaState.OneMore ?: return Transition(this, LeaveOutcome.NotWaiting)
         if (s.participant.id != id) return Transition(this, LeaveOutcome.NotWaiting)
-        return Transition(
-            copy(state = ArenaState.Waiting, epoch = epoch + 1),
-            LeaveOutcome.Left(s.participant),
-        )
+        return Transition(advance(ArenaState.Waiting), LeaveOutcome.Left(s.participant))
     }
 
     // COUNTDOWN is still pre-match (no teleport, backup, or scoring), so quitting unregisters instead of forfeiting.
@@ -73,10 +69,7 @@ data class ArenaMatch private constructor(
             is ArenaState.Countdown -> ArenaState.OneMore(if (s.first.id == id) s.second else s.first)
             else -> ArenaState.Waiting
         }
-        return Transition(
-            copy(state = next, epoch = epoch + 1),
-            QuitOutcome.WaitingExit(participant),
-        )
+        return Transition(advance(next), QuitOutcome.WaitingExit(participant))
     }
 
     fun recordDefeat(id: Uuid, cause: DefeatCause): Transition<DefeatOutcome> = when (val s = state) {
@@ -107,7 +100,7 @@ data class ArenaMatch private constructor(
             secondWins = state.secondWins + if (state.second.id == winner.id) 1 else 0,
         )
         return Transition(
-            copy(state = next, epoch = epoch + 1),
+            advance(next),
             DefeatOutcome.RoundWon(
                 round = next.firstWins + next.secondWins,
                 winner = winner,
@@ -118,23 +111,19 @@ data class ArenaMatch private constructor(
 
     fun beginMatch(): Transition<Boolean> = when (val s = state) {
         is ArenaState.Countdown ->
-            Transition(copy(state = ArenaState.InGame.of(s.first, s.second, 0, 0)), true)
+            Transition(advance(ArenaState.InGame.of(s.first, s.second, 0, 0)), true)
 
         else -> Transition(this, false)
     }
 
     fun resumeRound(): Transition<Boolean> = when (val s = state) {
         is ArenaState.RoundCountdown ->
-            Transition(copy(state = ArenaState.InGame.of(s.first, s.second, s.firstWins, s.secondWins)), true)
+            Transition(advance(ArenaState.InGame.of(s.first, s.second, s.firstWins, s.secondWins)), true)
 
         else -> Transition(this, false)
     }
 
-    // Advancing the epoch invalidates running countdowns and pending resolution callbacks.
-    fun abort(): Transition<List<Participant>> = Transition(
-        copy(state = ArenaState.Waiting, epoch = epoch + 1),
-        participants,
-    )
+    fun abort(): Transition<List<Participant>> = Transition(advance(ArenaState.Waiting), participants)
 
-    private fun finished(): ArenaMatch = copy(state = ArenaState.Waiting, epoch = epoch + 1)
+    private fun finished(): ArenaMatch = advance(ArenaState.Waiting)
 }

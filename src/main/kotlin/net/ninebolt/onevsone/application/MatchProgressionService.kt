@@ -153,7 +153,7 @@ class MatchProgressionService(
     }
 
     internal fun startInitialCountdown(arenaId: Arena.Id, gen: Long) {
-        runCountdown(arenaId, gen, ticks = 5, stillCounting = { it.canBeginMatch }) {
+        runCountdown(arenaId, gen, ticks = 5) {
             if (remaining > 0) {
                 presentation.countdownTick(participantIds, remaining)
                 return@runCountdown false
@@ -190,7 +190,7 @@ class MatchProgressionService(
     }
 
     private fun startRoundCountdown(arenaId: Arena.Id, gen: Long) {
-        runCountdown(arenaId, gen, ticks = 7, stillCounting = { it.canResumeRound }) {
+        runCountdown(arenaId, gen, ticks = 7) {
             when (remaining) {
                 7 -> {
                     rearm(arenaId, first, p1)
@@ -214,13 +214,12 @@ class MatchProgressionService(
         arenaId: Arena.Id,
         gen: Long,
         ticks: Int,
-        stillCounting: (ArenaMatch) -> Boolean,
         onTick: CountdownTick.() -> Boolean,
     ) {
         timers[arenaId] = scheduler.repeat(10, 20) { task, iteration ->
             val match = registry.match(arenaId)
             val paired = match?.state as? ArenaState.Paired
-            if (match == null || match.epoch != gen || !stillCounting(match) || paired == null) {
+            if (match == null || match.epoch != gen || paired == null) {
                 task.cancel()
                 return@repeat
             }
