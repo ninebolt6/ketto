@@ -30,7 +30,11 @@ class ArenaApplicationService(
         val participant = Participant.new(playerId, playerName)
 
         val step = match.join(participant)
-        if (step.outcome == JoinOutcome.Rejected) return JoinOutput.InMatch
+        val output = when (step.outcome) {
+            JoinOutcome.FirstJoined -> JoinOutput.JoinedWaiting
+            JoinOutcome.MatchReady -> JoinOutput.JoinedStarting
+            JoinOutcome.Rejected -> return JoinOutput.InMatch
+        }
 
         val handle = players.handle(playerId)
         recovery.pending(playerId)?.let { ref ->
@@ -41,11 +45,7 @@ class ArenaApplicationService(
         registry.putMatch(step.match)
         if (step.outcome == JoinOutcome.MatchReady) progression.startInitialCountdown(arenaId, step.match.epoch)
         signs.refreshSign(step.match)
-        return when (step.outcome) {
-            JoinOutcome.FirstJoined -> JoinOutput.JoinedWaiting
-            JoinOutcome.MatchReady -> JoinOutput.JoinedStarting
-            JoinOutcome.Rejected -> JoinOutput.InMatch
-        }
+        return output
     }
 
     fun leave(playerId: Uuid): LeaveError? {
