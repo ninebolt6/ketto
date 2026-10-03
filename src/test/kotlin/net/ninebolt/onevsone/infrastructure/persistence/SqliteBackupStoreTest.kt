@@ -80,6 +80,38 @@ class SqliteBackupStoreTest {
     }
 
     @Test
+    fun `pendingRefs skips a row with an unparseable backup id and keeps valid rows`() = withStore(folder) { store ->
+        store.exec(
+            "INSERT INTO backups(backup_id, match_id, player_uuid, player_name, payload) VALUES (?, ?, ?, ?, ?)",
+            "not-a-uuid",
+            Uuid.random().toString(),
+            Uuid.random().toString(),
+            "Alice",
+            InventoryPayloadCodec.encode(PaperInventorySnapshot()),
+        )
+        val backups = SqliteBackupStore(store)
+        val p = Participant.new("Bob")
+        val ref = BackupRef.new(MatchId.new(), p.id, p.name)
+        backups.saveBackups(listOf(PersistedBackup(ref, PaperInventorySnapshot())))
+
+        assertEquals(listOf(ref), backups.pendingRefs())
+    }
+
+    @Test
+    fun `pendingFor surfaces a corrupt row as PersistenceException`() = withStore(folder) { store ->
+        val playerId = Uuid.random()
+        store.exec(
+            "INSERT INTO backups(backup_id, match_id, player_uuid, player_name, payload) VALUES (?, ?, ?, ?, ?)",
+            Uuid.random().toString(),
+            "bad",
+            playerId.toString(),
+            "Alice",
+            InventoryPayloadCodec.encode(PaperInventorySnapshot()),
+        )
+        assertFailsWith<PersistenceException> { SqliteBackupStore(store).pendingFor(playerId) }
+    }
+
+    @Test
     fun `backup rows with an unparseable player uuid are skipped`() = withStore(folder) { store ->
         store.exec(
             "INSERT INTO backups(backup_id, match_id, player_uuid, player_name, payload) VALUES (?, ?, ?, ?, ?)",
