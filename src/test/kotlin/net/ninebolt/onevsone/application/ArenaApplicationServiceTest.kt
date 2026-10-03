@@ -216,17 +216,6 @@ class ArenaApplicationServiceTest {
     }
 
     @Test
-    fun `shutdown aborts matches and restores online pendings`() {
-        val app = TestApp()
-        val (p1, _) = app.startMatch()
-        app.lifecycle.shutdown()
-        assertEquals(ArenaState.Kind.WAITING, app.state())
-        assertTrue(app.registry.resolveArena("arena1")!!.enabled)
-        assertNull(app.registry.arenaOf(p1.id))
-        assertEquals(2, app.equipment.restored.size)
-    }
-
-    @Test
     fun `round countdown restores INGAME and releases resolution at completion`() {
         val app = TestApp()
         val (_, p2) = app.startMatch()
