@@ -115,7 +115,7 @@ class OneVsOneCommand(
                                         }
                                         .executes(
                                             playerOnly { player, ctx ->
-                                                spawnSet.execute(player, ctx.arenaName(), IntegerArgumentType.getInteger(ctx, "slot"))
+                                                spawnSet.execute(player, ctx.arenaName(), SpawnSlot.entries[IntegerArgumentType.getInteger(ctx, "slot") - 1])
                                             },
                                         ),
                                 ),

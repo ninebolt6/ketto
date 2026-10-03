@@ -12,8 +12,7 @@ internal class ArenaSpawnSetCommand(
     private val messenger: Messenger,
 ) {
 
-    fun execute(player: Player, arenaName: String, slotNumber: Int) {
-        val slot = SpawnSlot.ofNumber(slotNumber) ?: return
+    fun execute(player: Player, arenaName: String, slot: SpawnSlot) {
         val id = admin.resolveArenaId(arenaName) ?: run {
             messenger.send(player, Message.ArenaNotFound)
             return

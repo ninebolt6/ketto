@@ -9,7 +9,5 @@ enum class SpawnSlot(val index: Int) {
 
     companion object {
         fun ofIndex(index: Int): SpawnSlot? = entries.getOrNull(index)
-
-        fun ofNumber(number: Int): SpawnSlot? = entries.getOrNull(number - 1)
     }
 }
