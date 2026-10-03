@@ -33,9 +33,9 @@ class ArenaAdministrationService(
     fun remove(name: String): RemoveError? {
         val arena = registry.resolveArena(name) ?: return RemoveError.NotFound
         progression.abort(arena.id)
-        arenas.delete(arena.name)
+        arenas.delete(arena.id)
         registry.removeArena(arena.id)
-        signRepo.clearSign(arena.name)
+        signRepo.clearSign(arena.id)
         kit.forgetKit(arena.id)
         return null
     }

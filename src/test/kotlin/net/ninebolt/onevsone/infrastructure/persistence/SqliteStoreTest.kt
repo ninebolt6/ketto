@@ -83,7 +83,7 @@ class SqliteStoreTest {
 
         SqliteLobbyRepository(store).setLobby(WorldPosition.new("lobby", 1.0, 2.0, 3.0))
         SqliteArenaRepository(store).save(Arena.Disabled.new(arenaId("a1")))
-        SqliteArenaSignRepository(store).setSign("a1", BlockPosition.new("world", 5, 64, 5))
+        SqliteArenaSignRepository(store).setSign(arenaId("a1"), BlockPosition.new("world", 5, 64, 5))
         assertEquals(before.toList(), file.readBytes().toList())
     }
 }

@@ -1,6 +1,7 @@
 package net.ninebolt.onevsone.infrastructure.paper.command
 
 import net.ninebolt.onevsone.domain.BlockPosition
+import net.ninebolt.onevsone.domain.fixtures.arenaId
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.opPlayer
@@ -52,7 +53,7 @@ class ArenaSignSetCommandTest {
         second.targetBlock = sign
 
         env.runCommand(op, "arena", "arena1", "sign", "set")
-        assertEquals("arena1", env.signRepo.signOwner(BlockPosition.new("world", 4, 64, 4)))
+        assertEquals(arenaId("arena1"), env.signRepo.signOwner(BlockPosition.new("world", 4, 64, 4)))
 
         env.runCommand(second, "arena", "arena2", "sign", "set")
         assertTrue(second.drainMessages().any { it.contains("That sign is already registered") })
@@ -80,11 +81,11 @@ class ArenaSignSetCommandTest {
         val op = env.opPlayer("Op")
         env.newArena()
         val sign = env.signBlock(4, 64, 4)
-        env.signRepo.setSign("arena1", BlockPosition.new("world", 4, 64, 4))
+        env.signRepo.setSign(arenaId("arena1"), BlockPosition.new("world", 4, 64, 4))
         op.targetBlock = sign
 
         env.runCommand(op, "arena", "arena1", "sign", "set")
         assertTrue(op.drainMessages().none { it.contains("already registered") })
-        assertEquals("arena1", env.signRepo.signOwner(BlockPosition.new("world", 4, 64, 4)))
+        assertEquals(arenaId("arena1"), env.signRepo.signOwner(BlockPosition.new("world", 4, 64, 4)))
     }
 }

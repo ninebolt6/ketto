@@ -10,5 +10,5 @@ interface ArenaRepository {
     fun save(arena: Arena)
 
     // also removes the arena's related persistent data
-    fun delete(name: String)
+    fun delete(id: Arena.Id)
 }

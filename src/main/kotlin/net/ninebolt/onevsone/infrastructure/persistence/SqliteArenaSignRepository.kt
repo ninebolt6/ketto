@@ -1,38 +1,50 @@
 package net.ninebolt.onevsone.infrastructure.persistence
 
 import net.ninebolt.onevsone.application.port.ArenaSignRepository
+import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.BlockPosition
+import java.util.logging.Logger
 
 // rows are deleted by the arena's cascade
 // the in-memory index avoids a query per sign-click event; setSign/clearSign keep it in sync
-class SqliteArenaSignRepository(private val store: SqliteStore) : ArenaSignRepository {
+class SqliteArenaSignRepository(
+    private val store: SqliteStore,
+    private val logger: Logger = Logger.getLogger(SqliteArenaSignRepository::class.java.name),
+) : ArenaSignRepository {
 
-    private val index: MutableMap<BlockPosition, String> by lazy { scan() }
+    private val index: MutableMap<BlockPosition, Arena.Id> by lazy { scan() }
 
-    private fun scan(): MutableMap<BlockPosition, String> = store.query("SELECT arena_name, world, x, y, z FROM arena_signs") { row ->
-        BlockPosition.new(row.getString("world"), row.getInt("x"), row.getInt("y"), row.getInt("z")) to
-            row.getString("arena_name")
+    private fun scan(): MutableMap<BlockPosition, Arena.Id> = store.query("SELECT arena_name, world, x, y, z FROM arena_signs") { row ->
+        row.getString("arena_name") to BlockPosition.new(row.getString("world"), row.getInt("x"), row.getInt("y"), row.getInt("z"))
+    }.mapNotNull { (name, position) ->
+        val id = Arena.Id.of(name)
+        if (id == null) {
+            logger.warning("Ignoring sign for invalid arena name '$name' in arena_signs table")
+            null
+        } else {
+            position to id
+        }
     }.toMap().toMutableMap()
 
-    override fun signLocation(arenaName: String): BlockPosition? = index.entries.firstOrNull { it.value == arenaName }?.key
+    override fun signLocation(arena: Arena.Id): BlockPosition? = index.entries.firstOrNull { it.value == arena }?.key
 
-    override fun setSign(arenaName: String, position: BlockPosition) {
+    override fun setSign(arena: Arena.Id, position: BlockPosition) {
         store.exec(
             "INSERT OR REPLACE INTO arena_signs(arena_name, world, x, y, z) VALUES (?, ?, ?, ?, ?)",
-            arenaName,
+            arena.name,
             position.world,
             position.x,
             position.y,
             position.z,
         )
-        index.values.remove(arenaName)
-        index[position] = arenaName
+        index.values.remove(arena)
+        index[position] = arena
     }
 
-    override fun clearSign(arenaName: String) {
-        store.exec("DELETE FROM arena_signs WHERE arena_name = ?", arenaName)
-        index.entries.removeAll { it.value == arenaName }
+    override fun clearSign(arena: Arena.Id) {
+        store.exec("DELETE FROM arena_signs WHERE arena_name = ?", arena.name)
+        index.entries.removeAll { it.value == arena }
     }
 
-    override fun signOwner(position: BlockPosition): String? = index[position]
+    override fun signOwner(position: BlockPosition): Arena.Id? = index[position]
 }

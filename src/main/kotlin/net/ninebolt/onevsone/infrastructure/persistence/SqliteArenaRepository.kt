@@ -52,8 +52,8 @@ class SqliteArenaRepository(
         )
     }
 
-    override fun delete(name: String) {
-        store.exec("DELETE FROM arenas WHERE name = ?", name)
+    override fun delete(id: Arena.Id) {
+        store.exec("DELETE FROM arenas WHERE name = ?", id.name)
     }
 
     private fun decode(row: ResultSet, id: Arena.Id): Arena? = try {

@@ -1,6 +1,7 @@
 package net.ninebolt.onevsone.infrastructure.paper.command
 
 import net.ninebolt.onevsone.domain.BlockPosition
+import net.ninebolt.onevsone.domain.fixtures.arenaId
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.opPlayer
@@ -34,12 +35,12 @@ class ArenaSignRemoveCommandTest {
     fun `arena sign remove unregisters sign`() {
         val op = env.opPlayer("Op")
         env.newArena()
-        env.signRepo.setSign("arena1", BlockPosition.new("world", 4, 64, 4))
+        env.signRepo.setSign(arenaId("arena1"), BlockPosition.new("world", 4, 64, 4))
 
         env.runCommand(op, "arena", "arena1", "sign", "remove")
         assertTrue(op.drainMessages().any { it.contains("Unregistered sign for arena") })
         assertNull(env.signRepo.signOwner(BlockPosition.new("world", 4, 64, 4)))
-        assertNull(env.signRepo.signLocation("arena1"))
+        assertNull(env.signRepo.signLocation(arenaId("arena1")))
 
         env.runCommand(op, "arena", "arena1", "sign", "remove")
         assertTrue(op.drainMessages().any { it.contains("No sign is registered for that arena") })

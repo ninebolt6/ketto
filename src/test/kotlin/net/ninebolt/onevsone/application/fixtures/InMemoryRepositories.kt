@@ -20,7 +20,7 @@ class InMemoryArenaRepository :
     val names = mutableListOf<String>()
     val definitions = mutableMapOf<String, Arena>()
     var lobbyPosition: WorldPosition? = null
-    val signs = mutableMapOf<String, BlockPosition>()
+    val signs = mutableMapOf<Arena.Id, BlockPosition>()
     var failOnSave = false
     var failOnLoad = false
     var failOnSignRead = false
@@ -41,9 +41,9 @@ class InMemoryArenaRepository :
         if (names.none { it.equals(arena.name, ignoreCase = true) }) names += arena.name
     }
 
-    override fun delete(name: String) {
-        definitions.remove(name)
-        names.removeIf { it.equals(name, ignoreCase = true) }
+    override fun delete(id: Arena.Id) {
+        definitions.keys.removeIf { it.equals(id.name, ignoreCase = true) }
+        names.removeIf { it.equals(id.name, ignoreCase = true) }
     }
 
     override fun lobby(): WorldPosition? = lobbyPosition
@@ -51,19 +51,19 @@ class InMemoryArenaRepository :
         lobbyPosition = position
     }
 
-    override fun signLocation(arenaName: String): BlockPosition? {
+    override fun signLocation(arena: Arena.Id): BlockPosition? {
         if (failOnSignRead) throw PersistenceException("sign read failed")
-        return signs[arenaName]
+        return signs[arena]
     }
-    override fun setSign(arenaName: String, position: BlockPosition) {
-        signs[arenaName] = position
-    }
-
-    override fun clearSign(arenaName: String) {
-        signs.remove(arenaName)
+    override fun setSign(arena: Arena.Id, position: BlockPosition) {
+        signs[arena] = position
     }
 
-    override fun signOwner(position: BlockPosition): String? = signs.entries.firstOrNull { (_, pos) -> pos == position }?.key
+    override fun clearSign(arena: Arena.Id) {
+        signs.remove(arena)
+    }
+
+    override fun signOwner(position: BlockPosition): Arena.Id? = signs.entries.firstOrNull { (_, pos) -> pos == position }?.key
 }
 
 class InMemoryPlayerStatsRepository : PlayerStatsRepository {

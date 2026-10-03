@@ -55,7 +55,7 @@ class SqliteArenaRepositoryTest {
         assertEquals(listOf("b1", "a1"), loaded.map { it.name })
         assertTrue(loaded[0].enabled)
 
-        repo.delete("b1")
+        repo.delete(arenaId("b1"))
         assertEquals(listOf("a1"), repo.loadAll().map { it.name })
     }
 
@@ -74,9 +74,9 @@ class SqliteArenaRepositoryTest {
         val arenas = SqliteArenaRepository(store)
         arenas.save(enabledArena("a1"))
         SqliteKitStore(store).saveArenaKit("a1", PaperInventorySnapshot())
-        SqliteArenaSignRepository(store).setSign("a1", BlockPosition.new("world", 1, 2, 3))
+        SqliteArenaSignRepository(store).setSign(arenaId("a1"), BlockPosition.new("world", 1, 2, 3))
 
-        arenas.delete("a1")
+        arenas.delete(arenaId("a1"))
         assertEquals(0, countRows(store, "arena_kits"))
         assertEquals(0, countRows(store, "arena_signs"))
     }

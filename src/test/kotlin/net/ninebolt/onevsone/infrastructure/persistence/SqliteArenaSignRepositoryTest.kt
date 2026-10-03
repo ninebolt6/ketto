@@ -19,23 +19,33 @@ class SqliteArenaSignRepositoryTest {
     @Test
     fun `sign index is rebuilt from the table by a new instance`() = withStore(folder) { store ->
         SqliteArenaRepository(store).save(Arena.Disabled.new(arenaId("a1")))
-        SqliteArenaSignRepository(store).setSign("a1", BlockPosition.new("world", 5, 64, 5))
+        SqliteArenaSignRepository(store).setSign(arenaId("a1"), BlockPosition.new("world", 5, 64, 5))
         val fresh = SqliteArenaSignRepository(store)
-        assertEquals("a1", fresh.signOwner(BlockPosition.new("world", 5, 64, 5)))
-        assertEquals(5, fresh.signLocation("a1")!!.x)
+        assertEquals(arenaId("a1"), fresh.signOwner(BlockPosition.new("world", 5, 64, 5)))
+        assertEquals(5, fresh.signLocation(arenaId("a1"))!!.x)
     }
 
     @Test
     fun `setSign releases old position and clearSign removes it`() = withStore(folder) { store ->
         SqliteArenaRepository(store).save(Arena.Disabled.new(arenaId("a1")))
         val repo = SqliteArenaSignRepository(store)
-        repo.setSign("a1", BlockPosition.new("world", 5, 64, 5))
-        repo.setSign("a1", BlockPosition.new("world", 9, 64, 9))
+        repo.setSign(arenaId("a1"), BlockPosition.new("world", 5, 64, 5))
+        repo.setSign(arenaId("a1"), BlockPosition.new("world", 9, 64, 9))
         assertNull(repo.signOwner(BlockPosition.new("world", 5, 64, 5)))
-        assertEquals("a1", repo.signOwner(BlockPosition.new("world", 9, 64, 9)))
-        assertEquals(9, repo.signLocation("a1")!!.x)
-        repo.clearSign("a1")
+        assertEquals(arenaId("a1"), repo.signOwner(BlockPosition.new("world", 9, 64, 9)))
+        assertEquals(9, repo.signLocation(arenaId("a1"))!!.x)
+        repo.clearSign(arenaId("a1"))
         assertNull(repo.signOwner(BlockPosition.new("world", 9, 64, 9)))
         assertEquals(0, countRows(store, "arena_signs"))
+    }
+
+    @Test
+    fun `rows with an invalid arena name are skipped`() = withStore(folder) { store ->
+        store.exec("INSERT INTO arenas(name, enabled, seq) VALUES ('create', 0, 1)")
+        store.exec("INSERT INTO arena_signs(arena_name, world, x, y, z) VALUES ('create', 'world', 5, 64, 5)")
+
+        val repo = SqliteArenaSignRepository(store)
+
+        assertNull(repo.signOwner(BlockPosition.new("world", 5, 64, 5)))
     }
 }

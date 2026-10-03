@@ -3,7 +3,6 @@ package net.ninebolt.onevsone.infrastructure.paper
 import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.application.ArenaSignService
 import net.ninebolt.onevsone.application.JoinOutput
-import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.infrastructure.paper.message.Message
 import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import org.bukkit.block.Block
@@ -31,13 +30,11 @@ class ArenaSignListener(
         if (event.hand != EquipmentSlot.HAND) return
         val block = event.clickedBlock ?: return
         if (block.state !is Sign) return
-        val name = signs.signOwner(block.toBlockPosition()) ?: return
+        val id = signs.signOwner(block.toBlockPosition()) ?: return
         // Vanilla lets anyone open the sign edit screen by right-clicking an unwaxed sign
         event.denyUse()
-        val output = Arena.Id.of(name)
-            ?.let { service.join(event.player.uniqueId.toKotlinUuid(), event.player.name, it) }
-            ?: JoinOutput.NotFound
-        renderJoin(event.player, name, output)
+        val output = service.join(event.player.uniqueId.toKotlinUuid(), event.player.name, id)
+        renderJoin(event.player, id.name, output)
     }
 
     @EventHandler

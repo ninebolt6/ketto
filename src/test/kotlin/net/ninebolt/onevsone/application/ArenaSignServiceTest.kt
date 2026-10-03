@@ -20,8 +20,8 @@ class ArenaSignServiceTest {
         app.newArena()
         val sign = BlockPosition.new("world", 3, 64, 3)
         assertTrue(app.signs.setSign(arenaId("arena1"), sign))
-        assertEquals(sign, app.arenas.signLocation("arena1"))
-        assertEquals("arena1", app.signs.signOwner(BlockPosition.new("world", 3, 64, 3)))
+        assertEquals(sign, app.arenas.signLocation(arenaId("arena1")))
+        assertEquals(arenaId("arena1"), app.signs.signOwner(BlockPosition.new("world", 3, 64, 3)))
         assertEquals(
             Triple(app.registry.arena(arenaId("arena1"))!!, sign, ArenaState.Kind.WAITING),
             app.presentation.signUpdates.last(),
@@ -29,7 +29,7 @@ class ArenaSignServiceTest {
 
         assertFalse(app.signs.setSign(arenaId("missing"), sign))
         assertTrue(app.signs.clearSign(arenaId("arena1")))
-        assertNull(app.arenas.signLocation("arena1"))
+        assertNull(app.arenas.signLocation(arenaId("arena1")))
         assertFalse(app.signs.clearSign(arenaId("missing")))
     }
 

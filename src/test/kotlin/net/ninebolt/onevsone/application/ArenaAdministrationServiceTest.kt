@@ -47,8 +47,8 @@ class ArenaAdministrationServiceTest {
         assertNull(app.registry.resolveArena("arena1"))
         assertNull(app.registry.arenaOf(p1.id))
         assertNull(app.registry.arenaOf(p2.id))
-        assertNull(app.arenas.signLocation("arena1"))
-        assertNull(app.arenas.signs["arena1"])
+        assertNull(app.arenas.signLocation(arenaId("arena1")))
+        assertNull(app.arenas.signs[arenaId("arena1")])
         assertFalse(app.arenas.names.contains("arena1"))
         assertEquals(listOf(arena), app.equipment.forgottenKits)
 
@@ -137,12 +137,12 @@ class ArenaAdministrationServiceTest {
 
         app.admin.setSpawn(app.admin.resolveArenaId("ARENA1")!!, SpawnSlot.FIRST, WorldPosition.new("world", 1.0, 64.0, 1.0))
         app.signs.setSign(app.admin.resolveArenaId("arena1")!!, BlockPosition.new("world", 3, 64, 3))
-        assertEquals("Arena1", app.signs.signOwner(BlockPosition.new("world", 3, 64, 3)))
+        assertEquals("Arena1", app.signs.signOwner(BlockPosition.new("world", 3, 64, 3))?.name)
 
         assertNull(app.admin.remove("aReNa1"))
         assertNull(app.registry.resolveArena("Arena1"))
-        assertNull(app.arenas.signLocation("Arena1"))
-        assertNull(app.arenas.signs["Arena1"])
+        assertNull(app.arenas.signLocation(arenaId("Arena1")))
+        assertNull(app.arenas.signs[arenaId("Arena1")])
     }
 
     @Test

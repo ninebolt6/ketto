@@ -54,7 +54,7 @@ class ArenaSignListenerTest {
     @Test
     fun `registered sign join works and unregistered ignored`() {
         val arena = env.newArena()
-        env.signRepo.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
+        env.signRepo.setSign(arenaId("arena1"), BlockPosition.new("world", 3, 64, 3))
         val p1 = env.player("Alice")
 
         val unregistered = interact(p1, env.signBlock(9, 64, 9))
@@ -77,7 +77,7 @@ class ArenaSignListenerTest {
     @Test
     fun `first join waits for one more and second sign join starts the match`() {
         env.newArena()
-        env.signRepo.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
+        env.signRepo.setSign(arenaId("arena1"), BlockPosition.new("world", 3, 64, 3))
         val block = env.signBlock(3, 64, 3)
         val p1 = env.player("Alice")
         val p2 = env.player("Bob")
@@ -96,7 +96,7 @@ class ArenaSignListenerTest {
     @Test
     fun `pending restore join output explains why joining is blocked`() {
         env.newArena()
-        env.signRepo.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
+        env.signRepo.setSign(arenaId("arena1"), BlockPosition.new("world", 3, 64, 3))
         val p1 = env.player("Alice")
 
         // A pending row whose payload cannot decode fails the restore, which reports RestorePending
@@ -120,7 +120,7 @@ class ArenaSignListenerTest {
     @Test
     fun `cannot join sign click shows message`() {
         val arena = env.newArena()
-        env.signRepo.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
+        env.signRepo.setSign(arenaId("arena1"), BlockPosition.new("world", 3, 64, 3))
         val block = env.signBlock(3, 64, 3)
         val p1 = env.player("Alice")
         val p2 = env.player("Bob")
@@ -135,7 +135,7 @@ class ArenaSignListenerTest {
     @Test
     fun `sign click on a disabled arena reports not enabled`() {
         env.newArena("arena1", enabled = false)
-        env.signRepo.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
+        env.signRepo.setSign(arenaId("arena1"), BlockPosition.new("world", 3, 64, 3))
         val p1 = env.player("Alice")
 
         env.fire(interact(p1, env.signBlock(3, 64, 3)))
@@ -146,7 +146,7 @@ class ArenaSignListenerTest {
     @Test
     fun `sign click while already in the arena reports already joined`() {
         env.newArena()
-        env.signRepo.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
+        env.signRepo.setSign(arenaId("arena1"), BlockPosition.new("world", 3, 64, 3))
         val block = env.signBlock(3, 64, 3)
         val p1 = env.player("Alice")
 
@@ -157,22 +157,9 @@ class ArenaSignListenerTest {
     }
 
     @Test
-    fun `a sign registered to an invalid arena name reports not found`() {
-        env.store.exec(
-            "INSERT INTO arenas(name, enabled, spawn1_world, spawn1_x, spawn1_y, spawn1_z, seq) VALUES ('create', 1, 'w', 0, 0, 0, 1)",
-        )
-        env.signRepo.setSign("create", BlockPosition.new("world", 3, 64, 3))
-        val p1 = env.player("Alice")
-
-        env.fire(interact(p1, env.signBlock(3, 64, 3)))
-        assertTrue(p1.drainMessages().any { it.contains("does not exist") })
-        assertNull(env.registry.arenaOf(p1.uuid))
-    }
-
-    @Test
     fun `non sign block and non right click ignored`() {
         env.newArena()
-        env.signRepo.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
+        env.signRepo.setSign(arenaId("arena1"), BlockPosition.new("world", 3, 64, 3))
         val p1 = env.player("Alice")
 
         env.fire(interact(p1, env.plainBlock(3, 64, 3)))
@@ -185,7 +172,7 @@ class ArenaSignListenerTest {
     @Test
     fun `registered sign cannot be broken until unregistered`() {
         env.newArena()
-        env.signRepo.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
+        env.signRepo.setSign(arenaId("arena1"), BlockPosition.new("world", 3, 64, 3))
         val p1 = env.player("Alice")
         val sim = p1.simulation()
 
@@ -203,7 +190,7 @@ class ArenaSignListenerTest {
     @Test
     fun `registered sign survives explosions`() {
         env.newArena()
-        env.signRepo.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
+        env.signRepo.setSign(arenaId("arena1"), BlockPosition.new("world", 3, 64, 3))
         val sign = env.signBlock(3, 64, 3)
         val plain = env.plainBlock(9, 64, 9)
 
@@ -225,7 +212,7 @@ class ArenaSignListenerTest {
     @Test
     fun `non sign break is ignored`() {
         env.newArena()
-        env.signRepo.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
+        env.signRepo.setSign(arenaId("arena1"), BlockPosition.new("world", 3, 64, 3))
         val p1 = env.player("Alice")
 
         val event = p1.simulation().breakBlock(env.plainBlock(3, 64, 3))
@@ -235,7 +222,7 @@ class ArenaSignListenerTest {
     @Test
     fun `right click without a clicked block is ignored`() {
         env.newArena()
-        env.signRepo.setSign("arena1", BlockPosition.new("world", 3, 64, 3))
+        env.signRepo.setSign(arenaId("arena1"), BlockPosition.new("world", 3, 64, 3))
         val p1 = env.player("Alice")
 
         val event = PlayerInteractEvent(p1, Action.RIGHT_CLICK_BLOCK, null, null, BlockFace.SELF, EquipmentSlot.HAND)

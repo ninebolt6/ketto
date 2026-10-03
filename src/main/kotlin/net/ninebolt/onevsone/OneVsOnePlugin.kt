@@ -80,7 +80,7 @@ private class PluginModule(
 ) {
     private val arenaRepository = SqliteArenaRepository(store, plugin.logger)
     private val lobbyRepository = SqliteLobbyRepository(store)
-    private val signRepository = SqliteArenaSignRepository(store)
+    private val signRepository = SqliteArenaSignRepository(store, plugin.logger)
     private val stats = SqlitePlayerStatsRepository(store)
 
     private val lookup = PaperPlayerLookup(plugin.server)
