@@ -11,7 +11,7 @@ import kotlin.uuid.Uuid
 // Calls are serialized on the main thread, so the throttle map needs no synchronization
 class PlayerStatsService(
     private val statsRepository: PlayerStatsRepository,
-    private val players: PlayerPort,
+    private val playerPort: PlayerPort,
     private val logger: Logger,
 ) {
 
@@ -22,7 +22,7 @@ class PlayerStatsService(
             onResult(StatsOutput.Cooldown)
             return
         }
-        players.resolveOfflineId(targetName) { uuid ->
+        playerPort.resolveOfflineId(targetName) { uuid ->
             onResult(uuid?.let(::read) ?: StatsOutput.Missing)
         }
     }

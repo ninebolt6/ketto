@@ -10,7 +10,7 @@ import net.ninebolt.onevsone.domain.BlockPosition
 class ArenaSignService(
     private val sessions: ArenaSessions,
     private val signRepository: ArenaSignRepository,
-    private val presentation: PresentationPort,
+    private val presentationPort: PresentationPort,
 ) {
     fun signOwner(position: BlockPosition): Arena.Id? = signRepository.signOwner(position)
 
@@ -19,14 +19,14 @@ class ArenaSignService(
         val owner = signRepository.signOwner(position)
         if (owner != null && owner != arena.id) return false
         signRepository.setSign(arena.id, position)
-        presentation.updateSign(arena, position, match.state.kind)
+        presentationPort.updateSign(arena, position, match.state.kind)
         return true
     }
 
     fun refreshSign(arena: Arena.Id, state: ArenaState) {
         val position = signRepository.signLocation(arena) ?: return
         val resolved = sessions.arena(arena) ?: return
-        presentation.updateSign(resolved, position, state.kind)
+        presentationPort.updateSign(resolved, position, state.kind)
     }
 
     // A superseded match snapshot must not overwrite the live sign

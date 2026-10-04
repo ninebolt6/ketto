@@ -14,7 +14,7 @@ import org.bukkit.entity.Player
 import kotlin.uuid.Uuid
 
 class PaperEquipment(
-    private val backups: SqliteBackupStore,
+    private val backupStore: SqliteBackupStore,
     private val kitStore: SqliteKitStore,
     private val lookup: PaperPlayerLookup,
 ) : KitPort,
@@ -39,12 +39,12 @@ class PaperEquipment(
                 PaperInventorySnapshot.capture(player.inventory),
             )
         }
-        backups.saveBackups(captured)
+        backupStore.saveBackups(captured)
         return captured.map { it.ref }
     }
 
     override fun restore(backup: BackupRef) {
-        val snapshot = backups.backupFor(backup)?.snapshot
+        val snapshot = backupStore.backupFor(backup)?.snapshot
             ?: throw PersistenceException("No stored backup ${backup.backupId} for ${backup.playerName}")
         val player = lookup.resolve(backup.playerId)
             ?: throw PersistenceException("Player ${backup.playerName} is not available for restore")
@@ -52,12 +52,12 @@ class PaperEquipment(
     }
 
     override fun discard(backup: BackupRef) {
-        backups.deleteBackup(backup)
+        backupStore.deleteBackup(backup)
     }
 
-    override fun pendingFor(playerId: Uuid): BackupRef? = backups.pendingFor(playerId)
+    override fun pendingFor(playerId: Uuid): BackupRef? = backupStore.pendingFor(playerId)
 
-    override fun pendingRefs(): List<BackupRef> = backups.pendingRefs()
+    override fun pendingRefs(): List<BackupRef> = backupStore.pendingRefs()
 
     override fun applyKit(arena: Arena.Id, playerId: Uuid) {
         val player = lookup.resolve(playerId)

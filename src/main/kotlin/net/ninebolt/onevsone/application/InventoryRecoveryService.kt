@@ -15,23 +15,23 @@ import kotlin.uuid.Uuid
 
 // Deferred callbacks are validated by comparing the still-pending BackupRef
 class InventoryRecoveryService(
-    private val backups: InventoryBackupPort,
-    private val players: PlayerPort,
+    private val backupPort: InventoryBackupPort,
+    private val playerPort: PlayerPort,
     private val lobbyRepository: LobbyRepository,
-    private val presentation: PresentationPort,
+    private val presentationPort: PresentationPort,
     private val logger: Logger,
 ) {
     fun backupBeforeMatch(participants: List<Participant>) {
-        backups.backupBeforeMatch(MatchId.new(), participants)
+        backupPort.backupBeforeMatch(MatchId.new(), participants)
     }
 
-    fun pending(playerId: Uuid): BackupRef? = backups.pendingFor(playerId)
+    fun pending(playerId: Uuid): BackupRef? = backupPort.pendingFor(playerId)
 
     fun restoreNow(handle: PlayerHandle, ref: BackupRef): Boolean {
-        if (backups.pendingFor(handle.id) != ref) return false
+        if (backupPort.pendingFor(handle.id) != ref) return false
         if (!restorePayload(handle, ref)) return false
         try {
-            backups.discard(ref)
+            backupPort.discard(ref)
         } catch (e: PersistenceException) {
             // A failed delete leaves the record on disk; re-restoring on next startup is the safe side
             logger.log(Level.SEVERE, "Could not discard restored backup for ${handle.name} (${handle.id}); record retained", e)
@@ -41,12 +41,12 @@ class InventoryRecoveryService(
 
     private fun restorePayload(handle: PlayerHandle, ref: BackupRef): Boolean {
         try {
-            backups.restore(ref)
+            backupPort.restore(ref)
         } catch (e: PersistenceException) {
             logger.log(Level.SEVERE, "Could not restore inventory for ${handle.name} (${handle.id}); backup retained", e)
             return false
         }
-        presentation.clearScoreboard(handle.id)
+        presentationPort.clearScoreboard(handle.id)
         return true
     }
 
@@ -67,13 +67,13 @@ class InventoryRecoveryService(
     // Shutdown runs no future ticks, so restores are synchronous; dead players cannot be teleported and keep their record for next login
     fun restoreAllOnline() {
         val refs = try {
-            backups.pendingRefs()
+            backupPort.pendingRefs()
         } catch (e: PersistenceException) {
             logger.log(Level.WARNING, "Could not list pending backups; leaving records for next startup", e)
             return
         }
         refs.forEach { ref ->
-            val handle = players.handle(ref.playerId) ?: return@forEach
+            val handle = playerPort.handle(ref.playerId) ?: return@forEach
             if (handle.dead) {
                 restorePayload(handle, ref)
             } else {

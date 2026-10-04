@@ -13,7 +13,7 @@ import kotlin.uuid.Uuid
 
 class MatchParticipationService(
     private val sessions: ArenaSessions,
-    private val players: PlayerPort,
+    private val playerPort: PlayerPort,
     private val recovery: InventoryRecoveryService,
     private val progression: MatchProgressionService,
     private val signs: ArenaSignService,
@@ -36,7 +36,7 @@ class MatchParticipationService(
             JoinOutcome.Rejected -> return JoinOutput.Rejected
         }
 
-        val handle = players.handle(playerId)
+        val handle = playerPort.handle(playerId)
         recovery.pending(playerId)?.let { ref ->
             if (handle == null || handle.dead) return JoinOutput.Rejected
             if (!recovery.restoreNow(handle, ref)) return JoinOutput.RestorePending
@@ -66,7 +66,7 @@ class MatchParticipationService(
         val step = sessions.transactFor(playerId) { it.forfeit(playerId) }
         if (step == null) {
             recovery.pending(playerId)?.let { ref ->
-                players.handle(playerId)?.let { handle ->
+                playerPort.handle(playerId)?.let { handle ->
                     recovery.restoreNow(handle, ref)
                 }
             }
@@ -88,7 +88,7 @@ class MatchParticipationService(
     fun restorePending(playerId: Uuid) {
         if (sessions.isJoined(playerId)) return
         val ref = recovery.pending(playerId) ?: return
-        val handle = players.handle(playerId) ?: return
+        val handle = playerPort.handle(playerId) ?: return
         // A login can arrive dead; revive first so the restore lands on a live player
         handle.respawn()
         recovery.restoreNow(handle, ref)

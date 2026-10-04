@@ -86,36 +86,36 @@ private class PluginModule(
     private val lookup = PaperPlayerLookup(plugin.server)
     private val players = PaperPlayers(lookup = lookup, server = plugin.server, plugin = plugin, logger = plugin.logger)
     private val equipment = PaperEquipment(
-        backups = SqliteBackupStore(store, plugin.logger),
+        backupStore = SqliteBackupStore(store, plugin.logger),
         kitStore = SqliteKitStore(store),
         lookup = lookup,
     )
     private val presentation = PaperPresentation(server = plugin.server, messenger = messenger, logger = plugin.logger)
 
     private val sessions = ArenaSessions(requiredWins)
-    private val signs = ArenaSignService(sessions = sessions, signRepository = signRepository, presentation = presentation)
+    private val signs = ArenaSignService(sessions = sessions, signRepository = signRepository, presentationPort = presentation)
     private val recovery = InventoryRecoveryService(
-        backups = equipment,
-        players = players,
+        backupPort = equipment,
+        playerPort = players,
         lobbyRepository = lobbyRepository,
-        presentation = presentation,
+        presentationPort = presentation,
         logger = plugin.logger,
     )
-    private val statsService = PlayerStatsService(statsRepository = statsRepository, players = players, logger = plugin.logger)
+    private val statsService = PlayerStatsService(statsRepository = statsRepository, playerPort = players, logger = plugin.logger)
     private val progression = MatchProgressionService(
         sessions = sessions,
         signs = signs,
         stats = statsService,
-        kit = equipment,
-        players = players,
-        scheduler = PaperScheduler(plugin),
-        presentation = presentation,
+        kitPort = equipment,
+        playerPort = players,
+        schedulerPort = PaperScheduler(plugin),
+        presentationPort = presentation,
         recovery = recovery,
         logger = plugin.logger,
     )
     private val participation = MatchParticipationService(
         sessions = sessions,
-        players = players,
+        playerPort = players,
         recovery = recovery,
         progression = progression,
         signs = signs,
@@ -132,7 +132,7 @@ private class PluginModule(
         sessions = sessions,
         arenaRepository = arenaRepository,
         signRepository = signRepository,
-        kit = equipment,
+        kitPort = equipment,
         progression = progression,
         signs = signs,
     )

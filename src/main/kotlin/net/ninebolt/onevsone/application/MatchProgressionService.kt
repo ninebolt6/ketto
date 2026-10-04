@@ -23,18 +23,18 @@ class MatchProgressionService(
     private val sessions: ArenaSessions,
     private val signs: ArenaSignService,
     private val stats: PlayerStatsService,
-    private val kit: KitPort,
-    private val players: PlayerPort,
-    private val scheduler: SchedulerPort,
-    private val presentation: PresentationPort,
+    private val kitPort: KitPort,
+    private val playerPort: PlayerPort,
+    private val schedulerPort: SchedulerPort,
+    private val presentationPort: PresentationPort,
     private val recovery: InventoryRecoveryService,
     private val logger: Logger,
 ) {
     private val timers = mutableMapOf<Arena.Id, Cancellation>()
 
     fun requestRespawn(playerId: Uuid) {
-        scheduler.schedule(0) {
-            players.handle(playerId)?.takeIf { it.dead }?.respawn()
+        schedulerPort.schedule(0) {
+            playerPort.handle(playerId)?.takeIf { it.dead }?.respawn()
         }
     }
 
@@ -60,18 +60,18 @@ class MatchProgressionService(
         cancelCountdown(arenaId)
         val epoch = match.epoch
         try {
-            val winnerHandle = players.handle(outcome.winner.id)
+            val winnerHandle = playerPort.handle(outcome.winner.id)
             if (winnerHandle != null) {
                 rearm(arenaId, outcome.winner, winnerHandle)
             }
 
-            players.handle(outcome.loser.id)?.let { presentation.roundEndSound(it.position()) }
+            playerPort.handle(outcome.loser.id)?.let { presentationPort.roundEndSound(it.position()) }
 
             val ids = match.participants.map { it.id }
-            presentation.roundWon(ids, outcome.round, outcome.winner.name)
-            presentation.updateScoreboard(match)
+            presentationPort.roundWon(ids, outcome.round, outcome.winner.name)
+            presentationPort.updateScoreboard(match)
 
-            val loserHandle = players.handle(outcome.loser.id)
+            val loserHandle = playerPort.handle(outcome.loser.id)
             if (death) {
                 scheduleDeferred(outcome.loser.id, {
                     sessions.match(arenaId)?.epoch == epoch
@@ -110,11 +110,11 @@ class MatchProgressionService(
             logger.severe("Match in arena ${arenaId.name} ended without a pending backup; retained rows restore on next login")
         }
 
-        presentation.champion(arenaId, winner.name)
+        presentationPort.champion(arenaId, winner.name)
 
         runNowOrAfterRespawn(winner.id, winnerRef) { h ->
             resetAndRestore(h, winnerRef)
-            if (cause != DefeatCause.FORFEIT) presentation.championFirework(winner.id)
+            if (cause != DefeatCause.FORFEIT) presentationPort.championFirework(winner.id)
         }
 
         if (cause == DefeatCause.DEATH) {
@@ -123,7 +123,7 @@ class MatchProgressionService(
             }
         } else {
             // Losers who died via quit arrive here dead, so do not defer on a dead check
-            players.handle(loser.id)?.let { h ->
+            playerPort.handle(loser.id)?.let { h ->
                 if (cause == DefeatCause.FORFEIT) {
                     loserRef?.let { recovery.restoreNow(h, it) }
                 } else {
@@ -155,7 +155,7 @@ class MatchProgressionService(
     internal fun startInitialCountdown(arenaId: Arena.Id, epoch: Long) {
         runCountdown(arenaId, epoch, ticks = 5) {
             if (remaining > 0) {
-                presentation.countdownTick(participantIds, remaining)
+                presentationPort.countdownTick(participantIds, remaining)
                 return@runCountdown false
             }
             if (online.any { (_, h) -> h.dead }) return@runCountdown false
@@ -182,8 +182,8 @@ class MatchProgressionService(
                     abort(arenaId)
                     return@runCountdown true
                 }
-                presentation.matchStart(participantIds)
-                presentation.updateScoreboard(began.match)
+                presentationPort.matchStart(participantIds)
+                presentationPort.updateScoreboard(began.match)
                 signs.refreshSign(began.match)
             } catch (e: Exception) {
                 // Mid-swap failure: abort restores the players from the backups already taken
@@ -199,12 +199,12 @@ class MatchProgressionService(
             when (remaining) {
                 7 -> online.forEach { (sp, h) -> rearm(arenaId, sp, h) }
 
-                in 1..5 -> presentation.roundCountdownTick(participantIds, remaining)
+                in 1..5 -> presentationPort.roundCountdownTick(participantIds, remaining)
 
                 0 -> {
                     val resumed = sessions.transact(arenaId) { it.resumeRound() } ?: return@runCountdown true
                     if (resumed.outcome) {
-                        presentation.roundStart(participantIds)
+                        presentationPort.roundStart(participantIds)
                         signs.refreshSign(resumed.match)
                     }
                 }
@@ -219,7 +219,7 @@ class MatchProgressionService(
         ticks: Int,
         onTick: CountdownTick.() -> Boolean,
     ) {
-        timers[arenaId] = scheduler.repeat(10, 20) { task, iteration ->
+        timers[arenaId] = schedulerPort.repeat(10, 20) { task, iteration ->
             val match = sessions.match(arenaId)
             val paired = match?.paired
             if (match == null || match.epoch != epoch || paired == null) {
@@ -227,7 +227,7 @@ class MatchProgressionService(
                 return@repeat
             }
             val slotted = paired.slotted.toList()
-            val online = slotted.mapNotNull { sp -> players.handle(sp.id)?.let { sp to it } }
+            val online = slotted.mapNotNull { sp -> playerPort.handle(sp.id)?.let { sp to it } }
             if (online.size != slotted.size) {
                 task.cancel()
                 abort(arenaId)
@@ -247,7 +247,7 @@ class MatchProgressionService(
 
     private fun rearm(arenaId: Arena.Id, participant: SlottedParticipant, handle: PlayerHandle) {
         handle.prepareForMatch()
-        kit.applyKit(arenaId, participant.id)
+        kitPort.applyKit(arenaId, participant.id)
     }
 
     private fun resetAndRestore(handle: PlayerHandle, ref: BackupRef?) {
@@ -261,7 +261,7 @@ class MatchProgressionService(
         ref: BackupRef?,
         action: (PlayerHandle) -> Unit,
     ) {
-        val handle = players.handle(playerId) ?: return
+        val handle = playerPort.handle(playerId) ?: return
         if (!handle.dead) {
             action(handle)
             return
@@ -274,9 +274,9 @@ class MatchProgressionService(
     }
 
     private fun scheduleDeferred(playerId: Uuid, valid: () -> Boolean, action: (PlayerHandle) -> Unit) {
-        scheduler.schedule(0) {
+        schedulerPort.schedule(0) {
             if (!valid()) return@schedule
-            val h = players.handle(playerId)?.takeIf { it.online } ?: return@schedule
+            val h = playerPort.handle(playerId)?.takeIf { it.online } ?: return@schedule
             if (h.dead) {
                 h.respawn()
                 if (!valid()) return@schedule

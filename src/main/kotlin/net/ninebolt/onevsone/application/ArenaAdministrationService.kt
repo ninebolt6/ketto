@@ -13,7 +13,7 @@ class ArenaAdministrationService(
     private val sessions: ArenaSessions,
     private val arenaRepository: ArenaRepository,
     private val signRepository: ArenaSignRepository,
-    private val kit: KitPort,
+    private val kitPort: KitPort,
     private val progression: MatchProgressionService,
     private val signs: ArenaSignService,
 ) {
@@ -36,7 +36,7 @@ class ArenaAdministrationService(
         arenaRepository.delete(arena.id)
         sessions.removeArena(arena.id)
         signRepository.clearSign(arena.id)
-        kit.forgetKit(arena.id)
+        kitPort.forgetKit(arena.id)
         return null
     }
 
@@ -77,7 +77,7 @@ class ArenaAdministrationService(
 
     fun setKit(id: Arena.Id, playerId: Uuid) {
         if (sessions.arena(id) == null) return
-        kit.saveKit(id, playerId)
+        kitPort.saveKit(id, playerId)
     }
 }
 
