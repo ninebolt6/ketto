@@ -107,7 +107,7 @@ class ArchitectureTest {
             .filter { it.packageName.startsWith("net.ninebolt.onevsone.infrastructure") }
             .flatMap { it.methodCallsFromSelf }
             .filter {
-                it.targetOwner.name == "net.ninebolt.onevsone.application.ArenaApplicationService" &&
+                it.targetOwner.name == "net.ninebolt.onevsone.application.MatchParticipationService" &&
                     it.name.substringBefore('-') in forbiddenNames
             }
         assertTrue(directCalls.isEmpty(), "progression entrypoints called directly: $directCalls")

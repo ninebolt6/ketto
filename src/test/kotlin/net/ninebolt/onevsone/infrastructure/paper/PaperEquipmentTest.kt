@@ -18,7 +18,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.uuid.Uuid
 
-class PaperEquipmentAdapterTest {
+class PaperEquipmentTest {
 
     @TempDir
     lateinit var folder: File
@@ -37,7 +37,7 @@ class PaperEquipmentAdapterTest {
 
     private fun storeBackup(p: ArenaPlayerMock): BackupRef {
         p.inventory.setItem(0, env.item(Material.DIAMOND))
-        p.inventory.setChestplate(env.item(Material.DIAMOND_CHESTPLATE))
+        p.inventory.chestplate = env.item(Material.DIAMOND_CHESTPLATE)
         val snapshot = PaperInventorySnapshot.capture(p.inventory)
         p.inventory.clear()
         p.inventory.armorContents = arrayOfNulls(4)

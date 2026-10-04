@@ -15,19 +15,19 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.uuid.Uuid
 
-class ArenaApplicationServiceTest {
+class MatchParticipationServiceTest {
 
     @Test
     fun `first join waits and second starts countdown`() {
         val app = TestApp()
         app.newArena()
         val p1 = app.players.add("Alice")
-        assertEquals(JoinOutput.JoinedWaiting, app.service.join(p1.id, p1.name, arenaId("arena1")))
+        assertEquals(JoinOutput.JoinedWaiting, app.participation.join(p1.id, p1.name, arenaId("arena1")))
         assertEquals(ArenaState.Kind.ONEMORE, app.state())
-        assertEquals(arenaId("arena1"), app.registry.arenaOf(p1.id))
+        assertEquals(arenaId("arena1"), app.sessions.arenaIdOf(p1.id))
 
         val p2 = app.players.add("Bob")
-        assertEquals(JoinOutput.JoinedStarting, app.service.join(p2.id, p2.name, arenaId("arena1")))
+        assertEquals(JoinOutput.JoinedStarting, app.participation.join(p2.id, p2.name, arenaId("arena1")))
         assertEquals(ArenaState.Kind.COUNTDOWN, app.state())
         assertEquals(1, app.scheduler.timers.size)
         assertEquals(10L, app.scheduler.timers.last().delay)
@@ -39,8 +39,8 @@ class ArenaApplicationServiceTest {
         val app = TestApp()
         app.newArena()
         val p = app.players.add("Alice")
-        assertEquals(JoinOutput.NotFound, app.service.join(p.id, p.name, arenaId("ghost")))
-        assertNull(app.registry.arenaOf(p.id))
+        assertEquals(JoinOutput.NotFound, app.participation.join(p.id, p.name, arenaId("ghost")))
+        assertNull(app.sessions.arenaIdOf(p.id))
     }
 
     @Test
@@ -49,10 +49,10 @@ class ArenaApplicationServiceTest {
         app.newArena("a1")
         app.newArena("a2")
         val p = app.players.add("Alice")
-        assertEquals(JoinOutput.JoinedWaiting, app.service.join(p.id, p.name, arenaId("a1")))
-        assertEquals(JoinOutput.AlreadyJoined, app.service.join(p.id, p.name, arenaId("a2")))
-        assertEquals(arenaId("a1"), app.registry.arenaOf(p.id))
-        assertEquals(ArenaState.Kind.WAITING, app.service.matchOf("a2")!!.state.kind)
+        assertEquals(JoinOutput.JoinedWaiting, app.participation.join(p.id, p.name, arenaId("a1")))
+        assertEquals(JoinOutput.AlreadyJoined, app.participation.join(p.id, p.name, arenaId("a2")))
+        assertEquals(arenaId("a1"), app.sessions.arenaIdOf(p.id))
+        assertEquals(ArenaState.Kind.WAITING, app.participation.matchIn("a2")!!.state.kind)
     }
 
     @Test
@@ -61,15 +61,15 @@ class ArenaApplicationServiceTest {
         app.newArena("enabled")
         app.newArena("disabled", enabled = false)
         val p1 = app.players.add("Alice")
-        assertEquals(JoinOutput.NotEnabled, app.service.join(p1.id, p1.name, arenaId("disabled")))
-        assertNull(app.registry.arenaOf(p1.id))
+        assertEquals(JoinOutput.NotEnabled, app.participation.join(p1.id, p1.name, arenaId("disabled")))
+        assertNull(app.sessions.arenaIdOf(p1.id))
 
-        app.service.join(p1.id, p1.name, arenaId("enabled"))
+        app.participation.join(p1.id, p1.name, arenaId("enabled"))
         val p2 = app.players.add("Bob")
-        app.service.join(p2.id, p2.name, arenaId("enabled"))
+        app.participation.join(p2.id, p2.name, arenaId("enabled"))
         val p3 = app.players.add("Carol")
-        assertEquals(JoinOutput.InMatch, app.service.join(p3.id, p3.name, arenaId("enabled")))
-        assertNull(app.registry.arenaOf(p3.id))
+        assertEquals(JoinOutput.Rejected, app.participation.join(p3.id, p3.name, arenaId("enabled")))
+        assertNull(app.sessions.arenaIdOf(p3.id))
     }
 
     @Test
@@ -78,8 +78,8 @@ class ArenaApplicationServiceTest {
         app.newArena()
         val p1 = app.players.add("Alice")
         val p2 = app.players.add("Bob")
-        app.service.join(p1.id, p1.name, arenaId("arena1"))
-        app.service.join(p2.id, p2.name, arenaId("arena1"))
+        app.participation.join(p1.id, p1.name, arenaId("arena1"))
+        app.participation.join(p2.id, p2.name, arenaId("arena1"))
         app.scheduler.tick(5)
         assertEquals(ArenaState.Kind.COUNTDOWN, app.state())
         assertEquals(0, app.equipment.backupCalls)
@@ -104,7 +104,7 @@ class ArenaApplicationServiceTest {
         assertEquals(1, app.presentation.matchStarts.size)
         assertTrue(p1.events.contains("teleport"))
         assertTrue(p2.events.contains("teleport"))
-        assertEquals(2, app.service.matchOf("arena1")!!.participants.size)
+        assertEquals(2, app.participation.matchIn("arena1")!!.participants.size)
         assertNotNull(app.recovery.pending(p1.id))
         assertNotNull(app.recovery.pending(p2.id))
     }
@@ -115,13 +115,13 @@ class ArenaApplicationServiceTest {
         val (_, p2) = app.startMatch()
         assertEquals(1, app.equipment.backupCalls)
 
-        assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
+        assertTrue(app.participation.defeat(p2.id, DefeatCause.FALL))
         assertEquals(ArenaState.Kind.ROUNDCOUNTDOWN, app.state())
         app.scheduler.tick(8)
         assertEquals(ArenaState.Kind.INGAME, app.state())
         assertEquals(1, app.equipment.backupCalls)
 
-        assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
+        assertTrue(app.participation.defeat(p2.id, DefeatCause.FALL))
         app.scheduler.tick(8)
         assertEquals(1, app.equipment.backupCalls)
     }
@@ -130,28 +130,28 @@ class ArenaApplicationServiceTest {
     fun `round countdown accepts repeated falls`() {
         val app = TestApp()
         val (p1, p2) = app.startMatch()
-        assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
+        assertTrue(app.participation.defeat(p2.id, DefeatCause.FALL))
         assertEquals(ArenaState.Kind.ROUNDCOUNTDOWN, app.state())
         assertEquals(1, app.presentation.roundWins.size)
         assertEquals(Triple(listOf(p1.id, p2.id), 1, "Alice"), app.presentation.roundWins.last())
 
-        assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
-        assertEquals(2, app.service.matchOf("arena1")!!.winsOf(p1.id))
+        assertTrue(app.participation.defeat(p2.id, DefeatCause.FALL))
+        assertEquals(2, app.participation.matchIn("arena1")!!.winsOf(p1.id))
     }
 
     @Test
     fun `final defeat finishes match restores and records stats`() {
         val app = TestApp(requiredWins = 1)
         val (p1, p2) = app.startMatch()
-        assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
+        assertTrue(app.participation.defeat(p2.id, DefeatCause.FALL))
         assertEquals(ArenaState.Kind.WAITING, app.state())
-        assertNull(app.registry.arenaOf(p1.id))
-        assertNull(app.registry.arenaOf(p2.id))
+        assertNull(app.sessions.arenaIdOf(p1.id))
+        assertNull(app.sessions.arenaIdOf(p2.id))
         assertEquals(listOf(arenaId("arena1") to "Alice"), app.presentation.champions)
         assertEquals(1, app.stats.stats[p1.id]?.wins)
         assertEquals(1, app.stats.stats[p2.id]?.losses)
         assertEquals(2, app.equipment.restored.size)
-        assertEquals(2, app.equipment.acknowledged.size)
+        assertEquals(2, app.equipment.discarded.size)
         assertTrue(app.equipment.storedBackups.isEmpty())
         assertEquals(1, app.presentation.fireworks.size)
     }
@@ -162,11 +162,11 @@ class ArenaApplicationServiceTest {
         val (p1, p2) = app.joinedTwo()
         app.players.disconnect(p1)
         app.players.quittingScope(p1) {
-            app.service.quit(p1.id)
+            app.participation.quit(p1.id)
         }
         assertEquals(ArenaState.Kind.ONEMORE, app.state())
-        assertNull(app.registry.arenaOf(p1.id))
-        assertEquals(arenaId("arena1"), app.registry.arenaOf(p2.id))
+        assertNull(app.sessions.arenaIdOf(p1.id))
+        assertEquals(arenaId("arena1"), app.sessions.arenaIdOf(p2.id))
         assertTrue(app.stats.stats.isEmpty())
         assertTrue(app.equipment.restored.isEmpty())
         assertTrue(app.presentation.champions.isEmpty())
@@ -179,13 +179,13 @@ class ArenaApplicationServiceTest {
         val app = TestApp()
         app.newArena()
         val p1 = app.players.add("Alice")
-        app.service.join(p1.id, p1.name, arenaId("arena1"))
+        app.participation.join(p1.id, p1.name, arenaId("arena1"))
         app.players.disconnect(p1)
         app.players.quittingScope(p1) {
-            app.service.quit(p1.id)
+            app.participation.quit(p1.id)
         }
         assertEquals(ArenaState.Kind.WAITING, app.state())
-        assertNull(app.registry.arenaOf(p1.id))
+        assertNull(app.sessions.arenaIdOf(p1.id))
         assertTrue(app.stats.stats.isEmpty())
         assertTrue(app.equipment.restored.isEmpty())
     }
@@ -195,12 +195,12 @@ class ArenaApplicationServiceTest {
         val app = TestApp()
         app.newArena()
         val p1 = app.players.add("Alice")
-        assertEquals(LeaveError.NotJoined, app.service.leave(p1.id))
-        app.service.join(p1.id, p1.name, arenaId("arena1"))
+        assertEquals(LeaveError.NotJoined, app.participation.leave(p1.id))
+        app.participation.join(p1.id, p1.name, arenaId("arena1"))
         val p2 = app.players.add("Bob")
-        app.service.join(p2.id, p2.name, arenaId("arena1"))
-        assertEquals(LeaveError.NotWaiting, app.service.leave(p1.id))
-        assertEquals(arenaId("arena1"), app.registry.arenaOf(p1.id))
+        app.participation.join(p2.id, p2.name, arenaId("arena1"))
+        assertEquals(LeaveError.NotWaiting, app.participation.leave(p1.id))
+        assertEquals(arenaId("arena1"), app.sessions.arenaIdOf(p1.id))
     }
 
     @Test
@@ -208,10 +208,10 @@ class ArenaApplicationServiceTest {
         val app = TestApp()
         app.newArena()
         val p1 = app.players.add("Alice")
-        app.service.join(p1.id, p1.name, arenaId("arena1"))
-        assertNull(app.service.leave(p1.id))
+        app.participation.join(p1.id, p1.name, arenaId("arena1"))
+        assertNull(app.participation.leave(p1.id))
         assertEquals(ArenaState.Kind.WAITING, app.state())
-        assertNull(app.registry.arenaOf(p1.id))
+        assertNull(app.sessions.arenaIdOf(p1.id))
         assertTrue(app.equipment.restored.isEmpty())
     }
 
@@ -219,7 +219,7 @@ class ArenaApplicationServiceTest {
     fun `round countdown restores INGAME and releases resolution at completion`() {
         val app = TestApp()
         val (_, p2) = app.startMatch()
-        app.service.defeat(p2.id, DefeatCause.FALL)
+        app.participation.defeat(p2.id, DefeatCause.FALL)
         app.scheduler.tick()
         app.scheduler.tick()
         (5 downTo 1).forEach { n ->
@@ -230,7 +230,7 @@ class ArenaApplicationServiceTest {
         app.scheduler.tick()
         assertEquals(ArenaState.Kind.INGAME, app.state())
         assertEquals(1, app.presentation.roundStarts.size)
-        assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
+        assertTrue(app.participation.defeat(p2.id, DefeatCause.FALL))
     }
 
     @Test
@@ -241,8 +241,8 @@ class ArenaApplicationServiceTest {
         app.equipment.seedBackup(BackupRef.new(MatchId.new(), p.id, p.name))
         app.players.disconnect(p)
 
-        assertEquals(JoinOutput.InMatch, app.service.join(p.id, p.name, arenaId("arena1")))
-        assertNull(app.registry.arenaOf(p.id))
+        assertEquals(JoinOutput.Rejected, app.participation.join(p.id, p.name, arenaId("arena1")))
+        assertNull(app.sessions.arenaIdOf(p.id))
         assertTrue(app.equipment.restored.isEmpty())
     }
 
@@ -251,10 +251,10 @@ class ArenaApplicationServiceTest {
         val app = TestApp()
         app.newArena()
         val p = app.players.add("Alice")
-        app.service.join(p.id, p.name, arenaId("arena1"))
+        app.participation.join(p.id, p.name, arenaId("arena1"))
         app.recovery.backupBeforeMatch(listOf(Participant.new(p.id, p.name)))
 
-        app.service.restorePending(p.id)
+        app.participation.restorePending(p.id)
 
         assertTrue(app.equipment.restored.isEmpty())
         assertNotNull(app.recovery.pending(p.id))
@@ -264,7 +264,7 @@ class ArenaApplicationServiceTest {
     fun `restorePending without a pending backup does nothing`() {
         val app = TestApp()
         val p = app.players.add("Alice")
-        app.service.restorePending(p.id)
+        app.participation.restorePending(p.id)
         assertTrue(app.equipment.restored.isEmpty())
         assertTrue(p.events.isEmpty())
     }
@@ -276,7 +276,7 @@ class ArenaApplicationServiceTest {
         app.equipment.seedBackup(BackupRef.new(MatchId.new(), p.id, p.name))
         app.players.disconnect(p)
 
-        app.service.restorePending(p.id)
+        app.participation.restorePending(p.id)
 
         assertTrue(app.equipment.restored.isEmpty())
         assertNotNull(app.recovery.pending(p.id))
@@ -285,7 +285,7 @@ class ArenaApplicationServiceTest {
     @Test
     fun `quit without a match or pending backup is a no-op`() {
         val app = TestApp()
-        app.service.quit(Uuid.random())
+        app.participation.quit(Uuid.random())
         assertTrue(app.equipment.restored.isEmpty())
         assertTrue(app.logger.records.isEmpty())
     }
@@ -293,22 +293,22 @@ class ArenaApplicationServiceTest {
     @Test
     fun `defeat by a player without a match returns false`() {
         val app = TestApp()
-        assertFalse(app.service.defeat(Uuid.random(), DefeatCause.DEATH))
+        assertFalse(app.participation.defeat(Uuid.random(), DefeatCause.DEATH))
         app.newArena()
         val p = app.players.add("Alice")
-        app.service.join(p.id, p.name, arenaId("arena1"))
-        assertFalse(app.service.defeat(p.id, DefeatCause.DEATH))
+        app.participation.join(p.id, p.name, arenaId("arena1"))
+        assertFalse(app.participation.defeat(p.id, DefeatCause.DEATH))
     }
 
     @Test
     fun `forfeit during roundcountdown ends match`() {
         val app = TestApp()
         val (p1, p2) = app.startMatch()
-        app.service.defeat(p2.id, DefeatCause.FALL)
+        app.participation.defeat(p2.id, DefeatCause.FALL)
         assertEquals(ArenaState.Kind.ROUNDCOUNTDOWN, app.state())
         app.players.disconnect(p1)
         app.players.quittingScope(p1) {
-            app.service.quit(p1.id)
+            app.participation.quit(p1.id)
         }
         assertEquals(ArenaState.Kind.WAITING, app.state())
         assertEquals(1, app.stats.stats[p2.id]?.wins)

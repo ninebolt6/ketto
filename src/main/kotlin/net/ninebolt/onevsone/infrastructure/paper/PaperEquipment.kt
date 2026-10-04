@@ -13,7 +13,7 @@ import net.ninebolt.onevsone.infrastructure.persistence.SqliteKitStore
 import org.bukkit.entity.Player
 import kotlin.uuid.Uuid
 
-class PaperEquipmentAdapter(
+class PaperEquipment(
     private val backups: SqliteBackupStore,
     private val kitStore: SqliteKitStore,
     private val lookup: PaperPlayerLookup,
@@ -51,7 +51,7 @@ class PaperEquipmentAdapter(
         snapshot.apply(player.inventory)
     }
 
-    override fun acknowledge(backup: BackupRef) {
+    override fun discard(backup: BackupRef) {
         backups.deleteBackup(backup)
     }
 

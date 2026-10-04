@@ -46,7 +46,7 @@ class PaperPlayerLookup(private val server: Server) {
     fun resolve(id: Uuid): Player? = quitting[id] ?: server.getPlayer(id.toJavaUuid())
 }
 
-class PaperPlayerAdapter(
+class PaperPlayers(
     private val lookup: PaperPlayerLookup,
     private val server: Server,
     private val plugin: JavaPlugin,

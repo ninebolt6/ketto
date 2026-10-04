@@ -7,10 +7,10 @@ import java.util.logging.Level
 import java.util.logging.Logger
 
 class ArenaLifecycleService(
-    private val registry: ArenaRegistry,
+    private val sessions: ArenaSessions,
     private val arenas: ArenaRepository,
     private val signs: ArenaSignService,
-    private val recovery: PlayerRecoveryService,
+    private val recovery: InventoryRecoveryService,
     private val progression: MatchProgressionService,
     private val logger: Logger,
 ) {
@@ -23,7 +23,7 @@ class ArenaLifecycleService(
             emptyList()
         }
         loaded.forEach { arena ->
-            registry.installArena(arena)
+            sessions.installArena(arena)
             try {
                 signs.refreshSign(arena.id, ArenaState.Waiting)
             } catch (e: PersistenceException) {
@@ -33,10 +33,10 @@ class ArenaLifecycleService(
     }
 
     fun shutdown() {
-        registry.matches().forEach { match ->
+        sessions.matches().forEach { match ->
             val arenaId = match.arenaId
             progression.cancelCountdown(arenaId)
-            registry.transact(arenaId) { it.abort() }
+            sessions.transact(arenaId) { it.abort() }
         }
         recovery.restoreAllOnline()
     }

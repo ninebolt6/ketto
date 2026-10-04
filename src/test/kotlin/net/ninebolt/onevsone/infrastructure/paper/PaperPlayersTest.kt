@@ -22,7 +22,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.uuid.Uuid
 
-class PaperPlayerAdapterTest {
+class PaperPlayersTest {
 
     @TempDir
     lateinit var folder: File

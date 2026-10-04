@@ -11,21 +11,21 @@ import net.ninebolt.onevsone.domain.LeaveOutcome
 import net.ninebolt.onevsone.domain.Participant
 import kotlin.uuid.Uuid
 
-class ArenaApplicationService(
-    private val registry: ArenaRegistry,
+class MatchParticipationService(
+    private val sessions: ArenaSessions,
     private val players: PlayerPort,
-    private val recovery: PlayerRecoveryService,
+    private val recovery: InventoryRecoveryService,
     private val progression: MatchProgressionService,
     private val signs: ArenaSignService,
 ) {
 
-    fun matchOf(playerId: Uuid): ArenaMatch? = registry.matchOf(playerId)
+    fun matchOf(playerId: Uuid): ArenaMatch? = sessions.matchOf(playerId)
 
-    fun matchOf(name: String): ArenaMatch? = registry.resolveArenaId(name)?.let { registry.match(it) }
+    fun matchIn(name: String): ArenaMatch? = sessions.resolveArenaId(name)?.let { sessions.match(it) }
 
     fun join(playerId: Uuid, playerName: String, arenaId: Arena.Id): JoinOutput {
-        if (registry.isJoined(playerId)) return JoinOutput.AlreadyJoined
-        val (arena, match) = registry.entry(arenaId) ?: return JoinOutput.NotFound
+        if (sessions.isJoined(playerId)) return JoinOutput.AlreadyJoined
+        val (arena, match) = sessions.entry(arenaId) ?: return JoinOutput.NotFound
         if (arena !is Arena.Enabled) return JoinOutput.NotEnabled
         val participant = Participant.new(playerId, playerName)
 
@@ -33,23 +33,23 @@ class ArenaApplicationService(
         val output = when (step.outcome) {
             JoinOutcome.FirstJoined -> JoinOutput.JoinedWaiting
             JoinOutcome.MatchReady -> JoinOutput.JoinedStarting
-            JoinOutcome.Rejected -> return JoinOutput.InMatch
+            JoinOutcome.Rejected -> return JoinOutput.Rejected
         }
 
         val handle = players.handle(playerId)
         recovery.pending(playerId)?.let { ref ->
-            if (handle == null || handle.dead) return JoinOutput.InMatch
+            if (handle == null || handle.dead) return JoinOutput.Rejected
             if (!recovery.restoreNow(handle, ref)) return JoinOutput.RestorePending
         }
 
-        registry.putMatch(step.match)
+        sessions.putMatch(step.match)
         if (step.outcome == JoinOutcome.MatchReady) progression.startInitialCountdown(arenaId, step.match.epoch)
         signs.refreshSign(step.match)
         return output
     }
 
     fun leave(playerId: Uuid): LeaveError? {
-        val step = registry.transactFor(playerId) { it.leaveWaiting(playerId) }
+        val step = sessions.transactFor(playerId) { it.leaveWaiting(playerId) }
             ?: return LeaveError.NotJoined
         when (val outcome = step.outcome) {
             LeaveOutcome.NotWaiting -> return LeaveError.NotWaiting
@@ -63,7 +63,7 @@ class ArenaApplicationService(
 
     // During QuitEvent the adapter provides the disconnecting player's handle, so only the UUID is needed
     fun quit(playerId: Uuid) {
-        val step = registry.transactFor(playerId) { it.forfeit(playerId) }
+        val step = sessions.transactFor(playerId) { it.forfeit(playerId) }
         if (step == null) {
             recovery.pending(playerId)?.let { ref ->
                 players.handle(playerId)?.let { handle ->
@@ -86,7 +86,7 @@ class ArenaApplicationService(
     }
 
     fun restorePending(playerId: Uuid) {
-        if (registry.isJoined(playerId)) return
+        if (sessions.isJoined(playerId)) return
         val ref = recovery.pending(playerId) ?: return
         val handle = players.handle(playerId) ?: return
         // A login can arrive dead; revive first so the restore lands on a live player
@@ -95,7 +95,7 @@ class ArenaApplicationService(
     }
 
     fun defeat(playerId: Uuid, cause: DefeatCause): Boolean {
-        val step = registry.transactFor(playerId) { it.recordDefeat(playerId, cause) } ?: return false
+        val step = sessions.transactFor(playerId) { it.recordDefeat(playerId, cause) } ?: return false
         return when (val outcome = step.outcome) {
             DefeatOutcome.Rejected -> false
 
@@ -119,7 +119,7 @@ sealed interface JoinOutput {
     data object JoinedStarting : JoinOutput
     data object AlreadyJoined : JoinOutput
     data object NotEnabled : JoinOutput
-    data object InMatch : JoinOutput
+    data object Rejected : JoinOutput
     data object RestorePending : JoinOutput
     data object NotFound : JoinOutput
 }

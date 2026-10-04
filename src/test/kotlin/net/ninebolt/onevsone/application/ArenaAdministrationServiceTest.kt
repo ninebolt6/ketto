@@ -35,7 +35,7 @@ class ArenaAdministrationServiceTest {
         assertEquals(CreateError.InvalidName, app.admin.create(" bad"))
         assertEquals(CreateError.InvalidName, app.admin.create("create"))
         assertNull(app.admin.create("players"))
-        assertNull(app.registry.resolveArena("bad/name"))
+        assertNull(app.sessions.resolveArena("bad/name"))
     }
 
     @Test
@@ -44,9 +44,9 @@ class ArenaAdministrationServiceTest {
         val (p1, p2) = app.joinedTwo()
         app.signs.setSign(arenaId("arena1"), BlockPosition.new("world", 3, 64, 3))
         assertNull(app.admin.remove("arena1"))
-        assertNull(app.registry.resolveArena("arena1"))
-        assertNull(app.registry.arenaOf(p1.id))
-        assertNull(app.registry.arenaOf(p2.id))
+        assertNull(app.sessions.resolveArena("arena1"))
+        assertNull(app.sessions.arenaIdOf(p1.id))
+        assertNull(app.sessions.arenaIdOf(p2.id))
         assertNull(app.arenas.signLocation(arenaId("arena1")))
         assertNull(app.arenas.signs[arenaId("arena1")])
         assertFalse(app.arenas.names.contains("arena1"))
@@ -63,7 +63,7 @@ class ArenaAdministrationServiceTest {
         assertEquals(ArenaState.Kind.COUNTDOWN, app.state())
 
         assertNull(app.admin.disable("arena1"))
-        assertFalse(app.registry.resolveArena("arena1")!!.enabled)
+        assertFalse(app.sessions.resolveArena("arena1")!!.enabled)
         assertEquals(ArenaState.Kind.WAITING, app.state())
         assertFalse(app.arenas.find("arena1").enabled)
 
@@ -128,11 +128,11 @@ class ArenaAdministrationServiceTest {
     fun `arena name lookup ignores case`() {
         app.newArena("Arena1")
         assertEquals("Arena1", app.admin.resolveArenaId("arena1")?.name)
-        assertEquals("Arena1", app.registry.resolveArena("ARENA1")?.name)
-        assertEquals(ArenaState.Kind.WAITING, app.service.matchOf("ArEnA1")?.state?.kind)
+        assertEquals("Arena1", app.sessions.resolveArena("ARENA1")?.name)
+        assertEquals(ArenaState.Kind.WAITING, app.participation.matchIn("ArEnA1")?.state?.kind)
 
         assertNull(app.admin.disable("ARENA1"))
-        assertFalse(app.registry.resolveArena("Arena1")!!.enabled)
+        assertFalse(app.sessions.resolveArena("Arena1")!!.enabled)
         assertEquals(DisableError.AlreadyDisabled, app.admin.disable("arena1"))
 
         app.admin.setSpawn(app.admin.resolveArenaId("ARENA1")!!, SpawnSlot.FIRST, WorldPosition.new("world", 1.0, 64.0, 1.0))
@@ -140,7 +140,7 @@ class ArenaAdministrationServiceTest {
         assertEquals("Arena1", app.signs.signOwner(BlockPosition.new("world", 3, 64, 3))?.name)
 
         assertNull(app.admin.remove("aReNa1"))
-        assertNull(app.registry.resolveArena("Arena1"))
+        assertNull(app.sessions.resolveArena("Arena1"))
         assertNull(app.arenas.signLocation(arenaId("Arena1")))
         assertNull(app.arenas.signs[arenaId("Arena1")])
     }
@@ -148,23 +148,23 @@ class ArenaAdministrationServiceTest {
     @Test
     fun `remove during ingame forfeits and unregisters`() {
         val (p1, p2) = app.startMatch()
-        app.service.defeat(p2.id, DefeatCause.FALL)
+        app.participation.defeat(p2.id, DefeatCause.FALL)
         assertNull(app.admin.remove("arena1"))
-        assertNull(app.registry.arenaOf(p1.id))
-        assertNull(app.registry.arenaOf(p2.id))
+        assertNull(app.sessions.arenaIdOf(p1.id))
+        assertNull(app.sessions.arenaIdOf(p2.id))
     }
 
     @Test
-    fun `authoritative persist failure propagates and leaves the registry unchanged`() {
+    fun `authoritative persist failure propagates and leaves the sessions unchanged`() {
         app.arenas.failOnSave = true
         assertFailsWith<PersistenceException> { app.admin.create("arena1") }
-        assertNull(app.registry.resolveArena("arena1"))
+        assertNull(app.sessions.resolveArena("arena1"))
 
         app.arenas.failOnSave = false
         app.newArena()
         app.arenas.failOnSave = true
         assertFailsWith<PersistenceException> { app.admin.disable("arena1") }
-        assertTrue(app.registry.resolveArena("arena1")!!.enabled)
+        assertTrue(app.sessions.resolveArena("arena1")!!.enabled)
     }
 
     @Test
@@ -174,7 +174,7 @@ class ArenaAdministrationServiceTest {
         val signWrites = app.presentation.signUpdates.size
         app.arenas.failOnSave = true
         assertFailsWith<PersistenceException> { app.admin.enable("arena1") }
-        assertFalse(app.registry.resolveArena("arena1")!!.enabled)
+        assertFalse(app.sessions.resolveArena("arena1")!!.enabled)
         assertEquals(signWrites, app.presentation.signUpdates.size)
     }
 }

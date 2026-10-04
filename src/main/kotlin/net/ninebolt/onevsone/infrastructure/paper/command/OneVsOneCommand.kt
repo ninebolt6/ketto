@@ -9,9 +9,9 @@ import com.mojang.brigadier.tree.LiteralCommandNode
 import io.papermc.paper.command.brigadier.CommandSourceStack
 import io.papermc.paper.command.brigadier.Commands
 import net.ninebolt.onevsone.application.ArenaAdministrationService
-import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.application.ArenaSignService
 import net.ninebolt.onevsone.application.LobbyService
+import net.ninebolt.onevsone.application.MatchParticipationService
 import net.ninebolt.onevsone.application.PlayerStatsService
 import net.ninebolt.onevsone.domain.SpawnSlot
 import net.ninebolt.onevsone.infrastructure.paper.message.Message
@@ -22,7 +22,7 @@ import java.util.function.Predicate
 internal const val ADMIN_PERMISSION = "1vs1.admin"
 
 class OneVsOneCommand(
-    service: ArenaApplicationService,
+    participation: MatchParticipationService,
     private val admin: ArenaAdministrationService,
     statsService: PlayerStatsService,
     signs: ArenaSignService,
@@ -31,10 +31,10 @@ class OneVsOneCommand(
 ) {
 
     private val stats = StatsCommand(statsService, messenger)
-    private val leave = LeaveCommand(service, messenger)
+    private val leave = LeaveCommand(participation, messenger)
     private val lobbySet = SetLobbyCommand(lobby, messenger)
     private val create = ArenaCreateCommand(admin, messenger)
-    private val info = ArenaInfoCommand(service, messenger)
+    private val info = ArenaInfoCommand(participation, messenger)
     private val remove = ArenaRemoveCommand(admin, messenger)
     private val enable = ArenaEnableCommand(admin, messenger)
     private val disable = ArenaDisableCommand(admin, messenger)

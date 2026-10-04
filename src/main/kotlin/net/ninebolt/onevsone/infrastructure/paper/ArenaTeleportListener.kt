@@ -1,6 +1,6 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
-import net.ninebolt.onevsone.application.ArenaApplicationService
+import net.ninebolt.onevsone.application.MatchParticipationService
 import net.ninebolt.onevsone.domain.TeleportTrigger
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
@@ -11,7 +11,7 @@ import org.bukkit.event.vehicle.VehicleEnterEvent
 import kotlin.uuid.toKotlinUuid
 
 class ArenaTeleportListener(
-    private val service: ArenaApplicationService,
+    private val participation: MatchParticipationService,
     private val lookup: PaperPlayerLookup,
 ) : Listener {
 
@@ -27,7 +27,7 @@ class ArenaTeleportListener(
     }
 
     private fun restrictTeleport(event: PlayerTeleportEvent) {
-        val restrictions = service.restrictionsOf(event.player) ?: return
+        val restrictions = participation.restrictionsOf(event.player) ?: return
         // The plugin's own teleports do not always arrive with cause PLUGIN
         val trigger = when {
             lookup.isPluginTeleport(event.player.uniqueId.toKotlinUuid()) -> TeleportTrigger.PLUGIN
@@ -41,6 +41,6 @@ class ArenaTeleportListener(
     @EventHandler
     fun onVehicleEnter(event: VehicleEnterEvent) {
         val player = event.entered as? Player ?: return
-        if (service.restrictionsOf(player)?.horizontalMoveFrozen == true) event.isCancelled = true
+        if (participation.restrictionsOf(player)?.horizontalMoveFrozen == true) event.isCancelled = true
     }
 }

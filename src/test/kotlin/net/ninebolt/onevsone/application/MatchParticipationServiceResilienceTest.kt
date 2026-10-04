@@ -11,7 +11,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class ArenaApplicationServiceResilienceTest {
+class MatchParticipationServiceResilienceTest {
 
     @Test
     fun `abort during countdown stops timer and never equips`() {
@@ -20,7 +20,7 @@ class ArenaApplicationServiceResilienceTest {
         app.scheduler.tick(2)
         app.progression.abort(arenaId("arena1"))
         assertEquals(ArenaState.Kind.WAITING, app.state())
-        assertNull(app.registry.arenaOf(p1.id))
+        assertNull(app.sessions.arenaIdOf(p1.id))
         app.scheduler.tick(6)
         assertEquals(0, app.equipment.backupCalls)
         assertTrue(app.equipment.kitApplies.isEmpty())
@@ -36,8 +36,8 @@ class ArenaApplicationServiceResilienceTest {
         val (p1, p2) = app.joinedTwo()
         app.scheduler.tick(6)
         assertEquals(ArenaState.Kind.WAITING, app.state())
-        assertNull(app.registry.arenaOf(p1.id))
-        assertNull(app.registry.arenaOf(p2.id))
+        assertNull(app.sessions.arenaIdOf(p1.id))
+        assertNull(app.sessions.arenaIdOf(p2.id))
         assertTrue(app.equipment.kitApplies.isEmpty())
         assertTrue(app.equipment.restored.isEmpty())
         assertTrue(app.logger.reports.any { it.message.contains("Could not save inventories") })
@@ -52,7 +52,7 @@ class ArenaApplicationServiceResilienceTest {
         val (p1, _) = app.joinedTwo()
         app.scheduler.tick(6)
         assertEquals(ArenaState.Kind.WAITING, app.state())
-        assertNull(app.registry.arenaOf(p1.id))
+        assertNull(app.sessions.arenaIdOf(p1.id))
         assertEquals(2, app.equipment.restored.size)
         assertTrue(app.logger.reports.any { it.message.contains("Could not apply equipment") })
     }
@@ -63,10 +63,10 @@ class ArenaApplicationServiceResilienceTest {
         val (p1, p2) = app.startMatch()
         app.equipment.failOnApplyAt = app.equipment.applyCalls + 1
 
-        assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
+        assertTrue(app.participation.defeat(p2.id, DefeatCause.FALL))
         assertEquals(ArenaState.Kind.WAITING, app.state())
-        assertNull(app.registry.arenaOf(p1.id))
-        assertNull(app.registry.arenaOf(p2.id))
+        assertNull(app.sessions.arenaIdOf(p1.id))
+        assertNull(app.sessions.arenaIdOf(p2.id))
         assertEquals(2, app.equipment.restored.size)
         assertTrue(app.logger.reports.any { it.message.contains("Could not finish round") })
     }
@@ -76,9 +76,9 @@ class ArenaApplicationServiceResilienceTest {
         val app = TestApp()
         val (p1, p2) = app.startMatch()
         p2.dead = true
-        assertTrue(app.service.defeat(p2.id, DefeatCause.DEATH))
-        assertFalse(app.service.defeat(p2.id, DefeatCause.DEATH))
-        assertEquals(1, app.service.matchOf("arena1")!!.winsOf(p1.id))
+        assertTrue(app.participation.defeat(p2.id, DefeatCause.DEATH))
+        assertFalse(app.participation.defeat(p2.id, DefeatCause.DEATH))
+        assertEquals(1, app.participation.matchIn("arena1")!!.winsOf(p1.id))
         assertTrue(app.stats.stats.isEmpty())
     }
 
@@ -87,7 +87,7 @@ class ArenaApplicationServiceResilienceTest {
         val app = TestApp(requiredWins = 1)
         val (p1, p2) = app.startMatch()
         app.stats.failOnSaveFor = p1.id
-        assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
+        assertTrue(app.participation.defeat(p2.id, DefeatCause.FALL))
         assertEquals(ArenaState.Kind.WAITING, app.state())
         assertEquals(1, app.stats.stats[p2.id]?.losses)
         assertNull(app.stats.stats[p1.id])
@@ -100,7 +100,7 @@ class ArenaApplicationServiceResilienceTest {
         val app = TestApp(requiredWins = 1)
         val (p1, p2) = app.startMatch()
         app.stats.failOnSaveFor = p2.id
-        assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
+        assertTrue(app.participation.defeat(p2.id, DefeatCause.FALL))
         assertEquals(1, app.stats.stats[p1.id]?.wins)
         assertTrue(app.logger.reports.any { it.message.startsWith("Failed to record loss") })
     }
@@ -115,6 +115,6 @@ class ArenaApplicationServiceResilienceTest {
         assertTrue(timer.cancelled)
         assertTrue(app.equipment.kitApplies.isEmpty())
         val p3 = app.players.add("Carol")
-        assertEquals(JoinOutput.JoinedWaiting, app.service.join(p3.id, p3.name, arenaId("arena1")))
+        assertEquals(JoinOutput.JoinedWaiting, app.participation.join(p3.id, p3.name, arenaId("arena1")))
     }
 }

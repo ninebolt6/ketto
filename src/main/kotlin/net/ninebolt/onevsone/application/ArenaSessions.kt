@@ -5,7 +5,7 @@ import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.Transition
 import kotlin.uuid.Uuid
 
-class ArenaRegistry(private val requiredWins: Int) {
+class ArenaSessions(private val requiredWins: Int) {
 
     private data class Slot(val arena: Arena, val match: ArenaMatch)
 
@@ -59,15 +59,15 @@ class ArenaRegistry(private val requiredWins: Int) {
         return transition
     }
 
-    fun matchOf(playerId: Uuid): ArenaMatch? = arenaOf(playerId)?.let(::match)
+    fun matchOf(playerId: Uuid): ArenaMatch? = arenaIdOf(playerId)?.let(::match)
 
     fun <O> transactFor(
         playerId: Uuid,
         operation: (ArenaMatch) -> Transition<O>,
-    ): Transition<O>? = arenaOf(playerId)?.let { transact(it, operation) }
+    ): Transition<O>? = arenaIdOf(playerId)?.let { transact(it, operation) }
 
     // the last slot in insertion order wins if a player somehow appears in two matches
-    fun arenaOf(playerId: Uuid): Arena.Id? = slots.values.lastOrNull { slot -> slot.match.participants.any { it.id == playerId } }?.arena?.id
+    fun arenaIdOf(playerId: Uuid): Arena.Id? = slots.values.lastOrNull { slot -> slot.match.participants.any { it.id == playerId } }?.arena?.id
 
-    fun isJoined(playerId: Uuid): Boolean = arenaOf(playerId) != null
+    fun isJoined(playerId: Uuid): Boolean = arenaIdOf(playerId) != null
 }

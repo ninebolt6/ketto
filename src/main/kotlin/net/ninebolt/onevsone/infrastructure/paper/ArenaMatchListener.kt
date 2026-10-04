@@ -1,6 +1,6 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
-import net.ninebolt.onevsone.application.ArenaApplicationService
+import net.ninebolt.onevsone.application.MatchParticipationService
 import net.ninebolt.onevsone.domain.DamageAdmission
 import net.ninebolt.onevsone.domain.DamagePolicy
 import net.ninebolt.onevsone.domain.DefeatCause
@@ -21,7 +21,7 @@ import org.bukkit.event.player.PlayerQuitEvent
 import kotlin.uuid.toKotlinUuid
 
 class ArenaMatchListener(
-    private val service: ArenaApplicationService,
+    private val participation: MatchParticipationService,
     private val lookup: PaperPlayerLookup,
     private val messenger: Messenger,
 ) : Listener {
@@ -30,14 +30,14 @@ class ArenaMatchListener(
     fun onDeath(event: PlayerDeathEvent) {
         val player = event.entity
         val id = player.uniqueId.toKotlinUuid()
-        if (service.matchOf(id) == null) return
+        if (participation.matchOf(id) == null) return
         event.keepInventory = true
         event.drops.clear()
         // keepInventory protects only items, not experience
         event.droppedExp = 0
         event.keepLevel = true
-        if (!service.defeat(id, DefeatCause.DEATH)) {
-            service.requestRespawn(id)
+        if (!participation.defeat(id, DefeatCause.DEATH)) {
+            participation.requestRespawn(id)
         }
     }
 
@@ -48,7 +48,7 @@ class ArenaMatchListener(
             return
         }
         val player = event.entity as? Player ?: return
-        if (service.restrictionsOf(player)?.damagePolicy == DamagePolicy.BLOCKED) {
+        if (participation.restrictionsOf(player)?.damagePolicy == DamagePolicy.BLOCKED) {
             event.isCancelled = true
         }
     }
@@ -63,26 +63,26 @@ class ArenaMatchListener(
 
     private fun sideOf(player: Player?): DamageAdmission.Side? {
         val id = player?.uniqueId?.toKotlinUuid() ?: return null
-        return service.matchOf(id)?.let { DamageAdmission.Side(id, it) }
+        return participation.matchOf(id)?.let { DamageAdmission.Side(id, it) }
     }
 
     @EventHandler
     fun onQuit(event: PlayerQuitEvent) {
         // A quitting player can no longer be fetched from Server, so the event's Player must be resolved synchronously
         lookup.scopeQuitting(event.player) {
-            service.quit(event.player.uniqueId.toKotlinUuid())
+            participation.quit(event.player.uniqueId.toKotlinUuid())
         }
     }
 
     @EventHandler
     fun onJoin(event: PlayerJoinEvent) {
-        service.restorePending(event.player.uniqueId.toKotlinUuid())
+        participation.restorePending(event.player.uniqueId.toKotlinUuid())
     }
 
     @EventHandler
     fun onMove(event: PlayerMoveEvent) {
         // PlayerTeleportEvent has its own HandlerList and never reaches this handler
-        val match = service.matchOf(event.player.uniqueId.toKotlinUuid()) ?: return
+        val match = participation.matchOf(event.player.uniqueId.toKotlinUuid()) ?: return
         if (ParticipantRestrictions.forState(match.state.kind).horizontalMoveFrozen) {
             val from = event.from
             val to = event.to
@@ -92,13 +92,13 @@ class ArenaMatchListener(
         }
         // Since 1.18 a world's min height can be below y=0
         if (match.resolvesVoidFall && event.to.y <= (event.to.world?.minHeight ?: 0)) {
-            service.defeat(event.player.uniqueId.toKotlinUuid(), DefeatCause.FALL)
+            participation.defeat(event.player.uniqueId.toKotlinUuid(), DefeatCause.FALL)
         }
     }
 
     @EventHandler
     fun onCommand(event: PlayerCommandPreprocessEvent) {
-        if (service.restrictionsOf(event.player)?.commandsBlocked == true) {
+        if (participation.restrictionsOf(event.player)?.commandsBlocked == true) {
             event.isCancelled = true
             messenger.send(event.player, Message.CommandBlocked)
         }

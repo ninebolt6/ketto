@@ -20,7 +20,7 @@ class MatchProgressionServiceTest {
         val app = TestApp()
         val p = app.players.add("Alice")
         p.dead = true
-        app.service.requestRespawn(p.id)
+        app.participation.requestRespawn(p.id)
         app.scheduler.runOneShots()
         assertTrue("respawn" in p.events)
         assertFalse(p.dead)
@@ -30,7 +30,7 @@ class MatchProgressionServiceTest {
     fun `request respawn leaves an alive handle untouched`() {
         val app = TestApp()
         val p = app.players.add("Alice")
-        app.service.requestRespawn(p.id)
+        app.participation.requestRespawn(p.id)
         app.scheduler.runOneShots()
         assertTrue(p.events.isEmpty())
     }
@@ -38,7 +38,7 @@ class MatchProgressionServiceTest {
     @Test
     fun `request respawn without a handle does nothing`() {
         val app = TestApp()
-        app.service.requestRespawn(Uuid.random())
+        app.participation.requestRespawn(Uuid.random())
         app.scheduler.runOneShots()
         assertTrue(app.logger.records.isEmpty())
     }
@@ -58,7 +58,7 @@ class MatchProgressionServiceTest {
         val (p1, p2) = app.startMatch()
         app.players.disconnect(p1)
 
-        assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
+        assertTrue(app.participation.defeat(p2.id, DefeatCause.FALL))
 
         assertEquals(1, app.equipment.kitApplies.count { it.second == p1.id })
         assertEquals(1, p1.teleports.size)
@@ -76,7 +76,7 @@ class MatchProgressionServiceTest {
         val (_, p2) = app.startMatch()
         app.players.disconnect(p2)
 
-        assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
+        assertTrue(app.participation.defeat(p2.id, DefeatCause.FALL))
 
         assertTrue(app.presentation.roundEndSounds.isEmpty())
         assertEquals(ArenaState.Kind.ROUNDCOUNTDOWN, app.state())
@@ -90,7 +90,7 @@ class MatchProgressionServiceTest {
         val app = TestApp(requiredWins = 1)
         val (_, p2) = app.startMatch()
 
-        assertTrue(app.service.defeat(p2.id, DefeatCause.DEATH))
+        assertTrue(app.participation.defeat(p2.id, DefeatCause.DEATH))
         app.scheduler.runOneShots()
 
         assertTrue("respawn" !in p2.events)
@@ -103,10 +103,10 @@ class MatchProgressionServiceTest {
         val app = TestApp(requiredWins = 1)
         val (p1, p2) = app.startMatch()
         p1.dead = true
-        assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
+        assertTrue(app.participation.defeat(p2.id, DefeatCause.FALL))
 
         p1.dead = false
-        assertEquals(JoinOutput.JoinedWaiting, app.service.join(p1.id, p1.name, arenaId("arena1")))
+        assertEquals(JoinOutput.JoinedWaiting, app.participation.join(p1.id, p1.name, arenaId("arena1")))
         assertEquals(1, app.equipment.restored.count { it.playerId == p1.id })
 
         app.scheduler.runOneShots()
@@ -122,7 +122,7 @@ class MatchProgressionServiceTest {
         val (p1, p2) = app.startMatch()
         app.players.disconnect(p2)
 
-        app.service.quit(p2.id)
+        app.participation.quit(p2.id)
 
         assertEquals(ArenaState.Kind.WAITING, app.state())
         assertTrue(app.equipment.restored.any { it.playerId == p1.id })
@@ -136,12 +136,12 @@ class MatchProgressionServiceTest {
     fun `match results accumulate in persisted stats across matches`() {
         val app = TestApp(requiredWins = 1)
         val (p1, p2) = app.startMatch()
-        assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
+        assertTrue(app.participation.defeat(p2.id, DefeatCause.FALL))
 
-        assertEquals(JoinOutput.JoinedWaiting, app.service.join(p1.id, p1.name, arenaId("arena1")))
-        assertEquals(JoinOutput.JoinedStarting, app.service.join(p2.id, p2.name, arenaId("arena1")))
+        assertEquals(JoinOutput.JoinedWaiting, app.participation.join(p1.id, p1.name, arenaId("arena1")))
+        assertEquals(JoinOutput.JoinedStarting, app.participation.join(p2.id, p2.name, arenaId("arena1")))
         app.scheduler.tick(6)
-        assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
+        assertTrue(app.participation.defeat(p2.id, DefeatCause.FALL))
 
         assertEquals(2, app.stats.stats[p1.id]?.wins)
         assertEquals(2, app.stats.stats[p2.id]?.losses)
@@ -207,7 +207,7 @@ class MatchProgressionServiceTest {
         val app = TestApp()
         val (_, p2) = app.startMatch()
         p2.dead = true
-        assertTrue(app.service.defeat(p2.id, DefeatCause.DEATH))
+        assertTrue(app.participation.defeat(p2.id, DefeatCause.DEATH))
         val applies = app.equipment.kitApplies.count { it.second == p2.id }
         val teleports = p2.teleports.size
 
@@ -223,7 +223,7 @@ class MatchProgressionServiceTest {
         val app = TestApp()
         val (_, p2) = app.startMatch()
         p2.dead = true
-        assertTrue(app.service.defeat(p2.id, DefeatCause.DEATH))
+        assertTrue(app.participation.defeat(p2.id, DefeatCause.DEATH))
         val applies = app.equipment.kitApplies.count { it.second == p2.id }
         val teleports = p2.teleports.size
 
@@ -239,7 +239,7 @@ class MatchProgressionServiceTest {
         val app = TestApp()
         val (_, p2) = app.startMatch()
         p2.dead = true
-        assertTrue(app.service.defeat(p2.id, DefeatCause.DEATH))
+        assertTrue(app.participation.defeat(p2.id, DefeatCause.DEATH))
         val applies = app.equipment.kitApplies.count { it.second == p2.id }
         val teleports = p2.teleports.size
 
@@ -257,14 +257,14 @@ class MatchProgressionServiceTest {
         val app = TestApp()
         val (_, p2) = app.startMatch()
         p2.dead = true
-        assertTrue(app.service.defeat(p2.id, DefeatCause.DEATH))
+        assertTrue(app.participation.defeat(p2.id, DefeatCause.DEATH))
         val applies = app.equipment.kitApplies.count { it.second == p2.id }
 
         assertNull(app.admin.remove("arena1"))
         app.scheduler.runOneShots()
 
         assertEquals(applies, app.equipment.kitApplies.count { it.second == p2.id })
-        assertNull(app.service.matchOf("arena1"))
+        assertNull(app.participation.matchIn("arena1"))
     }
 
     @Test
@@ -272,17 +272,17 @@ class MatchProgressionServiceTest {
         val app = TestApp(requiredWins = 1)
         val (p1, p2) = app.startMatch()
         p2.dead = true
-        assertTrue(app.service.defeat(p2.id, DefeatCause.DEATH))
+        assertTrue(app.participation.defeat(p2.id, DefeatCause.DEATH))
         assertEquals(listOf(p1.id), app.equipment.restored.map { it.playerId })
 
         val arena2 = app.newArena("arena2")
         p2.dead = false
-        app.service.join(p2.id, p2.name, arena2)
+        app.participation.join(p2.id, p2.name, arena2)
         val restored = app.equipment.restored.size
         app.scheduler.runOneShots()
 
         assertEquals(restored, app.equipment.restored.size)
-        assertEquals(arena2, app.registry.arenaOf(p2.id))
+        assertEquals(arena2, app.sessions.arenaIdOf(p2.id))
     }
 
     @Test
@@ -290,7 +290,7 @@ class MatchProgressionServiceTest {
         val app = TestApp()
         val (_, p2) = app.startMatch()
 
-        app.service.quit(p2.id)
+        app.participation.quit(p2.id)
 
         assertEquals(ArenaState.Kind.WAITING, app.state())
         assertTrue(app.equipment.restored.any { it.playerId == p2.id })
@@ -314,7 +314,7 @@ class MatchProgressionServiceTest {
         val app = TestApp()
         val (_, p2) = app.startMatch()
         p2.dead = true
-        assertTrue(app.service.defeat(p2.id, DefeatCause.DEATH))
+        assertTrue(app.participation.defeat(p2.id, DefeatCause.DEATH))
         val applies = app.equipment.kitApplies.count { it.second == p2.id }
         val teleports = p2.teleports.size
 
@@ -344,7 +344,7 @@ class MatchProgressionServiceTest {
         val app = TestApp(requiredWins = 1)
         val (_, p2) = app.startMatch()
         p2.dead = true
-        assertTrue(app.service.defeat(p2.id, DefeatCause.DEATH))
+        assertTrue(app.participation.defeat(p2.id, DefeatCause.DEATH))
         assertNull(app.admin.remove("arena1"))
 
         app.scheduler.runOneShots()
@@ -358,7 +358,7 @@ class MatchProgressionServiceTest {
         val app = TestApp(requiredWins = 1)
         val (_, p2) = app.startMatch()
         p2.dead = true
-        assertTrue(app.service.defeat(p2.id, DefeatCause.DEATH))
+        assertTrue(app.participation.defeat(p2.id, DefeatCause.DEATH))
         p2.onRespawn = {
             p2.onRespawn = null
             app.recovery.pending(p2.id)?.let { app.recovery.restoreNow(p2, it) }
@@ -391,7 +391,7 @@ class MatchProgressionServiceTest {
         app.players.disconnect(p2)
         val events = p2.events.size
 
-        app.service.quit(p2.id)
+        app.participation.quit(p2.id)
 
         assertEquals(ArenaState.Kind.WAITING, app.state())
         assertEquals(events, p2.events.size)
@@ -404,7 +404,7 @@ class MatchProgressionServiceTest {
         val (p1, p2) = app.startMatch()
         app.equipment.storedBackups.values.removeIf { it.playerId == p2.id }
 
-        app.service.quit(p2.id)
+        app.participation.quit(p2.id)
 
         assertEquals(ArenaState.Kind.WAITING, app.state())
         assertTrue(app.logger.reports.any { it.message.contains("without a pending backup") })
@@ -418,7 +418,7 @@ class MatchProgressionServiceTest {
         val (p1, p2) = app.startMatch()
         app.equipment.storedBackups.values.removeIf { it.playerId == p1.id }
 
-        assertTrue(app.service.defeat(p2.id, DefeatCause.DEATH))
+        assertTrue(app.participation.defeat(p2.id, DefeatCause.DEATH))
         app.scheduler.runOneShots()
 
         assertTrue(app.logger.reports.any { it.message.contains("without a pending backup") })
@@ -431,7 +431,7 @@ class MatchProgressionServiceTest {
         app.equipment.storedBackups.values.removeIf { it.playerId == p2.id }
         p2.dead = true
 
-        assertTrue(app.service.defeat(p2.id, DefeatCause.DEATH))
+        assertTrue(app.participation.defeat(p2.id, DefeatCause.DEATH))
         app.scheduler.runOneShots()
 
         assertTrue(app.logger.reports.any { it.message.contains("without a pending backup") })
@@ -443,7 +443,7 @@ class MatchProgressionServiceTest {
         val app = TestApp(requiredWins = 1)
         val (_, p2) = app.startMatch()
         p2.dead = true
-        assertTrue(app.service.defeat(p2.id, DefeatCause.DEATH))
+        assertTrue(app.participation.defeat(p2.id, DefeatCause.DEATH))
 
         app.progression.abort(arenaId("arena1"))
         app.scheduler.runOneShots()
@@ -511,7 +511,7 @@ class MatchProgressionServiceTest {
         assertTrue(app.equipment.restored.any { it.playerId == p1.id })
         assertTrue(app.equipment.restored.any { it.playerId == p2.id })
         assertTrue(app.logger.reports.isEmpty())
-        assertNull(app.service.matchOf("arena1"))
+        assertNull(app.participation.matchIn("arena1"))
     }
 
     @Test
@@ -520,7 +520,7 @@ class MatchProgressionServiceTest {
         val (p1, p2) = app.joinedTwo()
         p1.onTeleport = {
             p1.onTeleport = null
-            app.players.quittingScope(p1) { app.service.quit(p1.id) }
+            app.players.quittingScope(p1) { app.participation.quit(p1.id) }
             app.players.disconnect(p1)
         }
 
@@ -550,7 +550,7 @@ class MatchProgressionServiceTest {
         assertTrue(p2.teleports.isEmpty())
         assertTrue(app.equipment.restored.any { it.playerId == p1.id })
         assertTrue(app.equipment.restored.any { it.playerId == p2.id })
-        assertNull(app.service.matchOf("arena1"))
+        assertNull(app.participation.matchIn("arena1"))
     }
 
     @Test
@@ -565,7 +565,7 @@ class MatchProgressionServiceTest {
             app.progression.abort(arenaId("arena1"))
         }
 
-        assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
+        assertTrue(app.participation.defeat(p2.id, DefeatCause.FALL))
         app.scheduler.tick()
 
         assertEquals(ArenaState.Kind.WAITING, app.presentation.signUpdates.last().third)

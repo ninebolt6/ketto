@@ -110,8 +110,8 @@ class PaperMatchProgressionTest {
 
         assertEquals(ArenaState.Kind.WAITING, env.view().state.kind)
         assertTrue(env.view().participants.isEmpty())
-        assertNull(env.registry.arenaOf(p1.uuid))
-        assertNull(env.registry.arenaOf(p2.uuid))
+        assertNull(env.sessions.arenaIdOf(p1.uuid))
+        assertNull(env.sessions.arenaIdOf(p2.uuid))
         assertTrue(env.lastBroadcast().contains("won the match"))
         assertEquals(1, env.statsRepo.find(p1.uuid)!!.wins)
         assertEquals(1, env.statsRepo.find(p2.uuid)!!.losses)

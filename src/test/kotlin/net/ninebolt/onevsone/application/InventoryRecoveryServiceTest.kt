@@ -17,7 +17,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.uuid.Uuid
 
-class PlayerRecoveryServiceTest {
+class InventoryRecoveryServiceTest {
 
     private fun backupRef(id: Uuid, name: String, match: MatchId = MatchId.new()) = BackupRef.new(match, id, name)
 
@@ -37,14 +37,14 @@ class PlayerRecoveryServiceTest {
         val app = TestApp(requiredWins = 1)
         val (_, p2) = app.startMatch()
         p2.dead = true
-        app.service.defeat(p2.id, DefeatCause.DEATH)
+        app.participation.defeat(p2.id, DefeatCause.DEATH)
         assertEquals(ArenaState.Kind.WAITING, app.state())
 
         val pending = app.recovery.pending(p2.id)
         assertNotNull(pending)
         app.players.disconnect(p2)
         app.players.quittingScope(p2) {
-            app.service.quit(p2.id)
+            app.participation.quit(p2.id)
         }
         assertEquals(2, app.equipment.restored.size)
         assertTrue(app.equipment.storedBackups.isEmpty())
@@ -55,7 +55,7 @@ class PlayerRecoveryServiceTest {
         val app = TestApp(requiredWins = 1)
         val (_, p2) = app.startMatch()
         p2.dead = true
-        app.service.defeat(p2.id, DefeatCause.DEATH)
+        app.participation.defeat(p2.id, DefeatCause.DEATH)
         app.scheduler.runOneShots()
         assertEquals(listOf("respawn", "vitals", "restore"), p2.events.takeLast(3))
         assertTrue(app.equipment.storedBackups.isEmpty())
@@ -66,10 +66,10 @@ class PlayerRecoveryServiceTest {
         val app = TestApp()
         app.newArena()
         val p1 = app.players.add("Alice")
-        app.service.join(p1.id, p1.name, arenaId("arena1"))
+        app.participation.join(p1.id, p1.name, arenaId("arena1"))
         app.players.disconnect(p1)
         app.players.quittingScope(p1) {
-            app.service.quit(p1.id)
+            app.participation.quit(p1.id)
         }
         assertTrue(app.equipment.restored.isEmpty())
         assertNull(app.recovery.pending(p1.id))
@@ -85,7 +85,7 @@ class PlayerRecoveryServiceTest {
         assertEquals(1, app.equipment.storedBackups.size)
 
         p2.online = true
-        app.service.restorePending(p2.id)
+        app.participation.restorePending(p2.id)
         assertEquals(2, app.equipment.restored.size)
         assertTrue(app.equipment.storedBackups.isEmpty())
         assertNull(app.recovery.pending(p2.id))
@@ -99,24 +99,24 @@ class PlayerRecoveryServiceTest {
         app.equipment.seedBackup(ref)
 
         val squatter = app.players.add("Alice")
-        app.service.restorePending(squatter.id)
+        app.participation.restorePending(squatter.id)
         assertTrue(app.equipment.restored.isEmpty())
 
         val renamed = app.players.add("Alice2", original.id)
-        app.service.restorePending(renamed.id)
+        app.participation.restorePending(renamed.id)
         assertEquals(1, app.equipment.restored.size)
         assertTrue(app.equipment.storedBackups.isEmpty())
     }
 
     @Test
-    fun `acknowledge failure keeps disk record but completes restore`() {
+    fun `discard failure keeps disk record but completes restore`() {
         val app = TestApp()
         val p = app.players.add("Alice")
         val ref = backupRef(p.id, "Alice")
         app.equipment.seedBackup(ref)
-        app.equipment.failOnAcknowledge = true
+        app.equipment.failOnDiscard = true
 
-        app.service.restorePending(p.id)
+        app.participation.restorePending(p.id)
         assertEquals(1, app.equipment.restored.size)
         assertTrue(app.equipment.storedBackups.containsKey(ref.backupId))
         assertTrue(app.logger.reports.any { it.message.contains("Could not discard") })
@@ -130,11 +130,11 @@ class PlayerRecoveryServiceTest {
         app.equipment.seedBackup(ref)
         app.equipment.failOnRestore = true
 
-        app.service.restorePending(p.id)
+        app.participation.restorePending(p.id)
         assertTrue(app.equipment.restored.isEmpty())
         assertNotNull(app.recovery.pending(p.id))
         app.equipment.failOnRestore = false
-        app.service.restorePending(p.id)
+        app.participation.restorePending(p.id)
         assertEquals(1, app.equipment.restored.size)
     }
 
@@ -148,10 +148,10 @@ class PlayerRecoveryServiceTest {
         val pending = assertNotNull(app.recovery.pending(p.id))
         app.equipment.failOnRestore = true
 
-        assertEquals(JoinOutput.RestorePending, app.service.join(p.id, p.name, arenaId))
+        assertEquals(JoinOutput.RestorePending, app.participation.join(p.id, p.name, arenaId))
 
-        assertNull(app.registry.arenaOf(p.id))
-        assertTrue(app.registry.match(arenaId)!!.participants.isEmpty())
+        assertNull(app.sessions.arenaIdOf(p.id))
+        assertTrue(app.sessions.match(arenaId)!!.participants.isEmpty())
         assertEquals(pending, app.recovery.pending(p.id))
         assertTrue(app.equipment.storedBackups.containsKey(ref.backupId))
     }
@@ -161,7 +161,7 @@ class PlayerRecoveryServiceTest {
         val app = TestApp()
         val (_, p2) = app.startMatch()
         p2.dead = true
-        app.service.defeat(p2.id, DefeatCause.DEATH)
+        app.participation.defeat(p2.id, DefeatCause.DEATH)
         val applies = app.equipment.kitApplies.count { it.second == p2.id }
         app.progression.abort(arenaId("arena1"))
         app.scheduler.runOneShots()
@@ -176,7 +176,7 @@ class PlayerRecoveryServiceTest {
         val app = TestApp()
         val (_, p2) = app.startMatch()
         p2.dead = true
-        app.service.defeat(p2.id, DefeatCause.DEATH)
+        app.participation.defeat(p2.id, DefeatCause.DEATH)
         app.players.disconnect(p2)
         app.scheduler.runOneShots()
         assertNotNull(app.recovery.pending(p2.id))
@@ -184,11 +184,11 @@ class PlayerRecoveryServiceTest {
         app.scheduler.tick()
         assertEquals(ArenaState.Kind.WAITING, app.state())
         assertNotNull(app.recovery.pending(p2.id))
-        assertNull(app.registry.arenaOf(p2.id))
+        assertNull(app.sessions.arenaIdOf(p2.id))
 
         p2.online = true
         p2.dead = false
-        app.service.restorePending(p2.id)
+        app.participation.restorePending(p2.id)
         assertTrue(app.equipment.restored.any { it.playerId == p2.id })
         assertNull(app.recovery.pending(p2.id))
     }
@@ -213,7 +213,7 @@ class PlayerRecoveryServiceTest {
         val (p1, p2) = app.startMatch()
         app.equipment.failOnRestore = true
 
-        app.service.defeat(p2.id, DefeatCause.FALL)
+        app.participation.defeat(p2.id, DefeatCause.FALL)
         app.scheduler.runOneShots()
         assertTrue(p1.teleports.none { it == lobby })
         assertTrue(p2.teleports.none { it == lobby })
@@ -226,7 +226,7 @@ class PlayerRecoveryServiceTest {
         val app = TestApp(requiredWins = 1)
         val (p1, p2) = app.startMatch()
 
-        app.service.defeat(p2.id, DefeatCause.FALL)
+        app.participation.defeat(p2.id, DefeatCause.FALL)
         app.scheduler.runOneShots()
         assertTrue(app.logger.warnings.count { it.contains("Lobby is not set") } >= 1)
         assertNull(app.recovery.pending(p1.id))
@@ -250,7 +250,7 @@ class PlayerRecoveryServiceTest {
         app.equipment.seedBackup(backupRef(p.id, p.name))
         app.players.disconnect(p)
         app.players.quittingScope(p) {
-            app.service.quit(p.id)
+            app.participation.quit(p.id)
         }
         assertTrue(app.equipment.restored.any { it.playerId == p.id })
         assertNull(app.recovery.pending(p.id))
@@ -263,7 +263,7 @@ class PlayerRecoveryServiceTest {
         app.equipment.seedBackup(backupRef(p.id, p.name))
         app.players.disconnect(p)
 
-        app.service.quit(p.id)
+        app.participation.quit(p.id)
 
         assertTrue(app.equipment.restored.isEmpty())
         assertNotNull(app.recovery.pending(p.id))
@@ -291,7 +291,7 @@ class PlayerRecoveryServiceTest {
         app.arenas.lobbyPosition = lobby
         val (p1, p2) = app.startMatch()
 
-        app.service.defeat(p2.id, DefeatCause.FALL)
+        app.participation.defeat(p2.id, DefeatCause.FALL)
         app.scheduler.runOneShots()
 
         assertTrue(lobby in p1.teleports)
@@ -343,10 +343,10 @@ class PlayerRecoveryServiceTest {
         app.equipment.seedBackup(ref)
 
         p.dead = true
-        assertEquals(JoinOutput.InMatch, app.service.join(p.id, p.name, arenaId("arena1")))
-        assertNull(app.registry.arenaOf(p.id))
+        assertEquals(JoinOutput.Rejected, app.participation.join(p.id, p.name, arenaId("arena1")))
+        assertNull(app.sessions.arenaIdOf(p.id))
         p.dead = false
-        assertEquals(JoinOutput.JoinedWaiting, app.service.join(p.id, p.name, arenaId("arena1")))
+        assertEquals(JoinOutput.JoinedWaiting, app.participation.join(p.id, p.name, arenaId("arena1")))
         assertTrue(app.equipment.restored.any { it.playerId == p.id })
         assertTrue(app.equipment.storedBackups.isEmpty())
     }

@@ -40,7 +40,7 @@ class ArenaRemoveCommandTest {
 
         env.runCommand(op, "arena", "newarena", "remove")
         assertTrue(op.drainMessages().any { it.contains("Removed arena: newarena") })
-        assertNull(env.registry.resolveArena("newarena"))
+        assertNull(env.sessions.resolveArena("newarena"))
 
         env.runCommand(op, "arena", "newarena", "remove")
         assertTrue(op.drainMessages().any { it.contains("That arena does not exist") })
@@ -63,9 +63,9 @@ class ArenaRemoveCommandTest {
 
         assertTrue(op.drainMessages().any { it.contains("Removed arena: arena1") })
         assertNull(env.state())
-        assertNull(env.registry.resolveArena("arena1"))
-        assertNull(env.registry.arenaOf(p1.uuid))
-        assertNull(env.registry.arenaOf(p2.uuid))
+        assertNull(env.sessions.resolveArena("arena1"))
+        assertNull(env.sessions.arenaIdOf(p1.uuid))
+        assertNull(env.sessions.arenaIdOf(p2.uuid))
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
     }

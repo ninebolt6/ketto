@@ -11,7 +11,7 @@ interface InventoryBackupPort {
     // on failure the backup record is kept
     fun restore(backup: BackupRef)
 
-    fun acknowledge(backup: BackupRef)
+    fun discard(backup: BackupRef)
 
     fun pendingFor(playerId: Uuid): BackupRef?
 

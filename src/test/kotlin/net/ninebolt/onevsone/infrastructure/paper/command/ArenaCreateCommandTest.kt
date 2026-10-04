@@ -34,7 +34,7 @@ class ArenaCreateCommandTest {
         val op = env.opPlayer("Op")
         env.runCommand(op, "arena", "create", "newarena")
         assertTrue(op.drainMessages().any { it.contains("Created arena: newarena") })
-        assertFalse(env.registry.resolveArena("newarena")!!.enabled)
+        assertFalse(env.sessions.resolveArena("newarena")!!.enabled)
 
         env.runCommand(op, "arena", "create", "newarena")
         assertTrue(op.drainMessages().any { it.contains("That arena already exists") })

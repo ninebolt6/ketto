@@ -53,8 +53,8 @@ class PaperArenaMembershipTest {
         p2.disconnect()
 
         assertEquals(ArenaState.Kind.WAITING, env.view().state.kind)
-        assertNull(env.registry.arenaOf(p1.uuid))
-        assertNull(env.registry.arenaOf(p2.uuid))
+        assertNull(env.sessions.arenaIdOf(p1.uuid))
+        assertNull(env.sessions.arenaIdOf(p2.uuid))
         assertEquals(1, env.statsRepo.find(p1.uuid)!!.wins)
         assertEquals(1, env.statsRepo.find(p2.uuid)!!.losses)
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
@@ -129,8 +129,8 @@ class PaperArenaMembershipTest {
         env.join(p2, arena)
         p1.disconnect()
         assertEquals(ArenaState.Kind.ONEMORE, env.view().state.kind)
-        assertNull(env.registry.arenaOf(p1.uuid))
-        assertEquals(arena, env.registry.arenaOf(p2.uuid))
+        assertNull(env.sessions.arenaIdOf(p1.uuid))
+        assertEquals(arena, env.sessions.arenaIdOf(p2.uuid))
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
         assertNull(env.statsRepo.find(p2.uuid))
@@ -164,8 +164,8 @@ class PaperArenaMembershipTest {
         assertNull(env.backupByName("Alice"))
         assertEquals(ArenaState.Kind.WAITING, env.view().state.kind)
         assertTrue(env.view().participants.isEmpty())
-        assertNull(env.registry.arenaOf(p1.uuid))
-        assertNull(env.registry.arenaOf(p2.uuid))
+        assertNull(env.sessions.arenaIdOf(p1.uuid))
+        assertNull(env.sessions.arenaIdOf(p2.uuid))
         assertEquals(1, env.statsRepo.find(p2.uuid)!!.wins)
         assertEquals(1, env.statsRepo.find(p1.uuid)!!.losses)
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
@@ -193,8 +193,8 @@ class PaperArenaMembershipTest {
         env.tick()
 
         assertEquals(ArenaState.Kind.WAITING, env.view().state.kind)
-        assertNull(env.registry.arenaOf(p1.uuid))
-        assertNull(env.registry.arenaOf(p2.uuid))
+        assertNull(env.sessions.arenaIdOf(p1.uuid))
+        assertNull(env.sessions.arenaIdOf(p2.uuid))
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
         assertNull(env.backupByName("Alice"))
     }
@@ -225,6 +225,6 @@ class PaperArenaMembershipTest {
             ),
         )
         env.lifecycle.load()
-        assertTrue(env.registry.resolveArena("arena1")!!.enabled)
+        assertTrue(env.sessions.resolveArena("arena1")!!.enabled)
     }
 }

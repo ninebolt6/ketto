@@ -24,7 +24,7 @@ class ArenaLifecycleServiceTest {
         )
         app.arenas.failOnLoad = true
         app.lifecycle.load()
-        assertTrue(app.registry.arenaIds().isEmpty())
+        assertTrue(app.sessions.arenaIds().isEmpty())
         assertTrue(app.logger.warnings.any { it.contains("unreadable") })
     }
 
@@ -40,7 +40,7 @@ class ArenaLifecycleServiceTest {
         )
         app.arenas.failOnSignRead = true
         app.lifecycle.load()
-        assertTrue(arenaId("a1") in app.registry.arenaIds())
+        assertTrue(arenaId("a1") in app.sessions.arenaIds())
         assertTrue(app.logger.warnings.any { it.contains("Could not update sign") })
     }
 
@@ -50,8 +50,8 @@ class ArenaLifecycleServiceTest {
         val (p1, _) = app.startMatch()
         app.lifecycle.shutdown()
         assertEquals(ArenaState.Kind.WAITING, app.state())
-        assertTrue(app.registry.resolveArena("arena1")!!.enabled)
-        assertNull(app.registry.arenaOf(p1.id))
+        assertTrue(app.sessions.resolveArena("arena1")!!.enabled)
+        assertNull(app.sessions.arenaIdOf(p1.id))
         assertEquals(2, app.equipment.restored.size)
     }
 }

@@ -8,14 +8,14 @@ import io.papermc.paper.threadedregions.scheduler.AsyncScheduler
 import io.papermc.paper.threadedregions.scheduler.ScheduledTask
 import net.kyori.adventure.text.Component
 import net.ninebolt.onevsone.application.ArenaAdministrationService
-import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.application.ArenaLifecycleService
-import net.ninebolt.onevsone.application.ArenaRegistry
+import net.ninebolt.onevsone.application.ArenaSessions
 import net.ninebolt.onevsone.application.ArenaSignService
+import net.ninebolt.onevsone.application.InventoryRecoveryService
 import net.ninebolt.onevsone.application.JoinOutput
 import net.ninebolt.onevsone.application.LobbyService
+import net.ninebolt.onevsone.application.MatchParticipationService
 import net.ninebolt.onevsone.application.MatchProgressionService
-import net.ninebolt.onevsone.application.PlayerRecoveryService
 import net.ninebolt.onevsone.application.PlayerStatsService
 import net.ninebolt.onevsone.application.port.PlayerStatsRepository
 import net.ninebolt.onevsone.domain.Arena
@@ -25,10 +25,10 @@ import net.ninebolt.onevsone.infrastructure.paper.ArenaGuardListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaMatchListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaSignListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaTeleportListener
-import net.ninebolt.onevsone.infrastructure.paper.PaperEquipmentAdapter
+import net.ninebolt.onevsone.infrastructure.paper.PaperEquipment
 import net.ninebolt.onevsone.infrastructure.paper.PaperInventorySnapshot
-import net.ninebolt.onevsone.infrastructure.paper.PaperPlayerAdapter
 import net.ninebolt.onevsone.infrastructure.paper.PaperPlayerLookup
+import net.ninebolt.onevsone.infrastructure.paper.PaperPlayers
 import net.ninebolt.onevsone.infrastructure.paper.PaperPresentation
 import net.ninebolt.onevsone.infrastructure.paper.PaperScheduler
 import net.ninebolt.onevsone.infrastructure.paper.command.OneVsOneCommand
@@ -121,7 +121,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     val messenger = Messenger.load(File(folder, "messages"), "en", "auto", Logger.getLogger("1vs1-test"))
     val logger = plugin.logger
     val lookup = PaperPlayerLookup(server)
-    val playerPort = PaperPlayerAdapter(lookup, server, plugin, logger)
+    val playerPort = PaperPlayers(lookup, server, plugin, logger)
     val schedulerPort = PaperScheduler(plugin)
 
     private class Deps(
@@ -132,12 +132,12 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         val lobbyRepo: SqliteLobbyRepository,
         val signRepo: SqliteArenaSignRepository,
         val statsRepo: PlayerStatsRepository,
-        val equipment: PaperEquipmentAdapter,
+        val equipment: PaperEquipment,
         val presentation: PaperPresentation,
-        val registry: ArenaRegistry,
-        val recovery: PlayerRecoveryService,
+        val sessions: ArenaSessions,
+        val recovery: InventoryRecoveryService,
         val progression: MatchProgressionService,
-        val service: ArenaApplicationService,
+        val participation: MatchParticipationService,
         val lifecycle: ArenaLifecycleService,
         val admin: ArenaAdministrationService,
         val statsService: PlayerStatsService,
@@ -164,10 +164,10 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     val statsRepo get() = deps.statsRepo
     val equipment get() = deps.equipment
     val presentation get() = deps.presentation
-    val registry get() = deps.registry
+    val sessions get() = deps.sessions
     val recovery get() = deps.recovery
     val progression get() = deps.progression
-    val service get() = deps.service
+    val participation get() = deps.participation
     val lifecycle get() = deps.lifecycle
     val admin get() = deps.admin
     val statsService get() = deps.statsService
@@ -184,25 +184,25 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         val arenaRepo = SqliteArenaRepository(store)
         val lobbyRepo = SqliteLobbyRepository(store)
         val signRepo = SqliteArenaSignRepository(store)
-        val equipment = PaperEquipmentAdapter(backupStore, kitStore, lookup)
+        val equipment = PaperEquipment(backupStore, kitStore, lookup)
         val presentation = PaperPresentation(server, messenger, logger)
-        val registry = ArenaRegistry(requiredWins)
-        val signs = ArenaSignService(registry, signRepo, presentation)
-        val recovery = PlayerRecoveryService(equipment, playerPort, lobbyRepo, presentation, logger)
+        val sessions = ArenaSessions(requiredWins)
+        val signs = ArenaSignService(sessions, signRepo, presentation)
+        val recovery = InventoryRecoveryService(equipment, playerPort, lobbyRepo, presentation, logger)
         val statsService = PlayerStatsService(statsRepo, playerPort, logger)
         val progression = MatchProgressionService(
-            registry, signs, statsService,
+            sessions, signs, statsService,
             equipment, playerPort, schedulerPort, presentation, recovery, logger,
         )
-        val service = ArenaApplicationService(
-            registry,
+        val participation = MatchParticipationService(
+            sessions,
             playerPort,
             recovery,
             progression,
             signs,
         )
         val lifecycle = ArenaLifecycleService(
-            registry,
+            sessions,
             arenaRepo,
             signs,
             recovery,
@@ -210,7 +210,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
             logger,
         )
         val admin = ArenaAdministrationService(
-            registry,
+            sessions,
             arenaRepo,
             signRepo,
             equipment,
@@ -220,9 +220,9 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         val lobby = LobbyService(lobbyRepo)
         return Deps(
             store, backupStore, kitStore, arenaRepo, lobbyRepo, signRepo, statsRepo,
-            equipment, presentation, registry, recovery, progression, service, lifecycle, admin,
+            equipment, presentation, sessions, recovery, progression, participation, lifecycle, admin,
             statsService, signs, lobby,
-            OneVsOneCommand(service, admin, statsService, signs, lobby, messenger),
+            OneVsOneCommand(participation, admin, statsService, signs, lobby, messenger),
         )
     }
 
@@ -238,10 +238,10 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     // Registration must unregister first, or rebuildWith would leave handlers holding the old service
     private fun registerListeners() {
         HandlerList.unregisterAll(plugin)
-        server.pluginManager.registerEvents(ArenaMatchListener(service, lookup, messenger), plugin)
-        server.pluginManager.registerEvents(ArenaGuardListener(service), plugin)
-        server.pluginManager.registerEvents(ArenaTeleportListener(service, lookup), plugin)
-        server.pluginManager.registerEvents(ArenaSignListener(service, signs, messenger), plugin)
+        server.pluginManager.registerEvents(ArenaMatchListener(participation, lookup, messenger), plugin)
+        server.pluginManager.registerEvents(ArenaGuardListener(participation), plugin)
+        server.pluginManager.registerEvents(ArenaTeleportListener(participation, lookup), plugin)
+        server.pluginManager.registerEvents(ArenaSignListener(participation, signs, messenger), plugin)
     }
 
     fun fire(event: Event) {
@@ -289,15 +289,15 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
             Arena.Disabled.restored(id, spawn1, spawn2)
         }
         arenaRepo.save(arena)
-        registry.installArena(arena)
+        sessions.installArena(arena)
         return id
     }
 
     fun setKit(arena: Arena.Id, snapshot: PaperInventorySnapshot) = kitStore.saveArenaKit(arena.name, snapshot)
 
-    fun join(player: Player, arena: Arena.Id = arenaId("arena1")): JoinOutput = service.join(player.uuid, player.name, arena)
+    fun join(player: Player, arena: Arena.Id = arenaId("arena1")): JoinOutput = participation.join(player.uuid, player.name, arena)
 
-    fun state(name: String = "arena1") = service.matchOf(name)?.state?.kind
+    fun state(name: String = "arena1") = participation.matchIn(name)?.state?.kind
 
     fun close() {
         deps.store.close()

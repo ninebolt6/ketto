@@ -1,14 +1,14 @@
 package net.ninebolt.onevsone.application.fixtures
 
 import net.ninebolt.onevsone.application.ArenaAdministrationService
-import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.application.ArenaLifecycleService
-import net.ninebolt.onevsone.application.ArenaRegistry
+import net.ninebolt.onevsone.application.ArenaSessions
 import net.ninebolt.onevsone.application.ArenaSignService
+import net.ninebolt.onevsone.application.InventoryRecoveryService
 import net.ninebolt.onevsone.application.JoinOutput
 import net.ninebolt.onevsone.application.LobbyService
+import net.ninebolt.onevsone.application.MatchParticipationService
 import net.ninebolt.onevsone.application.MatchProgressionService
-import net.ninebolt.onevsone.application.PlayerRecoveryService
 import net.ninebolt.onevsone.application.PlayerStatsService
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaState
@@ -18,28 +18,28 @@ import kotlin.test.assertEquals
 
 class TestApp(val requiredWins: Int = 3) {
     val logger = RecordingLogger()
-    val registry = ArenaRegistry(requiredWins)
+    val sessions = ArenaSessions(requiredWins)
     val arenas = InMemoryArenaRepository()
     val stats = InMemoryPlayerStatsRepository()
     val players = FakePlayers()
     val equipment = FakeEquipment(players)
     val scheduler = FakeScheduler()
     val presentation = RecordingPresentation()
-    val recovery = PlayerRecoveryService(equipment, players, arenas, presentation, logger)
-    val signs = ArenaSignService(registry, arenas, presentation)
+    val recovery = InventoryRecoveryService(equipment, players, arenas, presentation, logger)
+    val signs = ArenaSignService(sessions, arenas, presentation)
     val statsService = PlayerStatsService(stats, players, logger)
     val progression = MatchProgressionService(
-        registry, signs, statsService, equipment, players, scheduler, presentation, recovery, logger,
+        sessions, signs, statsService, equipment, players, scheduler, presentation, recovery, logger,
     )
-    val service = ArenaApplicationService(
-        registry,
+    val participation = MatchParticipationService(
+        sessions,
         players,
         recovery,
         progression,
         signs,
     )
-    val lifecycle = ArenaLifecycleService(registry, arenas, signs, recovery, progression, logger)
-    val admin = ArenaAdministrationService(registry, arenas, arenas, equipment, progression, signs)
+    val lifecycle = ArenaLifecycleService(sessions, arenas, signs, recovery, progression, logger)
+    val admin = ArenaAdministrationService(sessions, arenas, arenas, equipment, progression, signs)
     val lobby = LobbyService(arenas)
 
     fun newArena(name: String = "arena1", enabled: Boolean = true): Arena.Id {
@@ -51,7 +51,7 @@ class TestApp(val requiredWins: Int = 3) {
         } else {
             Arena.Disabled.restored(id, spawn1, spawn2)
         }
-        registry.installArena(arena)
+        sessions.installArena(arena)
         return id
     }
 
@@ -59,8 +59,8 @@ class TestApp(val requiredWins: Int = 3) {
         newArena(arenaName)
         val p1 = players.add("Alice")
         val p2 = players.add("Bob")
-        assertEquals(JoinOutput.JoinedWaiting, service.join(p1.id, p1.name, arenaId(arenaName)))
-        assertEquals(JoinOutput.JoinedStarting, service.join(p2.id, p2.name, arenaId(arenaName)))
+        assertEquals(JoinOutput.JoinedWaiting, participation.join(p1.id, p1.name, arenaId(arenaName)))
+        assertEquals(JoinOutput.JoinedStarting, participation.join(p2.id, p2.name, arenaId(arenaName)))
         return p1 to p2
     }
 
@@ -71,5 +71,5 @@ class TestApp(val requiredWins: Int = 3) {
         return pair
     }
 
-    fun state(name: String = "arena1") = service.matchOf(name)!!.state.kind
+    fun state(name: String = "arena1") = participation.matchIn(name)!!.state.kind
 }

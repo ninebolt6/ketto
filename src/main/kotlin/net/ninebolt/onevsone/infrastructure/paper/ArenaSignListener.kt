@@ -1,8 +1,8 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
-import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.application.ArenaSignService
 import net.ninebolt.onevsone.application.JoinOutput
+import net.ninebolt.onevsone.application.MatchParticipationService
 import net.ninebolt.onevsone.infrastructure.paper.message.Message
 import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import org.bukkit.block.Block
@@ -19,7 +19,7 @@ import org.bukkit.inventory.EquipmentSlot
 import kotlin.uuid.toKotlinUuid
 
 class ArenaSignListener(
-    private val service: ArenaApplicationService,
+    private val participation: MatchParticipationService,
     private val signs: ArenaSignService,
     private val messenger: Messenger,
 ) : Listener {
@@ -33,7 +33,7 @@ class ArenaSignListener(
         val id = signs.signOwner(block.toBlockPosition()) ?: return
         // Vanilla lets anyone open the sign edit screen by right-clicking an unwaxed sign
         event.denyUse()
-        val output = service.join(event.player.uniqueId.toKotlinUuid(), event.player.name, id)
+        val output = participation.join(event.player.uniqueId.toKotlinUuid(), event.player.name, id)
         renderJoin(event.player, id.name, output)
     }
 
@@ -69,7 +69,7 @@ class ArenaSignListener(
 
             JoinOutput.NotEnabled -> messenger.send(player, Message.ArenaNotEnabled)
 
-            JoinOutput.InMatch -> messenger.send(player, Message.MatchInGame)
+            JoinOutput.Rejected -> messenger.send(player, Message.MatchInGame)
 
             JoinOutput.RestorePending -> messenger.send(player, Message.MatchRestorePending)
 

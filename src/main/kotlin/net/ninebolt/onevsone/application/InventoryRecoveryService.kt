@@ -14,7 +14,7 @@ import java.util.logging.Logger
 import kotlin.uuid.Uuid
 
 // Deferred callbacks are validated by comparing the still-pending BackupRef
-class PlayerRecoveryService(
+class InventoryRecoveryService(
     private val backups: InventoryBackupPort,
     private val players: PlayerPort,
     private val lobby: LobbyRepository,
@@ -31,7 +31,7 @@ class PlayerRecoveryService(
         if (backups.pendingFor(handle.id) != ref) return false
         if (!restorePayload(handle, ref)) return false
         try {
-            backups.acknowledge(ref)
+            backups.discard(ref)
         } catch (e: PersistenceException) {
             // A failed delete leaves the record on disk; re-restoring on next startup is the safe side
             logger.log(Level.SEVERE, "Could not discard restored backup for ${handle.name} (${handle.id}); record retained", e)

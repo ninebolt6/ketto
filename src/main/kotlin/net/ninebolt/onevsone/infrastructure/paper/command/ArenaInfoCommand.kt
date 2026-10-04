@@ -1,17 +1,17 @@
 package net.ninebolt.onevsone.infrastructure.paper.command
 
-import net.ninebolt.onevsone.application.ArenaApplicationService
+import net.ninebolt.onevsone.application.MatchParticipationService
 import net.ninebolt.onevsone.infrastructure.paper.message.Message
 import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import org.bukkit.command.CommandSender
 
 internal class ArenaInfoCommand(
-    private val service: ArenaApplicationService,
+    private val participation: MatchParticipationService,
     private val messenger: Messenger,
 ) {
 
     fun execute(sender: CommandSender, arenaName: String) {
-        val match = service.matchOf(arenaName) ?: run {
+        val match = participation.matchIn(arenaName) ?: run {
             messenger.send(sender, Message.ArenaNotFound)
             return
         }

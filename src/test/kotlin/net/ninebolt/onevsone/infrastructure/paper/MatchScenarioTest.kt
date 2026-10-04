@@ -210,7 +210,7 @@ class MatchScenarioTest {
         env.rebuildWith(SqliteStore(folder, Logger.getLogger("1vs1-test")))
         env.lifecycle.load()
 
-        assertTrue(env.registry.resolveArena("arena1")!!.enabled)
+        assertTrue(env.sessions.resolveArena("arena1")!!.enabled)
         assertEquals(arenaId("arena1"), env.signRepo.signOwner(BlockPosition.new("world", 3, 64, 3)))
 
         val sign = env.signBlock(3, 64, 3)

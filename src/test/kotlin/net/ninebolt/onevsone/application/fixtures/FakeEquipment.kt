@@ -14,7 +14,7 @@ class FakeEquipment(var players: FakePlayers? = null) :
     InventoryBackupPort {
     val storedBackups = linkedMapOf<Uuid, BackupRef>()
     val restored = mutableListOf<BackupRef>()
-    val acknowledged = mutableListOf<BackupRef>()
+    val discarded = mutableListOf<BackupRef>()
     val kitApplies = mutableListOf<Pair<Arena.Id, Uuid>>()
     val savedKits = mutableListOf<Pair<Arena.Id, Uuid>>()
     val forgottenKits = mutableListOf<Arena.Id>()
@@ -22,7 +22,7 @@ class FakeEquipment(var players: FakePlayers? = null) :
     var applyCalls = 0
     var failOnBackup: PersistenceException? = null
     var failOnApplyAt: Int = -1
-    var failOnAcknowledge = false
+    var failOnDiscard = false
     var failOnRestore = false
     var failOnPendingRefs: PersistenceException? = null
 
@@ -40,9 +40,9 @@ class FakeEquipment(var players: FakePlayers? = null) :
         players?.players?.get(backup.playerId)?.events?.add("restore")
     }
 
-    override fun acknowledge(backup: BackupRef) {
-        if (failOnAcknowledge) throw PersistenceException("acknowledge failed")
-        acknowledged += backup
+    override fun discard(backup: BackupRef) {
+        if (failOnDiscard) throw PersistenceException("discard failed")
+        discarded += backup
         storedBackups.remove(backup.backupId)
     }
 

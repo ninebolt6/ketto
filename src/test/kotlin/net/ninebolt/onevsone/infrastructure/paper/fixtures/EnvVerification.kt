@@ -9,7 +9,7 @@ internal fun MessageTarget.drainMessages(): List<String> = generateSequence { ne
 
 internal fun TestEnv.lastBroadcast(): String = server.consoleSender.drainMessages().lastOrNull() ?: error("no broadcast captured")
 
-internal fun TestEnv.view(name: String = "arena1") = service.matchOf(name)!!
+internal fun TestEnv.view(name: String = "arena1") = participation.matchIn(name)!!
 
 internal data class BackupRow(val backupId: String, val matchId: String, val playerUuid: String?, val playerName: String)
 

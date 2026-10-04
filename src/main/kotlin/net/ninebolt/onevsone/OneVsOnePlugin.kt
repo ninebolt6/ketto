@@ -2,21 +2,21 @@ package net.ninebolt.onevsone
 
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents
 import net.ninebolt.onevsone.application.ArenaAdministrationService
-import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.application.ArenaLifecycleService
-import net.ninebolt.onevsone.application.ArenaRegistry
+import net.ninebolt.onevsone.application.ArenaSessions
 import net.ninebolt.onevsone.application.ArenaSignService
+import net.ninebolt.onevsone.application.InventoryRecoveryService
 import net.ninebolt.onevsone.application.LobbyService
+import net.ninebolt.onevsone.application.MatchParticipationService
 import net.ninebolt.onevsone.application.MatchProgressionService
-import net.ninebolt.onevsone.application.PlayerRecoveryService
 import net.ninebolt.onevsone.application.PlayerStatsService
 import net.ninebolt.onevsone.infrastructure.paper.ArenaGuardListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaMatchListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaSignListener
 import net.ninebolt.onevsone.infrastructure.paper.ArenaTeleportListener
-import net.ninebolt.onevsone.infrastructure.paper.PaperEquipmentAdapter
-import net.ninebolt.onevsone.infrastructure.paper.PaperPlayerAdapter
+import net.ninebolt.onevsone.infrastructure.paper.PaperEquipment
 import net.ninebolt.onevsone.infrastructure.paper.PaperPlayerLookup
+import net.ninebolt.onevsone.infrastructure.paper.PaperPlayers
 import net.ninebolt.onevsone.infrastructure.paper.PaperPresentation
 import net.ninebolt.onevsone.infrastructure.paper.PaperScheduler
 import net.ninebolt.onevsone.infrastructure.paper.PluginSettings
@@ -84,17 +84,17 @@ private class PluginModule(
     private val stats = SqlitePlayerStatsRepository(store)
 
     private val lookup = PaperPlayerLookup(plugin.server)
-    private val players = PaperPlayerAdapter(lookup = lookup, server = plugin.server, plugin = plugin, logger = plugin.logger)
-    private val equipment = PaperEquipmentAdapter(
+    private val players = PaperPlayers(lookup = lookup, server = plugin.server, plugin = plugin, logger = plugin.logger)
+    private val equipment = PaperEquipment(
         backups = SqliteBackupStore(store, plugin.logger),
         kitStore = SqliteKitStore(store),
         lookup = lookup,
     )
     private val presentation = PaperPresentation(server = plugin.server, messenger = messenger, logger = plugin.logger)
 
-    private val registry = ArenaRegistry(requiredWins)
-    private val signs = ArenaSignService(registry = registry, signs = signRepository, presentation = presentation)
-    private val recovery = PlayerRecoveryService(
+    private val sessions = ArenaSessions(requiredWins)
+    private val signs = ArenaSignService(sessions = sessions, signs = signRepository, presentation = presentation)
+    private val recovery = InventoryRecoveryService(
         backups = equipment,
         players = players,
         lobby = lobbyRepository,
@@ -103,7 +103,7 @@ private class PluginModule(
     )
     private val statsService = PlayerStatsService(stats = stats, players = players, logger = plugin.logger)
     private val progression = MatchProgressionService(
-        registry = registry,
+        sessions = sessions,
         signs = signs,
         stats = statsService,
         kit = equipment,
@@ -113,15 +113,15 @@ private class PluginModule(
         recovery = recovery,
         logger = plugin.logger,
     )
-    private val service = ArenaApplicationService(
-        registry = registry,
+    private val participation = MatchParticipationService(
+        sessions = sessions,
         players = players,
         recovery = recovery,
         progression = progression,
         signs = signs,
     )
     val lifecycle = ArenaLifecycleService(
-        registry = registry,
+        sessions = sessions,
         arenas = arenaRepository,
         recovery = recovery,
         progression = progression,
@@ -129,7 +129,7 @@ private class PluginModule(
         logger = plugin.logger,
     )
     private val admin = ArenaAdministrationService(
-        registry = registry,
+        sessions = sessions,
         arenas = arenaRepository,
         signRepo = signRepository,
         kit = equipment,
@@ -144,7 +144,7 @@ private class PluginModule(
 
     fun registerCommands() {
         val commands = OneVsOneCommand(
-            service = service,
+            participation = participation,
             admin = admin,
             statsService = statsService,
             signs = signs,
@@ -158,9 +158,9 @@ private class PluginModule(
 
     fun registerListeners() {
         val manager = plugin.server.pluginManager
-        manager.registerEvents(ArenaMatchListener(service, lookup, messenger), plugin)
-        manager.registerEvents(ArenaGuardListener(service), plugin)
-        manager.registerEvents(ArenaTeleportListener(service, lookup), plugin)
-        manager.registerEvents(ArenaSignListener(service, signs, messenger), plugin)
+        manager.registerEvents(ArenaMatchListener(participation, lookup, messenger), plugin)
+        manager.registerEvents(ArenaGuardListener(participation), plugin)
+        manager.registerEvents(ArenaTeleportListener(participation, lookup), plugin)
+        manager.registerEvents(ArenaSignListener(participation, signs, messenger), plugin)
     }
 }
