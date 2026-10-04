@@ -50,8 +50,8 @@ class ArenaLifecycleServiceTest {
         val (p1, _) = app.startMatch()
         app.lifecycle.shutdown()
         assertEquals(ArenaState.Kind.WAITING, app.state())
-        assertTrue(app.sessions.resolveArena("arena1")!!.enabled)
-        assertNull(app.sessions.arenaIdOf(p1.id))
+        assertTrue(app.sessions.findArena("arena1")!!.enabled)
+        assertNull(app.sessions.findArenaIdOf(p1.id))
         assertEquals(2, app.equipment.restored.size)
     }
 }

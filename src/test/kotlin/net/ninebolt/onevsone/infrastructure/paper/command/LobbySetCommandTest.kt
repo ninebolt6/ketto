@@ -36,7 +36,7 @@ class LobbySetCommandTest {
         p.setLocation(Location(env.world(), 7.5, 64.0, -2.5, 90f, 0f))
         env.runCommand(p, "lobby", "set")
         assertTrue(p.drainMessages().any { it.contains("Lobby location set") })
-        val lobby = env.lobbyRepository.lobby()!!
+        val lobby = env.lobbyRepository.findLobby()!!
         assertEquals(7.5, lobby.x)
         assertEquals(90f, lobby.yaw, 0.001f)
     }

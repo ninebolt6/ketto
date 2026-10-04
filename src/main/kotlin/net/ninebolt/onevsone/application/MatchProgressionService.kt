@@ -18,7 +18,7 @@ import java.util.logging.Level
 import java.util.logging.Logger
 import kotlin.uuid.Uuid
 
-// ArenaMatch is immutable: never capture it inside a deferred callback — re-read via sessions.match(arenaId) and validate by epoch
+// ArenaMatch is immutable: never capture it inside a deferred callback — re-read via sessions.findMatch(arenaId) and validate by epoch
 class MatchProgressionService(
     private val sessions: ArenaSessions,
     private val signService: ArenaSignService,
@@ -34,7 +34,7 @@ class MatchProgressionService(
 
     fun requestRespawn(playerId: Uuid) {
         schedulerPort.schedule(0) {
-            playerPort.handle(playerId)?.takeIf { it.dead }?.respawn()
+            playerPort.findHandle(playerId)?.takeIf { it.dead }?.respawn()
         }
     }
 
@@ -42,7 +42,7 @@ class MatchProgressionService(
         cancelCountdown(arenaId)
         val step = sessions.transact(arenaId) { it.abort() } ?: return
         val left = step.outcome
-        val pendingRefs = left.map { it to recovery.pending(it.id) }
+        val pendingRefs = left.map { it to recovery.findPending(it.id) }
         pendingRefs.forEach { (participant, ref) ->
             runNowOrAfterRespawn(participant.id, ref) { h ->
                 ref?.let { recovery.restoreNow(h, it) }
@@ -60,21 +60,21 @@ class MatchProgressionService(
         cancelCountdown(arenaId)
         val epoch = match.epoch
         try {
-            val winnerHandle = playerPort.handle(outcome.winner.id)
+            val winnerHandle = playerPort.findHandle(outcome.winner.id)
             if (winnerHandle != null) {
                 rearm(arenaId, outcome.winner, winnerHandle)
             }
 
-            playerPort.handle(outcome.loser.id)?.let { presentationPort.roundEndSound(it.position()) }
+            playerPort.findHandle(outcome.loser.id)?.let { presentationPort.roundEndSound(it.position()) }
 
             val ids = match.participants.map { it.id }
             presentationPort.roundWon(ids, outcome.round, outcome.winner.name)
             presentationPort.updateScoreboard(match)
 
-            val loserHandle = playerPort.handle(outcome.loser.id)
+            val loserHandle = playerPort.findHandle(outcome.loser.id)
             if (death) {
                 scheduleDeferred(outcome.loser.id, {
-                    sessions.match(arenaId)?.epoch == epoch
+                    sessions.findMatch(arenaId)?.epoch == epoch
                 }) { h ->
                     rearm(arenaId, outcome.loser, h)
                     teleportToSlot(arenaId, outcome.loser, h)
@@ -104,8 +104,8 @@ class MatchProgressionService(
         cancelCountdown(arenaId)
 
         // Backup refs must be secured first: the committing transition has already unregistered both participants
-        val winnerRef = recovery.pending(winner.id)
-        val loserRef = recovery.pending(loser.id)
+        val winnerRef = recovery.findPending(winner.id)
+        val loserRef = recovery.findPending(loser.id)
         if (winnerRef == null || loserRef == null) {
             logger.severe("Match in arena ${arenaId.name} ended without a pending backup; retained rows restore on next login")
         }
@@ -123,7 +123,7 @@ class MatchProgressionService(
             }
         } else {
             // Losers who died via quit arrive here dead, so do not defer on a dead check
-            playerPort.handle(loser.id)?.let { h ->
+            playerPort.findHandle(loser.id)?.let { h ->
                 if (cause == DefeatCause.FORFEIT) {
                     loserRef?.let { recovery.restoreNow(h, it) }
                 } else {
@@ -170,7 +170,7 @@ class MatchProgressionService(
                 online.forEach { (sp, h) -> rearm(arenaId, sp, h) }
                 // Teleports fire events synchronously, so the match can move on mid-loop
                 for ((sp, h) in online) {
-                    if (sessions.match(arenaId)?.epoch != epoch) {
+                    if (sessions.findMatch(arenaId)?.epoch != epoch) {
                         abort(arenaId)
                         return@runCountdown true
                     }
@@ -220,14 +220,14 @@ class MatchProgressionService(
         onTick: CountdownTick.() -> Boolean,
     ) {
         timers[arenaId] = schedulerPort.repeat(10, 20) { task, iteration ->
-            val match = sessions.match(arenaId)
+            val match = sessions.findMatch(arenaId)
             val paired = match?.paired
             if (match == null || match.epoch != epoch || paired == null) {
                 task.cancel()
                 return@repeat
             }
             val slotted = paired.slotted.toList()
-            val online = slotted.mapNotNull { sp -> playerPort.handle(sp.id)?.let { sp to it } }
+            val online = slotted.mapNotNull { sp -> playerPort.findHandle(sp.id)?.let { sp to it } }
             if (online.size != slotted.size) {
                 task.cancel()
                 abort(arenaId)
@@ -261,7 +261,7 @@ class MatchProgressionService(
         ref: BackupRef?,
         action: (PlayerHandle) -> Unit,
     ) {
-        val handle = playerPort.handle(playerId) ?: return
+        val handle = playerPort.findHandle(playerId) ?: return
         if (!handle.dead) {
             action(handle)
             return
@@ -276,7 +276,7 @@ class MatchProgressionService(
     private fun scheduleDeferred(playerId: Uuid, valid: () -> Boolean, action: (PlayerHandle) -> Unit) {
         schedulerPort.schedule(0) {
             if (!valid()) return@schedule
-            val h = playerPort.handle(playerId)?.takeIf { it.online } ?: return@schedule
+            val h = playerPort.findHandle(playerId)?.takeIf { it.online } ?: return@schedule
             if (h.dead) {
                 h.respawn()
                 if (!valid()) return@schedule
@@ -295,10 +295,10 @@ class MatchProgressionService(
         playerId: Uuid,
         ref: BackupRef,
         action: (PlayerHandle) -> Unit,
-    ) = scheduleDeferred(playerId, { recovery.pending(playerId) == ref }, action)
+    ) = scheduleDeferred(playerId, { recovery.findPending(playerId) == ref }, action)
 
     private fun teleportToSlot(arenaId: Arena.Id, participant: SlottedParticipant, handle: PlayerHandle) {
-        val spawn = sessions.enabledArena(arenaId)?.spawn(participant.slot)
+        val spawn = sessions.findEnabledArena(arenaId)?.spawn(participant.slot)
         if (spawn == null) {
             logger.warning("Arena ${arenaId.name} is not enabled during an active match; skipping teleport")
             return

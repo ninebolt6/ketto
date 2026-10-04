@@ -12,11 +12,11 @@ class ArenaSignService(
     private val signRepository: ArenaSignRepository,
     private val presentationPort: PresentationPort,
 ) {
-    fun signOwner(position: BlockPosition): Arena.Id? = signRepository.signOwner(position)
+    fun findSignOwner(position: BlockPosition): Arena.Id? = signRepository.findSignOwner(position)
 
     fun setSign(id: Arena.Id, position: BlockPosition): Boolean {
-        val (arena, match) = sessions.entry(id) ?: return false
-        val owner = signRepository.signOwner(position)
+        val (arena, match) = sessions.findEntry(id) ?: return false
+        val owner = signRepository.findSignOwner(position)
         if (owner != null && owner != arena.id) return false
         signRepository.setSign(arena.id, position)
         presentationPort.updateSign(arena, position, match.state.kind)
@@ -24,19 +24,19 @@ class ArenaSignService(
     }
 
     fun refreshSign(arena: Arena.Id, state: ArenaState) {
-        val position = signRepository.signLocation(arena) ?: return
-        val resolved = sessions.arena(arena) ?: return
+        val position = signRepository.findSignLocation(arena) ?: return
+        val resolved = sessions.findArena(arena) ?: return
         presentationPort.updateSign(resolved, position, state.kind)
     }
 
     // A superseded match snapshot must not overwrite the live sign
     fun refreshSign(match: ArenaMatch) {
-        if (sessions.match(match.arenaId) === match) refreshSign(match.arenaId, match.state)
+        if (sessions.findMatch(match.arenaId) === match) refreshSign(match.arenaId, match.state)
     }
 
     fun clearSign(id: Arena.Id): Boolean {
-        val arena = sessions.arena(id) ?: return false
-        if (signRepository.signLocation(arena.id) == null) return false
+        val arena = sessions.findArena(id) ?: return false
+        if (signRepository.findSignLocation(arena.id) == null) return false
         signRepository.clearSign(arena.id)
         return true
     }

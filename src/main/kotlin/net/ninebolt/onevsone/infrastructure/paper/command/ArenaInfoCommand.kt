@@ -11,7 +11,7 @@ internal class ArenaInfoCommand(
 ) {
 
     fun execute(sender: CommandSender, arenaName: String) {
-        val match = participation.matchIn(arenaName) ?: run {
+        val match = participation.findMatchIn(arenaName) ?: run {
             messenger.send(sender, Message.ArenaNotFound)
             return
         }

@@ -144,7 +144,7 @@ class ArenaTeleportListenerTest {
         assertTrue(p1.hasTeleported())
 
         p1.clearTeleported()
-        env.playerPort.handle(p1.uuid)!!.teleport(WorldPosition.new("world", 7.0, 64.0, 7.0))
+        env.playerPort.findHandle(p1.uuid)!!.teleport(WorldPosition.new("world", 7.0, 64.0, 7.0))
         assertTrue(p1.hasTeleported())
     }
 

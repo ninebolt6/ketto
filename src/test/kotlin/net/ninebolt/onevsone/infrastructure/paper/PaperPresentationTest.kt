@@ -60,7 +60,7 @@ class PaperPresentationTest {
     @Test
     fun `sign update for an unloaded world warns and leaves other worlds untouched`() {
         env.newArena()
-        val arena = env.sessions.resolveArena("arena1")!!
+        val arena = env.sessions.findArena("arena1")!!
         val sign = env.signBlock(1, 64, 1)
         val warnings = captureLog()
 
@@ -73,7 +73,7 @@ class PaperPresentationTest {
     @Test
     fun `sign update on a non sign block is ignored`() {
         env.newArena()
-        val arena = env.sessions.resolveArena("arena1")!!
+        val arena = env.sessions.findArena("arena1")!!
         val block = env.plainBlock()
         val warnings = captureLog()
 
@@ -105,7 +105,7 @@ class PaperPresentationTest {
     @Test
     fun `scoreboard update skips an offline participant and still updates the online one`() {
         val (p1, p2) = env.twoPlayerIngame()
-        val match = env.participation.matchIn("arena1")!!
+        val match = env.participation.findMatchIn("arena1")!!
         env.disconnectWithoutQuitHandler(p2)
 
         env.presentation.updateScoreboard(match)

@@ -27,7 +27,7 @@ class ArenaTeleportListener(
     }
 
     private fun restrictTeleport(event: PlayerTeleportEvent) {
-        val restrictions = participation.restrictionsOf(event.player) ?: return
+        val restrictions = participation.findRestrictions(event.player) ?: return
         // The plugin's own teleports do not always arrive with cause PLUGIN
         val trigger = when {
             lookup.isPluginTeleport(event.player.uniqueId.toKotlinUuid()) -> TeleportTrigger.PLUGIN
@@ -41,6 +41,6 @@ class ArenaTeleportListener(
     @EventHandler
     fun onVehicleEnter(event: VehicleEnterEvent) {
         val player = event.entered as? Player ?: return
-        if (participation.restrictionsOf(player)?.horizontalMoveFrozen == true) event.isCancelled = true
+        if (participation.findRestrictions(player)?.horizontalMoveFrozen == true) event.isCancelled = true
     }
 }

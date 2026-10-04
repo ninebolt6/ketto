@@ -21,8 +21,8 @@ class SqliteArenaSignRepositoryTest {
         SqliteArenaRepository(store).save(Arena.Disabled.new(arenaId("a1")))
         SqliteArenaSignRepository(store).setSign(arenaId("a1"), BlockPosition.new("world", 5, 64, 5))
         val fresh = SqliteArenaSignRepository(store)
-        assertEquals(arenaId("a1"), fresh.signOwner(BlockPosition.new("world", 5, 64, 5)))
-        assertEquals(5, fresh.signLocation(arenaId("a1"))!!.x)
+        assertEquals(arenaId("a1"), fresh.findSignOwner(BlockPosition.new("world", 5, 64, 5)))
+        assertEquals(5, fresh.findSignLocation(arenaId("a1"))!!.x)
     }
 
     @Test
@@ -31,11 +31,11 @@ class SqliteArenaSignRepositoryTest {
         val repo = SqliteArenaSignRepository(store)
         repo.setSign(arenaId("a1"), BlockPosition.new("world", 5, 64, 5))
         repo.setSign(arenaId("a1"), BlockPosition.new("world", 9, 64, 9))
-        assertNull(repo.signOwner(BlockPosition.new("world", 5, 64, 5)))
-        assertEquals(arenaId("a1"), repo.signOwner(BlockPosition.new("world", 9, 64, 9)))
-        assertEquals(9, repo.signLocation(arenaId("a1"))!!.x)
+        assertNull(repo.findSignOwner(BlockPosition.new("world", 5, 64, 5)))
+        assertEquals(arenaId("a1"), repo.findSignOwner(BlockPosition.new("world", 9, 64, 9)))
+        assertEquals(9, repo.findSignLocation(arenaId("a1"))!!.x)
         repo.clearSign(arenaId("a1"))
-        assertNull(repo.signOwner(BlockPosition.new("world", 9, 64, 9)))
+        assertNull(repo.findSignOwner(BlockPosition.new("world", 9, 64, 9)))
         assertEquals(0, countRows(store, "arena_signs"))
     }
 
@@ -46,6 +46,6 @@ class SqliteArenaSignRepositoryTest {
 
         val repo = SqliteArenaSignRepository(store)
 
-        assertNull(repo.signOwner(BlockPosition.new("world", 5, 64, 5)))
+        assertNull(repo.findSignOwner(BlockPosition.new("world", 5, 64, 5)))
     }
 }

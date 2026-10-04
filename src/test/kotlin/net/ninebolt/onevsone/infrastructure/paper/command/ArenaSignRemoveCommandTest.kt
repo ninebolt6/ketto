@@ -39,8 +39,8 @@ class ArenaSignRemoveCommandTest {
 
         env.runCommand(op, "arena", "arena1", "sign", "remove")
         assertTrue(op.drainMessages().any { it.contains("Unregistered sign for arena") })
-        assertNull(env.signRepository.signOwner(BlockPosition.new("world", 4, 64, 4)))
-        assertNull(env.signRepository.signLocation(arenaId("arena1")))
+        assertNull(env.signRepository.findSignOwner(BlockPosition.new("world", 4, 64, 4)))
+        assertNull(env.signRepository.findSignLocation(arenaId("arena1")))
 
         env.runCommand(op, "arena", "arena1", "sign", "remove")
         assertTrue(op.drainMessages().any { it.contains("No sign is registered for that arena") })

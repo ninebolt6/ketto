@@ -46,7 +46,7 @@ class FakePlayers : PlayerPort {
     val players = mutableMapOf<Uuid, FakeHandle>()
     val offlineIds = mutableMapOf<String, Uuid>()
 
-    override fun handle(playerId: Uuid): PlayerHandle? = players[playerId]?.takeIf { it.online || it.quitting }
+    override fun findHandle(playerId: Uuid): PlayerHandle? = players[playerId]?.takeIf { it.online || it.quitting }
 
     override fun resolveOfflineId(name: String, callback: (Uuid?) -> Unit) {
         callback(offlineIds[name])

@@ -29,7 +29,7 @@ class SqliteBackupStore(
     }
 
     // strict: returning null would let the next match's INSERT OR REPLACE silently overwrite the row and its payload
-    fun pendingFor(playerId: Uuid): BackupRef? = store.queryOne(
+    fun findPending(playerId: Uuid): BackupRef? = store.queryOne(
         "SELECT backup_id, match_id, player_uuid, player_name FROM backups WHERE player_uuid = ?",
         playerId.toString(),
     ) { toRef(it) }

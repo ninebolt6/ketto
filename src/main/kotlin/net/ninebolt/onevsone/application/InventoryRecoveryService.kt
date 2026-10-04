@@ -25,10 +25,10 @@ class InventoryRecoveryService(
         backupPort.backupBeforeMatch(MatchId.new(), participants)
     }
 
-    fun pending(playerId: Uuid): BackupRef? = backupPort.pendingFor(playerId)
+    fun findPending(playerId: Uuid): BackupRef? = backupPort.findPending(playerId)
 
     fun restoreNow(handle: PlayerHandle, ref: BackupRef): Boolean {
-        if (backupPort.pendingFor(handle.id) != ref) return false
+        if (backupPort.findPending(handle.id) != ref) return false
         if (!restorePayload(handle, ref)) return false
         try {
             backupPort.discard(ref)
@@ -56,7 +56,7 @@ class InventoryRecoveryService(
     }
 
     private fun teleportLobby(handle: PlayerHandle) {
-        val position = lobbyRepository.lobby()
+        val position = lobbyRepository.findLobby()
         if (position == null) {
             logger.warning("Lobby is not set; skipping teleport for ${handle.name}")
             return
@@ -73,7 +73,7 @@ class InventoryRecoveryService(
             return
         }
         refs.forEach { ref ->
-            val handle = playerPort.handle(ref.playerId) ?: return@forEach
+            val handle = playerPort.findHandle(ref.playerId) ?: return@forEach
             if (handle.dead) {
                 restorePayload(handle, ref)
             } else {

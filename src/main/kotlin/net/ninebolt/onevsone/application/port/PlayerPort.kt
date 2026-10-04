@@ -5,7 +5,7 @@ import kotlin.uuid.Uuid
 
 interface PlayerPort {
     // also returns disconnecting players, which the adapter registers while processing QuitEvent
-    fun handle(playerId: Uuid): PlayerHandle?
+    fun findHandle(playerId: Uuid): PlayerHandle?
 
     // the callback runs on the main thread, never fires after plugin disable, and must re-check the player is still around
     fun resolveOfflineId(name: String, callback: (Uuid?) -> Unit)

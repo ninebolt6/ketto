@@ -30,7 +30,7 @@ class ArenaSignListener(
         if (event.hand != EquipmentSlot.HAND) return
         val block = event.clickedBlock ?: return
         if (block.state !is Sign) return
-        val id = signService.signOwner(block.toBlockPosition()) ?: return
+        val id = signService.findSignOwner(block.toBlockPosition()) ?: return
         // Vanilla lets anyone open the sign edit screen by right-clicking an unwaxed sign
         event.denyUse()
         val output = participation.join(event.player.uniqueId.toKotlinUuid(), event.player.name, id)
@@ -54,7 +54,7 @@ class ArenaSignListener(
         event.blockList().removeIf(::isRegisteredSign)
     }
 
-    private fun isRegisteredSign(block: Block): Boolean = block.state is Sign && signService.signOwner(block.toBlockPosition()) != null
+    private fun isRegisteredSign(block: Block): Boolean = block.state is Sign && signService.findSignOwner(block.toBlockPosition()) != null
 
     private fun renderJoin(player: Player, arenaName: String, output: JoinOutput) {
         when (output) {

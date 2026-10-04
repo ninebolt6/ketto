@@ -26,7 +26,7 @@ class SqliteArenaSignRepository(
         }
     }.toMap().toMutableMap()
 
-    override fun signLocation(arena: Arena.Id): BlockPosition? = index.entries.firstOrNull { it.value == arena }?.key
+    override fun findSignLocation(arena: Arena.Id): BlockPosition? = index.entries.firstOrNull { it.value == arena }?.key
 
     override fun setSign(arena: Arena.Id, position: BlockPosition) {
         store.exec(
@@ -46,5 +46,5 @@ class SqliteArenaSignRepository(
         index.entries.removeAll { it.value == arena }
     }
 
-    override fun signOwner(position: BlockPosition): Arena.Id? = index[position]
+    override fun findSignOwner(position: BlockPosition): Arena.Id? = index[position]
 }

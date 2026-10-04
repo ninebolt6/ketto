@@ -12,7 +12,7 @@ internal class ArenaKitSetCommand(
 ) {
 
     fun execute(player: Player, arenaName: String) {
-        val id = administration.resolveArenaId(arenaName) ?: run {
+        val id = administration.findArenaId(arenaName) ?: run {
             messenger.send(player, Message.ArenaNotFound)
             return
         }

@@ -29,7 +29,7 @@ class InventoryRecoveryServiceTest {
         app.equipment.failOnPendingRefs = PersistenceException("read failed")
         app.lifecycle.shutdown()
         assertTrue(app.logger.warnings.any { it.contains("Could not list pending backups") })
-        assertEquals(ref, app.equipment.pendingFor(ref.playerId))
+        assertEquals(ref, app.equipment.findPending(ref.playerId))
     }
 
     @Test
@@ -40,7 +40,7 @@ class InventoryRecoveryServiceTest {
         app.participation.defeat(p2.id, DefeatCause.DEATH)
         assertEquals(ArenaState.Kind.WAITING, app.state())
 
-        val pending = app.recovery.pending(p2.id)
+        val pending = app.recovery.findPending(p2.id)
         assertNotNull(pending)
         app.players.disconnect(p2)
         app.players.quittingScope(p2) {
@@ -72,7 +72,7 @@ class InventoryRecoveryServiceTest {
             app.participation.quit(p1.id)
         }
         assertTrue(app.equipment.restored.isEmpty())
-        assertNull(app.recovery.pending(p1.id))
+        assertNull(app.recovery.findPending(p1.id))
     }
 
     @Test
@@ -88,7 +88,7 @@ class InventoryRecoveryServiceTest {
         app.participation.restorePending(p2.id)
         assertEquals(2, app.equipment.restored.size)
         assertTrue(app.equipment.storedBackups.isEmpty())
-        assertNull(app.recovery.pending(p2.id))
+        assertNull(app.recovery.findPending(p2.id))
     }
 
     @Test
@@ -132,7 +132,7 @@ class InventoryRecoveryServiceTest {
 
         app.participation.restorePending(p.id)
         assertTrue(app.equipment.restored.isEmpty())
-        assertNotNull(app.recovery.pending(p.id))
+        assertNotNull(app.recovery.findPending(p.id))
         app.equipment.failOnRestore = false
         app.participation.restorePending(p.id)
         assertEquals(1, app.equipment.restored.size)
@@ -145,14 +145,14 @@ class InventoryRecoveryServiceTest {
         val p = app.players.add("Alice")
         val ref = backupRef(p.id, p.name)
         app.equipment.seedBackup(ref)
-        val pending = assertNotNull(app.recovery.pending(p.id))
+        val pending = assertNotNull(app.recovery.findPending(p.id))
         app.equipment.failOnRestore = true
 
         assertEquals(JoinOutput.RestorePending, app.participation.join(p.id, p.name, arenaId))
 
-        assertNull(app.sessions.arenaIdOf(p.id))
-        assertTrue(app.sessions.match(arenaId)!!.participants.isEmpty())
-        assertEquals(pending, app.recovery.pending(p.id))
+        assertNull(app.sessions.findArenaIdOf(p.id))
+        assertTrue(app.sessions.findMatch(arenaId)!!.participants.isEmpty())
+        assertEquals(pending, app.recovery.findPending(p.id))
         assertTrue(app.equipment.storedBackups.containsKey(ref.backupId))
     }
 
@@ -179,18 +179,18 @@ class InventoryRecoveryServiceTest {
         app.participation.defeat(p2.id, DefeatCause.DEATH)
         app.players.disconnect(p2)
         app.scheduler.runOneShots()
-        assertNotNull(app.recovery.pending(p2.id))
+        assertNotNull(app.recovery.findPending(p2.id))
 
         app.scheduler.tick()
         assertEquals(ArenaState.Kind.WAITING, app.state())
-        assertNotNull(app.recovery.pending(p2.id))
-        assertNull(app.sessions.arenaIdOf(p2.id))
+        assertNotNull(app.recovery.findPending(p2.id))
+        assertNull(app.sessions.findArenaIdOf(p2.id))
 
         p2.online = true
         p2.dead = false
         app.participation.restorePending(p2.id)
         assertTrue(app.equipment.restored.any { it.playerId == p2.id })
-        assertNull(app.recovery.pending(p2.id))
+        assertNull(app.recovery.findPending(p2.id))
     }
 
     @Test
@@ -202,7 +202,7 @@ class InventoryRecoveryServiceTest {
         assertTrue(app.equipment.restored.any { it.playerId == p1.id })
         assertTrue(app.equipment.restored.any { it.playerId == p2.id })
         assertEquals(1, app.equipment.storedBackups.size)
-        assertNotNull(app.recovery.pending(p2.id))
+        assertNotNull(app.recovery.findPending(p2.id))
     }
 
     @Test
@@ -217,8 +217,8 @@ class InventoryRecoveryServiceTest {
         app.scheduler.runOneShots()
         assertTrue(p1.teleports.none { it == lobby })
         assertTrue(p2.teleports.none { it == lobby })
-        assertNotNull(app.recovery.pending(p1.id))
-        assertNotNull(app.recovery.pending(p2.id))
+        assertNotNull(app.recovery.findPending(p1.id))
+        assertNotNull(app.recovery.findPending(p2.id))
     }
 
     @Test
@@ -229,7 +229,7 @@ class InventoryRecoveryServiceTest {
         app.participation.defeat(p2.id, DefeatCause.FALL)
         app.scheduler.runOneShots()
         assertTrue(app.logger.warnings.count { it.contains("Lobby is not set") } >= 1)
-        assertNull(app.recovery.pending(p1.id))
+        assertNull(app.recovery.findPending(p1.id))
     }
 
     @Test
@@ -240,7 +240,7 @@ class InventoryRecoveryServiceTest {
         app.equipment.failOnRestore = true
         app.lifecycle.shutdown()
         assertTrue(app.logger.reports.any { it.message.contains("Could not restore inventory") })
-        assertNotNull(app.recovery.pending(p2.id))
+        assertNotNull(app.recovery.findPending(p2.id))
     }
 
     @Test
@@ -253,7 +253,7 @@ class InventoryRecoveryServiceTest {
             app.participation.quit(p.id)
         }
         assertTrue(app.equipment.restored.any { it.playerId == p.id })
-        assertNull(app.recovery.pending(p.id))
+        assertNull(app.recovery.findPending(p.id))
     }
 
     @Test
@@ -266,7 +266,7 @@ class InventoryRecoveryServiceTest {
         app.participation.quit(p.id)
 
         assertTrue(app.equipment.restored.isEmpty())
-        assertNotNull(app.recovery.pending(p.id))
+        assertNotNull(app.recovery.findPending(p.id))
     }
 
     @Test
@@ -275,13 +275,13 @@ class InventoryRecoveryServiceTest {
         val p = app.players.add("Alice")
         val participant = Participant.new(p.id, p.name)
         app.recovery.backupBeforeMatch(listOf(participant))
-        val stale = app.recovery.pending(p.id)!!
+        val stale = app.recovery.findPending(p.id)!!
         app.recovery.backupBeforeMatch(listOf(participant))
 
         assertFalse(app.recovery.restoreNow(p, stale))
 
         assertTrue(app.equipment.restored.isEmpty())
-        assertNotNull(app.recovery.pending(p.id))
+        assertNotNull(app.recovery.findPending(p.id))
     }
 
     @Test
@@ -306,7 +306,7 @@ class InventoryRecoveryServiceTest {
         app.lifecycle.shutdown()
         assertTrue(app.equipment.restored.none { it.playerId == p2.id })
         assertEquals(1, app.equipment.storedBackups.size)
-        assertNotNull(app.recovery.pending(p2.id))
+        assertNotNull(app.recovery.findPending(p2.id))
     }
 
     @Test
@@ -317,10 +317,10 @@ class InventoryRecoveryServiceTest {
         app.arenaRepository.lobbyPosition = WorldPosition.new("world", 0.0, 64.0, 0.0)
         app.equipment.failOnRestore = true
 
-        app.recovery.restoreToLobby(p, app.recovery.pending(p.id)!!)
+        app.recovery.restoreToLobby(p, app.recovery.findPending(p.id)!!)
 
         assertTrue(p.teleports.isEmpty())
-        assertNotNull(app.recovery.pending(p.id))
+        assertNotNull(app.recovery.findPending(p.id))
     }
 
     @Test
@@ -344,7 +344,7 @@ class InventoryRecoveryServiceTest {
 
         p.dead = true
         assertEquals(JoinOutput.Rejected, app.participation.join(p.id, p.name, arenaId("arena1")))
-        assertNull(app.sessions.arenaIdOf(p.id))
+        assertNull(app.sessions.findArenaIdOf(p.id))
         p.dead = false
         assertEquals(JoinOutput.JoinedWaiting, app.participation.join(p.id, p.name, arenaId("arena1")))
         assertTrue(app.equipment.restored.any { it.playerId == p.id })

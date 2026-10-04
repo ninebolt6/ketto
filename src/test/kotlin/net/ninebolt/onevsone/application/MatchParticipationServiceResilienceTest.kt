@@ -20,7 +20,7 @@ class MatchParticipationServiceResilienceTest {
         app.scheduler.tick(2)
         app.progression.abort(arenaId("arena1"))
         assertEquals(ArenaState.Kind.WAITING, app.state())
-        assertNull(app.sessions.arenaIdOf(p1.id))
+        assertNull(app.sessions.findArenaIdOf(p1.id))
         app.scheduler.tick(6)
         assertEquals(0, app.equipment.backupCalls)
         assertTrue(app.equipment.kitApplies.isEmpty())
@@ -36,8 +36,8 @@ class MatchParticipationServiceResilienceTest {
         val (p1, p2) = app.joinedTwo()
         app.scheduler.tick(6)
         assertEquals(ArenaState.Kind.WAITING, app.state())
-        assertNull(app.sessions.arenaIdOf(p1.id))
-        assertNull(app.sessions.arenaIdOf(p2.id))
+        assertNull(app.sessions.findArenaIdOf(p1.id))
+        assertNull(app.sessions.findArenaIdOf(p2.id))
         assertTrue(app.equipment.kitApplies.isEmpty())
         assertTrue(app.equipment.restored.isEmpty())
         assertTrue(app.logger.reports.any { it.message.contains("Could not save inventories") })
@@ -52,7 +52,7 @@ class MatchParticipationServiceResilienceTest {
         val (p1, _) = app.joinedTwo()
         app.scheduler.tick(6)
         assertEquals(ArenaState.Kind.WAITING, app.state())
-        assertNull(app.sessions.arenaIdOf(p1.id))
+        assertNull(app.sessions.findArenaIdOf(p1.id))
         assertEquals(2, app.equipment.restored.size)
         assertTrue(app.logger.reports.any { it.message.contains("Could not apply equipment") })
     }
@@ -65,8 +65,8 @@ class MatchParticipationServiceResilienceTest {
 
         assertTrue(app.participation.defeat(p2.id, DefeatCause.FALL))
         assertEquals(ArenaState.Kind.WAITING, app.state())
-        assertNull(app.sessions.arenaIdOf(p1.id))
-        assertNull(app.sessions.arenaIdOf(p2.id))
+        assertNull(app.sessions.findArenaIdOf(p1.id))
+        assertNull(app.sessions.findArenaIdOf(p2.id))
         assertEquals(2, app.equipment.restored.size)
         assertTrue(app.logger.reports.any { it.message.contains("Could not finish round") })
     }
@@ -78,7 +78,7 @@ class MatchParticipationServiceResilienceTest {
         p2.dead = true
         assertTrue(app.participation.defeat(p2.id, DefeatCause.DEATH))
         assertFalse(app.participation.defeat(p2.id, DefeatCause.DEATH))
-        assertEquals(1, app.participation.matchIn("arena1")!!.winsOf(p1.id))
+        assertEquals(1, app.participation.findMatchIn("arena1")!!.winsOf(p1.id))
         assertTrue(app.statsRepository.stats.isEmpty())
     }
 

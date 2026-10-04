@@ -28,7 +28,7 @@ class PaperEquipment(
 
     override fun backupBeforeMatch(match: MatchId, participants: List<Participant>): List<BackupRef> {
         val captured = participants.map { participant ->
-            val player = lookup.resolve(participant.id)
+            val player = lookup.find(participant.id)
                 ?: throw PersistenceException("Player ${participant.name} (${participant.id}) is not available for inventory backup")
             PersistedBackup(
                 BackupRef.new(
@@ -46,7 +46,7 @@ class PaperEquipment(
     override fun restore(backup: BackupRef) {
         val snapshot = backupStore.backupFor(backup)?.snapshot
             ?: throw PersistenceException("No stored backup ${backup.backupId} for ${backup.playerName}")
-        val player = lookup.resolve(backup.playerId)
+        val player = lookup.find(backup.playerId)
             ?: throw PersistenceException("Player ${backup.playerName} is not available for restore")
         snapshot.apply(player.inventory)
     }
@@ -55,18 +55,18 @@ class PaperEquipment(
         backupStore.deleteBackup(backup)
     }
 
-    override fun pendingFor(playerId: Uuid): BackupRef? = backupStore.pendingFor(playerId)
+    override fun findPending(playerId: Uuid): BackupRef? = backupStore.findPending(playerId)
 
     override fun pendingRefs(): List<BackupRef> = backupStore.pendingRefs()
 
     override fun applyKit(arena: Arena.Id, playerId: Uuid) {
-        val player = lookup.resolve(playerId)
+        val player = lookup.find(playerId)
             ?: throw PersistenceException("Player $playerId is not available for kit apply")
         kit(arena).apply(player.inventory)
     }
 
     override fun saveKit(arena: Arena.Id, playerId: Uuid) {
-        val player = lookup.resolve(playerId)
+        val player = lookup.find(playerId)
             ?: throw PersistenceException("Player $playerId is not available for kit capture")
         val kit = PaperInventorySnapshot.capture(player.inventory)
         kitStore.saveArenaKit(arena.name, kit)

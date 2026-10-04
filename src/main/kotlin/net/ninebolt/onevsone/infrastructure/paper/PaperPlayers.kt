@@ -43,7 +43,7 @@ class PaperPlayerLookup(private val server: Server) {
 
     fun isPluginTeleport(playerId: Uuid): Boolean = playerId in pluginTeleports
 
-    fun resolve(id: Uuid): Player? = quitting[id] ?: server.getPlayer(id.toJavaUuid())
+    fun find(id: Uuid): Player? = quitting[id] ?: server.getPlayer(id.toJavaUuid())
 }
 
 class PaperPlayers(
@@ -52,7 +52,7 @@ class PaperPlayers(
     private val plugin: JavaPlugin,
     private val logger: Logger,
 ) : PlayerPort {
-    override fun handle(playerId: Uuid): PlayerHandle? = lookup.resolve(playerId)?.let { PaperPlayerHandle(it, server, logger, lookup) }
+    override fun findHandle(playerId: Uuid): PlayerHandle? = lookup.find(playerId)?.let { PaperPlayerHandle(it, server, logger, lookup) }
 
     override fun resolveOfflineId(name: String, callback: (Uuid?) -> Unit) {
         val known = server.getPlayerExact(name) ?: server.getOfflinePlayerIfCached(name)

@@ -127,7 +127,7 @@ class MatchProgressionServiceTest {
         assertEquals(ArenaState.Kind.WAITING, app.state())
         assertTrue(app.equipment.restored.any { it.playerId == p1.id })
         assertTrue(app.equipment.restored.none { it.playerId == p2.id })
-        assertNotNull(app.recovery.pending(p2.id))
+        assertNotNull(app.recovery.findPending(p2.id))
         assertEquals(1, app.statsRepository.stats[p1.id]?.wins)
         assertEquals(1, app.statsRepository.stats[p2.id]?.losses)
     }
@@ -264,7 +264,7 @@ class MatchProgressionServiceTest {
         app.scheduler.runOneShots()
 
         assertEquals(applies, app.equipment.kitApplies.count { it.second == p2.id })
-        assertNull(app.participation.matchIn("arena1"))
+        assertNull(app.participation.findMatchIn("arena1"))
     }
 
     @Test
@@ -282,7 +282,7 @@ class MatchProgressionServiceTest {
         app.scheduler.runOneShots()
 
         assertEquals(restored, app.equipment.restored.size)
-        assertEquals(arena2, app.sessions.arenaIdOf(p2.id))
+        assertEquals(arena2, app.sessions.findArenaIdOf(p2.id))
     }
 
     @Test
@@ -361,7 +361,7 @@ class MatchProgressionServiceTest {
         assertTrue(app.participation.defeat(p2.id, DefeatCause.DEATH))
         p2.onRespawn = {
             p2.onRespawn = null
-            app.recovery.pending(p2.id)?.let { app.recovery.restoreNow(p2, it) }
+            app.recovery.findPending(p2.id)?.let { app.recovery.restoreNow(p2, it) }
         }
 
         app.scheduler.runOneShots()
@@ -369,7 +369,7 @@ class MatchProgressionServiceTest {
         assertTrue("respawn" in p2.events)
         assertEquals(1, app.equipment.restored.count { it.playerId == p2.id })
         assertTrue("vitals" !in p2.events)
-        assertNull(app.recovery.pending(p2.id))
+        assertNull(app.recovery.findPending(p2.id))
     }
 
     @Test
@@ -511,7 +511,7 @@ class MatchProgressionServiceTest {
         assertTrue(app.equipment.restored.any { it.playerId == p1.id })
         assertTrue(app.equipment.restored.any { it.playerId == p2.id })
         assertTrue(app.logger.reports.isEmpty())
-        assertNull(app.participation.matchIn("arena1"))
+        assertNull(app.participation.findMatchIn("arena1"))
     }
 
     @Test
@@ -529,8 +529,8 @@ class MatchProgressionServiceTest {
         assertEquals(ArenaState.Kind.WAITING, app.state())
         assertTrue(p2.teleports.isEmpty())
         assertTrue(app.equipment.restored.any { it.playerId == p2.id })
-        assertNull(app.recovery.pending(p2.id))
-        assertNotNull(app.recovery.pending(p1.id))
+        assertNull(app.recovery.findPending(p2.id))
+        assertNotNull(app.recovery.findPending(p1.id))
         assertTrue(app.presentation.matchStarts.isEmpty())
         assertTrue(app.logger.reports.isEmpty())
     }
@@ -550,7 +550,7 @@ class MatchProgressionServiceTest {
         assertTrue(p2.teleports.isEmpty())
         assertTrue(app.equipment.restored.any { it.playerId == p1.id })
         assertTrue(app.equipment.restored.any { it.playerId == p2.id })
-        assertNull(app.participation.matchIn("arena1"))
+        assertNull(app.participation.findMatchIn("arena1"))
     }
 
     @Test

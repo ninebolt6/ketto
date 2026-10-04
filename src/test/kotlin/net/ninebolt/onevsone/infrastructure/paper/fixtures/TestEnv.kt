@@ -297,7 +297,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
 
     fun join(player: Player, arena: Arena.Id = arenaId("arena1")): JoinOutput = participation.join(player.uuid, player.name, arena)
 
-    fun state(name: String = "arena1") = participation.matchIn(name)?.state?.kind
+    fun state(name: String = "arena1") = participation.findMatchIn(name)?.state?.kind
 
     fun close() {
         deps.store.close()

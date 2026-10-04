@@ -18,7 +18,8 @@
   rejection reason, or sealed `*Output` types when success itself has multiple
   outcomes or carries data; declare them at the bottom of the service file.
   Binary accept/reject checks return Boolean and
-  lookups return null. Persistence and external-reference failures throw
+  lookups return null; nullable single-item lookups are named `find*`
+  (`findMatch`, `findArena`, `findPending`). Persistence and external-reference failures throw
   `PersistenceException`. Domain state-machine transition results are `*Outcome`
   types, kept distinct from application-level `Output`/`Error` results
 

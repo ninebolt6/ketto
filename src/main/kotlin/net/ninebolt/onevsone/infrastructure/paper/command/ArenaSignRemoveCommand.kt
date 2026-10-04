@@ -13,7 +13,7 @@ internal class ArenaSignRemoveCommand(
 ) {
 
     fun execute(sender: CommandSender, arenaName: String) {
-        val id = administration.resolveArenaId(arenaName) ?: run {
+        val id = administration.findArenaId(arenaName) ?: run {
             messenger.send(sender, Message.ArenaNotFound)
             return
         }

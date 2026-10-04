@@ -30,7 +30,7 @@ class ArenaMatchListener(
     fun onDeath(event: PlayerDeathEvent) {
         val player = event.entity
         val id = player.uniqueId.toKotlinUuid()
-        if (participation.matchOf(id) == null) return
+        if (participation.findMatchOf(id) == null) return
         event.keepInventory = true
         event.drops.clear()
         // keepInventory protects only items, not experience
@@ -48,7 +48,7 @@ class ArenaMatchListener(
             return
         }
         val player = event.entity as? Player ?: return
-        if (participation.restrictionsOf(player)?.damagePolicy == DamagePolicy.BLOCKED) {
+        if (participation.findRestrictions(player)?.damagePolicy == DamagePolicy.BLOCKED) {
             event.isCancelled = true
         }
     }
@@ -63,7 +63,7 @@ class ArenaMatchListener(
 
     private fun sideOf(player: Player?): DamageAdmission.Side? {
         val id = player?.uniqueId?.toKotlinUuid() ?: return null
-        return participation.matchOf(id)?.let { DamageAdmission.Side(id, it) }
+        return participation.findMatchOf(id)?.let { DamageAdmission.Side(id, it) }
     }
 
     @EventHandler
@@ -82,7 +82,7 @@ class ArenaMatchListener(
     @EventHandler
     fun onMove(event: PlayerMoveEvent) {
         // PlayerTeleportEvent has its own HandlerList and never reaches this handler
-        val match = participation.matchOf(event.player.uniqueId.toKotlinUuid()) ?: return
+        val match = participation.findMatchOf(event.player.uniqueId.toKotlinUuid()) ?: return
         if (ParticipantRestrictions.forState(match.state.kind).horizontalMoveFrozen) {
             val from = event.from
             val to = event.to
@@ -98,7 +98,7 @@ class ArenaMatchListener(
 
     @EventHandler
     fun onCommand(event: PlayerCommandPreprocessEvent) {
-        if (participation.restrictionsOf(event.player)?.commandsBlocked == true) {
+        if (participation.findRestrictions(event.player)?.commandsBlocked == true) {
             event.isCancelled = true
             messenger.send(event.player, Message.CommandBlocked)
         }

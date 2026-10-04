@@ -39,10 +39,10 @@ class ArenaSessionsTest {
         val p = Participant.new("Alice")
         sessions.putMatch(match("a1", ArenaState.OneMore(p)))
         sessions.putMatch(match("a2", ArenaState.OneMore(p)))
-        assertEquals(arenaId("a2"), sessions.arenaIdOf(p.id))
+        assertEquals(arenaId("a2"), sessions.findArenaIdOf(p.id))
 
         sessions.putMatch(match("a1", ArenaState.Waiting))
-        assertEquals(arenaId("a2"), sessions.arenaIdOf(p.id))
+        assertEquals(arenaId("a2"), sessions.findArenaIdOf(p.id))
         assertTrue(sessions.isJoined(p.id))
     }
 
@@ -55,20 +55,20 @@ class ArenaSessionsTest {
 
         val rejected = sessions.transact(arenaId("a1")) { it.join(p) }
         assertEquals(JoinOutcome.Rejected, rejected?.outcome)
-        assertEquals(listOf(p), sessions.match(arenaId("a1"))!!.participants)
+        assertEquals(listOf(p), sessions.findMatch(arenaId("a1"))!!.participants)
     }
 
     @Test
     fun `reads on unknown ids and names return null`() {
         val sessions = ArenaSessions(3)
         val id = arenaId("nope")
-        assertNull(sessions.arena(id))
-        assertNull(sessions.match(id))
-        assertNull(sessions.entry(id))
-        assertNull(sessions.resolveArenaId("nope"))
-        assertNull(sessions.resolveArena("nope"))
-        assertNull(sessions.enabledArena(id))
-        assertNull(sessions.arenaIdOf(Uuid.random()))
+        assertNull(sessions.findArena(id))
+        assertNull(sessions.findMatch(id))
+        assertNull(sessions.findEntry(id))
+        assertNull(sessions.findArenaId("nope"))
+        assertNull(sessions.findArena("nope"))
+        assertNull(sessions.findEnabledArena(id))
+        assertNull(sessions.findArenaIdOf(Uuid.random()))
         assertFalse(sessions.isJoined(Uuid.random()))
     }
 
@@ -76,28 +76,28 @@ class ArenaSessionsTest {
     fun `resolveArenaId tolerates names that are not valid arena ids`() {
         val sessions = ArenaSessions(3)
         sessions.install("a1")
-        assertNull(sessions.resolveArenaId("create"))
-        assertNull(sessions.resolveArenaId("  "))
+        assertNull(sessions.findArenaId("create"))
+        assertNull(sessions.findArenaId("  "))
     }
 
     @Test
     fun `resolveArenaId falls back to a case-insensitive match`() {
         val sessions = ArenaSessions(3)
         sessions.install("a1")
-        assertEquals(arenaId("a1"), sessions.resolveArenaId("A1"))
-        assertEquals(arenaId("a1"), sessions.resolveArena("A1")?.id)
+        assertEquals(arenaId("a1"), sessions.findArenaId("A1"))
+        assertEquals(arenaId("a1"), sessions.findArena("A1")?.id)
     }
 
     @Test
     fun `arenaIdOf returns null for a player outside every match`() {
         val sessions = ArenaSessions(3)
         sessions.install("a1")
-        assertNull(sessions.arenaIdOf(Uuid.random()))
+        assertNull(sessions.findArenaIdOf(Uuid.random()))
         val p = Participant.new("Alice")
         sessions.putMatch(match("a1", ArenaState.OneMore(p)))
-        assertNull(sessions.arenaIdOf(Uuid.random()))
+        assertNull(sessions.findArenaIdOf(Uuid.random()))
         assertFalse(sessions.isJoined(Uuid.random()))
-        assertEquals(arenaId("a1"), sessions.arenaIdOf(Uuid.parse(p.id.toString())))
+        assertEquals(arenaId("a1"), sessions.findArenaIdOf(Uuid.parse(p.id.toString())))
     }
 
     @Test
@@ -105,7 +105,7 @@ class ArenaSessionsTest {
         val sessions = ArenaSessions(3)
         val id = arenaId("a1")
         sessions.installArena(Arena.Disabled.new(id))
-        assertNull(sessions.enabledArena(id))
+        assertNull(sessions.findEnabledArena(id))
     }
 
     @Test
@@ -123,9 +123,9 @@ class ArenaSessionsTest {
     fun `putting the identical match instance is a no-op`() {
         val sessions = ArenaSessions(3)
         sessions.install("a1")
-        val current = sessions.match(arenaId("a1"))!!
+        val current = sessions.findMatch(arenaId("a1"))!!
         sessions.putMatch(current)
-        assertSame(current, sessions.match(arenaId("a1")))
+        assertSame(current, sessions.findMatch(arenaId("a1")))
     }
 
     @Test
@@ -138,7 +138,7 @@ class ArenaSessionsTest {
         sessions.install("a1")
 
         assertFalse(sessions.isJoined(p.id))
-        assertEquals(ArenaState.Kind.WAITING, sessions.match(arenaId("a1"))!!.state.kind)
+        assertEquals(ArenaState.Kind.WAITING, sessions.findMatch(arenaId("a1"))!!.state.kind)
     }
 
     @Test
@@ -150,8 +150,8 @@ class ArenaSessionsTest {
 
         sessions.removeArena(arenaId("a1"))
 
-        assertNull(sessions.arena(arenaId("a1")))
+        assertNull(sessions.findArena(arenaId("a1")))
         assertFalse(sessions.isJoined(p.id))
-        assertNull(sessions.arenaIdOf(p.id))
+        assertNull(sessions.findArenaIdOf(p.id))
     }
 }

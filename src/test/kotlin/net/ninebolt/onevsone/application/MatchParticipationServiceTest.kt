@@ -24,7 +24,7 @@ class MatchParticipationServiceTest {
         val p1 = app.players.add("Alice")
         assertEquals(JoinOutput.JoinedWaiting, app.participation.join(p1.id, p1.name, arenaId("arena1")))
         assertEquals(ArenaState.Kind.ONEMORE, app.state())
-        assertEquals(arenaId("arena1"), app.sessions.arenaIdOf(p1.id))
+        assertEquals(arenaId("arena1"), app.sessions.findArenaIdOf(p1.id))
 
         val p2 = app.players.add("Bob")
         assertEquals(JoinOutput.JoinedStarting, app.participation.join(p2.id, p2.name, arenaId("arena1")))
@@ -40,7 +40,7 @@ class MatchParticipationServiceTest {
         app.newArena()
         val p = app.players.add("Alice")
         assertEquals(JoinOutput.NotFound, app.participation.join(p.id, p.name, arenaId("ghost")))
-        assertNull(app.sessions.arenaIdOf(p.id))
+        assertNull(app.sessions.findArenaIdOf(p.id))
     }
 
     @Test
@@ -51,8 +51,8 @@ class MatchParticipationServiceTest {
         val p = app.players.add("Alice")
         assertEquals(JoinOutput.JoinedWaiting, app.participation.join(p.id, p.name, arenaId("a1")))
         assertEquals(JoinOutput.AlreadyJoined, app.participation.join(p.id, p.name, arenaId("a2")))
-        assertEquals(arenaId("a1"), app.sessions.arenaIdOf(p.id))
-        assertEquals(ArenaState.Kind.WAITING, app.participation.matchIn("a2")!!.state.kind)
+        assertEquals(arenaId("a1"), app.sessions.findArenaIdOf(p.id))
+        assertEquals(ArenaState.Kind.WAITING, app.participation.findMatchIn("a2")!!.state.kind)
     }
 
     @Test
@@ -62,14 +62,14 @@ class MatchParticipationServiceTest {
         app.newArena("disabled", enabled = false)
         val p1 = app.players.add("Alice")
         assertEquals(JoinOutput.NotEnabled, app.participation.join(p1.id, p1.name, arenaId("disabled")))
-        assertNull(app.sessions.arenaIdOf(p1.id))
+        assertNull(app.sessions.findArenaIdOf(p1.id))
 
         app.participation.join(p1.id, p1.name, arenaId("enabled"))
         val p2 = app.players.add("Bob")
         app.participation.join(p2.id, p2.name, arenaId("enabled"))
         val p3 = app.players.add("Carol")
         assertEquals(JoinOutput.Rejected, app.participation.join(p3.id, p3.name, arenaId("enabled")))
-        assertNull(app.sessions.arenaIdOf(p3.id))
+        assertNull(app.sessions.findArenaIdOf(p3.id))
     }
 
     @Test
@@ -104,9 +104,9 @@ class MatchParticipationServiceTest {
         assertEquals(1, app.presentation.matchStarts.size)
         assertTrue(p1.events.contains("teleport"))
         assertTrue(p2.events.contains("teleport"))
-        assertEquals(2, app.participation.matchIn("arena1")!!.participants.size)
-        assertNotNull(app.recovery.pending(p1.id))
-        assertNotNull(app.recovery.pending(p2.id))
+        assertEquals(2, app.participation.findMatchIn("arena1")!!.participants.size)
+        assertNotNull(app.recovery.findPending(p1.id))
+        assertNotNull(app.recovery.findPending(p2.id))
     }
 
     @Test
@@ -136,7 +136,7 @@ class MatchParticipationServiceTest {
         assertEquals(Triple(listOf(p1.id, p2.id), 1, "Alice"), app.presentation.roundWins.last())
 
         assertTrue(app.participation.defeat(p2.id, DefeatCause.FALL))
-        assertEquals(2, app.participation.matchIn("arena1")!!.winsOf(p1.id))
+        assertEquals(2, app.participation.findMatchIn("arena1")!!.winsOf(p1.id))
     }
 
     @Test
@@ -145,8 +145,8 @@ class MatchParticipationServiceTest {
         val (p1, p2) = app.startMatch()
         assertTrue(app.participation.defeat(p2.id, DefeatCause.FALL))
         assertEquals(ArenaState.Kind.WAITING, app.state())
-        assertNull(app.sessions.arenaIdOf(p1.id))
-        assertNull(app.sessions.arenaIdOf(p2.id))
+        assertNull(app.sessions.findArenaIdOf(p1.id))
+        assertNull(app.sessions.findArenaIdOf(p2.id))
         assertEquals(listOf(arenaId("arena1") to "Alice"), app.presentation.champions)
         assertEquals(1, app.statsRepository.stats[p1.id]?.wins)
         assertEquals(1, app.statsRepository.stats[p2.id]?.losses)
@@ -165,8 +165,8 @@ class MatchParticipationServiceTest {
             app.participation.quit(p1.id)
         }
         assertEquals(ArenaState.Kind.ONEMORE, app.state())
-        assertNull(app.sessions.arenaIdOf(p1.id))
-        assertEquals(arenaId("arena1"), app.sessions.arenaIdOf(p2.id))
+        assertNull(app.sessions.findArenaIdOf(p1.id))
+        assertEquals(arenaId("arena1"), app.sessions.findArenaIdOf(p2.id))
         assertTrue(app.statsRepository.stats.isEmpty())
         assertTrue(app.equipment.restored.isEmpty())
         assertTrue(app.presentation.champions.isEmpty())
@@ -185,7 +185,7 @@ class MatchParticipationServiceTest {
             app.participation.quit(p1.id)
         }
         assertEquals(ArenaState.Kind.WAITING, app.state())
-        assertNull(app.sessions.arenaIdOf(p1.id))
+        assertNull(app.sessions.findArenaIdOf(p1.id))
         assertTrue(app.statsRepository.stats.isEmpty())
         assertTrue(app.equipment.restored.isEmpty())
     }
@@ -200,7 +200,7 @@ class MatchParticipationServiceTest {
         val p2 = app.players.add("Bob")
         app.participation.join(p2.id, p2.name, arenaId("arena1"))
         assertEquals(LeaveError.NotWaiting, app.participation.leave(p1.id))
-        assertEquals(arenaId("arena1"), app.sessions.arenaIdOf(p1.id))
+        assertEquals(arenaId("arena1"), app.sessions.findArenaIdOf(p1.id))
     }
 
     @Test
@@ -211,7 +211,7 @@ class MatchParticipationServiceTest {
         app.participation.join(p1.id, p1.name, arenaId("arena1"))
         assertNull(app.participation.leave(p1.id))
         assertEquals(ArenaState.Kind.WAITING, app.state())
-        assertNull(app.sessions.arenaIdOf(p1.id))
+        assertNull(app.sessions.findArenaIdOf(p1.id))
         assertTrue(app.equipment.restored.isEmpty())
     }
 
@@ -242,7 +242,7 @@ class MatchParticipationServiceTest {
         app.players.disconnect(p)
 
         assertEquals(JoinOutput.Rejected, app.participation.join(p.id, p.name, arenaId("arena1")))
-        assertNull(app.sessions.arenaIdOf(p.id))
+        assertNull(app.sessions.findArenaIdOf(p.id))
         assertTrue(app.equipment.restored.isEmpty())
     }
 
@@ -257,7 +257,7 @@ class MatchParticipationServiceTest {
         app.participation.restorePending(p.id)
 
         assertTrue(app.equipment.restored.isEmpty())
-        assertNotNull(app.recovery.pending(p.id))
+        assertNotNull(app.recovery.findPending(p.id))
     }
 
     @Test
@@ -279,7 +279,7 @@ class MatchParticipationServiceTest {
         app.participation.restorePending(p.id)
 
         assertTrue(app.equipment.restored.isEmpty())
-        assertNotNull(app.recovery.pending(p.id))
+        assertNotNull(app.recovery.findPending(p.id))
     }
 
     @Test

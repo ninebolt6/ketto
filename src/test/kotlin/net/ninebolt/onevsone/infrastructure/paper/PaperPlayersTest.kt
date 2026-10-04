@@ -41,7 +41,7 @@ class PaperPlayersTest {
 
     @Test
     fun `handle returns null for a player who is not online`() {
-        assertNull(env.playerPort.handle(Uuid.random()))
+        assertNull(env.playerPort.findHandle(Uuid.random()))
     }
 
     @Test
@@ -87,7 +87,7 @@ class PaperPlayersTest {
         p.foodLevel = 3
         p.fireTicks = 100
 
-        env.playerPort.handle(p.uuid)!!.resetVitals()
+        env.playerPort.findHandle(p.uuid)!!.resetVitals()
 
         assertEquals(20.0, p.health)
         assertEquals(20, p.foodLevel)
@@ -99,7 +99,7 @@ class PaperPlayersTest {
         val p = env.player("Alice")
         p.simulateDamage(100.0, genericDamage())
 
-        env.playerPort.handle(p.uuid)!!.resetVitals()
+        env.playerPort.findHandle(p.uuid)!!.resetVitals()
 
         assertEquals(0.0, p.health)
         assertTrue(p.isDead)
@@ -122,7 +122,7 @@ class PaperPlayersTest {
         )
         val from = p.location
 
-        env.playerPort.handle(p.uuid)!!.teleport(WorldPosition.new("missing-world", 1.0, 64.0, 1.0))
+        env.playerPort.findHandle(p.uuid)!!.teleport(WorldPosition.new("missing-world", 1.0, 64.0, 1.0))
 
         assertEquals(from, p.location)
         assertTrue(warnings.any { "missing-world" in it })

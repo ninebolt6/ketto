@@ -54,7 +54,7 @@ class ArenaMatchListenerTest {
             event.keepInventory && event.drops.isEmpty() && event.droppedExp == 0 && event.keepLevel
         }
         assertEquals(ArenaState.Kind.ROUNDCOUNTDOWN, env.state())
-        assertEquals(1, env.participation.matchIn("arena1")!!.winsOf(p1.uuid))
+        assertEquals(1, env.participation.findMatchIn("arena1")!!.winsOf(p1.uuid))
     }
 
     @Test
@@ -76,7 +76,7 @@ class ArenaMatchListenerTest {
         p1.simulateDamage(100.0, genericDamage())
         env.assertFired<PlayerDeathEvent> { event -> event.keepInventory && event.keepLevel }
         assertEquals(ArenaState.Kind.COUNTDOWN, env.state())
-        assertEquals(arena, env.sessions.arenaIdOf(p1.uuid))
+        assertEquals(arena, env.sessions.findArenaIdOf(p1.uuid))
 
         env.tick(6)
         assertEquals(ArenaState.Kind.INGAME, env.state())
@@ -171,7 +171,7 @@ class ArenaMatchListenerTest {
 
         sim.simulatePlayerMove(Location(w, 0.0, -1.0, 0.0))
         assertEquals(ArenaState.Kind.ROUNDCOUNTDOWN, env.state())
-        assertEquals(1, env.participation.matchIn("arena1")!!.winsOf(p2.uuid))
+        assertEquals(1, env.participation.findMatchIn("arena1")!!.winsOf(p2.uuid))
     }
 
     @Test
@@ -203,7 +203,7 @@ class ArenaMatchListenerTest {
 
         sim.simulatePlayerMove(Location(deep, 0.0, -65.0, 0.0))
         assertEquals(ArenaState.Kind.ROUNDCOUNTDOWN, env.state())
-        assertEquals(1, env.participation.matchIn("arena1")!!.winsOf(p2.uuid))
+        assertEquals(1, env.participation.findMatchIn("arena1")!!.winsOf(p2.uuid))
     }
 
     @Test
@@ -215,7 +215,7 @@ class ArenaMatchListenerTest {
         val sim = p2.simulation()
         val base = p2.location
         sim.simulatePlayerMove(Location(base.world, base.x, -1.0, base.z))
-        assertEquals(2, env.participation.matchIn("arena1")!!.winsOf(p1.uuid))
+        assertEquals(2, env.participation.findMatchIn("arena1")!!.winsOf(p1.uuid))
         env.tick(8)
         assertEquals(ArenaState.Kind.INGAME, env.state())
 

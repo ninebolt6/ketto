@@ -53,8 +53,8 @@ class PaperArenaMembershipTest {
         p2.disconnect()
 
         assertEquals(ArenaState.Kind.WAITING, env.view().state.kind)
-        assertNull(env.sessions.arenaIdOf(p1.uuid))
-        assertNull(env.sessions.arenaIdOf(p2.uuid))
+        assertNull(env.sessions.findArenaIdOf(p1.uuid))
+        assertNull(env.sessions.findArenaIdOf(p2.uuid))
         assertEquals(1, env.statsRepository.find(p1.uuid)!!.wins)
         assertEquals(1, env.statsRepository.find(p2.uuid)!!.losses)
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
@@ -100,14 +100,14 @@ class PaperArenaMembershipTest {
         env.join(p1, arena)
         p1.disconnect()
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
-        assertNull(env.recovery.pending(p1.uuid))
+        assertNull(env.recovery.findPending(p1.uuid))
 
         val p2 = env.player("Bob")
         p2.inventory.setItem(0, env.item(Material.APPLE))
         env.join(p2, arena)
         env.administration.disable("arena1")
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
-        assertNull(env.recovery.pending(p2.uuid))
+        assertNull(env.recovery.findPending(p2.uuid))
         env.administration.enable("arena1")
 
         val p3 = env.player("Carol")
@@ -129,8 +129,8 @@ class PaperArenaMembershipTest {
         env.join(p2, arena)
         p1.disconnect()
         assertEquals(ArenaState.Kind.ONEMORE, env.view().state.kind)
-        assertNull(env.sessions.arenaIdOf(p1.uuid))
-        assertEquals(arena, env.sessions.arenaIdOf(p2.uuid))
+        assertNull(env.sessions.findArenaIdOf(p1.uuid))
+        assertEquals(arena, env.sessions.findArenaIdOf(p2.uuid))
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
         assertNull(env.statsRepository.find(p2.uuid))
@@ -160,12 +160,12 @@ class PaperArenaMembershipTest {
         assertEquals(ArenaState.Kind.ROUNDCOUNTDOWN, env.view().state.kind)
 
         p1.disconnect()
-        assertNull(env.recovery.pending(p1.uuid))
+        assertNull(env.recovery.findPending(p1.uuid))
         assertNull(env.backupByName("Alice"))
         assertEquals(ArenaState.Kind.WAITING, env.view().state.kind)
         assertTrue(env.view().participants.isEmpty())
-        assertNull(env.sessions.arenaIdOf(p1.uuid))
-        assertNull(env.sessions.arenaIdOf(p2.uuid))
+        assertNull(env.sessions.findArenaIdOf(p1.uuid))
+        assertNull(env.sessions.findArenaIdOf(p2.uuid))
         assertEquals(1, env.statsRepository.find(p2.uuid)!!.wins)
         assertEquals(1, env.statsRepository.find(p1.uuid)!!.losses)
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
@@ -193,8 +193,8 @@ class PaperArenaMembershipTest {
         env.tick()
 
         assertEquals(ArenaState.Kind.WAITING, env.view().state.kind)
-        assertNull(env.sessions.arenaIdOf(p1.uuid))
-        assertNull(env.sessions.arenaIdOf(p2.uuid))
+        assertNull(env.sessions.findArenaIdOf(p1.uuid))
+        assertNull(env.sessions.findArenaIdOf(p2.uuid))
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
         assertNull(env.backupByName("Alice"))
     }
@@ -225,6 +225,6 @@ class PaperArenaMembershipTest {
             ),
         )
         env.lifecycle.load()
-        assertTrue(env.sessions.resolveArena("arena1")!!.enabled)
+        assertTrue(env.sessions.findArena("arena1")!!.enabled)
     }
 }

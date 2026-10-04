@@ -19,11 +19,11 @@ class ArenaAdministrationService(
 ) {
     fun arenaNames(): List<String> = sessions.arenaIds().map { it.name }
 
-    fun resolveArenaId(name: String): Arena.Id? = sessions.resolveArenaId(name)
+    fun findArenaId(name: String): Arena.Id? = sessions.findArenaId(name)
 
     fun create(name: String): CreateError? {
         val id = Arena.Id.of(name) ?: return CreateError.InvalidName
-        if (sessions.resolveArenaId(name) != null) return CreateError.AlreadyExists
+        if (sessions.findArenaId(name) != null) return CreateError.AlreadyExists
         val arena = Arena.Disabled.new(id)
         arenaRepository.save(arena)
         sessions.installArena(arena)
@@ -31,7 +31,7 @@ class ArenaAdministrationService(
     }
 
     fun remove(name: String): RemoveError? {
-        val arena = sessions.resolveArena(name) ?: return RemoveError.NotFound
+        val arena = sessions.findArena(name) ?: return RemoveError.NotFound
         progression.abort(arena.id)
         arenaRepository.delete(arena.id)
         sessions.removeArena(arena.id)
@@ -41,7 +41,7 @@ class ArenaAdministrationService(
     }
 
     fun enable(name: String): EnableError? {
-        val arena = sessions.resolveArena(name) ?: return EnableError.NotFound
+        val arena = sessions.findArena(name) ?: return EnableError.NotFound
         val next = when (arena) {
             is Arena.Enabled -> return EnableError.AlreadyEnabled
 
@@ -52,12 +52,12 @@ class ArenaAdministrationService(
         }
         arenaRepository.save(next)
         sessions.replaceArena(next)
-        sessions.match(arena.id)?.let(signService::refreshSign)
+        sessions.findMatch(arena.id)?.let(signService::refreshSign)
         return null
     }
 
     fun disable(name: String): DisableError? {
-        val arena = sessions.resolveArena(name) ?: return DisableError.NotFound
+        val arena = sessions.findArena(name) ?: return DisableError.NotFound
         val next = when (arena) {
             is Arena.Disabled -> return DisableError.AlreadyDisabled
             is Arena.Enabled -> arena.disable()
@@ -69,14 +69,14 @@ class ArenaAdministrationService(
     }
 
     fun setSpawn(id: Arena.Id, slot: SpawnSlot, position: WorldPosition) {
-        val arena = sessions.arena(id) ?: return
+        val arena = sessions.findArena(id) ?: return
         val next = arena.withSpawn(slot, position)
         arenaRepository.save(next)
         sessions.replaceArena(next)
     }
 
     fun setKit(id: Arena.Id, playerId: Uuid) {
-        if (sessions.arena(id) == null) return
+        if (sessions.findArena(id) == null) return
         kitPort.saveKit(id, playerId)
     }
 }

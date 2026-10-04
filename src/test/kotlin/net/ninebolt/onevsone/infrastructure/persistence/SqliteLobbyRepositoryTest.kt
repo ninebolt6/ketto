@@ -16,9 +16,9 @@ class SqliteLobbyRepositoryTest {
     @Test
     fun `lobby round trips`() = withStore(folder) { store ->
         val lobby = SqliteLobbyRepository(store)
-        assertNull(lobby.lobby())
+        assertNull(lobby.findLobby())
         lobby.setLobby(WorldPosition.new("lobby", 1.0, 2.0, 3.0, 45.5f, 10.25f))
-        val loaded = lobby.lobby()!!
+        val loaded = lobby.findLobby()!!
         assertEquals("lobby", loaded.world)
         assertEquals(45.5f, loaded.yaw, 0.001f)
     }

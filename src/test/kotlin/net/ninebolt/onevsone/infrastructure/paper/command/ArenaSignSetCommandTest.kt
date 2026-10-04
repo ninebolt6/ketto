@@ -53,7 +53,7 @@ class ArenaSignSetCommandTest {
         second.targetBlock = sign
 
         env.runCommand(op, "arena", "arena1", "sign", "set")
-        assertEquals(arenaId("arena1"), env.signRepository.signOwner(BlockPosition.new("world", 4, 64, 4)))
+        assertEquals(arenaId("arena1"), env.signRepository.findSignOwner(BlockPosition.new("world", 4, 64, 4)))
 
         env.runCommand(second, "arena", "arena2", "sign", "set")
         assertTrue(second.drainMessages().any { it.contains("That sign is already registered") })
@@ -86,6 +86,6 @@ class ArenaSignSetCommandTest {
 
         env.runCommand(op, "arena", "arena1", "sign", "set")
         assertTrue(op.drainMessages().none { it.contains("already registered") })
-        assertEquals(arenaId("arena1"), env.signRepository.signOwner(BlockPosition.new("world", 4, 64, 4)))
+        assertEquals(arenaId("arena1"), env.signRepository.findSignOwner(BlockPosition.new("world", 4, 64, 4)))
     }
 }

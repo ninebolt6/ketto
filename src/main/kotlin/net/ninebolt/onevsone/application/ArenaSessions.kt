@@ -11,15 +11,15 @@ class ArenaSessions(private val requiredWins: Int) {
 
     private val slots = linkedMapOf<Arena.Id, Slot>()
 
-    fun arena(id: Arena.Id): Arena? = slots[id]?.arena
+    fun findArena(id: Arena.Id): Arena? = slots[id]?.arena
 
-    fun enabledArena(id: Arena.Id): Arena.Enabled? = arena(id) as? Arena.Enabled
+    fun findEnabledArena(id: Arena.Id): Arena.Enabled? = findArena(id) as? Arena.Enabled
 
     // Case-insensitive fallback is unambiguous because create rejects case-insensitive duplicate names
-    fun resolveArenaId(name: String): Arena.Id? = Arena.Id.of(name)?.takeIf { slots.containsKey(it) }
+    fun findArenaId(name: String): Arena.Id? = Arena.Id.of(name)?.takeIf { slots.containsKey(it) }
         ?: slots.keys.firstOrNull { it.name.equals(name, ignoreCase = true) }
 
-    fun resolveArena(name: String): Arena? = resolveArenaId(name)?.let { slots.getValue(it).arena }
+    fun findArena(name: String): Arena? = findArenaId(name)?.let { slots.getValue(it).arena }
 
     fun arenaIds(): List<Arena.Id> = slots.keys.toList()
 
@@ -38,9 +38,9 @@ class ArenaSessions(private val requiredWins: Int) {
         slots[arena.id] = slot.copy(arena = arena)
     }
 
-    fun match(id: Arena.Id): ArenaMatch? = slots[id]?.match
+    fun findMatch(id: Arena.Id): ArenaMatch? = slots[id]?.match
 
-    fun entry(id: Arena.Id): Pair<Arena, ArenaMatch>? = slots[id]?.let { it.arena to it.match }
+    fun findEntry(id: Arena.Id): Pair<Arena, ArenaMatch>? = slots[id]?.let { it.arena to it.match }
 
     fun matches(): List<ArenaMatch> = slots.values.map { it.match }
 
@@ -59,15 +59,15 @@ class ArenaSessions(private val requiredWins: Int) {
         return transition
     }
 
-    fun matchOf(playerId: Uuid): ArenaMatch? = arenaIdOf(playerId)?.let(::match)
+    fun findMatchOf(playerId: Uuid): ArenaMatch? = findArenaIdOf(playerId)?.let(::findMatch)
 
     fun <O> transactFor(
         playerId: Uuid,
         operation: (ArenaMatch) -> Transition<O>,
-    ): Transition<O>? = arenaIdOf(playerId)?.let { transact(it, operation) }
+    ): Transition<O>? = findArenaIdOf(playerId)?.let { transact(it, operation) }
 
     // the last slot in insertion order wins if a player somehow appears in two matches
-    fun arenaIdOf(playerId: Uuid): Arena.Id? = slots.values.lastOrNull { slot -> slot.match.participants.any { it.id == playerId } }?.arena?.id
+    fun findArenaIdOf(playerId: Uuid): Arena.Id? = slots.values.lastOrNull { slot -> slot.match.participants.any { it.id == playerId } }?.arena?.id
 
-    fun isJoined(playerId: Uuid): Boolean = arenaIdOf(playerId) != null
+    fun isJoined(playerId: Uuid): Boolean = findArenaIdOf(playerId) != null
 }

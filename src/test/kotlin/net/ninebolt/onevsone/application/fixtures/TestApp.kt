@@ -71,5 +71,5 @@ class TestApp(val requiredWins: Int = 3) {
         return pair
     }
 
-    fun state(name: String = "arena1") = participation.matchIn(name)!!.state.kind
+    fun state(name: String = "arena1") = participation.findMatchIn(name)!!.state.kind
 }

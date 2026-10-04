@@ -19,13 +19,13 @@ class MatchParticipationService(
     private val signService: ArenaSignService,
 ) {
 
-    fun matchOf(playerId: Uuid): ArenaMatch? = sessions.matchOf(playerId)
+    fun findMatchOf(playerId: Uuid): ArenaMatch? = sessions.findMatchOf(playerId)
 
-    fun matchIn(name: String): ArenaMatch? = sessions.resolveArenaId(name)?.let { sessions.match(it) }
+    fun findMatchIn(name: String): ArenaMatch? = sessions.findArenaId(name)?.let { sessions.findMatch(it) }
 
     fun join(playerId: Uuid, playerName: String, arenaId: Arena.Id): JoinOutput {
         if (sessions.isJoined(playerId)) return JoinOutput.AlreadyJoined
-        val (arena, match) = sessions.entry(arenaId) ?: return JoinOutput.NotFound
+        val (arena, match) = sessions.findEntry(arenaId) ?: return JoinOutput.NotFound
         if (arena !is Arena.Enabled) return JoinOutput.NotEnabled
         val participant = Participant.new(playerId, playerName)
 
@@ -36,8 +36,8 @@ class MatchParticipationService(
             JoinOutcome.Rejected -> return JoinOutput.Rejected
         }
 
-        val handle = playerPort.handle(playerId)
-        recovery.pending(playerId)?.let { ref ->
+        val handle = playerPort.findHandle(playerId)
+        recovery.findPending(playerId)?.let { ref ->
             if (handle == null || handle.dead) return JoinOutput.Rejected
             if (!recovery.restoreNow(handle, ref)) return JoinOutput.RestorePending
         }
@@ -65,8 +65,8 @@ class MatchParticipationService(
     fun quit(playerId: Uuid) {
         val step = sessions.transactFor(playerId) { it.forfeit(playerId) }
         if (step == null) {
-            recovery.pending(playerId)?.let { ref ->
-                playerPort.handle(playerId)?.let { handle ->
+            recovery.findPending(playerId)?.let { ref ->
+                playerPort.findHandle(playerId)?.let { handle ->
                     recovery.restoreNow(handle, ref)
                 }
             }
@@ -87,8 +87,8 @@ class MatchParticipationService(
 
     fun restorePending(playerId: Uuid) {
         if (sessions.isJoined(playerId)) return
-        val ref = recovery.pending(playerId) ?: return
-        val handle = playerPort.handle(playerId) ?: return
+        val ref = recovery.findPending(playerId) ?: return
+        val handle = playerPort.findHandle(playerId) ?: return
         // A login can arrive dead; revive first so the restore lands on a live player
         handle.respawn()
         recovery.restoreNow(handle, ref)

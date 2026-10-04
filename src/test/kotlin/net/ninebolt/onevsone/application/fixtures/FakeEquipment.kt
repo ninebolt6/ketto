@@ -46,7 +46,7 @@ class FakeEquipment(var players: FakePlayers? = null) :
         storedBackups.remove(backup.backupId)
     }
 
-    override fun pendingFor(playerId: Uuid): BackupRef? = storedBackups.values.firstOrNull { it.playerId == playerId }
+    override fun findPending(playerId: Uuid): BackupRef? = storedBackups.values.firstOrNull { it.playerId == playerId }
 
     override fun pendingRefs(): List<BackupRef> {
         failOnPendingRefs?.let { throw it }

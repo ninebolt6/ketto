@@ -58,7 +58,7 @@ class SqliteBackupStoreTest {
         backups.saveBackups(listOf(PersistedBackup(first, PaperInventorySnapshot())))
         backups.saveBackups(listOf(PersistedBackup(second, PaperInventorySnapshot())))
 
-        assertEquals(second, backups.pendingFor(p.id))
+        assertEquals(second, backups.findPending(p.id))
         assertEquals(listOf(second), backups.pendingRefs())
         assertNull(backups.backupFor(first))
     }
@@ -109,7 +109,7 @@ class SqliteBackupStoreTest {
                 "Alice",
                 InventoryPayloadCodec.encode(PaperInventorySnapshot()),
             )
-            assertFailsWith<PersistenceException> { SqliteBackupStore(store).pendingFor(playerId) }
+            assertFailsWith<PersistenceException> { SqliteBackupStore(store).findPending(playerId) }
         }
     }
 

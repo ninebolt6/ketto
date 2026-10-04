@@ -46,12 +46,12 @@ class InMemoryArenaRepository :
         names.removeIf { it.equals(id.name, ignoreCase = true) }
     }
 
-    override fun lobby(): WorldPosition? = lobbyPosition
+    override fun findLobby(): WorldPosition? = lobbyPosition
     override fun setLobby(position: WorldPosition) {
         lobbyPosition = position
     }
 
-    override fun signLocation(arena: Arena.Id): BlockPosition? {
+    override fun findSignLocation(arena: Arena.Id): BlockPosition? {
         if (failOnSignRead) throw PersistenceException("sign read failed")
         return signs[arena]
     }
@@ -63,7 +63,7 @@ class InMemoryArenaRepository :
         signs.remove(arena)
     }
 
-    override fun signOwner(position: BlockPosition): Arena.Id? = signs.entries.firstOrNull { (_, pos) -> pos == position }?.key
+    override fun findSignOwner(position: BlockPosition): Arena.Id? = signs.entries.firstOrNull { (_, pos) -> pos == position }?.key
 }
 
 class InMemoryPlayerStatsRepository : PlayerStatsRepository {

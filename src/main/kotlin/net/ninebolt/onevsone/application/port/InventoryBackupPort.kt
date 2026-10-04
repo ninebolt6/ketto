@@ -13,7 +13,7 @@ interface InventoryBackupPort {
 
     fun discard(backup: BackupRef)
 
-    fun pendingFor(playerId: Uuid): BackupRef?
+    fun findPending(playerId: Uuid): BackupRef?
 
     fun pendingRefs(): List<BackupRef>
 }
