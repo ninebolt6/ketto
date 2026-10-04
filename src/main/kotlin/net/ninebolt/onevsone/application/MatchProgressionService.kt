@@ -58,7 +58,7 @@ class MatchProgressionService(
     internal fun endRound(match: ArenaMatch, outcome: DefeatOutcome.RoundWon, death: Boolean) {
         val arenaId = match.arenaId
         cancelCountdown(arenaId)
-        val gen = match.epoch
+        val epoch = match.epoch
         try {
             val winnerHandle = players.handle(outcome.winner.id)
             if (winnerHandle != null) {
@@ -74,7 +74,7 @@ class MatchProgressionService(
             val loserHandle = players.handle(outcome.loser.id)
             if (death) {
                 scheduleDeferred(outcome.loser.id, {
-                    sessions.match(arenaId)?.epoch == gen
+                    sessions.match(arenaId)?.epoch == epoch
                 }) { h ->
                     rearm(arenaId, outcome.loser, h)
                     teleportToSlot(arenaId, outcome.loser, h)
@@ -86,7 +86,7 @@ class MatchProgressionService(
             winnerHandle?.let { h -> teleportToSlot(arenaId, outcome.winner, h) }
 
             signs.refreshSign(match)
-            startRoundCountdown(arenaId, gen)
+            startRoundCountdown(arenaId, epoch)
         } catch (e: Exception) {
             // A failure after the resolution commit would leave a timer-less ROUNDCOUNTDOWN stuck, so abort
             logger.log(Level.SEVERE, "Could not finish round ${outcome.round} in arena ${arenaId.name}; match aborted", e)
@@ -152,8 +152,8 @@ class MatchProgressionService(
         }
     }
 
-    internal fun startInitialCountdown(arenaId: Arena.Id, gen: Long) {
-        runCountdown(arenaId, gen, ticks = 5) {
+    internal fun startInitialCountdown(arenaId: Arena.Id, epoch: Long) {
+        runCountdown(arenaId, epoch, ticks = 5) {
             if (remaining > 0) {
                 presentation.countdownTick(participantIds, remaining)
                 return@runCountdown false
@@ -170,7 +170,7 @@ class MatchProgressionService(
                 online.forEach { (sp, h) -> rearm(arenaId, sp, h) }
                 // Teleports fire events synchronously, so the match can move on mid-loop
                 for ((sp, h) in online) {
-                    if (sessions.match(arenaId)?.epoch != gen) {
+                    if (sessions.match(arenaId)?.epoch != epoch) {
                         abort(arenaId)
                         return@runCountdown true
                     }
@@ -194,8 +194,8 @@ class MatchProgressionService(
         }
     }
 
-    private fun startRoundCountdown(arenaId: Arena.Id, gen: Long) {
-        runCountdown(arenaId, gen, ticks = 7) {
+    private fun startRoundCountdown(arenaId: Arena.Id, epoch: Long) {
+        runCountdown(arenaId, epoch, ticks = 7) {
             when (remaining) {
                 7 -> online.forEach { (sp, h) -> rearm(arenaId, sp, h) }
 
@@ -215,14 +215,14 @@ class MatchProgressionService(
 
     private fun runCountdown(
         arenaId: Arena.Id,
-        gen: Long,
+        epoch: Long,
         ticks: Int,
         onTick: CountdownTick.() -> Boolean,
     ) {
         timers[arenaId] = scheduler.repeat(10, 20) { task, iteration ->
             val match = sessions.match(arenaId)
             val paired = match?.paired
-            if (match == null || match.epoch != gen || paired == null) {
+            if (match == null || match.epoch != epoch || paired == null) {
                 task.cancel()
                 return@repeat
             }
