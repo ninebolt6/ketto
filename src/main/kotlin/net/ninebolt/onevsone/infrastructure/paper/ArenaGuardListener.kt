@@ -3,12 +3,13 @@ package net.ninebolt.onevsone.infrastructure.paper
 import net.ninebolt.onevsone.application.MatchParticipationService
 import org.bukkit.Material
 import org.bukkit.Tag
-import org.bukkit.block.Block
 import org.bukkit.entity.ArmorStand
 import org.bukkit.entity.ItemFrame
 import org.bukkit.entity.Player
+import org.bukkit.event.Event
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
+import org.bukkit.event.block.Action
 import org.bukkit.event.block.BlockBreakEvent
 import org.bukkit.event.block.BlockDispenseArmorEvent
 import org.bukkit.event.block.BlockFertilizeEvent
@@ -34,6 +35,7 @@ import org.bukkit.event.player.PlayerInteractEntityEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerPickupArrowEvent
 import org.bukkit.inventory.InventoryHolder
+import org.bukkit.inventory.ItemStack
 
 class ArenaGuardListener(
     private val participation: MatchParticipationService,
@@ -82,24 +84,29 @@ class ArenaGuardListener(
     @EventHandler
     fun onInteract(event: PlayerInteractEvent) {
         val restrictions = participation.findRestrictions(event.player) ?: return
-        val block = event.clickedBlock
-        if (restrictions.inventoryTransferCancelled && block != null && storesItems(block)) {
-            event.denyUse()
-            return
+        if (!restrictions.blockPlaceCancelled) return
+        val item = event.item
+        if (event.clickedBlock != null && !ignites(item)) {
+            event.setUseInteractedBlock(Event.Result.DENY)
         }
-        if (restrictions.blockPlaceCancelled &&
-            event.item?.type?.name?.endsWith("_SPAWN_EGG") == true
-        ) {
+        if (event.action == Action.RIGHT_CLICK_BLOCK && modifiesBlock(item)) {
+            event.setUseItemInHand(Event.Result.DENY)
+        }
+        if (item?.type?.name?.endsWith("_SPAWN_EGG") == true) {
             event.denyUse()
         }
     }
 
-    // Ender chests, beds, respawn anchors and flower pots hold items but have no InventoryHolder block state
-    private fun storesItems(block: Block): Boolean {
-        if (block.state is InventoryHolder) return true
-        val type = block.type
-        return type == Material.ENDER_CHEST || type == Material.RESPAWN_ANCHOR ||
-            Tag.BEDS.isTagged(type) || type == Material.FLOWER_POT || type.name.startsWith("POTTED_")
+    // Ignition stays allowed by design, so these items keep the block interaction enabled
+    private fun ignites(item: ItemStack?): Boolean = item?.type == Material.FLINT_AND_STEEL || item?.type == Material.FIRE_CHARGE
+
+    private fun modifiesBlock(item: ItemStack?): Boolean {
+        val type = item?.type ?: return false
+        return Tag.ITEMS_AXES.isTagged(type) ||
+            Tag.ITEMS_SHOVELS.isTagged(type) ||
+            Tag.ITEMS_HOES.isTagged(type) ||
+            type == Material.HONEYCOMB ||
+            type == Material.BRUSH
     }
 
     @EventHandler

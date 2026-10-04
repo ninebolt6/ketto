@@ -88,7 +88,53 @@ class ArenaGuardListenerInteractTest {
         val ingame = interact(p1, chest)
         env.fire(ingame)
         assertEquals(Event.Result.DENY, ingame.useInteractedBlock())
-        assertEquals(Event.Result.DENY, ingame.useItemInHand())
+    }
+
+    @Test
+    fun `campfire lever and farmland interact denied while restricted`() {
+        val (p1, _) = env.twoPlayerIngame()
+        listOf(Material.CAMPFIRE, Material.LEVER).forEachIndexed { i, type ->
+            val event = interact(p1, env.blockOf(type, x = 8, z = 24 + i))
+            env.fire(event)
+            assertEquals(Event.Result.DENY, event.useInteractedBlock(), "type=$type")
+        }
+
+        val trample = interact(p1, env.blockOf(Material.FARMLAND), action = Action.PHYSICAL)
+        env.fire(trample)
+        assertEquals(Event.Result.DENY, trample.useInteractedBlock())
+    }
+
+    @Test
+    fun `block modifying tools are denied on interact while restricted`() {
+        val (p1, _) = env.twoPlayerIngame()
+        listOf(Material.IRON_AXE, Material.IRON_SHOVEL, Material.IRON_HOE, Material.HONEYCOMB, Material.BRUSH)
+            .forEachIndexed { i, type ->
+                val event = interact(p1, env.blockOf(Material.OAK_LOG, x = 8, z = 32 + i), item = env.item(type))
+                env.fire(event)
+                assertEquals(Event.Result.DENY, event.useItemInHand(), "type=$type")
+            }
+    }
+
+    @Test
+    fun `flint and steel ignition stays allowed while restricted`() {
+        val (p1, _) = env.twoPlayerIngame()
+        val event = interact(p1, env.plainBlock(), item = env.item(Material.FLINT_AND_STEEL))
+        env.fire(event)
+        assertNotEquals(Event.Result.DENY, event.useInteractedBlock())
+        assertNotEquals(Event.Result.DENY, event.useItemInHand())
+    }
+
+    @Test
+    fun `block interact stays allowed during countdown`() {
+        val arena = env.newArena()
+        val p1 = env.player("Alice")
+        val p2 = env.player("Bob")
+        env.join(p1, arena)
+        env.join(p2, arena)
+
+        val event = interact(p1, env.blockOf(Material.LEVER))
+        env.fire(event)
+        assertNotEquals(Event.Result.DENY, event.useInteractedBlock())
     }
 
     @Test
@@ -120,11 +166,11 @@ class ArenaGuardListenerInteractTest {
     }
 
     @Test
-    fun `plain block interact and non participant unaffected`() {
+    fun `plain block interact denied in game and non participant unaffected`() {
         val (p1, _) = env.twoPlayerIngame()
         val plain = interact(p1, env.plainBlock())
         env.fire(plain)
-        assertNotEquals(Event.Result.DENY, plain.useInteractedBlock())
+        assertEquals(Event.Result.DENY, plain.useInteractedBlock())
 
         val outsider = env.player("Outsider")
         val foreign = interact(outsider, env.blockOf(Material.CHEST))
@@ -482,7 +528,7 @@ class ArenaGuardListenerInteractTest {
     }
 
     @Test
-    fun `non egg item interact is not denied while restricted`() {
+    fun `non egg item use is not denied while restricted`() {
         val (p1, _) = env.twoPlayerIngame()
         val event = interact(p1, env.plainBlock(), item = env.item(Material.STONE))
         env.fire(event)
