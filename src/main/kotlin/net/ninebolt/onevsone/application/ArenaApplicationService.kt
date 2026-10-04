@@ -5,10 +5,10 @@ import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
 import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.domain.DefeatOutcome
+import net.ninebolt.onevsone.domain.ForfeitOutcome
 import net.ninebolt.onevsone.domain.JoinOutcome
 import net.ninebolt.onevsone.domain.LeaveOutcome
 import net.ninebolt.onevsone.domain.Participant
-import net.ninebolt.onevsone.domain.QuitOutcome
 import kotlin.uuid.Uuid
 
 class ArenaApplicationService(
@@ -73,15 +73,15 @@ class ArenaApplicationService(
             return
         }
         when (val outcome = step.outcome) {
-            is QuitOutcome.WaitingExit -> {
+            is ForfeitOutcome.WaitingExit -> {
                 signs.refreshSign(step.match)
             }
 
-            is QuitOutcome.MatchEnded -> {
-                progression.finishMatch(step.match, outcome.winner, outcome.loser, MatchEnd.FORFEITED)
+            is ForfeitOutcome.MatchEnded -> {
+                progression.finishMatch(step.match, outcome.winner, outcome.loser, DefeatCause.FORFEIT)
             }
 
-            QuitOutcome.NotParticipant -> Unit
+            ForfeitOutcome.NotParticipant -> Unit
         }
     }
 
@@ -104,9 +104,8 @@ class ArenaApplicationService(
                 true
             }
 
-            is DefeatOutcome.MatchFinished -> {
-                val end = if (cause == DefeatCause.DEATH) MatchEnd.KILLED else MatchEnd.FELL
-                progression.finishMatch(step.match, outcome.winner, outcome.loser, end)
+            is DefeatOutcome.MatchEnded -> {
+                progression.finishMatch(step.match, outcome.winner, outcome.loser, cause)
                 true
             }
         }

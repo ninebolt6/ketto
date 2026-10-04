@@ -10,6 +10,7 @@ import net.ninebolt.onevsone.application.port.PresentationPort
 import net.ninebolt.onevsone.application.port.SchedulerPort
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
+import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.domain.DefeatOutcome
 import net.ninebolt.onevsone.domain.Participant
 import net.ninebolt.onevsone.domain.SlottedParticipant
@@ -97,7 +98,7 @@ class MatchProgressionService(
         match: ArenaMatch,
         winner: Participant,
         loser: Participant,
-        end: MatchEnd,
+        cause: DefeatCause,
     ) {
         val arenaId = match.arenaId
         cancelCountdown(arenaId)
@@ -113,17 +114,17 @@ class MatchProgressionService(
 
         runNowOrAfterRespawn(winner.id, winnerRef) { h ->
             resetAndRestore(h, winnerRef)
-            if (end != MatchEnd.FORFEITED) presentation.championFirework(winner.id)
+            if (cause != DefeatCause.FORFEIT) presentation.championFirework(winner.id)
         }
 
-        if (end == MatchEnd.KILLED) {
+        if (cause == DefeatCause.DEATH) {
             runAfterRespawn(loser.id, loserRef) { h ->
                 resetAndRestore(h, loserRef)
             }
         } else {
             // Losers who died via quit arrive here dead, so do not defer on a dead check
             players.handle(loser.id)?.let { h ->
-                if (end == MatchEnd.FORFEITED) {
+                if (cause == DefeatCause.FORFEIT) {
                     loserRef?.let { recovery.restoreNow(h, it) }
                 } else {
                     resetAndRestore(h, loserRef)
@@ -304,12 +305,4 @@ class MatchProgressionService(
         }
         handle.teleport(spawn)
     }
-}
-
-internal enum class MatchEnd {
-    KILLED,
-
-    FELL,
-
-    FORFEITED,
 }

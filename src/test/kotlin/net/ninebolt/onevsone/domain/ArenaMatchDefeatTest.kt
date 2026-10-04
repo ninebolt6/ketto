@@ -46,7 +46,7 @@ class ArenaMatchDefeatTest {
         m = m.recordDefeat(bob.id, DefeatCause.FALL).match
         m = m.resumeRound().match
         val step = m.recordDefeat(bob.id, DefeatCause.FALL)
-        assertTrue(step.outcome is DefeatOutcome.MatchFinished)
+        assertTrue(step.outcome is DefeatOutcome.MatchEnded)
         assertEquals(ArenaState.Kind.WAITING, step.match.state.kind)
         assertTrue(step.match.participants.isEmpty())
     }
@@ -55,7 +55,7 @@ class ArenaMatchDefeatTest {
     fun `requiredWins 1 ends on first defeat`() {
         val m = startedMatch(requiredWins = 1)
         val step = m.recordDefeat(bob.id, DefeatCause.DEATH)
-        assertTrue(step.outcome is DefeatOutcome.MatchFinished)
+        assertTrue(step.outcome is DefeatOutcome.MatchEnded)
         assertEquals(alice, step.outcome.winner)
     }
 
@@ -76,7 +76,7 @@ class ArenaMatchDefeatTest {
                 m = step.match
             }
         }
-        assertTrue(outcome is DefeatOutcome.MatchFinished)
+        assertTrue(outcome is DefeatOutcome.MatchEnded)
         assertEquals(alice, outcome.winner)
     }
 

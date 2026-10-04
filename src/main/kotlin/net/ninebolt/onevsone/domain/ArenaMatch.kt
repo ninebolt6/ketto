@@ -58,18 +58,18 @@ data class ArenaMatch private constructor(
     }
 
     // COUNTDOWN is still pre-match (no teleport, backup, or scoring), so quitting unregisters instead of forfeiting.
-    fun forfeit(id: Uuid): Transition<QuitOutcome> {
-        val participant = participant(id) ?: return Transition(this, QuitOutcome.NotParticipant)
+    fun forfeit(id: Uuid): Transition<ForfeitOutcome> {
+        val participant = participant(id) ?: return Transition(this, ForfeitOutcome.NotParticipant)
         val s = state
         if (s is ArenaState.Active) {
             val winner = s.participants.first { it.id != id }
-            return Transition(finished(), QuitOutcome.MatchEnded(winner, participant))
+            return Transition(finished(), ForfeitOutcome.MatchEnded(winner, participant))
         }
         val next: ArenaState = when (s) {
             is ArenaState.Countdown -> ArenaState.OneMore(if (s.first.id == id) s.second else s.first)
             else -> ArenaState.Waiting
         }
-        return Transition(advance(next), QuitOutcome.WaitingExit(participant))
+        return Transition(advance(next), ForfeitOutcome.WaitingExit(participant))
     }
 
     fun recordDefeat(id: Uuid, cause: DefeatCause): Transition<DefeatOutcome> = when (val s = state) {
@@ -92,7 +92,7 @@ data class ArenaMatch private constructor(
         val winner = slotted.first { it.id != id }
         // End is judged on the win count before adding; the final kill is not added to the count.
         if (state.winsOf(winner.id) >= requiredWins - 1) {
-            return Transition(finished(), DefeatOutcome.MatchFinished(winner.participant, loser.participant))
+            return Transition(finished(), DefeatOutcome.MatchEnded(winner.participant, loser.participant))
         }
         val next = ArenaState.RoundCountdown.of(
             first = state.first,

@@ -14,15 +14,15 @@ class TeleportRestrictionTest {
     }
 
     @Test
-    fun `ender pearl only allows pearl and internal`() {
+    fun `ender pearl only allows pearl and plugin`() {
         assertTrue(TeleportRestriction.ENDER_PEARL_ONLY.allows(TeleportTrigger.ENDER_PEARL))
-        assertTrue(TeleportRestriction.ENDER_PEARL_ONLY.allows(TeleportTrigger.INTERNAL))
+        assertTrue(TeleportRestriction.ENDER_PEARL_ONLY.allows(TeleportTrigger.PLUGIN))
         assertFalse(TeleportRestriction.ENDER_PEARL_ONLY.allows(TeleportTrigger.EXTERNAL))
     }
 
     @Test
-    fun `plugin only allows internal`() {
-        assertTrue(TeleportRestriction.PLUGIN_ONLY.allows(TeleportTrigger.INTERNAL))
+    fun `plugin only allows plugin teleports`() {
+        assertTrue(TeleportRestriction.PLUGIN_ONLY.allows(TeleportTrigger.PLUGIN))
         assertFalse(TeleportRestriction.PLUGIN_ONLY.allows(TeleportTrigger.ENDER_PEARL))
         assertFalse(TeleportRestriction.PLUGIN_ONLY.allows(TeleportTrigger.EXTERNAL))
     }

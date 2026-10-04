@@ -95,10 +95,10 @@ class ArenaMatchTest {
         var m = match()
         m = m.join(alice).match
         val step = m.forfeit(alice.id)
-        assertTrue(step.outcome is QuitOutcome.WaitingExit)
+        assertTrue(step.outcome is ForfeitOutcome.WaitingExit)
         assertEquals(ArenaState.Kind.WAITING, step.match.state.kind)
         assertEquals(0, step.match.participants.size)
-        assertEquals(QuitOutcome.NotParticipant, step.match.forfeit(alice.id).outcome)
+        assertEquals(ForfeitOutcome.NotParticipant, step.match.forfeit(alice.id).outcome)
     }
 
     @Test
@@ -107,7 +107,7 @@ class ArenaMatchTest {
         countdown = countdown.join(alice).match
         countdown = countdown.join(bob).match
         val step = countdown.forfeit(alice.id)
-        assertTrue(step.outcome is QuitOutcome.WaitingExit)
+        assertTrue(step.outcome is ForfeitOutcome.WaitingExit)
         assertEquals(alice, step.outcome.participant)
         assertEquals(ArenaState.Kind.ONEMORE, step.match.state.kind)
         assertEquals(listOf(bob), step.match.participants)
@@ -120,7 +120,7 @@ class ArenaMatchTest {
         countdown = countdown.join(alice).match
         countdown = countdown.join(bob).match
         val step = countdown.forfeit(bob.id)
-        assertTrue(step.outcome is QuitOutcome.WaitingExit)
+        assertTrue(step.outcome is ForfeitOutcome.WaitingExit)
         assertEquals(bob, step.outcome.participant)
         assertEquals(ArenaState.Kind.ONEMORE, step.match.state.kind)
         assertEquals(listOf(alice), step.match.participants)
@@ -130,7 +130,7 @@ class ArenaMatchTest {
     fun `forfeit during ingame ends match for opponent`() {
         val ingame = startedMatch()
         val finished = ingame.forfeit(alice.id)
-        assertTrue(finished.outcome is QuitOutcome.MatchEnded)
+        assertTrue(finished.outcome is ForfeitOutcome.MatchEnded)
         assertEquals(bob, finished.outcome.winner)
         assertEquals(0, finished.match.participants.size)
         assertEquals(ArenaState.Kind.WAITING, finished.match.state.kind)

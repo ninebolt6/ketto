@@ -7,5 +7,5 @@ sealed interface DefeatOutcome {
         val winner: SlottedParticipant,
         val loser: SlottedParticipant,
     ) : DefeatOutcome
-    data class MatchFinished(val winner: Participant, val loser: Participant) : DefeatOutcome
+    data class MatchEnded(val winner: Participant, val loser: Participant) : DefeatOutcome
 }

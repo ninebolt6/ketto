@@ -30,7 +30,7 @@ class ArenaTeleportListener(
         val restrictions = service.restrictionsOf(event.player) ?: return
         // The plugin's own teleports do not always arrive with cause PLUGIN
         val trigger = when {
-            lookup.isPluginTeleport(event.player.uniqueId.toKotlinUuid()) -> TeleportTrigger.INTERNAL
+            lookup.isPluginTeleport(event.player.uniqueId.toKotlinUuid()) -> TeleportTrigger.PLUGIN
             event.cause == PlayerTeleportEvent.TeleportCause.ENDER_PEARL -> TeleportTrigger.ENDER_PEARL
             else -> TeleportTrigger.EXTERNAL
         }
