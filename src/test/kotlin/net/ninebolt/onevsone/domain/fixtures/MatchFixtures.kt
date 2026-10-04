@@ -2,6 +2,7 @@ package net.ninebolt.onevsone.domain.fixtures
 
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
+import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.Participant
 
 internal val alice = Participant.new("Alice")
@@ -20,4 +21,12 @@ internal fun startedMatch(requiredWins: Int = 3): ArenaMatch {
     val began = m.beginMatch()
     check(began.outcome)
     return began.match
+}
+
+internal fun stateForKind(kind: ArenaState.Kind): ArenaState = when (kind) {
+    ArenaState.Kind.WAITING -> ArenaState.Waiting
+    ArenaState.Kind.ONEMORE -> ArenaState.OneMore(alice)
+    ArenaState.Kind.COUNTDOWN -> ArenaState.Countdown.of(alice, bob)
+    ArenaState.Kind.ROUNDCOUNTDOWN -> ArenaState.RoundCountdown.of(alice, bob, firstWins = 0, secondWins = 0)
+    ArenaState.Kind.INGAME -> ArenaState.InGame.of(alice, bob, firstWins = 0, secondWins = 0)
 }
