@@ -17,6 +17,6 @@ internal class ArenaKitSetCommand(
             return
         }
         admin.setKit(id, player.uniqueId.toKotlinUuid())
-        messenger.send(player, Message.ArenaInventorySet(id.name))
+        messenger.send(player, Message.ArenaKitSet(id.name))
     }
 }

@@ -6,7 +6,7 @@ import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import net.ninebolt.onevsone.infrastructure.paper.toWorldPosition
 import org.bukkit.entity.Player
 
-internal class SetLobbyCommand(
+internal class LobbySetCommand(
     private val lobby: LobbyService,
     private val messenger: Messenger,
 ) {

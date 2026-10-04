@@ -28,7 +28,7 @@ internal class StatsCommand(
         when (output) {
             is StatsOutput.Found -> {
                 messenger.send(sender, Message.StatsWin(output.stats.wins))
-                messenger.send(sender, Message.StatsLose(output.stats.losses))
+                messenger.send(sender, Message.StatsLoss(output.stats.losses))
                 messenger.send(sender, Message.StatsRatio(output.stats))
             }
 

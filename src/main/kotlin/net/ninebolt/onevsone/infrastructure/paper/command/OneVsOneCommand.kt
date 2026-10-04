@@ -32,7 +32,7 @@ class OneVsOneCommand(
 
     private val stats = StatsCommand(statsService, messenger)
     private val leave = LeaveCommand(participation, messenger)
-    private val lobbySet = SetLobbyCommand(lobby, messenger)
+    private val lobbySet = LobbySetCommand(lobby, messenger)
     private val create = ArenaCreateCommand(admin, messenger)
     private val info = ArenaInfoCommand(participation, messenger)
     private val remove = ArenaRemoveCommand(admin, messenger)

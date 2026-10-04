@@ -46,7 +46,7 @@ sealed class Message(val key: MessageKey, vararg val args: Arg) {
             Str("name", name),
             Str("slots", slots.joinToString(", ") { it.number.toString() }),
         )
-    class ArenaInventorySet(name: String) : Message(MessageKey.ARENA_INVENTORY_SET, Str("name", name))
+    class ArenaKitSet(name: String) : Message(MessageKey.ARENA_KIT_SET, Str("name", name))
     data object ArenaNotEnabled : Message(MessageKey.ARENA_NOT_ENABLED)
 
     class ArenaInfoHeader(name: String) : Message(MessageKey.ARENA_INFO_HEADER, Str("name", name))
@@ -69,7 +69,7 @@ sealed class Message(val key: MessageKey, vararg val args: Arg) {
     class MatchChampion(arena: String, name: String) : Message(MessageKey.MATCH_CHAMPION, Str("arena", arena), Str("name", name))
 
     class StatsWin(wins: Int) : Message(MessageKey.STATS_WIN, Str("wins", "$wins"))
-    class StatsLose(losses: Int) : Message(MessageKey.STATS_LOSE, Str("losses", "$losses"))
+    class StatsLoss(losses: Int) : Message(MessageKey.STATS_LOSS, Str("losses", "$losses"))
     class StatsRatio(stats: PlayerStats) : Message(MessageKey.STATS_RATIO, Str("ratio", "%.2f".format(Locale.ROOT, stats.ratio)))
     data object StatsNone : Message(MessageKey.STATS_NONE)
     data object StatsCooldown : Message(MessageKey.STATS_COOLDOWN)
@@ -126,7 +126,7 @@ enum class MessageKey {
     ARENA_DISABLED,
     ARENA_ALREADY_DISABLED,
     ARENA_MISSING_SPAWNS,
-    ARENA_INVENTORY_SET,
+    ARENA_KIT_SET,
     ARENA_NOT_ENABLED,
 
     ARENA_INFO_HEADER,
@@ -149,7 +149,7 @@ enum class MessageKey {
     MATCH_CHAMPION,
 
     STATS_WIN,
-    STATS_LOSE,
+    STATS_LOSS,
     STATS_RATIO,
     STATS_NONE,
     STATS_COOLDOWN,

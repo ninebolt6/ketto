@@ -36,7 +36,7 @@ class ArenaKitSetCommandTest {
         env.newArena()
         op.inventory.setItem(0, env.item(Material.DIAMOND_SWORD))
         env.runCommand(op, "arena", "arena1", "kit", "set")
-        assertTrue(op.drainMessages().any { it.contains("Set inventory for arena") })
+        assertTrue(op.drainMessages().any { it.contains("Set kit for arena") })
         assertEquals(Material.DIAMOND_SWORD, env.kitStore.loadArenaKit("arena1").items[0]!!.type)
     }
 
