@@ -17,12 +17,14 @@ class FakePlayers : PlayerPort {
         val teleports = mutableListOf<WorldPosition>()
         val events = mutableListOf<String>()
         var onTeleport: (() -> Unit)? = null
+        var onRespawn: (() -> Unit)? = null
 
         override fun position(): WorldPosition = positionValue
         override fun respawn() {
             if (dead) {
                 dead = false
                 events += "respawn"
+                onRespawn?.invoke()
             }
         }
 

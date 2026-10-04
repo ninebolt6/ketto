@@ -167,14 +167,20 @@ class MatchProgressionService(
             }
             try {
                 online.forEach { (sp, h) -> rearm(arenaId, sp, h) }
-                online.forEach { (sp, h) -> teleportToSlot(arenaId, sp, h) }
-                val began = registry.transact(arenaId) { it.beginMatch() }
-                    ?: run {
-                        logger.severe("Arena ${arenaId.name} vanished before the match could begin; aborting")
+                // Teleports fire events synchronously, so the match can move on mid-loop
+                for ((sp, h) in online) {
+                    if (registry.match(arenaId)?.epoch != gen) {
                         abort(arenaId)
                         return@runCountdown true
                     }
-                if (!began.outcome) return@runCountdown true
+                    teleportToSlot(arenaId, sp, h)
+                }
+                // An arena removal aborts the match itself, so a missing match means cleanup already ran
+                val began = registry.transact(arenaId) { it.beginMatch() } ?: return@runCountdown true
+                if (!began.outcome) {
+                    abort(arenaId)
+                    return@runCountdown true
+                }
                 presentation.matchStart(participantIds)
                 presentation.updateScoreboard(began.match)
                 signs.refreshSign(began.match)
@@ -195,11 +201,7 @@ class MatchProgressionService(
                 in 1..5 -> presentation.roundCountdownTick(participantIds, remaining)
 
                 0 -> {
-                    val resumed = registry.transact(arenaId) { it.resumeRound() }
-                        ?: run {
-                            logger.severe("Arena ${arenaId.name} vanished while resuming a round")
-                            return@runCountdown true
-                        }
+                    val resumed = registry.transact(arenaId) { it.resumeRound() } ?: return@runCountdown true
                     if (resumed.outcome) {
                         presentation.roundStart(participantIds)
                         signs.refreshSign(resumed.match)

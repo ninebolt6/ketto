@@ -354,6 +354,25 @@ class MatchProgressionServiceTest {
     }
 
     @Test
+    fun `a deferred restore is skipped when the loser is restored during the respawn`() {
+        val app = TestApp(requiredWins = 1)
+        val (_, p2) = app.startMatch()
+        p2.dead = true
+        assertTrue(app.service.defeat(p2.id, DefeatCause.DEATH))
+        p2.onRespawn = {
+            p2.onRespawn = null
+            app.recovery.pending(p2.id)?.let { app.recovery.restoreNow(p2, it) }
+        }
+
+        app.scheduler.runOneShots()
+
+        assertTrue("respawn" in p2.events)
+        assertEquals(1, app.equipment.restored.count { it.playerId == p2.id })
+        assertTrue("vitals" !in p2.events)
+        assertNull(app.recovery.pending(p2.id))
+    }
+
+    @Test
     fun `a countdown cancels itself once the arena is removed`() {
         val app = TestApp()
         app.joinedTwo()
@@ -452,6 +471,45 @@ class MatchProgressionServiceTest {
         assertTrue(app.equipment.restored.any { it.playerId == p1.id })
         assertTrue(app.equipment.restored.any { it.playerId == p2.id })
         assertTrue(app.logger.reports.isEmpty())
+    }
+
+    @Test
+    fun `a participant quitting during the match start teleport aborts and restores the opponent`() {
+        val app = TestApp()
+        val (p1, p2) = app.joinedTwo()
+        p1.onTeleport = {
+            p1.onTeleport = null
+            app.players.quittingScope(p1) { app.service.quit(p1.id) }
+            app.players.disconnect(p1)
+        }
+
+        app.scheduler.tick(6)
+
+        assertEquals(ArenaState.Kind.WAITING, app.state())
+        assertTrue(p2.teleports.isEmpty())
+        assertTrue(app.equipment.restored.any { it.playerId == p2.id })
+        assertNull(app.recovery.pending(p2.id))
+        assertNotNull(app.recovery.pending(p1.id))
+        assertTrue(app.presentation.matchStarts.isEmpty())
+        assertTrue(app.logger.reports.isEmpty())
+    }
+
+    @Test
+    fun `removing the arena during the match start teleport stops without an error`() {
+        val app = TestApp()
+        val (p1, p2) = app.joinedTwo()
+        p1.onTeleport = {
+            p1.onTeleport = null
+            assertNull(app.admin.remove("arena1"))
+        }
+
+        app.scheduler.tick(6)
+
+        assertTrue(app.logger.reports.isEmpty())
+        assertTrue(p2.teleports.isEmpty())
+        assertTrue(app.equipment.restored.any { it.playerId == p1.id })
+        assertTrue(app.equipment.restored.any { it.playerId == p2.id })
+        assertNull(app.service.matchOf("arena1"))
     }
 
     @Test
