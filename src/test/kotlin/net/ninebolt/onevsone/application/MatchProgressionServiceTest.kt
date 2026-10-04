@@ -260,7 +260,7 @@ class MatchProgressionServiceTest {
         assertTrue(app.participation.defeat(p2.id, DefeatCause.DEATH))
         val applies = app.equipment.kitApplies.count { it.second == p2.id }
 
-        assertNull(app.admin.remove("arena1"))
+        assertNull(app.administration.remove("arena1"))
         app.scheduler.runOneShots()
 
         assertEquals(applies, app.equipment.kitApplies.count { it.second == p2.id })
@@ -345,7 +345,7 @@ class MatchProgressionServiceTest {
         val (_, p2) = app.startMatch()
         p2.dead = true
         assertTrue(app.participation.defeat(p2.id, DefeatCause.DEATH))
-        assertNull(app.admin.remove("arena1"))
+        assertNull(app.administration.remove("arena1"))
 
         app.scheduler.runOneShots()
 
@@ -377,7 +377,7 @@ class MatchProgressionServiceTest {
         val app = TestApp()
         app.joinedTwo()
         val timer = app.scheduler.timers.last()
-        assertNull(app.admin.remove("arena1"))
+        assertNull(app.administration.remove("arena1"))
 
         timer.run()
 
@@ -458,7 +458,7 @@ class MatchProgressionServiceTest {
         val (p1, p2) = app.joinedTwo()
         p1.onTeleport = {
             p1.onTeleport = null
-            app.admin.disable("arena1")
+            app.administration.disable("arena1")
         }
 
         app.scheduler.tick(6)
@@ -479,7 +479,7 @@ class MatchProgressionServiceTest {
         val (p1, p2) = app.joinedTwo()
         p2.onTeleport = {
             p2.onTeleport = null
-            app.admin.disable("arena1")
+            app.administration.disable("arena1")
         }
 
         app.scheduler.tick(6)
@@ -500,7 +500,7 @@ class MatchProgressionServiceTest {
         val (p1, p2) = app.joinedTwo()
         p2.onTeleport = {
             p2.onTeleport = null
-            assertNull(app.admin.remove("arena1"))
+            assertNull(app.administration.remove("arena1"))
         }
 
         app.scheduler.tick(6)
@@ -541,7 +541,7 @@ class MatchProgressionServiceTest {
         val (p1, p2) = app.joinedTwo()
         p1.onTeleport = {
             p1.onTeleport = null
-            assertNull(app.admin.remove("arena1"))
+            assertNull(app.administration.remove("arena1"))
         }
 
         app.scheduler.tick(6)
@@ -557,7 +557,7 @@ class MatchProgressionServiceTest {
     fun `aborting during a round end teleport does not refresh a stale sign`() {
         val app = TestApp()
         val (_, p2) = app.joinedTwo()
-        app.signs.setSign(arenaId("arena1"), BlockPosition.new("world", 3, 64, 3))
+        app.signService.setSign(arenaId("arena1"), BlockPosition.new("world", 3, 64, 3))
         app.scheduler.tick(6)
         assertEquals(ArenaState.Kind.INGAME, app.state())
         p2.onTeleport = {

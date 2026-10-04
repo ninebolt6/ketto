@@ -27,14 +27,14 @@ class ArenaAdministrationServiceTest {
 
     @Test
     fun `create persists arena and rejects duplicates and invalid names`() {
-        assertNull(app.admin.create("arena1"))
+        assertNull(app.administration.create("arena1"))
         assertEquals(false, app.arenaRepository.find("arena1").enabled)
         assertEquals(ArenaState.Kind.WAITING, app.state())
 
-        assertEquals(CreateError.AlreadyExists, app.admin.create("Arena1"))
-        assertEquals(CreateError.InvalidName, app.admin.create(" bad"))
-        assertEquals(CreateError.InvalidName, app.admin.create("create"))
-        assertNull(app.admin.create("players"))
+        assertEquals(CreateError.AlreadyExists, app.administration.create("Arena1"))
+        assertEquals(CreateError.InvalidName, app.administration.create(" bad"))
+        assertEquals(CreateError.InvalidName, app.administration.create("create"))
+        assertNull(app.administration.create("players"))
         assertNull(app.sessions.resolveArena("bad/name"))
     }
 
@@ -42,8 +42,8 @@ class ArenaAdministrationServiceTest {
     fun `remove aborts running match and clears registrations`() {
         val arena = app.newArena()
         val (p1, p2) = app.joinedTwo()
-        app.signs.setSign(arenaId("arena1"), BlockPosition.new("world", 3, 64, 3))
-        assertNull(app.admin.remove("arena1"))
+        app.signService.setSign(arenaId("arena1"), BlockPosition.new("world", 3, 64, 3))
+        assertNull(app.administration.remove("arena1"))
         assertNull(app.sessions.resolveArena("arena1"))
         assertNull(app.sessions.arenaIdOf(p1.id))
         assertNull(app.sessions.arenaIdOf(p2.id))
@@ -52,8 +52,8 @@ class ArenaAdministrationServiceTest {
         assertFalse(app.arenaRepository.names.contains("arena1"))
         assertEquals(listOf(arena), app.equipment.forgottenKits)
 
-        assertEquals(RemoveError.NotFound, app.admin.remove("arena1"))
-        assertEquals(RemoveError.NotFound, app.admin.remove("bad name!"))
+        assertEquals(RemoveError.NotFound, app.administration.remove("arena1"))
+        assertEquals(RemoveError.NotFound, app.administration.remove("bad name!"))
     }
 
     @Test
@@ -62,36 +62,36 @@ class ArenaAdministrationServiceTest {
         app.joinedTwo()
         assertEquals(ArenaState.Kind.COUNTDOWN, app.state())
 
-        assertNull(app.admin.disable("arena1"))
+        assertNull(app.administration.disable("arena1"))
         assertFalse(app.sessions.resolveArena("arena1")!!.enabled)
         assertEquals(ArenaState.Kind.WAITING, app.state())
         assertFalse(app.arenaRepository.find("arena1").enabled)
 
-        assertEquals(DisableError.AlreadyDisabled, app.admin.disable("arena1"))
-        assertNull(app.admin.enable("arena1"))
-        assertEquals(EnableError.AlreadyEnabled, app.admin.enable("arena1"))
-        assertEquals(EnableError.NotFound, app.admin.enable("missing"))
-        assertEquals(EnableError.NotFound, app.admin.enable("bad name!"))
+        assertEquals(DisableError.AlreadyDisabled, app.administration.disable("arena1"))
+        assertNull(app.administration.enable("arena1"))
+        assertEquals(EnableError.AlreadyEnabled, app.administration.enable("arena1"))
+        assertEquals(EnableError.NotFound, app.administration.enable("missing"))
+        assertEquals(EnableError.NotFound, app.administration.enable("bad name!"))
     }
 
     @Test
     fun `enable requires both spawns and reports the missing slots`() {
-        assertNull(app.admin.create("arena1"))
+        assertNull(app.administration.create("arena1"))
         assertEquals(
             EnableError.MissingSpawns(listOf(SpawnSlot.FIRST, SpawnSlot.SECOND)),
-            app.admin.enable("arena1"),
+            app.administration.enable("arena1"),
         )
         assertFalse(app.arenaRepository.find("arena1").enabled)
 
         val pos = WorldPosition.new("world", 9.5, 70.0, -2.5)
-        app.admin.setSpawn(arenaId("arena1"), SpawnSlot.FIRST, pos)
+        app.administration.setSpawn(arenaId("arena1"), SpawnSlot.FIRST, pos)
         assertEquals(
             EnableError.MissingSpawns(listOf(SpawnSlot.SECOND)),
-            app.admin.enable("arena1"),
+            app.administration.enable("arena1"),
         )
 
-        app.admin.setSpawn(arenaId("arena1"), SpawnSlot.SECOND, pos)
-        assertNull(app.admin.enable("arena1"))
+        app.administration.setSpawn(arenaId("arena1"), SpawnSlot.SECOND, pos)
+        assertNull(app.administration.enable("arena1"))
         assertTrue(app.arenaRepository.find("arena1").enabled)
     }
 
@@ -99,27 +99,27 @@ class ArenaAdministrationServiceTest {
     fun `setSpawn writes slot and persists`() {
         app.newArena()
         val pos = WorldPosition.new("world", 9.5, 70.0, -2.5, 33.3f, 12.5f)
-        app.admin.setSpawn(arenaId("arena1"), SpawnSlot.FIRST, pos)
+        app.administration.setSpawn(arenaId("arena1"), SpawnSlot.FIRST, pos)
         assertEquals(pos, app.arenaRepository.find("arena1").spawn1)
-        app.admin.setSpawn(arenaId("arena1"), SpawnSlot.SECOND, pos)
+        app.administration.setSpawn(arenaId("arena1"), SpawnSlot.SECOND, pos)
         assertEquals(pos, app.arenaRepository.find("arena1").spawn2)
-        assertNull(app.admin.resolveArenaId("missing"))
+        assertNull(app.administration.resolveArenaId("missing"))
     }
 
     @Test
     fun `setKit delegates to kit port`() {
         app.newArena()
         val p = app.players.add("Alice")
-        app.admin.setKit(arenaId("arena1"), p.id)
+        app.administration.setKit(arenaId("arena1"), p.id)
         assertEquals(1, app.equipment.savedKits.size)
-        assertNull(app.admin.resolveArenaId("missing"))
+        assertNull(app.administration.resolveArenaId("missing"))
     }
 
     @Test
     fun `setSpawn and setKit ignore an unknown arena id`() {
         val missing = arenaId("missing")
-        app.admin.setSpawn(missing, SpawnSlot.FIRST, WorldPosition.new("world", 0.0, 64.0, 0.0))
-        app.admin.setKit(missing, app.players.add("Alice").id)
+        app.administration.setSpawn(missing, SpawnSlot.FIRST, WorldPosition.new("world", 0.0, 64.0, 0.0))
+        app.administration.setKit(missing, app.players.add("Alice").id)
         assertTrue(app.equipment.savedKits.isEmpty())
         assertFalse("missing" in app.arenaRepository.names)
     }
@@ -127,19 +127,19 @@ class ArenaAdministrationServiceTest {
     @Test
     fun `arena name lookup ignores case`() {
         app.newArena("Arena1")
-        assertEquals("Arena1", app.admin.resolveArenaId("arena1")?.name)
+        assertEquals("Arena1", app.administration.resolveArenaId("arena1")?.name)
         assertEquals("Arena1", app.sessions.resolveArena("ARENA1")?.name)
         assertEquals(ArenaState.Kind.WAITING, app.participation.matchIn("ArEnA1")?.state?.kind)
 
-        assertNull(app.admin.disable("ARENA1"))
+        assertNull(app.administration.disable("ARENA1"))
         assertFalse(app.sessions.resolveArena("Arena1")!!.enabled)
-        assertEquals(DisableError.AlreadyDisabled, app.admin.disable("arena1"))
+        assertEquals(DisableError.AlreadyDisabled, app.administration.disable("arena1"))
 
-        app.admin.setSpawn(app.admin.resolveArenaId("ARENA1")!!, SpawnSlot.FIRST, WorldPosition.new("world", 1.0, 64.0, 1.0))
-        app.signs.setSign(app.admin.resolveArenaId("arena1")!!, BlockPosition.new("world", 3, 64, 3))
-        assertEquals("Arena1", app.signs.signOwner(BlockPosition.new("world", 3, 64, 3))?.name)
+        app.administration.setSpawn(app.administration.resolveArenaId("ARENA1")!!, SpawnSlot.FIRST, WorldPosition.new("world", 1.0, 64.0, 1.0))
+        app.signService.setSign(app.administration.resolveArenaId("arena1")!!, BlockPosition.new("world", 3, 64, 3))
+        assertEquals("Arena1", app.signService.signOwner(BlockPosition.new("world", 3, 64, 3))?.name)
 
-        assertNull(app.admin.remove("aReNa1"))
+        assertNull(app.administration.remove("aReNa1"))
         assertNull(app.sessions.resolveArena("Arena1"))
         assertNull(app.arenaRepository.signLocation(arenaId("Arena1")))
         assertNull(app.arenaRepository.signs[arenaId("Arena1")])
@@ -149,7 +149,7 @@ class ArenaAdministrationServiceTest {
     fun `remove during ingame forfeits and unregisters`() {
         val (p1, p2) = app.startMatch()
         app.participation.defeat(p2.id, DefeatCause.FALL)
-        assertNull(app.admin.remove("arena1"))
+        assertNull(app.administration.remove("arena1"))
         assertNull(app.sessions.arenaIdOf(p1.id))
         assertNull(app.sessions.arenaIdOf(p2.id))
     }
@@ -157,23 +157,23 @@ class ArenaAdministrationServiceTest {
     @Test
     fun `authoritative persist failure propagates and leaves the sessions unchanged`() {
         app.arenaRepository.failOnSave = true
-        assertFailsWith<PersistenceException> { app.admin.create("arena1") }
+        assertFailsWith<PersistenceException> { app.administration.create("arena1") }
         assertNull(app.sessions.resolveArena("arena1"))
 
         app.arenaRepository.failOnSave = false
         app.newArena()
         app.arenaRepository.failOnSave = true
-        assertFailsWith<PersistenceException> { app.admin.disable("arena1") }
+        assertFailsWith<PersistenceException> { app.administration.disable("arena1") }
         assertTrue(app.sessions.resolveArena("arena1")!!.enabled)
     }
 
     @Test
     fun `enable persist failure leaves the arena disabled and the sign untouched`() {
         app.newArena("arena1", enabled = false)
-        app.signs.setSign(arenaId("arena1"), BlockPosition.new("world", 3, 64, 3))
+        app.signService.setSign(arenaId("arena1"), BlockPosition.new("world", 3, 64, 3))
         val signWrites = app.presentation.signUpdates.size
         app.arenaRepository.failOnSave = true
-        assertFailsWith<PersistenceException> { app.admin.enable("arena1") }
+        assertFailsWith<PersistenceException> { app.administration.enable("arena1") }
         assertFalse(app.sessions.resolveArena("arena1")!!.enabled)
         assertEquals(signWrites, app.presentation.signUpdates.size)
     }

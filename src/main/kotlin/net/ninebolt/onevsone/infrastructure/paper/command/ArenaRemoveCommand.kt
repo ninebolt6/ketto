@@ -7,12 +7,12 @@ import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import org.bukkit.command.CommandSender
 
 internal class ArenaRemoveCommand(
-    private val admin: ArenaAdministrationService,
+    private val administration: ArenaAdministrationService,
     private val messenger: Messenger,
 ) {
 
     fun execute(sender: CommandSender, arenaName: String) {
-        when (admin.remove(arenaName)) {
+        when (administration.remove(arenaName)) {
             null -> messenger.send(sender, Message.ArenaRemoved(arenaName))
             RemoveError.NotFound -> messenger.send(sender, Message.ArenaNotFound)
         }

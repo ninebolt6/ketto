@@ -23,25 +23,25 @@ internal const val ADMIN_PERMISSION = "1vs1.admin"
 
 class OneVsOneCommand(
     participation: MatchParticipationService,
-    private val admin: ArenaAdministrationService,
+    private val administration: ArenaAdministrationService,
     statsService: PlayerStatsService,
-    signs: ArenaSignService,
-    lobby: LobbyService,
+    signService: ArenaSignService,
+    lobbyService: LobbyService,
     private val messenger: Messenger,
 ) {
 
     private val stats = StatsCommand(statsService, messenger)
     private val leave = LeaveCommand(participation, messenger)
-    private val lobbySet = LobbySetCommand(lobby, messenger)
-    private val create = ArenaCreateCommand(admin, messenger)
+    private val lobbySet = LobbySetCommand(lobbyService, messenger)
+    private val create = ArenaCreateCommand(administration, messenger)
     private val info = ArenaInfoCommand(participation, messenger)
-    private val remove = ArenaRemoveCommand(admin, messenger)
-    private val enable = ArenaEnableCommand(admin, messenger)
-    private val disable = ArenaDisableCommand(admin, messenger)
-    private val spawnSet = ArenaSpawnSetCommand(admin, messenger)
-    private val kitSet = ArenaKitSetCommand(admin, messenger)
-    private val signSet = ArenaSignSetCommand(admin, signs, messenger)
-    private val signRemove = ArenaSignRemoveCommand(admin, signs, messenger)
+    private val remove = ArenaRemoveCommand(administration, messenger)
+    private val enable = ArenaEnableCommand(administration, messenger)
+    private val disable = ArenaDisableCommand(administration, messenger)
+    private val spawnSet = ArenaSpawnSetCommand(administration, messenger)
+    private val kitSet = ArenaKitSetCommand(administration, messenger)
+    private val signSet = ArenaSignSetCommand(administration, signService, messenger)
+    private val signRemove = ArenaSignRemoveCommand(administration, signService, messenger)
 
     private val adminOnly = Predicate<CommandSourceStack> { it.sender.hasPermission(ADMIN_PERMISSION) }
 
@@ -157,7 +157,7 @@ class OneVsOneCommand(
         Command.SINGLE_SUCCESS
     }
 
-    private fun suggestArenaNames(builder: SuggestionsBuilder) = admin.arenaNames()
+    private fun suggestArenaNames(builder: SuggestionsBuilder) = administration.arenaNames()
         .filter { it.startsWith(builder.remaining, ignoreCase = true) }
         .forEach(builder::suggest)
 

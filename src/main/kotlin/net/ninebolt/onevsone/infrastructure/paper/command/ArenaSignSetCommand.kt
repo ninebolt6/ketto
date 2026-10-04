@@ -9,13 +9,13 @@ import org.bukkit.block.Sign
 import org.bukkit.entity.Player
 
 internal class ArenaSignSetCommand(
-    private val admin: ArenaAdministrationService,
-    private val signs: ArenaSignService,
+    private val administration: ArenaAdministrationService,
+    private val signService: ArenaSignService,
     private val messenger: Messenger,
 ) {
 
     fun execute(player: Player, arenaName: String) {
-        val id = admin.resolveArenaId(arenaName) ?: run {
+        val id = administration.resolveArenaId(arenaName) ?: run {
             messenger.send(player, Message.ArenaNotFound)
             return
         }
@@ -24,7 +24,7 @@ internal class ArenaSignSetCommand(
             messenger.send(player, Message.SignLookAt)
             return
         }
-        if (!signs.setSign(id, target.toBlockPosition())) {
+        if (!signService.setSign(id, target.toBlockPosition())) {
             messenger.send(player, Message.SignTaken)
         }
     }

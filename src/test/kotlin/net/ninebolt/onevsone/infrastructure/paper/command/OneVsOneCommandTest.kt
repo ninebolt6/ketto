@@ -80,7 +80,7 @@ class OneVsOneCommandTest {
         assertTrue(op.drainMessages().any { it.contains("Created arena: 闘技場") })
         env.runCommand(op, "arena", "create", "\"my arena\"")
         assertTrue(op.drainMessages().any { it.contains("Created arena: my arena") })
-        assertTrue(env.admin.arenaNames().containsAll(listOf("闘技場", "my arena")))
+        assertTrue(env.administration.arenaNames().containsAll(listOf("闘技場", "my arena")))
     }
 
     @Test
@@ -131,7 +131,7 @@ class OneVsOneCommandTest {
         assertTrue(p.drainMessages().any { it.contains("Incorrect argument") })
         env.runCommand(p, "lobby", "set")
         assertTrue(p.drainMessages().any { it.contains("Incorrect argument") })
-        assertEquals(listOf("arena1"), env.admin.arenaNames())
+        assertEquals(listOf("arena1"), env.administration.arenaNames())
     }
 
     @Test

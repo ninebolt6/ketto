@@ -7,12 +7,12 @@ import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import org.bukkit.command.CommandSender
 
 internal class ArenaDisableCommand(
-    private val admin: ArenaAdministrationService,
+    private val administration: ArenaAdministrationService,
     private val messenger: Messenger,
 ) {
 
     fun execute(sender: CommandSender, arenaName: String) {
-        when (admin.disable(arenaName)) {
+        when (administration.disable(arenaName)) {
             null -> messenger.send(sender, Message.ArenaDisabled(arenaName))
             DisableError.NotFound -> messenger.send(sender, Message.ArenaNotFound)
             DisableError.AlreadyDisabled -> messenger.send(sender, Message.ArenaAlreadyDisabled)

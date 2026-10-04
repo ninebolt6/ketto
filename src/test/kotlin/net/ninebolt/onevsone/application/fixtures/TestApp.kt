@@ -26,21 +26,21 @@ class TestApp(val requiredWins: Int = 3) {
     val scheduler = FakeScheduler()
     val presentation = RecordingPresentation()
     val recovery = InventoryRecoveryService(equipment, players, arenaRepository, presentation, logger)
-    val signs = ArenaSignService(sessions, arenaRepository, presentation)
+    val signService = ArenaSignService(sessions, arenaRepository, presentation)
     val statsService = PlayerStatsService(statsRepository, players, logger)
     val progression = MatchProgressionService(
-        sessions, signs, statsService, equipment, players, scheduler, presentation, recovery, logger,
+        sessions, signService, statsService, equipment, players, scheduler, presentation, recovery, logger,
     )
     val participation = MatchParticipationService(
         sessions,
         players,
         recovery,
         progression,
-        signs,
+        signService,
     )
-    val lifecycle = ArenaLifecycleService(sessions, arenaRepository, signs, recovery, progression, logger)
-    val admin = ArenaAdministrationService(sessions, arenaRepository, arenaRepository, equipment, progression, signs)
-    val lobby = LobbyService(arenaRepository)
+    val lifecycle = ArenaLifecycleService(sessions, arenaRepository, signService, recovery, progression, logger)
+    val administration = ArenaAdministrationService(sessions, arenaRepository, arenaRepository, equipment, progression, signService)
+    val lobbyService = LobbyService(arenaRepository)
 
     fun newArena(name: String = "arena1", enabled: Boolean = true): Arena.Id {
         val id = arenaId(name)

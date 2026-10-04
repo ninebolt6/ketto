@@ -21,8 +21,8 @@ import kotlin.uuid.Uuid
 // ArenaMatch is immutable: never capture it inside a deferred callback — re-read via sessions.match(arenaId) and validate by epoch
 class MatchProgressionService(
     private val sessions: ArenaSessions,
-    private val signs: ArenaSignService,
-    private val stats: PlayerStatsService,
+    private val signService: ArenaSignService,
+    private val statsService: PlayerStatsService,
     private val kitPort: KitPort,
     private val playerPort: PlayerPort,
     private val schedulerPort: SchedulerPort,
@@ -48,7 +48,7 @@ class MatchProgressionService(
                 ref?.let { recovery.restoreNow(h, it) }
             }
         }
-        signs.refreshSign(step.match)
+        signService.refreshSign(step.match)
     }
 
     internal fun cancelCountdown(arenaId: Arena.Id) {
@@ -85,7 +85,7 @@ class MatchProgressionService(
             }
             winnerHandle?.let { h -> teleportToSlot(arenaId, outcome.winner, h) }
 
-            signs.refreshSign(match)
+            signService.refreshSign(match)
             startRoundCountdown(arenaId, epoch)
         } catch (e: Exception) {
             // A failure after the resolution commit would leave a timer-less ROUNDCOUNTDOWN stuck, so abort
@@ -132,7 +132,7 @@ class MatchProgressionService(
             }
         }
 
-        signs.refreshSign(match)
+        signService.refreshSign(match)
         recordResult(winner, loser)
     }
 
@@ -140,7 +140,7 @@ class MatchProgressionService(
     private fun recordResult(winner: Participant, loser: Participant) {
         listOf(winner to true, loser to false).forEach { (participant, win) ->
             try {
-                if (win) stats.recordWin(participant.id) else stats.recordLoss(participant.id)
+                if (win) statsService.recordWin(participant.id) else statsService.recordLoss(participant.id)
             } catch (e: PersistenceException) {
                 logger.log(
                     Level.SEVERE,
@@ -184,7 +184,7 @@ class MatchProgressionService(
                 }
                 presentationPort.matchStart(participantIds)
                 presentationPort.updateScoreboard(began.match)
-                signs.refreshSign(began.match)
+                signService.refreshSign(began.match)
             } catch (e: Exception) {
                 // Mid-swap failure: abort restores the players from the backups already taken
                 logger.log(Level.SEVERE, "Could not apply equipment before starting arena ${arenaId.name}; match aborted", e)
@@ -205,7 +205,7 @@ class MatchProgressionService(
                     val resumed = sessions.transact(arenaId) { it.resumeRound() } ?: return@runCountdown true
                     if (resumed.outcome) {
                         presentationPort.roundStart(participantIds)
-                        signs.refreshSign(resumed.match)
+                        signService.refreshSign(resumed.match)
                     }
                 }
             }

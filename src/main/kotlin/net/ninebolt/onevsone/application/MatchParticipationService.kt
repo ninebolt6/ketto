@@ -16,7 +16,7 @@ class MatchParticipationService(
     private val playerPort: PlayerPort,
     private val recovery: InventoryRecoveryService,
     private val progression: MatchProgressionService,
-    private val signs: ArenaSignService,
+    private val signService: ArenaSignService,
 ) {
 
     fun matchOf(playerId: Uuid): ArenaMatch? = sessions.matchOf(playerId)
@@ -44,7 +44,7 @@ class MatchParticipationService(
 
         sessions.putMatch(step.match)
         if (step.outcome == JoinOutcome.MatchReady) progression.startInitialCountdown(arenaId, step.match.epoch)
-        signs.refreshSign(step.match)
+        signService.refreshSign(step.match)
         return output
     }
 
@@ -55,7 +55,7 @@ class MatchParticipationService(
             LeaveOutcome.NotWaiting -> return LeaveError.NotWaiting
 
             is LeaveOutcome.Left -> {
-                signs.refreshSign(step.match)
+                signService.refreshSign(step.match)
                 return null
             }
         }
@@ -74,7 +74,7 @@ class MatchParticipationService(
         }
         when (val outcome = step.outcome) {
             is ForfeitOutcome.WaitingExit -> {
-                signs.refreshSign(step.match)
+                signService.refreshSign(step.match)
             }
 
             is ForfeitOutcome.MatchEnded -> {

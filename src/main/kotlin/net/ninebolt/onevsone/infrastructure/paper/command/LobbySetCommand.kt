@@ -7,12 +7,12 @@ import net.ninebolt.onevsone.infrastructure.paper.toWorldPosition
 import org.bukkit.entity.Player
 
 internal class LobbySetCommand(
-    private val lobby: LobbyService,
+    private val lobbyService: LobbyService,
     private val messenger: Messenger,
 ) {
 
     fun execute(player: Player) {
-        lobby.setLobby(player.toWorldPosition())
+        lobbyService.setLobby(player.toWorldPosition())
         messenger.send(player, Message.LobbySet)
     }
 }

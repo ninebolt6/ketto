@@ -11,7 +11,7 @@ class LobbyServiceTest {
     fun `setLobby persists position`() {
         val app = TestApp()
         val pos = WorldPosition.new("lobby", 5.0, 64.0, 5.0)
-        app.lobby.setLobby(pos)
+        app.lobbyService.setLobby(pos)
         assertEquals(pos, app.arenaRepository.lobbyPosition)
     }
 }

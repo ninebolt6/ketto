@@ -139,10 +139,10 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         val progression: MatchProgressionService,
         val participation: MatchParticipationService,
         val lifecycle: ArenaLifecycleService,
-        val admin: ArenaAdministrationService,
+        val administration: ArenaAdministrationService,
         val statsService: PlayerStatsService,
-        val signs: ArenaSignService,
-        val lobby: LobbyService,
+        val signService: ArenaSignService,
+        val lobbyService: LobbyService,
         val command: OneVsOneCommand,
     )
 
@@ -169,10 +169,10 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     val progression get() = deps.progression
     val participation get() = deps.participation
     val lifecycle get() = deps.lifecycle
-    val admin get() = deps.admin
+    val administration get() = deps.administration
     val statsService get() = deps.statsService
-    val signs get() = deps.signs
-    val lobby get() = deps.lobby
+    val signService get() = deps.signService
+    val lobbyService get() = deps.lobbyService
     val command get() = deps.command
 
     private fun makeDeps(
@@ -187,11 +187,11 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         val equipment = PaperEquipment(backupStore, kitStore, lookup)
         val presentation = PaperPresentation(server, messenger, logger)
         val sessions = ArenaSessions(requiredWins)
-        val signs = ArenaSignService(sessions, signRepository, presentation)
+        val signService = ArenaSignService(sessions, signRepository, presentation)
         val recovery = InventoryRecoveryService(equipment, playerPort, lobbyRepository, presentation, logger)
         val statsService = PlayerStatsService(statsRepository, playerPort, logger)
         val progression = MatchProgressionService(
-            sessions, signs, statsService,
+            sessions, signService, statsService,
             equipment, playerPort, schedulerPort, presentation, recovery, logger,
         )
         val participation = MatchParticipationService(
@@ -199,30 +199,30 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
             playerPort,
             recovery,
             progression,
-            signs,
+            signService,
         )
         val lifecycle = ArenaLifecycleService(
             sessions,
             arenaRepository,
-            signs,
+            signService,
             recovery,
             progression,
             logger,
         )
-        val admin = ArenaAdministrationService(
+        val administration = ArenaAdministrationService(
             sessions,
             arenaRepository,
             signRepository,
             equipment,
             progression,
-            signs,
+            signService,
         )
-        val lobby = LobbyService(lobbyRepository)
+        val lobbyService = LobbyService(lobbyRepository)
         return Deps(
             store, backupStore, kitStore, arenaRepository, lobbyRepository, signRepository, statsRepository,
-            equipment, presentation, sessions, recovery, progression, participation, lifecycle, admin,
-            statsService, signs, lobby,
-            OneVsOneCommand(participation, admin, statsService, signs, lobby, messenger),
+            equipment, presentation, sessions, recovery, progression, participation, lifecycle, administration,
+            statsService, signService, lobbyService,
+            OneVsOneCommand(participation, administration, statsService, signService, lobbyService, messenger),
         )
     }
 
@@ -241,7 +241,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         server.pluginManager.registerEvents(ArenaMatchListener(participation, lookup, messenger), plugin)
         server.pluginManager.registerEvents(ArenaGuardListener(participation), plugin)
         server.pluginManager.registerEvents(ArenaTeleportListener(participation, lookup), plugin)
-        server.pluginManager.registerEvents(ArenaSignListener(participation, signs, messenger), plugin)
+        server.pluginManager.registerEvents(ArenaSignListener(participation, signService, messenger), plugin)
     }
 
     fun fire(event: Event) {

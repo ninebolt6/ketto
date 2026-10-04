@@ -7,12 +7,12 @@ import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import org.bukkit.command.CommandSender
 
 internal class ArenaCreateCommand(
-    private val admin: ArenaAdministrationService,
+    private val administration: ArenaAdministrationService,
     private val messenger: Messenger,
 ) {
 
     fun execute(sender: CommandSender, arenaName: String) {
-        when (admin.create(arenaName)) {
+        when (administration.create(arenaName)) {
             null -> messenger.send(sender, Message.ArenaCreated(arenaName))
             CreateError.AlreadyExists -> messenger.send(sender, Message.ArenaExists)
             CreateError.InvalidName -> messenger.send(sender, Message.UsageCreate)

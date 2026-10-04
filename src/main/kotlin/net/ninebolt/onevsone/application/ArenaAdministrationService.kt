@@ -15,7 +15,7 @@ class ArenaAdministrationService(
     private val signRepository: ArenaSignRepository,
     private val kitPort: KitPort,
     private val progression: MatchProgressionService,
-    private val signs: ArenaSignService,
+    private val signService: ArenaSignService,
 ) {
     fun arenaNames(): List<String> = sessions.arenaIds().map { it.name }
 
@@ -52,7 +52,7 @@ class ArenaAdministrationService(
         }
         arenaRepository.save(next)
         sessions.replaceArena(next)
-        sessions.match(arena.id)?.let(signs::refreshSign)
+        sessions.match(arena.id)?.let(signService::refreshSign)
         return null
     }
 

@@ -93,7 +93,7 @@ private class PluginModule(
     private val presentation = PaperPresentation(server = plugin.server, messenger = messenger, logger = plugin.logger)
 
     private val sessions = ArenaSessions(requiredWins)
-    private val signs = ArenaSignService(sessions = sessions, signRepository = signRepository, presentationPort = presentation)
+    private val signService = ArenaSignService(sessions = sessions, signRepository = signRepository, presentationPort = presentation)
     private val recovery = InventoryRecoveryService(
         backupPort = equipment,
         playerPort = players,
@@ -104,8 +104,8 @@ private class PluginModule(
     private val statsService = PlayerStatsService(statsRepository = statsRepository, playerPort = players, logger = plugin.logger)
     private val progression = MatchProgressionService(
         sessions = sessions,
-        signs = signs,
-        stats = statsService,
+        signService = signService,
+        statsService = statsService,
         kitPort = equipment,
         playerPort = players,
         schedulerPort = PaperScheduler(plugin),
@@ -118,25 +118,25 @@ private class PluginModule(
         playerPort = players,
         recovery = recovery,
         progression = progression,
-        signs = signs,
+        signService = signService,
     )
     val lifecycle = ArenaLifecycleService(
         sessions = sessions,
         arenaRepository = arenaRepository,
         recovery = recovery,
         progression = progression,
-        signs = signs,
+        signService = signService,
         logger = plugin.logger,
     )
-    private val admin = ArenaAdministrationService(
+    private val administration = ArenaAdministrationService(
         sessions = sessions,
         arenaRepository = arenaRepository,
         signRepository = signRepository,
         kitPort = equipment,
         progression = progression,
-        signs = signs,
+        signService = signService,
     )
-    private val lobby = LobbyService(lobbyRepository = lobbyRepository)
+    private val lobbyService = LobbyService(lobbyRepository = lobbyRepository)
 
     init {
         lifecycle.load()
@@ -145,10 +145,10 @@ private class PluginModule(
     fun registerCommands() {
         val commands = OneVsOneCommand(
             participation = participation,
-            admin = admin,
+            administration = administration,
             statsService = statsService,
-            signs = signs,
-            lobby = lobby,
+            signService = signService,
+            lobbyService = lobbyService,
             messenger = messenger,
         )
         plugin.lifecycleManager.registerEventHandler(LifecycleEvents.COMMANDS) { event ->
@@ -161,6 +161,6 @@ private class PluginModule(
         manager.registerEvents(ArenaMatchListener(participation, lookup, messenger), plugin)
         manager.registerEvents(ArenaGuardListener(participation), plugin)
         manager.registerEvents(ArenaTeleportListener(participation, lookup), plugin)
-        manager.registerEvents(ArenaSignListener(participation, signs, messenger), plugin)
+        manager.registerEvents(ArenaSignListener(participation, signService, messenger), plugin)
     }
 }

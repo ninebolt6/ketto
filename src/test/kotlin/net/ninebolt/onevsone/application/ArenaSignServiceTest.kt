@@ -19,18 +19,18 @@ class ArenaSignServiceTest {
         val app = TestApp()
         app.newArena()
         val sign = BlockPosition.new("world", 3, 64, 3)
-        assertTrue(app.signs.setSign(arenaId("arena1"), sign))
+        assertTrue(app.signService.setSign(arenaId("arena1"), sign))
         assertEquals(sign, app.arenaRepository.signLocation(arenaId("arena1")))
-        assertEquals(arenaId("arena1"), app.signs.signOwner(BlockPosition.new("world", 3, 64, 3)))
+        assertEquals(arenaId("arena1"), app.signService.signOwner(BlockPosition.new("world", 3, 64, 3)))
         assertEquals(
             Triple(app.sessions.arena(arenaId("arena1"))!!, sign, ArenaState.Kind.WAITING),
             app.presentation.signUpdates.last(),
         )
 
-        assertFalse(app.signs.setSign(arenaId("missing"), sign))
-        assertTrue(app.signs.clearSign(arenaId("arena1")))
+        assertFalse(app.signService.setSign(arenaId("missing"), sign))
+        assertTrue(app.signService.clearSign(arenaId("arena1")))
         assertNull(app.arenaRepository.signLocation(arenaId("arena1")))
-        assertFalse(app.signs.clearSign(arenaId("missing")))
+        assertFalse(app.signService.clearSign(arenaId("missing")))
     }
 
     @Test
@@ -38,11 +38,11 @@ class ArenaSignServiceTest {
         val app = TestApp()
         app.newArena("arena1", enabled = false)
         val sign = BlockPosition.new("world", 3, 64, 3)
-        assertTrue(app.signs.setSign(arenaId("arena1"), sign))
+        assertTrue(app.signService.setSign(arenaId("arena1"), sign))
         val (arenaAtRegistration) = app.presentation.signUpdates.last()
         assertIs<Arena.Disabled>(arenaAtRegistration)
 
-        assertNull(app.admin.enable("arena1"))
+        assertNull(app.administration.enable("arena1"))
 
         val (arenaAfterEnable, position, state) = app.presentation.signUpdates.last()
         assertIs<Arena.Enabled>(arenaAfterEnable)
@@ -55,14 +55,14 @@ class ArenaSignServiceTest {
         val app = TestApp()
         app.newArena()
         val sign = BlockPosition.new("world", 3, 64, 3)
-        app.signs.setSign(arenaId("arena1"), sign)
+        app.signService.setSign(arenaId("arena1"), sign)
         val stale = app.sessions.match(arenaId("arena1"))!!
 
         val p1 = app.players.add("Alice")
         app.participation.join(p1.id, p1.name, arenaId("arena1"))
         val writes = app.presentation.signUpdates.size
 
-        app.signs.refreshSign(stale)
+        app.signService.refreshSign(stale)
 
         assertEquals(writes, app.presentation.signUpdates.size)
     }

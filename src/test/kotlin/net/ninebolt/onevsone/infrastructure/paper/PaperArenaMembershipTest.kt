@@ -105,10 +105,10 @@ class PaperArenaMembershipTest {
         val p2 = env.player("Bob")
         p2.inventory.setItem(0, env.item(Material.APPLE))
         env.join(p2, arena)
-        env.admin.disable("arena1")
+        env.administration.disable("arena1")
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
         assertNull(env.recovery.pending(p2.uuid))
-        env.admin.enable("arena1")
+        env.administration.enable("arena1")
 
         val p3 = env.player("Carol")
         p3.inventory.setItem(0, env.item(Material.COOKED_BEEF))
@@ -203,7 +203,7 @@ class PaperArenaMembershipTest {
     fun `recreated arena does not reuse removed kit`() {
         val arena = env.newArena()
         env.setKit(arena, PaperInventorySnapshot(items = listOf(env.item(Material.IRON_SWORD))))
-        env.admin.remove("arena1")
+        env.administration.remove("arena1")
         assertEquals(PaperInventorySnapshot(), env.kitStore.loadArenaKit(arena.name))
 
         env.newArena("arena1")

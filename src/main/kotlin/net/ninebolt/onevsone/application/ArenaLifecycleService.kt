@@ -9,7 +9,7 @@ import java.util.logging.Logger
 class ArenaLifecycleService(
     private val sessions: ArenaSessions,
     private val arenaRepository: ArenaRepository,
-    private val signs: ArenaSignService,
+    private val signService: ArenaSignService,
     private val recovery: InventoryRecoveryService,
     private val progression: MatchProgressionService,
     private val logger: Logger,
@@ -25,7 +25,7 @@ class ArenaLifecycleService(
         loaded.forEach { arena ->
             sessions.installArena(arena)
             try {
-                signs.refreshSign(arena.id, ArenaState.Waiting)
+                signService.refreshSign(arena.id, ArenaState.Waiting)
             } catch (e: PersistenceException) {
                 logger.log(Level.WARNING, "Could not update sign for arena ${arena.id.name}; continuing startup", e)
             }
