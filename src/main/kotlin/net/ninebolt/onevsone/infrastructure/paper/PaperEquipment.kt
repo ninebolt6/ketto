@@ -12,7 +12,7 @@ import net.ninebolt.onevsone.infrastructure.persistence.SqliteBackupStore
 import net.ninebolt.onevsone.infrastructure.persistence.SqliteKitStore
 import org.bukkit.entity.Player
 import org.bukkit.event.inventory.InventoryType
-import org.bukkit.inventory.Inventory
+import org.bukkit.inventory.CraftingInventory
 import org.bukkit.inventory.ItemStack
 import kotlin.uuid.Uuid
 
@@ -96,13 +96,11 @@ class PaperEquipment(
             player.setItemOnCursor(null)
         }
         craftingGrid(player)?.let { grid ->
-            // The result slot is derived from the material slots, so it is cleared instead of reclaimed
-            for (slot in 0 until grid.size - 1) {
-                val item = grid.getItem(slot) ?: continue
-                dropOverflow(player, inventory.addItem(item))
-                grid.setItem(slot, null)
-            }
-            grid.setItem(grid.size - 1, null)
+            val matrix = grid.matrix
+            matrix.forEach { item -> if (item != null) dropOverflow(player, inventory.addItem(item)) }
+            // The result is derived from the matrix, so it is discarded instead of reclaimed
+            grid.setMatrix(arrayOfNulls(matrix.size))
+            grid.setResult(null)
         }
         player.closeInventory()
     }
@@ -114,9 +112,10 @@ class PaperEquipment(
     }
 
     // The view's top inventory is nullable only under MockBukkit, whose default CRAFTING view carries none
-    private fun craftingGrid(player: Player): Inventory? {
-        val top = player.openInventory.topInventory as Inventory?
-        return top?.takeIf { it.type == InventoryType.CRAFTING }
+    private fun craftingGrid(player: Player): CraftingInventory? {
+        val view = player.openInventory
+        if (view.type != InventoryType.CRAFTING) return null
+        return view.topInventory as? CraftingInventory
     }
 
     private fun dropOverflow(player: Player, leftovers: Map<Int, ItemStack>) {

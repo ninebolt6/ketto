@@ -101,10 +101,11 @@ class PaperEquipmentTest {
     }
 
     @Test
-    fun `backup reclaims items on the cursor and in the crafting grid`() {
+    fun `backup reclaims the crafting matrix and discards the result`() {
         val p = env.player("Alice")
         val grid = env.openCraftingGrid(p)
-        grid.setItem(0, env.item(Material.APPLE))
+        grid.matrix = arrayOf(env.item(Material.APPLE), null, null, null)
+        grid.result = env.item(Material.STICK)
         p.setItemOnCursor(env.item(Material.GOLD_INGOT))
 
         val ref = env.equipment.backupBeforeMatch(MatchId.new(), listOf(Participant.new(p.uuid, "Alice"))).single()
@@ -112,6 +113,7 @@ class PaperEquipmentTest {
         val snapshot = env.backupStore.backupFor(ref)!!.snapshot
         assertTrue(snapshot.items.any { it?.type == Material.APPLE })
         assertTrue(snapshot.items.any { it?.type == Material.GOLD_INGOT })
+        assertTrue(snapshot.items.none { it?.type == Material.STICK })
         assertTrue(p.itemOnCursor.isEmpty)
         assertTrue(grid.isEmpty())
     }
@@ -121,7 +123,8 @@ class PaperEquipmentTest {
         val p = env.player("Alice")
         val ref = storeBackup(p)
         val grid = env.openCraftingGrid(p)
-        grid.setItem(0, env.item(Material.IRON_SWORD))
+        grid.matrix = arrayOf(env.item(Material.IRON_SWORD), null, null, null)
+        grid.result = env.item(Material.STICK)
         p.setItemOnCursor(env.item(Material.IRON_SWORD))
 
         env.equipment.restore(ref)
@@ -137,7 +140,7 @@ class PaperEquipmentTest {
         val p = env.player("Alice")
         env.kitStore.saveArenaKit(arena.name, PaperInventorySnapshot(items = listOf(env.item(Material.DIAMOND_SWORD))))
         val grid = env.openCraftingGrid(p)
-        grid.setItem(0, env.item(Material.BREAD))
+        grid.matrix = arrayOf(env.item(Material.BREAD), null, null, null)
         p.setItemOnCursor(env.item(Material.BREAD))
 
         env.equipment.applyKit(arena, p.uuid)
@@ -158,7 +161,7 @@ class PaperEquipmentTest {
         p.inventory.setItem(0, env.item(Material.IRON_SWORD))
         p.inventory.chestplate = env.item(Material.IRON_CHESTPLATE)
         val grid = env.openCraftingGrid(p)
-        grid.setItem(0, env.item(Material.BREAD))
+        grid.matrix = arrayOf(env.item(Material.BREAD), null, null, null)
         p.setItemOnCursor(env.item(Material.BREAD))
 
         env.equipment.stripKit(p.uuid)

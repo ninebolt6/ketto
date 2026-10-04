@@ -48,7 +48,6 @@ import org.bukkit.entity.Player
 import org.bukkit.event.Event
 import org.bukkit.event.HandlerList
 import org.bukkit.event.inventory.InventoryType
-import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.ItemStack
 import org.bukkit.scoreboard.Criteria
 import org.bukkit.scoreboard.DisplaySlot
@@ -57,7 +56,6 @@ import org.bukkit.scoreboard.Scoreboard
 import org.mockbukkit.mockbukkit.MockBukkit
 import org.mockbukkit.mockbukkit.ServerMock
 import org.mockbukkit.mockbukkit.entity.PlayerMock
-import org.mockbukkit.mockbukkit.inventory.InventoryMock
 import org.mockbukkit.mockbukkit.inventory.ItemStackMock
 import org.mockbukkit.mockbukkit.inventory.SimpleInventoryViewMock
 import org.mockbukkit.mockbukkit.plugin.PluginMock
@@ -300,8 +298,8 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     fun setKit(arena: Arena.Id, snapshot: PaperInventorySnapshot) = kitStore.saveArenaKit(arena.name, snapshot)
 
     // The default player view carries no crafting grid, so tests open a CRAFTING view explicitly
-    fun openCraftingGrid(player: Player): Inventory {
-        val grid = InventoryMock(null, InventoryType.CRAFTING)
+    fun openCraftingGrid(player: Player): CraftingGridMock {
+        val grid = CraftingGridMock()
         player.openInventory(SimpleInventoryViewMock(player, grid, player.inventory, InventoryType.CRAFTING))
         return grid
     }

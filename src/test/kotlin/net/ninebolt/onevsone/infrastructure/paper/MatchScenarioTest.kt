@@ -235,7 +235,7 @@ class MatchScenarioTest {
         assertEquals(Material.IRON_SWORD, p1.inventory.contents[0]?.type)
 
         val grid = env.openCraftingGrid(p1)
-        grid.setItem(0, env.item(Material.IRON_SWORD))
+        grid.matrix = arrayOf(env.item(Material.IRON_SWORD), null, null, null)
         p1.setItemOnCursor(env.item(Material.IRON_SWORD))
 
         p2.disconnect()
@@ -243,7 +243,7 @@ class MatchScenarioTest {
 
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
         assertTrue(p1.itemOnCursor.isEmpty)
-        assertTrue(grid.isEmpty)
+        assertTrue(grid.isEmpty())
         assertNull(env.backupByName("Alice"))
     }
 
@@ -258,7 +258,7 @@ class MatchScenarioTest {
         assertEquals(ArenaState.Kind.COUNTDOWN, env.state())
 
         val grid = env.openCraftingGrid(p1)
-        grid.setItem(0, env.item(Material.APPLE))
+        grid.matrix = arrayOf(env.item(Material.APPLE), null, null, null)
         env.tick(6)
         assertEquals(ArenaState.Kind.INGAME, env.state())
 
@@ -266,6 +266,6 @@ class MatchScenarioTest {
         env.runOneShots()
 
         assertEquals(Material.APPLE, p1.inventory.contents[0]?.type)
-        assertTrue(grid.isEmpty)
+        assertTrue(grid.isEmpty())
     }
 }
