@@ -101,7 +101,7 @@ private class PluginModule(
         presentation = presentation,
         logger = plugin.logger,
     )
-    private val statsService = PlayerStatsService(stats = stats)
+    private val statsService = PlayerStatsService(stats = stats, players = players, logger = plugin.logger)
     private val progression = MatchProgressionService(
         registry = registry,
         signs = signs,
@@ -149,8 +149,6 @@ private class PluginModule(
             statsService = statsService,
             signs = signs,
             lobby = lobby,
-            players = players,
-            logger = plugin.logger,
             messenger = messenger,
         )
         plugin.lifecycleManager.registerEventHandler(LifecycleEvents.COMMANDS) { event ->

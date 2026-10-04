@@ -27,7 +27,7 @@ class TestApp(val requiredWins: Int = 3) {
     val presentation = RecordingPresentation()
     val recovery = PlayerRecoveryService(equipment, players, arenas, presentation, logger)
     val signs = ArenaSignService(registry, arenas, presentation)
-    val statsService = PlayerStatsService(stats)
+    val statsService = PlayerStatsService(stats, players, logger)
     val progression = MatchProgressionService(
         registry, signs, statsService, equipment, players, scheduler, presentation, recovery, logger,
     )

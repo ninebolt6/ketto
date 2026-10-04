@@ -1,13 +1,31 @@
 package net.ninebolt.onevsone.application
 
+import net.ninebolt.onevsone.application.port.PersistenceException
+import net.ninebolt.onevsone.application.port.PlayerPort
 import net.ninebolt.onevsone.application.port.PlayerStatsRepository
 import net.ninebolt.onevsone.domain.PlayerStats
+import java.util.logging.Level
+import java.util.logging.Logger
 import kotlin.uuid.Uuid
 
 // Calls are serialized on the main thread, so the throttle map needs no synchronization
-class PlayerStatsService(private val stats: PlayerStatsRepository) {
+class PlayerStatsService(
+    private val stats: PlayerStatsRepository,
+    private val players: PlayerPort,
+    private val logger: Logger,
+) {
 
-    fun statsFor(playerId: Uuid): PlayerStats? = stats.find(playerId)
+    fun ownStats(playerId: Uuid): StatsOutput = read(playerId)
+
+    fun lookupStats(requesterId: Uuid, targetName: String, nowNanos: Long, onResult: (StatsOutput) -> Unit) {
+        if (!statsLookupThrottle.tryAcquire(requesterId, nowNanos)) {
+            onResult(StatsOutput.Cooldown)
+            return
+        }
+        players.resolveOfflineId(targetName) { uuid ->
+            onResult(uuid?.let(::read) ?: StatsOutput.Missing)
+        }
+    }
 
     fun recordWin(playerId: Uuid) {
         val current = stats.find(playerId) ?: PlayerStats.new(playerId)
@@ -19,12 +37,26 @@ class PlayerStatsService(private val stats: PlayerStatsRepository) {
         stats.save(current.recordLoss())
     }
 
+    private fun read(playerId: Uuid): StatsOutput {
+        val found = try {
+            stats.find(playerId)
+        } catch (e: PersistenceException) {
+            logger.log(Level.WARNING, "Could not read stats for $playerId", e)
+            null
+        }
+        return found?.let(StatsOutput::Found) ?: StatsOutput.Missing
+    }
+
     // Named-stats lookups resolve uncached names through an external call, hence the cooldown
     private val statsLookupThrottle = RequestThrottle(STATS_LOOKUP_COOLDOWN_NANOS)
-
-    fun tryAcquireStatsLookup(playerId: Uuid, nowNanos: Long): Boolean = statsLookupThrottle.tryAcquire(playerId, nowNanos)
 
     private companion object {
         const val STATS_LOOKUP_COOLDOWN_NANOS = 3_000_000_000L
     }
+}
+
+sealed interface StatsOutput {
+    data class Found(val stats: PlayerStats) : StatsOutput
+    data object Missing : StatsOutput
+    data object Cooldown : StatsOutput
 }

@@ -13,13 +13,11 @@ import net.ninebolt.onevsone.application.ArenaApplicationService
 import net.ninebolt.onevsone.application.ArenaSignService
 import net.ninebolt.onevsone.application.LobbyService
 import net.ninebolt.onevsone.application.PlayerStatsService
-import net.ninebolt.onevsone.application.port.PlayerPort
 import net.ninebolt.onevsone.domain.SpawnSlot
 import net.ninebolt.onevsone.infrastructure.paper.message.Message
 import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import org.bukkit.entity.Player
 import java.util.function.Predicate
-import java.util.logging.Logger
 
 internal const val ADMIN_PERMISSION = "1vs1.admin"
 
@@ -29,12 +27,10 @@ class OneVsOneCommand(
     statsService: PlayerStatsService,
     signs: ArenaSignService,
     lobby: LobbyService,
-    players: PlayerPort,
-    logger: Logger,
     private val messenger: Messenger,
 ) {
 
-    private val stats = StatsCommand(statsService, players, logger, messenger)
+    private val stats = StatsCommand(statsService, messenger)
     private val leave = LeaveCommand(service, messenger)
     private val lobbySet = SetLobbyCommand(lobby, messenger)
     private val create = ArenaCreateCommand(admin, messenger)

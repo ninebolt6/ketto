@@ -1,55 +1,40 @@
 package net.ninebolt.onevsone.infrastructure.paper.command
 
 import net.ninebolt.onevsone.application.PlayerStatsService
-import net.ninebolt.onevsone.application.port.PersistenceException
-import net.ninebolt.onevsone.application.port.PlayerPort
+import net.ninebolt.onevsone.application.StatsOutput
 import net.ninebolt.onevsone.infrastructure.paper.message.Message
 import net.ninebolt.onevsone.infrastructure.paper.message.Messenger
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
-import java.util.logging.Level
-import java.util.logging.Logger
-import kotlin.uuid.Uuid
 import kotlin.uuid.toKotlinUuid
 
 internal class StatsCommand(
     private val statsService: PlayerStatsService,
-    private val players: PlayerPort,
-    private val logger: Logger,
     private val messenger: Messenger,
 ) {
 
     fun execute(player: Player, targetName: String?) {
         val playerId = player.uniqueId.toKotlinUuid()
         if (targetName == null) {
-            showStats(player, playerId)
+            render(player, statsService.ownStats(playerId))
             return
         }
-        // UUID resolution of uncached names hits an external lookup, so rate-limit it
-        if (!statsService.tryAcquireStatsLookup(playerId, System.nanoTime())) {
-            messenger.send(player, Message.StatsCooldown)
-            return
-        }
-        players.resolveOfflineId(targetName) { uuid ->
-            if (player.isOnline) {
-                if (uuid == null) messenger.send(player, Message.StatsNone) else showStats(player, uuid)
-            }
+        statsService.lookupStats(playerId, targetName, System.nanoTime()) { output ->
+            if (player.isOnline) render(player, output)
         }
     }
 
-    private fun showStats(sender: CommandSender, uuid: Uuid) {
-        val stats = try {
-            statsService.statsFor(uuid)
-        } catch (e: PersistenceException) {
-            logger.log(Level.WARNING, "Could not read stats for $uuid", e)
-            null
+    private fun render(sender: CommandSender, output: StatsOutput) {
+        when (output) {
+            is StatsOutput.Found -> {
+                messenger.send(sender, Message.StatsWin(output.stats.wins))
+                messenger.send(sender, Message.StatsLose(output.stats.losses))
+                messenger.send(sender, Message.StatsRatio(output.stats))
+            }
+
+            StatsOutput.Missing -> messenger.send(sender, Message.StatsNone)
+
+            StatsOutput.Cooldown -> messenger.send(sender, Message.StatsCooldown)
         }
-        if (stats == null) {
-            messenger.send(sender, Message.StatsNone)
-            return
-        }
-        messenger.send(sender, Message.StatsWin(stats.wins))
-        messenger.send(sender, Message.StatsLose(stats.losses))
-        messenger.send(sender, Message.StatsRatio(stats))
     }
 }
