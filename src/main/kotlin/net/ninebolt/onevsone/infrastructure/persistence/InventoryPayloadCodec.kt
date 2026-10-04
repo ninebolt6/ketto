@@ -19,11 +19,17 @@ internal object InventoryPayloadCodec {
         try {
             val yaml = YamlConfiguration()
             yaml.loadFromString(payload)
-            val armor = (yaml.getList("armor") ?: emptyList()).map { it as? ItemStack }
-            val items = (yaml.getList("item") ?: emptyList()).map { it as? ItemStack }
-            return PaperInventorySnapshot(armor, items)
+            return PaperInventorySnapshot(decodeSlots(yaml.getList("armor")), decodeSlots(yaml.getList("item")))
         } catch (e: Exception) {
             throw PersistenceException("Could not decode inventory payload", e)
+        }
+    }
+
+    private fun decodeSlots(entries: List<*>?): List<ItemStack?> = entries.orEmpty().map { entry ->
+        when (entry) {
+            null -> null
+            is ItemStack -> entry
+            else -> throw IllegalArgumentException("Unexpected inventory payload entry: $entry")
         }
     }
 }

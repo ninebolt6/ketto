@@ -1,9 +1,10 @@
 package net.ninebolt.onevsone.infrastructure.persistence
 
+import net.ninebolt.onevsone.application.port.PersistenceException
 import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.inventory.ItemStack
 import org.junit.jupiter.api.Test
-import kotlin.test.assertNull
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class InventoryPayloadCodecTest {
@@ -25,9 +26,16 @@ class InventoryPayloadCodecTest {
     }
 
     @Test
-    fun `codec tolerates non item entries in the payload lists`() {
-        val snapshot = InventoryPayloadCodec.decode("item:\n- 'not an item'\narmor:\n- 'junk'\n")
-        assertNull(snapshot.items.single())
-        assertNull(snapshot.armor.single())
+    fun `codec rejects a non item entry in the items list`() {
+        assertFailsWith<PersistenceException> {
+            InventoryPayloadCodec.decode("item:\n- 'not an item'\n")
+        }
+    }
+
+    @Test
+    fun `codec rejects a non item entry in the armor list`() {
+        assertFailsWith<PersistenceException> {
+            InventoryPayloadCodec.decode("armor:\n- 'junk'\n")
+        }
     }
 }
