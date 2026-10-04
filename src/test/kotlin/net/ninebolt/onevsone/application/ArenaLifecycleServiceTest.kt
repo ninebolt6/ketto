@@ -15,14 +15,14 @@ class ArenaLifecycleServiceTest {
     @Test
     fun `load skips every arena when definitions are unreadable`() {
         val app = TestApp()
-        app.arenas.save(
+        app.arenaRepository.save(
             Arena.Enabled.restored(
                 arenaId("a1"),
                 WorldPosition.new("world", 1.0, 64.0, 1.0),
                 WorldPosition.new("world", 2.0, 64.0, 2.0),
             ),
         )
-        app.arenas.failOnLoad = true
+        app.arenaRepository.failOnLoad = true
         app.lifecycle.load()
         assertTrue(app.sessions.arenaIds().isEmpty())
         assertTrue(app.logger.warnings.any { it.contains("unreadable") })
@@ -31,14 +31,14 @@ class ArenaLifecycleServiceTest {
     @Test
     fun `sign refresh failure during load does not block the arena install`() {
         val app = TestApp()
-        app.arenas.save(
+        app.arenaRepository.save(
             Arena.Enabled.restored(
                 arenaId("a1"),
                 WorldPosition.new("world", 1.0, 64.0, 1.0),
                 WorldPosition.new("world", 2.0, 64.0, 2.0),
             ),
         )
-        app.arenas.failOnSignRead = true
+        app.arenaRepository.failOnSignRead = true
         app.lifecycle.load()
         assertTrue(arenaId("a1") in app.sessions.arenaIds())
         assertTrue(app.logger.warnings.any { it.contains("Could not update sign") })

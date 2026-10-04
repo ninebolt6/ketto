@@ -209,7 +209,7 @@ class InventoryRecoveryServiceTest {
     fun `failed restore during finish keeps position and pending backup`() {
         val app = TestApp(requiredWins = 1)
         val lobby = WorldPosition.new("world", 9.0, 64.0, 9.0)
-        app.arenas.lobbyPosition = lobby
+        app.arenaRepository.lobbyPosition = lobby
         val (p1, p2) = app.startMatch()
         app.equipment.failOnRestore = true
 
@@ -288,7 +288,7 @@ class InventoryRecoveryServiceTest {
     fun `finished match teleports players to the configured lobby`() {
         val app = TestApp(requiredWins = 1)
         val lobby = WorldPosition.new("world", 9.0, 64.0, 9.0)
-        app.arenas.lobbyPosition = lobby
+        app.arenaRepository.lobbyPosition = lobby
         val (p1, p2) = app.startMatch()
 
         app.participation.defeat(p2.id, DefeatCause.FALL)
@@ -314,7 +314,7 @@ class InventoryRecoveryServiceTest {
         val app = TestApp()
         val p = app.players.add("Alice")
         app.equipment.seedBackup(backupRef(p.id, p.name))
-        app.arenas.lobbyPosition = WorldPosition.new("world", 0.0, 64.0, 0.0)
+        app.arenaRepository.lobbyPosition = WorldPosition.new("world", 0.0, 64.0, 0.0)
         app.equipment.failOnRestore = true
 
         app.recovery.restoreToLobby(p, app.recovery.pending(p.id)!!)
@@ -327,7 +327,7 @@ class InventoryRecoveryServiceTest {
     fun `restore to lobby without a pending backup teleports to the lobby`() {
         val app = TestApp()
         val p = app.players.add("Alice")
-        app.arenas.lobbyPosition = WorldPosition.new("world", 9.0, 64.0, 9.0)
+        app.arenaRepository.lobbyPosition = WorldPosition.new("world", 9.0, 64.0, 9.0)
 
         app.recovery.restoreToLobby(p, null)
 

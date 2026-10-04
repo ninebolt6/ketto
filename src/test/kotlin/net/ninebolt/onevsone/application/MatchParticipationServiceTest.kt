@@ -148,8 +148,8 @@ class MatchParticipationServiceTest {
         assertNull(app.sessions.arenaIdOf(p1.id))
         assertNull(app.sessions.arenaIdOf(p2.id))
         assertEquals(listOf(arenaId("arena1") to "Alice"), app.presentation.champions)
-        assertEquals(1, app.stats.stats[p1.id]?.wins)
-        assertEquals(1, app.stats.stats[p2.id]?.losses)
+        assertEquals(1, app.statsRepository.stats[p1.id]?.wins)
+        assertEquals(1, app.statsRepository.stats[p2.id]?.losses)
         assertEquals(2, app.equipment.restored.size)
         assertEquals(2, app.equipment.discarded.size)
         assertTrue(app.equipment.storedBackups.isEmpty())
@@ -167,7 +167,7 @@ class MatchParticipationServiceTest {
         assertEquals(ArenaState.Kind.ONEMORE, app.state())
         assertNull(app.sessions.arenaIdOf(p1.id))
         assertEquals(arenaId("arena1"), app.sessions.arenaIdOf(p2.id))
-        assertTrue(app.stats.stats.isEmpty())
+        assertTrue(app.statsRepository.stats.isEmpty())
         assertTrue(app.equipment.restored.isEmpty())
         assertTrue(app.presentation.champions.isEmpty())
         app.scheduler.tick(6)
@@ -186,7 +186,7 @@ class MatchParticipationServiceTest {
         }
         assertEquals(ArenaState.Kind.WAITING, app.state())
         assertNull(app.sessions.arenaIdOf(p1.id))
-        assertTrue(app.stats.stats.isEmpty())
+        assertTrue(app.statsRepository.stats.isEmpty())
         assertTrue(app.equipment.restored.isEmpty())
     }
 
@@ -311,7 +311,7 @@ class MatchParticipationServiceTest {
             app.participation.quit(p1.id)
         }
         assertEquals(ArenaState.Kind.WAITING, app.state())
-        assertEquals(1, app.stats.stats[p2.id]?.wins)
-        assertEquals(1, app.stats.stats[p1.id]?.losses)
+        assertEquals(1, app.statsRepository.stats[p2.id]?.wins)
+        assertEquals(1, app.statsRepository.stats[p1.id]?.losses)
     }
 }

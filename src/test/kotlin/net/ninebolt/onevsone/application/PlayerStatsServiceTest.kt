@@ -13,7 +13,7 @@ class PlayerStatsServiceTest {
     fun `own stats returns found when stats exist`() {
         val app = TestApp()
         val p = app.players.add("Alice")
-        app.stats.stats[p.id] = PlayerStats.restored(p.id, wins = 3, losses = 1)
+        app.statsRepository.stats[p.id] = PlayerStats.restored(p.id, wins = 3, losses = 1)
 
         assertEquals(StatsOutput.Found(PlayerStats.restored(p.id, 3, 1)), app.statsService.ownStats(p.id))
     }
@@ -30,7 +30,7 @@ class PlayerStatsServiceTest {
     fun `own stats returns missing and warns when the read fails`() {
         val app = TestApp()
         val p = app.players.add("Alice")
-        app.stats.failOnFind = PersistenceException("read failed")
+        app.statsRepository.failOnFind = PersistenceException("read failed")
 
         assertEquals(StatsOutput.Missing, app.statsService.ownStats(p.id))
         assertTrue(app.logger.warnings.any { it.contains("Could not read stats for ${p.id}") })
@@ -42,7 +42,7 @@ class PlayerStatsServiceTest {
         val viewer = app.players.add("Viewer")
         val target = app.players.add("Target")
         app.players.offlineIds["Target"] = target.id
-        app.stats.stats[target.id] = PlayerStats.restored(target.id, wins = 2, losses = 1)
+        app.statsRepository.stats[target.id] = PlayerStats.restored(target.id, wins = 2, losses = 1)
 
         var output: StatsOutput? = null
         app.statsService.lookupStats(viewer.id, "Target", nowNanos = 0) { output = it }

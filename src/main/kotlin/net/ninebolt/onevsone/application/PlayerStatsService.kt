@@ -10,7 +10,7 @@ import kotlin.uuid.Uuid
 
 // Calls are serialized on the main thread, so the throttle map needs no synchronization
 class PlayerStatsService(
-    private val stats: PlayerStatsRepository,
+    private val statsRepository: PlayerStatsRepository,
     private val players: PlayerPort,
     private val logger: Logger,
 ) {
@@ -28,18 +28,18 @@ class PlayerStatsService(
     }
 
     fun recordWin(playerId: Uuid) {
-        val current = stats.find(playerId) ?: PlayerStats.new(playerId)
-        stats.save(current.recordWin())
+        val current = statsRepository.find(playerId) ?: PlayerStats.new(playerId)
+        statsRepository.save(current.recordWin())
     }
 
     fun recordLoss(playerId: Uuid) {
-        val current = stats.find(playerId) ?: PlayerStats.new(playerId)
-        stats.save(current.recordLoss())
+        val current = statsRepository.find(playerId) ?: PlayerStats.new(playerId)
+        statsRepository.save(current.recordLoss())
     }
 
     private fun read(playerId: Uuid): StatsOutput {
         val found = try {
-            stats.find(playerId)
+            statsRepository.find(playerId)
         } catch (e: PersistenceException) {
             logger.log(Level.WARNING, "Could not read stats for $playerId", e)
             null

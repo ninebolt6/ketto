@@ -36,7 +36,7 @@ class ArenaEnableCommandTest {
         env.runCommand(op, "arena", "a2", "enable")
         assertTrue(op.drainMessages().any { it.contains("Enabled arena") })
         assertTrue(env.sessions.resolveArena("a2")!!.enabled)
-        assertTrue(env.arenaRepo.loadAll().first { it.name == "a2" }.enabled)
+        assertTrue(env.arenaRepository.loadAll().first { it.name == "a2" }.enabled)
 
         env.runCommand(op, "arena", "a2", "enable")
         assertTrue(op.drainMessages().any { it.contains("That arena is already enabled!") })

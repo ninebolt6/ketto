@@ -128,8 +128,8 @@ class MatchProgressionServiceTest {
         assertTrue(app.equipment.restored.any { it.playerId == p1.id })
         assertTrue(app.equipment.restored.none { it.playerId == p2.id })
         assertNotNull(app.recovery.pending(p2.id))
-        assertEquals(1, app.stats.stats[p1.id]?.wins)
-        assertEquals(1, app.stats.stats[p2.id]?.losses)
+        assertEquals(1, app.statsRepository.stats[p1.id]?.wins)
+        assertEquals(1, app.statsRepository.stats[p2.id]?.losses)
     }
 
     @Test
@@ -143,8 +143,8 @@ class MatchProgressionServiceTest {
         app.scheduler.tick(6)
         assertTrue(app.participation.defeat(p2.id, DefeatCause.FALL))
 
-        assertEquals(2, app.stats.stats[p1.id]?.wins)
-        assertEquals(2, app.stats.stats[p2.id]?.losses)
+        assertEquals(2, app.statsRepository.stats[p1.id]?.wins)
+        assertEquals(2, app.statsRepository.stats[p2.id]?.losses)
     }
 
     @Test

@@ -60,8 +60,8 @@ class PaperInventoryRecoveryTest {
         assertEquals(1, p2.respawnCount)
         assertNotEquals(Material.APPLE, p2.slotAtRespawn?.type)
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
-        assertEquals(1, env.statsRepo.find(p1.uuid)!!.wins)
-        assertEquals(1, env.statsRepo.find(p2.uuid)!!.losses)
+        assertEquals(1, env.statsRepository.find(p1.uuid)!!.wins)
+        assertEquals(1, env.statsRepository.find(p2.uuid)!!.losses)
     }
 
     @Test

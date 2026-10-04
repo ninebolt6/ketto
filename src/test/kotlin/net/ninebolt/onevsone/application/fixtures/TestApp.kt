@@ -19,15 +19,15 @@ import kotlin.test.assertEquals
 class TestApp(val requiredWins: Int = 3) {
     val logger = RecordingLogger()
     val sessions = ArenaSessions(requiredWins)
-    val arenas = InMemoryArenaRepository()
-    val stats = InMemoryPlayerStatsRepository()
+    val arenaRepository = InMemoryArenaRepository()
+    val statsRepository = InMemoryPlayerStatsRepository()
     val players = FakePlayers()
     val equipment = FakeEquipment(players)
     val scheduler = FakeScheduler()
     val presentation = RecordingPresentation()
-    val recovery = InventoryRecoveryService(equipment, players, arenas, presentation, logger)
-    val signs = ArenaSignService(sessions, arenas, presentation)
-    val statsService = PlayerStatsService(stats, players, logger)
+    val recovery = InventoryRecoveryService(equipment, players, arenaRepository, presentation, logger)
+    val signs = ArenaSignService(sessions, arenaRepository, presentation)
+    val statsService = PlayerStatsService(statsRepository, players, logger)
     val progression = MatchProgressionService(
         sessions, signs, statsService, equipment, players, scheduler, presentation, recovery, logger,
     )
@@ -38,9 +38,9 @@ class TestApp(val requiredWins: Int = 3) {
         progression,
         signs,
     )
-    val lifecycle = ArenaLifecycleService(sessions, arenas, signs, recovery, progression, logger)
-    val admin = ArenaAdministrationService(sessions, arenas, arenas, equipment, progression, signs)
-    val lobby = LobbyService(arenas)
+    val lifecycle = ArenaLifecycleService(sessions, arenaRepository, signs, recovery, progression, logger)
+    val admin = ArenaAdministrationService(sessions, arenaRepository, arenaRepository, equipment, progression, signs)
+    val lobby = LobbyService(arenaRepository)
 
     fun newArena(name: String = "arena1", enabled: Boolean = true): Arena.Id {
         val id = arenaId(name)

@@ -57,7 +57,7 @@ class MatchScenarioTest {
     @Test
     fun `sign click to match end`() {
         val arena = env.newArena()
-        env.signRepo.setSign(arenaId("arena1"), BlockPosition.new("world", 3, 64, 3))
+        env.signRepository.setSign(arenaId("arena1"), BlockPosition.new("world", 3, 64, 3))
         env.setKit(arena, PaperInventorySnapshot(items = listOf(env.item(Material.IRON_SWORD))))
         val p1 = env.player("Alice")
         val p2 = env.player("Bob")
@@ -74,8 +74,8 @@ class MatchScenarioTest {
 
         p2.simulateDamage(100.0, attackDamage(p1))
         assertEquals(ArenaState.Kind.WAITING, env.state())
-        assertEquals(1, env.statsRepo.find(p1.uuid)!!.wins)
-        assertEquals(1, env.statsRepo.find(p2.uuid)!!.losses)
+        assertEquals(1, env.statsRepository.find(p1.uuid)!!.wins)
+        assertEquals(1, env.statsRepository.find(p2.uuid)!!.losses)
         assertNull(p1.inventory.contents[0])
     }
 
@@ -123,8 +123,8 @@ class MatchScenarioTest {
         assertEquals(100.0, p2.location.x, 0.001)
         assertNull(env.backupByName("Alice"))
         assertNull(env.backupByName("Bob"))
-        assertEquals(1, env.statsRepo.find(p1.uuid)!!.wins)
-        assertEquals(1, env.statsRepo.find(p2.uuid)!!.losses)
+        assertEquals(1, env.statsRepository.find(p1.uuid)!!.wins)
+        assertEquals(1, env.statsRepository.find(p2.uuid)!!.losses)
         env.runCommand(p1, "stats")
         assertTrue(p1.drainMessages().any { it.contains("Win") })
         assertTrue(signLines(sign)[2].contains("Join"))
@@ -142,8 +142,8 @@ class MatchScenarioTest {
         env.newArena("arena2")
         val sign1 = env.signBlock(3, 64, 3)
         val sign2 = env.signBlock(4, 64, 4)
-        env.signRepo.setSign(arenaId("arena1"), BlockPosition.new("world", 3, 64, 3))
-        env.signRepo.setSign(arenaId("arena2"), BlockPosition.new("world", 4, 64, 4))
+        env.signRepository.setSign(arenaId("arena1"), BlockPosition.new("world", 3, 64, 3))
+        env.signRepository.setSign(arenaId("arena2"), BlockPosition.new("world", 4, 64, 4))
 
         val p1 = env.player("Alice")
         val p2 = env.player("Bob")
@@ -177,17 +177,17 @@ class MatchScenarioTest {
         fallIntoVoid(p4)
         assertEquals(ArenaState.Kind.WAITING, env.state("arena2"))
 
-        assertEquals(1, env.statsRepo.find(p1.uuid)!!.wins)
-        assertEquals(1, env.statsRepo.find(p3.uuid)!!.wins)
-        assertEquals(1, env.statsRepo.find(p2.uuid)!!.losses)
-        assertEquals(1, env.statsRepo.find(p4.uuid)!!.losses)
+        assertEquals(1, env.statsRepository.find(p1.uuid)!!.wins)
+        assertEquals(1, env.statsRepository.find(p3.uuid)!!.wins)
+        assertEquals(1, env.statsRepository.find(p2.uuid)!!.losses)
+        assertEquals(1, env.statsRepository.find(p4.uuid)!!.losses)
     }
 
     @Test
     fun `shutdown mid-match restores online players and a restart reloads persisted data`() {
         val arena = env.newArena()
         env.signBlock(3, 64, 3)
-        env.signRepo.setSign(arenaId("arena1"), BlockPosition.new("world", 3, 64, 3))
+        env.signRepository.setSign(arenaId("arena1"), BlockPosition.new("world", 3, 64, 3))
         val p1 = env.player("Alice")
         val p2 = env.player("Bob")
         p1.inventory.setItem(0, env.item(Material.BREAD))
@@ -211,7 +211,7 @@ class MatchScenarioTest {
         env.lifecycle.load()
 
         assertTrue(env.sessions.resolveArena("arena1")!!.enabled)
-        assertEquals(arenaId("arena1"), env.signRepo.signOwner(BlockPosition.new("world", 3, 64, 3)))
+        assertEquals(arenaId("arena1"), env.signRepository.signOwner(BlockPosition.new("world", 3, 64, 3)))
 
         val sign = env.signBlock(3, 64, 3)
         env.fire(interact(p1, sign))

@@ -140,5 +140,5 @@ class StatsCommandTest {
 }
 
 private fun TestEnv.writeStats(uuid: Uuid, win: Int, lose: Int) {
-    statsRepo.save(PlayerStats.restored(uuid, win, lose))
+    statsRepository.save(PlayerStats.restored(uuid, win, lose))
 }

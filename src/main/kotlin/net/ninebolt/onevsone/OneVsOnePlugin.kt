@@ -81,7 +81,7 @@ private class PluginModule(
     private val arenaRepository = SqliteArenaRepository(store, plugin.logger)
     private val lobbyRepository = SqliteLobbyRepository(store)
     private val signRepository = SqliteArenaSignRepository(store, plugin.logger)
-    private val stats = SqlitePlayerStatsRepository(store)
+    private val statsRepository = SqlitePlayerStatsRepository(store)
 
     private val lookup = PaperPlayerLookup(plugin.server)
     private val players = PaperPlayers(lookup = lookup, server = plugin.server, plugin = plugin, logger = plugin.logger)
@@ -93,15 +93,15 @@ private class PluginModule(
     private val presentation = PaperPresentation(server = plugin.server, messenger = messenger, logger = plugin.logger)
 
     private val sessions = ArenaSessions(requiredWins)
-    private val signs = ArenaSignService(sessions = sessions, signs = signRepository, presentation = presentation)
+    private val signs = ArenaSignService(sessions = sessions, signRepository = signRepository, presentation = presentation)
     private val recovery = InventoryRecoveryService(
         backups = equipment,
         players = players,
-        lobby = lobbyRepository,
+        lobbyRepository = lobbyRepository,
         presentation = presentation,
         logger = plugin.logger,
     )
-    private val statsService = PlayerStatsService(stats = stats, players = players, logger = plugin.logger)
+    private val statsService = PlayerStatsService(statsRepository = statsRepository, players = players, logger = plugin.logger)
     private val progression = MatchProgressionService(
         sessions = sessions,
         signs = signs,
@@ -122,7 +122,7 @@ private class PluginModule(
     )
     val lifecycle = ArenaLifecycleService(
         sessions = sessions,
-        arenas = arenaRepository,
+        arenaRepository = arenaRepository,
         recovery = recovery,
         progression = progression,
         signs = signs,
@@ -130,13 +130,13 @@ private class PluginModule(
     )
     private val admin = ArenaAdministrationService(
         sessions = sessions,
-        arenas = arenaRepository,
-        signRepo = signRepository,
+        arenaRepository = arenaRepository,
+        signRepository = signRepository,
         kit = equipment,
         progression = progression,
         signs = signs,
     )
-    private val lobby = LobbyService(lobby = lobbyRepository)
+    private val lobby = LobbyService(lobbyRepository = lobbyRepository)
 
     init {
         lifecycle.load()

@@ -46,8 +46,8 @@ class PaperArenaFailureTest {
     fun `winner stats failure does not prevent final death cleanup`() {
         env.close()
         env = TestEnv(folder, requiredWins = 1)
-        val spyStats = spyk(env.statsRepo)
-        env.rebuildWith(statsRepo = spyStats)
+        val spyStats = spyk(env.statsRepository)
+        env.rebuildWith(statsRepository = spyStats)
         val records = capturePluginLog()
         val arena = env.newArena()
         env.setKit(arena, PaperInventorySnapshot(items = listOf(env.item(Material.IRON_SWORD))))
@@ -67,8 +67,8 @@ class PaperArenaFailureTest {
         assertNull(env.sessions.arenaIdOf(p1.uuid))
         assertNull(env.sessions.arenaIdOf(p2.uuid))
         assertSame(env.mainBoard, p1.scoreboard)
-        assertNull(env.statsRepo.find(p1.uuid))
-        assertEquals(1, env.statsRepo.find(p2.uuid)!!.losses)
+        assertNull(env.statsRepository.find(p1.uuid))
+        assertEquals(1, env.statsRepository.find(p2.uuid)!!.losses)
         val failedLog = records.single { it.message.contains("Failed to record") }
         assertEquals(Level.SEVERE, failedLog.level)
         assertTrue(failedLog.thrown is PersistenceException)

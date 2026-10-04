@@ -55,8 +55,8 @@ class PaperArenaMembershipTest {
         assertEquals(ArenaState.Kind.WAITING, env.view().state.kind)
         assertNull(env.sessions.arenaIdOf(p1.uuid))
         assertNull(env.sessions.arenaIdOf(p2.uuid))
-        assertEquals(1, env.statsRepo.find(p1.uuid)!!.wins)
-        assertEquals(1, env.statsRepo.find(p2.uuid)!!.losses)
+        assertEquals(1, env.statsRepository.find(p1.uuid)!!.wins)
+        assertEquals(1, env.statsRepository.find(p2.uuid)!!.losses)
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
         assertTrue(env.lastBroadcast().contains("Alice"))
     }
@@ -133,8 +133,8 @@ class PaperArenaMembershipTest {
         assertEquals(arena, env.sessions.arenaIdOf(p2.uuid))
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
-        assertNull(env.statsRepo.find(p2.uuid))
-        assertNull(env.statsRepo.find(p1.uuid))
+        assertNull(env.statsRepository.find(p2.uuid))
+        assertNull(env.statsRepository.find(p1.uuid))
         assertNull(env.backupByName("Alice"))
         assertNull(env.backupByName("Bob"))
 
@@ -166,8 +166,8 @@ class PaperArenaMembershipTest {
         assertTrue(env.view().participants.isEmpty())
         assertNull(env.sessions.arenaIdOf(p1.uuid))
         assertNull(env.sessions.arenaIdOf(p2.uuid))
-        assertEquals(1, env.statsRepo.find(p2.uuid)!!.wins)
-        assertEquals(1, env.statsRepo.find(p1.uuid)!!.losses)
+        assertEquals(1, env.statsRepository.find(p2.uuid)!!.wins)
+        assertEquals(1, env.statsRepository.find(p1.uuid)!!.losses)
         assertEquals(Material.APPLE, p2.inventory.contents[0]?.type)
         assertTrue(env.lastBroadcast().contains("Bob"))
 
@@ -217,7 +217,7 @@ class PaperArenaMembershipTest {
 
     @Test
     fun `enabled persists across service load`() {
-        env.arenaRepo.save(
+        env.arenaRepository.save(
             Arena.Enabled.restored(
                 arenaId("arena1"),
                 WorldPosition.new("world", 1.0, 64.0, 1.0),

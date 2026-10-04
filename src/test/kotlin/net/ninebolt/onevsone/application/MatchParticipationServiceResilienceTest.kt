@@ -79,18 +79,18 @@ class MatchParticipationServiceResilienceTest {
         assertTrue(app.participation.defeat(p2.id, DefeatCause.DEATH))
         assertFalse(app.participation.defeat(p2.id, DefeatCause.DEATH))
         assertEquals(1, app.participation.matchIn("arena1")!!.winsOf(p1.id))
-        assertTrue(app.stats.stats.isEmpty())
+        assertTrue(app.statsRepository.stats.isEmpty())
     }
 
     @Test
     fun `stats failure for winner does not block loser record or restores`() {
         val app = TestApp(requiredWins = 1)
         val (p1, p2) = app.startMatch()
-        app.stats.failOnSaveFor = p1.id
+        app.statsRepository.failOnSaveFor = p1.id
         assertTrue(app.participation.defeat(p2.id, DefeatCause.FALL))
         assertEquals(ArenaState.Kind.WAITING, app.state())
-        assertEquals(1, app.stats.stats[p2.id]?.losses)
-        assertNull(app.stats.stats[p1.id])
+        assertEquals(1, app.statsRepository.stats[p2.id]?.losses)
+        assertNull(app.statsRepository.stats[p1.id])
         assertEquals(2, app.equipment.restored.size)
         assertTrue(app.logger.reports.any { it.message.startsWith("Failed to record win") })
     }
@@ -99,9 +99,9 @@ class MatchParticipationServiceResilienceTest {
     fun `stats failure for loser does not block winner record`() {
         val app = TestApp(requiredWins = 1)
         val (p1, p2) = app.startMatch()
-        app.stats.failOnSaveFor = p2.id
+        app.statsRepository.failOnSaveFor = p2.id
         assertTrue(app.participation.defeat(p2.id, DefeatCause.FALL))
-        assertEquals(1, app.stats.stats[p1.id]?.wins)
+        assertEquals(1, app.statsRepository.stats[p1.id]?.wins)
         assertTrue(app.logger.reports.any { it.message.startsWith("Failed to record loss") })
     }
 

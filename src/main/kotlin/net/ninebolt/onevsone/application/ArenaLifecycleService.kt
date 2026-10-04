@@ -8,7 +8,7 @@ import java.util.logging.Logger
 
 class ArenaLifecycleService(
     private val sessions: ArenaSessions,
-    private val arenas: ArenaRepository,
+    private val arenaRepository: ArenaRepository,
     private val signs: ArenaSignService,
     private val recovery: InventoryRecoveryService,
     private val progression: MatchProgressionService,
@@ -17,9 +17,9 @@ class ArenaLifecycleService(
 
     fun load() {
         val loaded = try {
-            arenas.loadAll()
+            arenaRepository.loadAll()
         } catch (e: PersistenceException) {
-            logger.log(Level.WARNING, "Arena definitions are unreadable; no arenas loaded this session", e)
+            logger.log(Level.WARNING, "Arena definitions are unreadable; no arenaRepository loaded this session", e)
             emptyList()
         }
         loaded.forEach { arena ->

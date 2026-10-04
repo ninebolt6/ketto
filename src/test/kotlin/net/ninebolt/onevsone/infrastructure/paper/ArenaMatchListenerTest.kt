@@ -83,8 +83,8 @@ class ArenaMatchListenerTest {
         assertEquals(1, p1.respawnCount)
         assertTrue(p1.hasTeleported())
         assertTrue(p2.hasTeleported())
-        assertNull(env.statsRepo.find(p1.uuid))
-        assertNull(env.statsRepo.find(p2.uuid))
+        assertNull(env.statsRepository.find(p1.uuid))
+        assertNull(env.statsRepository.find(p2.uuid))
     }
 
     @Test

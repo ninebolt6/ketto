@@ -128,10 +128,10 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         val store: SqliteStore,
         val backupStore: SqliteBackupStore,
         val kitStore: SqliteKitStore,
-        val arenaRepo: SqliteArenaRepository,
-        val lobbyRepo: SqliteLobbyRepository,
-        val signRepo: SqliteArenaSignRepository,
-        val statsRepo: PlayerStatsRepository,
+        val arenaRepository: SqliteArenaRepository,
+        val lobbyRepository: SqliteLobbyRepository,
+        val signRepository: SqliteArenaSignRepository,
+        val statsRepository: PlayerStatsRepository,
         val equipment: PaperEquipment,
         val presentation: PaperPresentation,
         val sessions: ArenaSessions,
@@ -158,10 +158,10 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     val store get() = deps.store
     val backupStore get() = deps.backupStore
     val kitStore get() = deps.kitStore
-    val arenaRepo get() = deps.arenaRepo
-    val lobbyRepo get() = deps.lobbyRepo
-    val signRepo get() = deps.signRepo
-    val statsRepo get() = deps.statsRepo
+    val arenaRepository get() = deps.arenaRepository
+    val lobbyRepository get() = deps.lobbyRepository
+    val signRepository get() = deps.signRepository
+    val statsRepository get() = deps.statsRepository
     val equipment get() = deps.equipment
     val presentation get() = deps.presentation
     val sessions get() = deps.sessions
@@ -178,18 +178,18 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     private fun makeDeps(
         store: SqliteStore,
         backupStore: SqliteBackupStore,
-        statsRepo: PlayerStatsRepository,
+        statsRepository: PlayerStatsRepository,
     ): Deps {
         val kitStore = SqliteKitStore(store)
-        val arenaRepo = SqliteArenaRepository(store)
-        val lobbyRepo = SqliteLobbyRepository(store)
-        val signRepo = SqliteArenaSignRepository(store)
+        val arenaRepository = SqliteArenaRepository(store)
+        val lobbyRepository = SqliteLobbyRepository(store)
+        val signRepository = SqliteArenaSignRepository(store)
         val equipment = PaperEquipment(backupStore, kitStore, lookup)
         val presentation = PaperPresentation(server, messenger, logger)
         val sessions = ArenaSessions(requiredWins)
-        val signs = ArenaSignService(sessions, signRepo, presentation)
-        val recovery = InventoryRecoveryService(equipment, playerPort, lobbyRepo, presentation, logger)
-        val statsService = PlayerStatsService(statsRepo, playerPort, logger)
+        val signs = ArenaSignService(sessions, signRepository, presentation)
+        val recovery = InventoryRecoveryService(equipment, playerPort, lobbyRepository, presentation, logger)
+        val statsService = PlayerStatsService(statsRepository, playerPort, logger)
         val progression = MatchProgressionService(
             sessions, signs, statsService,
             equipment, playerPort, schedulerPort, presentation, recovery, logger,
@@ -203,7 +203,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         )
         val lifecycle = ArenaLifecycleService(
             sessions,
-            arenaRepo,
+            arenaRepository,
             signs,
             recovery,
             progression,
@@ -211,15 +211,15 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         )
         val admin = ArenaAdministrationService(
             sessions,
-            arenaRepo,
-            signRepo,
+            arenaRepository,
+            signRepository,
             equipment,
             progression,
             signs,
         )
-        val lobby = LobbyService(lobbyRepo)
+        val lobby = LobbyService(lobbyRepository)
         return Deps(
-            store, backupStore, kitStore, arenaRepo, lobbyRepo, signRepo, statsRepo,
+            store, backupStore, kitStore, arenaRepository, lobbyRepository, signRepository, statsRepository,
             equipment, presentation, sessions, recovery, progression, participation, lifecycle, admin,
             statsService, signs, lobby,
             OneVsOneCommand(participation, admin, statsService, signs, lobby, messenger),
@@ -229,9 +229,9 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     fun rebuildWith(
         newStore: SqliteStore = deps.store,
         backupStore: SqliteBackupStore = SqliteBackupStore(newStore),
-        statsRepo: PlayerStatsRepository = SqlitePlayerStatsRepository(newStore),
+        statsRepository: PlayerStatsRepository = SqlitePlayerStatsRepository(newStore),
     ) {
-        deps = makeDeps(newStore, backupStore, statsRepo)
+        deps = makeDeps(newStore, backupStore, statsRepository)
         registerListeners()
     }
 
@@ -288,7 +288,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         } else {
             Arena.Disabled.restored(id, spawn1, spawn2)
         }
-        arenaRepo.save(arena)
+        arenaRepository.save(arena)
         sessions.installArena(arena)
         return id
     }

@@ -11,8 +11,8 @@ import kotlin.uuid.Uuid
 
 class ArenaAdministrationService(
     private val sessions: ArenaSessions,
-    private val arenas: ArenaRepository,
-    private val signRepo: ArenaSignRepository,
+    private val arenaRepository: ArenaRepository,
+    private val signRepository: ArenaSignRepository,
     private val kit: KitPort,
     private val progression: MatchProgressionService,
     private val signs: ArenaSignService,
@@ -25,7 +25,7 @@ class ArenaAdministrationService(
         val id = Arena.Id.of(name) ?: return CreateError.InvalidName
         if (sessions.resolveArenaId(name) != null) return CreateError.AlreadyExists
         val arena = Arena.Disabled.new(id)
-        arenas.save(arena)
+        arenaRepository.save(arena)
         sessions.installArena(arena)
         return null
     }
@@ -33,9 +33,9 @@ class ArenaAdministrationService(
     fun remove(name: String): RemoveError? {
         val arena = sessions.resolveArena(name) ?: return RemoveError.NotFound
         progression.abort(arena.id)
-        arenas.delete(arena.id)
+        arenaRepository.delete(arena.id)
         sessions.removeArena(arena.id)
-        signRepo.clearSign(arena.id)
+        signRepository.clearSign(arena.id)
         kit.forgetKit(arena.id)
         return null
     }
@@ -50,7 +50,7 @@ class ArenaAdministrationService(
                 is EnableOutcome.Ready -> outcome.arena
             }
         }
-        arenas.save(next)
+        arenaRepository.save(next)
         sessions.replaceArena(next)
         sessions.match(arena.id)?.let(signs::refreshSign)
         return null
@@ -62,7 +62,7 @@ class ArenaAdministrationService(
             is Arena.Disabled -> return DisableError.AlreadyDisabled
             is Arena.Enabled -> arena.disable()
         }
-        arenas.save(next)
+        arenaRepository.save(next)
         sessions.replaceArena(next)
         progression.abort(arena.id)
         return null
@@ -71,7 +71,7 @@ class ArenaAdministrationService(
     fun setSpawn(id: Arena.Id, slot: SpawnSlot, position: WorldPosition) {
         val arena = sessions.arena(id) ?: return
         val next = arena.withSpawn(slot, position)
-        arenas.save(next)
+        arenaRepository.save(next)
         sessions.replaceArena(next)
     }
 

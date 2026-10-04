@@ -17,7 +17,7 @@ import kotlin.uuid.Uuid
 class InventoryRecoveryService(
     private val backups: InventoryBackupPort,
     private val players: PlayerPort,
-    private val lobby: LobbyRepository,
+    private val lobbyRepository: LobbyRepository,
     private val presentation: PresentationPort,
     private val logger: Logger,
 ) {
@@ -56,12 +56,12 @@ class InventoryRecoveryService(
     }
 
     private fun teleportLobby(handle: PlayerHandle) {
-        val lobby = lobby.lobby()
-        if (lobby == null) {
+        val position = lobbyRepository.lobby()
+        if (position == null) {
             logger.warning("Lobby is not set; skipping teleport for ${handle.name}")
             return
         }
-        handle.teleport(lobby)
+        handle.teleport(position)
     }
 
     // Shutdown runs no future ticks, so restores are synchronous; dead players cannot be teleported and keep their record for next login
