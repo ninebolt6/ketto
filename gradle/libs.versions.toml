@@ -8,7 +8,7 @@ mockk = "1.14.11"
 archunit = "1.5.0"
 ktlint-engine = "1.8.0"
 ktlint-gradle = "14.2.0"
-kover = "0.9.9"
+kover = "0.9.11"
 
 [libraries]
 paper-api = { module = "io.papermc.paper:paper-api", version.ref = "paper" }
