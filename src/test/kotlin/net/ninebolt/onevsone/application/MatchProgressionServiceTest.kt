@@ -571,4 +571,21 @@ class MatchProgressionServiceTest {
         assertEquals(ArenaState.Kind.WAITING, app.presentation.signUpdates.last().third)
         assertTrue(app.scheduler.timers.all { it.cancelled })
     }
+
+    @Test
+    fun `a failing round countdown tick aborts and releases both participants`() {
+        val app = TestApp()
+        val (p1, p2) = app.startMatch()
+        assertTrue(app.participation.defeat(p2.id, DefeatCause.FALL))
+        assertEquals(ArenaState.Kind.ROUNDCOUNTDOWN, app.state())
+
+        app.equipment.failOnApplyAt = app.equipment.applyCalls + 1
+        app.scheduler.tick()
+
+        assertEquals(ArenaState.Kind.WAITING, app.state())
+        assertNull(app.sessions.findArenaIdOf(p1.id))
+        assertNull(app.sessions.findArenaIdOf(p2.id))
+        assertEquals(2, app.equipment.restored.size)
+        assertTrue(app.logger.reports.any { it.message.contains("Countdown tick failed") })
+    }
 }

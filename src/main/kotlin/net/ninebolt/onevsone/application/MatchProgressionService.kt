@@ -233,7 +233,14 @@ class MatchProgressionService(
                 abort(arenaId)
                 return@repeat
             }
-            if (CountdownTick(match, online, ticks - iteration).onTick()) task.cancel()
+            try {
+                if (CountdownTick(match, online, ticks - iteration).onTick()) task.cancel()
+            } catch (e: Exception) {
+                // A failing tick would leave the countdown running with no way to finish it
+                logger.log(Level.SEVERE, "Countdown tick failed in arena ${arenaId.name}; match aborted", e)
+                task.cancel()
+                abort(arenaId)
+            }
         }
     }
 
