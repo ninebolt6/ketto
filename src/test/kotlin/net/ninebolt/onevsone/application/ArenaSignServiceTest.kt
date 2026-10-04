@@ -49,4 +49,21 @@ class ArenaSignServiceTest {
         assertEquals(sign, position)
         assertEquals(ArenaState.Kind.WAITING, state)
     }
+
+    @Test
+    fun `refreshing with a superseded match does not write the sign`() {
+        val app = TestApp()
+        app.newArena()
+        val sign = BlockPosition.new("world", 3, 64, 3)
+        app.signs.setSign(arenaId("arena1"), sign)
+        val stale = app.registry.match(arenaId("arena1"))!!
+
+        val p1 = app.players.add("Alice")
+        app.service.join(p1.id, p1.name, arenaId("arena1"))
+        val writes = app.presentation.signUpdates.size
+
+        app.signs.refreshSign(stale)
+
+        assertEquals(writes, app.presentation.signUpdates.size)
+    }
 }

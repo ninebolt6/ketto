@@ -2,6 +2,7 @@ package net.ninebolt.onevsone.application
 
 import net.ninebolt.onevsone.application.fixtures.TestApp
 import net.ninebolt.onevsone.domain.ArenaState
+import net.ninebolt.onevsone.domain.BlockPosition
 import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.domain.fixtures.arenaId
 import org.junit.jupiter.api.Test
@@ -430,5 +431,45 @@ class MatchProgressionServiceTest {
 
         assertTrue("respawn" in p2.events)
         assertTrue(app.equipment.restored.isNotEmpty())
+    }
+
+    @Test
+    fun `disabling the arena during the match start teleport does not present the match`() {
+        val app = TestApp()
+        val (p1, p2) = app.joinedTwo()
+        p1.onTeleport = {
+            p1.onTeleport = null
+            app.admin.disable("arena1")
+        }
+
+        app.scheduler.tick(6)
+
+        assertEquals(ArenaState.Kind.WAITING, app.state())
+        assertTrue(p1.teleports.isNotEmpty())
+        assertTrue(p2.teleports.isEmpty())
+        assertTrue(app.presentation.matchStarts.isEmpty())
+        assertTrue(app.presentation.scoreboards.isEmpty())
+        assertTrue(app.equipment.restored.any { it.playerId == p1.id })
+        assertTrue(app.equipment.restored.any { it.playerId == p2.id })
+        assertTrue(app.logger.reports.isEmpty())
+    }
+
+    @Test
+    fun `aborting during a round end teleport does not refresh a stale sign`() {
+        val app = TestApp()
+        val (_, p2) = app.joinedTwo()
+        app.signs.setSign(arenaId("arena1"), BlockPosition.new("world", 3, 64, 3))
+        app.scheduler.tick(6)
+        assertEquals(ArenaState.Kind.INGAME, app.state())
+        p2.onTeleport = {
+            p2.onTeleport = null
+            app.progression.abort(arenaId("arena1"))
+        }
+
+        assertTrue(app.service.defeat(p2.id, DefeatCause.FALL))
+        app.scheduler.tick()
+
+        assertEquals(ArenaState.Kind.WAITING, app.presentation.signUpdates.last().third)
+        assertTrue(app.scheduler.timers.all { it.cancelled })
     }
 }

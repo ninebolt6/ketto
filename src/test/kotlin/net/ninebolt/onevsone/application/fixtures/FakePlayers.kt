@@ -16,6 +16,7 @@ class FakePlayers : PlayerPort {
         var positionValue: WorldPosition = WorldPosition.new("world", 0.0, 64.0, 0.0)
         val teleports = mutableListOf<WorldPosition>()
         val events = mutableListOf<String>()
+        var onTeleport: (() -> Unit)? = null
 
         override fun position(): WorldPosition = positionValue
         override fun respawn() {
@@ -36,6 +37,7 @@ class FakePlayers : PlayerPort {
         override fun teleport(position: WorldPosition) {
             teleports += position
             events += "teleport"
+            onTeleport?.invoke()
         }
     }
 

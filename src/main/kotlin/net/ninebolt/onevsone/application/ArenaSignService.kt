@@ -29,7 +29,10 @@ class ArenaSignService(
         presentation.updateSign(resolved, position, state.kind)
     }
 
-    fun refreshSign(match: ArenaMatch) = refreshSign(match.arenaId, match.state)
+    // A superseded match snapshot must not overwrite the live sign
+    fun refreshSign(match: ArenaMatch) {
+        if (registry.match(match.arenaId) === match) refreshSign(match.arenaId, match.state)
+    }
 
     fun clearSign(id: Arena.Id): Boolean {
         val arena = registry.arena(id) ?: return false

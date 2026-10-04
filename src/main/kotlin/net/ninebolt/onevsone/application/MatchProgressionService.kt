@@ -168,13 +168,14 @@ class MatchProgressionService(
             try {
                 online.forEach { (sp, h) -> rearm(arenaId, sp, h) }
                 online.forEach { (sp, h) -> teleportToSlot(arenaId, sp, h) }
-                presentation.matchStart(participantIds)
                 val began = registry.transact(arenaId) { it.beginMatch() }
                     ?: run {
                         logger.severe("Arena ${arenaId.name} vanished before the match could begin; aborting")
                         abort(arenaId)
                         return@runCountdown true
                     }
+                if (!began.outcome) return@runCountdown true
+                presentation.matchStart(participantIds)
                 presentation.updateScoreboard(began.match)
                 signs.refreshSign(began.match)
             } catch (e: Exception) {
@@ -194,10 +195,15 @@ class MatchProgressionService(
                 in 1..5 -> presentation.roundCountdownTick(participantIds, remaining)
 
                 0 -> {
-                    presentation.roundStart(participantIds)
-                    registry.transact(arenaId) { it.resumeRound() }
-                        ?.let { signs.refreshSign(it.match) }
-                        ?: logger.severe("Arena ${arenaId.name} vanished while resuming a round")
+                    val resumed = registry.transact(arenaId) { it.resumeRound() }
+                        ?: run {
+                            logger.severe("Arena ${arenaId.name} vanished while resuming a round")
+                            return@runCountdown true
+                        }
+                    if (resumed.outcome) {
+                        presentation.roundStart(participantIds)
+                        signs.refreshSign(resumed.match)
+                    }
                 }
             }
             remaining == 0
@@ -268,7 +274,10 @@ class MatchProgressionService(
         scheduler.schedule(0) {
             if (!valid()) return@schedule
             val h = players.handle(playerId)?.takeIf { it.online } ?: return@schedule
-            if (h.dead) h.respawn()
+            if (h.dead) {
+                h.respawn()
+                if (!valid()) return@schedule
+            }
             action(h)
         }
     }
