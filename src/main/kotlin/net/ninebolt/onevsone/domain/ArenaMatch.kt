@@ -23,6 +23,8 @@ data class ArenaMatch private constructor(
 
     val resolvesVoidFall: Boolean get() = state is ArenaState.Active
 
+    val keepsInventoryOnDeath: Boolean get() = state is ArenaState.Paired
+
     val paired: ArenaState.Paired? get() = state as? ArenaState.Paired
 
     fun matchup(): Pair<SlottedParticipant, SlottedParticipant>? = (state as? ArenaState.Active)?.slotted

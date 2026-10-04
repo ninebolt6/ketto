@@ -65,6 +65,20 @@ class ArenaMatchListenerTest {
     }
 
     @Test
+    fun `onemore death is left to vanilla and keeps the participant joined`() {
+        val arena = env.newArena()
+        val p1 = env.player("Alice")
+        env.join(p1, arena)
+        assertEquals(ArenaState.Kind.ONEMORE, env.state())
+
+        p1.simulateDamage(100.0, genericDamage())
+
+        env.assertFired<PlayerDeathEvent> { event -> !event.keepInventory && !event.keepLevel }
+        assertEquals(ArenaState.Kind.ONEMORE, env.state())
+        assertEquals(arena, env.sessions.findArenaIdOf(p1.uuid))
+    }
+
+    @Test
     fun `participant death during countdown respawns and the match still starts`() {
         val arena = env.newArena()
         val p1 = env.player("Alice")

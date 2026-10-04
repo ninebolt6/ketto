@@ -30,7 +30,7 @@ class ArenaMatchListener(
     fun onDeath(event: PlayerDeathEvent) {
         val player = event.entity
         val id = player.uniqueId.toKotlinUuid()
-        if (participation.findMatchOf(id) == null) return
+        if (participation.findMatchOf(id)?.keepsInventoryOnDeath != true) return
         event.keepInventory = true
         event.drops.clear()
         // keepInventory protects only items, not experience

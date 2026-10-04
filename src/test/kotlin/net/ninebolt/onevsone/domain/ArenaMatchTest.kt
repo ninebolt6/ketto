@@ -238,6 +238,17 @@ class ArenaMatchTest {
     }
 
     @Test
+    fun `death keeps the inventory only while a pair is committed`() {
+        ArenaState.Kind.entries.forEach { kind ->
+            val match = ArenaMatch.restored(arenaId("a1"), requiredWins = 3, state = stateForKind(kind))
+            val paired = kind == ArenaState.Kind.COUNTDOWN ||
+                kind == ArenaState.Kind.ROUNDCOUNTDOWN ||
+                kind == ArenaState.Kind.INGAME
+            assertEquals(paired, match.keepsInventoryOnDeath, "$kind.keepsInventoryOnDeath")
+        }
+    }
+
+    @Test
     fun `leaveWaiting rejects a non participant while onemore`() {
         val onemore = match().join(alice).match
         assertEquals(LeaveOutcome.NotWaiting, onemore.leaveWaiting(bob.id).outcome)
