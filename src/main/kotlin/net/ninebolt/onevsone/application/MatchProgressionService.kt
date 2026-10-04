@@ -10,10 +10,9 @@ import net.ninebolt.onevsone.application.port.PresentationPort
 import net.ninebolt.onevsone.application.port.SchedulerPort
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
-import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatOutcome
 import net.ninebolt.onevsone.domain.Participant
-import net.ninebolt.onevsone.domain.SpawnSlot
+import net.ninebolt.onevsone.domain.SlottedParticipant
 import java.util.logging.Level
 import java.util.logging.Logger
 import kotlin.uuid.Uuid
@@ -62,7 +61,7 @@ class MatchProgressionService(
         try {
             val winnerHandle = players.handle(outcome.winner.id)
             if (winnerHandle != null) {
-                rearm(arenaId, outcome.winner.participant, winnerHandle)
+                rearm(arenaId, outcome.winner, winnerHandle)
             }
 
             players.handle(outcome.loser.id)?.let { presentation.roundEndSound(it.position()) }
@@ -76,14 +75,14 @@ class MatchProgressionService(
                 scheduleDeferred(outcome.loser.id, {
                     registry.match(arenaId)?.epoch == gen
                 }) { h ->
-                    rearm(arenaId, outcome.loser.participant, h)
-                    teleportToSlot(arenaId, outcome.loser.slot, h)
+                    rearm(arenaId, outcome.loser, h)
+                    teleportToSlot(arenaId, outcome.loser, h)
                 }
             } else if (loserHandle != null) {
-                rearm(arenaId, outcome.loser.participant, loserHandle)
-                teleportToSlot(arenaId, outcome.loser.slot, loserHandle)
+                rearm(arenaId, outcome.loser, loserHandle)
+                teleportToSlot(arenaId, outcome.loser, loserHandle)
             }
-            winnerHandle?.let { h -> teleportToSlot(arenaId, outcome.winner.slot, h) }
+            winnerHandle?.let { h -> teleportToSlot(arenaId, outcome.winner, h) }
 
             signs.refreshSign(match)
             startRoundCountdown(arenaId, gen)
@@ -158,7 +157,7 @@ class MatchProgressionService(
                 presentation.countdownTick(participantIds, remaining)
                 return@runCountdown false
             }
-            if (p1.dead || p2.dead) return@runCountdown false
+            if (online.any { (_, h) -> h.dead }) return@runCountdown false
             try {
                 recovery.backupBeforeMatch(match.participants)
             } catch (e: PersistenceException) {
@@ -167,10 +166,8 @@ class MatchProgressionService(
                 return@runCountdown true
             }
             try {
-                rearm(arenaId, first, p1)
-                rearm(arenaId, second, p2)
-                teleportToSlot(arenaId, SpawnSlot.FIRST, p1)
-                teleportToSlot(arenaId, SpawnSlot.SECOND, p2)
+                online.forEach { (sp, h) -> rearm(arenaId, sp, h) }
+                online.forEach { (sp, h) -> teleportToSlot(arenaId, sp, h) }
                 presentation.matchStart(participantIds)
                 val began = registry.transact(arenaId) { it.beginMatch() }
                     ?: run {
@@ -192,10 +189,7 @@ class MatchProgressionService(
     private fun startRoundCountdown(arenaId: Arena.Id, gen: Long) {
         runCountdown(arenaId, gen, ticks = 7) {
             when (remaining) {
-                7 -> {
-                    rearm(arenaId, first, p1)
-                    rearm(arenaId, second, p2)
-                }
+                7 -> online.forEach { (sp, h) -> rearm(arenaId, sp, h) }
 
                 in 1..5 -> presentation.roundCountdownTick(participantIds, remaining)
 
@@ -218,35 +212,31 @@ class MatchProgressionService(
     ) {
         timers[arenaId] = scheduler.repeat(10, 20) { task, iteration ->
             val match = registry.match(arenaId)
-            val paired = match?.state as? ArenaState.Paired
+            val paired = match?.paired
             if (match == null || match.epoch != gen || paired == null) {
                 task.cancel()
                 return@repeat
             }
-            val (first, second) = paired.pair
-            val p1 = players.handle(first.id)
-            val p2 = players.handle(second.id)
-            if (p1 == null || p2 == null) {
+            val slotted = paired.slotted.toList()
+            val online = slotted.mapNotNull { sp -> players.handle(sp.id)?.let { sp to it } }
+            if (online.size != slotted.size) {
                 task.cancel()
                 abort(arenaId)
                 return@repeat
             }
-            if (CountdownTick(match, first, second, p1, p2, ticks - iteration).onTick()) task.cancel()
+            if (CountdownTick(match, online, ticks - iteration).onTick()) task.cancel()
         }
     }
 
     private class CountdownTick(
         val match: ArenaMatch,
-        val first: Participant,
-        val second: Participant,
-        val p1: PlayerHandle,
-        val p2: PlayerHandle,
+        val online: List<Pair<SlottedParticipant, PlayerHandle>>,
         val remaining: Int,
     ) {
         val participantIds: List<Uuid> get() = match.participants.map { it.id }
     }
 
-    private fun rearm(arenaId: Arena.Id, participant: Participant, handle: PlayerHandle) {
+    private fun rearm(arenaId: Arena.Id, participant: SlottedParticipant, handle: PlayerHandle) {
         handle.prepareForMatch()
         kit.applyKit(arenaId, participant.id)
     }
@@ -295,8 +285,8 @@ class MatchProgressionService(
         action: (PlayerHandle) -> Unit,
     ) = scheduleDeferred(playerId, { recovery.pending(playerId) == ref }, action)
 
-    private fun teleportToSlot(arenaId: Arena.Id, slot: SpawnSlot, handle: PlayerHandle) {
-        val spawn = registry.enabledArena(arenaId)?.spawn(slot)
+    private fun teleportToSlot(arenaId: Arena.Id, participant: SlottedParticipant, handle: PlayerHandle) {
+        val spawn = registry.enabledArena(arenaId)?.spawn(participant.slot)
         if (spawn == null) {
             logger.warning("Arena ${arenaId.name} is not enabled during an active match; skipping teleport")
             return

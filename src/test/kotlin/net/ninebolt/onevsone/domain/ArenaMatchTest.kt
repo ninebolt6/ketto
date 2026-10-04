@@ -213,6 +213,20 @@ class ArenaMatchTest {
     }
 
     @Test
+    fun `paired exposes slot-mapped participants`() {
+        var m = match()
+        assertNull(m.paired)
+        m = m.join(alice).match
+        m = m.join(bob).match
+        val (first, second) = m.paired!!.slotted
+
+        assertEquals(alice, first.participant)
+        assertEquals(SpawnSlot.FIRST, first.slot)
+        assertEquals(bob, second.participant)
+        assertEquals(SpawnSlot.SECOND, second.slot)
+    }
+
+    @Test
     fun `restrictions matrix matches arena states`() {
         fun assertRestrictions(
             state: ArenaState.Kind,

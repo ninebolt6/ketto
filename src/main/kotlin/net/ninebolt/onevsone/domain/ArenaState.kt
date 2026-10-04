@@ -27,12 +27,12 @@ sealed interface ArenaState {
         override val participants: List<Participant> get() = listOf(participant)
     }
 
-    // participants order maps to spawn slots: first teleports to FIRST, second to SECOND
     sealed interface Paired : ArenaState {
         val first: Participant
         val second: Participant
 
-        val pair: Pair<Participant, Participant> get() = first to second
+        val slotted: Pair<SlottedParticipant, SlottedParticipant>
+            get() = SlottedParticipant(first, SpawnSlot.FIRST) to SlottedParticipant(second, SpawnSlot.SECOND)
         override val participants: List<Participant> get() = listOf(first, second)
     }
 

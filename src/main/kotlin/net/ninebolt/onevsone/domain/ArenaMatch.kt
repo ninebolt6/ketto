@@ -23,7 +23,9 @@ data class ArenaMatch private constructor(
 
     val resolvesVoidFall: Boolean get() = state is ArenaState.Active
 
-    fun matchup(): Pair<Participant, Participant>? = (state as? ArenaState.Active)?.pair
+    val paired: ArenaState.Paired? get() = state as? ArenaState.Paired
+
+    fun matchup(): Pair<SlottedParticipant, SlottedParticipant>? = (state as? ArenaState.Active)?.slotted
 
     fun participant(id: Uuid): Participant? = participants.firstOrNull { it.id == id }
 
@@ -84,12 +86,13 @@ data class ArenaMatch private constructor(
     }
 
     private fun defeat(id: Uuid, state: ArenaState.Active): Transition<DefeatOutcome> {
-        val loser = state.participants.firstOrNull { it.id == id }
+        val slotted = state.slotted.toList()
+        val loser = slotted.firstOrNull { it.id == id }
             ?: return Transition(this, DefeatOutcome.Rejected)
-        val winner = state.participants.first { it.id != id }
+        val winner = slotted.first { it.id != id }
         // End is judged on the win count before adding; the final kill is not added to the count.
         if (state.winsOf(winner.id) >= requiredWins - 1) {
-            return Transition(finished(), DefeatOutcome.MatchFinished(winner, loser))
+            return Transition(finished(), DefeatOutcome.MatchFinished(winner.participant, loser.participant))
         }
         val next = ArenaState.RoundCountdown.of(
             first = state.first,
@@ -97,14 +100,12 @@ data class ArenaMatch private constructor(
             firstWins = state.firstWins + if (state.first.id == winner.id) 1 else 0,
             secondWins = state.secondWins + if (state.second.id == winner.id) 1 else 0,
         )
-        val winnerSlot = if (state.first.id == winner.id) SpawnSlot.FIRST else SpawnSlot.SECOND
-        val loserSlot = if (state.first.id == loser.id) SpawnSlot.FIRST else SpawnSlot.SECOND
         return Transition(
             advance(next),
             DefeatOutcome.RoundWon(
                 round = next.firstWins + next.secondWins,
-                winner = SlottedParticipant(winner, winnerSlot),
-                loser = SlottedParticipant(loser, loserSlot),
+                winner = winner,
+                loser = loser,
             ),
         )
     }
