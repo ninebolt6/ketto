@@ -50,13 +50,13 @@ class InventoryRecoveryService(
         return true
     }
 
-    fun restoreToLobby(handle: PlayerHandle, ref: BackupRef?) {
-        if (ref != null && !restoreNow(handle, ref)) return
-        teleportLobby(handle)
-    }
-
-    private fun teleportLobby(handle: PlayerHandle) {
-        val position = lobbyRepository.findLobby()
+    fun teleportLobby(handle: PlayerHandle) {
+        val position = try {
+            lobbyRepository.findLobby()
+        } catch (e: PersistenceException) {
+            logger.log(Level.WARNING, "Could not read the lobby for ${handle.name}; skipping teleport", e)
+            return
+        }
         if (position == null) {
             logger.warning("Lobby is not set; skipping teleport for ${handle.name}")
             return

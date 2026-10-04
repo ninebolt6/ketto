@@ -10,6 +10,7 @@ import net.ninebolt.onevsone.application.port.PresentationPort
 import net.ninebolt.onevsone.application.port.SchedulerPort
 import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaMatch
+import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatCause
 import net.ninebolt.onevsone.domain.DefeatOutcome
 import net.ninebolt.onevsone.domain.Participant
@@ -40,15 +41,20 @@ class MatchProgressionService(
 
     fun abort(arenaId: Arena.Id) {
         cancelCountdown(arenaId)
+        val wasActive = sessions.findMatch(arenaId)?.state is ArenaState.Active
         val step = sessions.transact(arenaId) { it.abort() } ?: return
         val left = step.outcome
-        val pendingRefs = left.map { it to recovery.findPending(it.id) }
+        val pendingRefs = left.map { it to pendingOrNull(it.id) }
         pendingRefs.forEach { (participant, ref) ->
             runNowOrAfterRespawn(participant.id, ref) { h ->
-                ref?.let { recovery.restoreNow(h, it) }
+                if (wasActive) {
+                    release(h, ref, toLobby = false)
+                } else {
+                    ref?.let { recovery.restoreNow(h, it) }
+                }
             }
         }
-        signService.refreshSign(step.match)
+        stepSafely("refresh the sign of arena ${arenaId.name}") { signService.refreshSign(step.match) }
     }
 
     internal fun cancelCountdown(arenaId: Arena.Id) {
@@ -104,36 +110,38 @@ class MatchProgressionService(
         cancelCountdown(arenaId)
 
         // Backup refs must be secured first: the committing transition has already unregistered both participants
-        val winnerRef = recovery.findPending(winner.id)
-        val loserRef = recovery.findPending(loser.id)
+        val winnerRef = pendingOrNull(winner.id)
+        val loserRef = pendingOrNull(loser.id)
         if (winnerRef == null || loserRef == null) {
             logger.severe("Match in arena ${arenaId.name} ended without a pending backup; retained rows restore on next login")
         }
 
-        presentationPort.champion(arenaId, winner.name)
-
-        runNowOrAfterRespawn(winner.id, winnerRef) { h ->
-            resetAndRestore(h, winnerRef)
-            if (cause != DefeatCause.FORFEIT) presentationPort.championFirework(winner.id)
+        stepSafely("present the champion of arena ${arenaId.name}") {
+            presentationPort.champion(arenaId, winner.name)
         }
 
-        if (cause == DefeatCause.DEATH) {
-            runAfterRespawn(loser.id, loserRef) { h ->
-                resetAndRestore(h, loserRef)
+        stepSafely("release the winner of arena ${arenaId.name}") {
+            runNowOrAfterRespawn(winner.id, winnerRef) { h ->
+                release(h, winnerRef, toLobby = true)
+                if (cause != DefeatCause.FORFEIT) presentationPort.championFirework(winner.id)
             }
-        } else {
-            // Losers who died via quit arrive here dead, so do not defer on a dead check
-            playerPort.findHandle(loser.id)?.let { h ->
-                if (cause == DefeatCause.FORFEIT) {
-                    loserRef?.let { recovery.restoreNow(h, it) }
-                } else {
-                    resetAndRestore(h, loserRef)
+        }
+
+        stepSafely("release the loser of arena ${arenaId.name}") {
+            if (cause == DefeatCause.DEATH) {
+                runAfterRespawn(loser.id, loserRef) { h ->
+                    release(h, loserRef, toLobby = true)
+                }
+            } else {
+                // Losers who died via quit arrive here dead, so do not defer on a dead check
+                playerPort.findHandle(loser.id)?.let { h ->
+                    release(h, loserRef, toLobby = cause != DefeatCause.FORFEIT)
                 }
             }
         }
 
-        signService.refreshSign(match)
-        recordResult(winner, loser)
+        stepSafely("record the result of arena ${arenaId.name}") { recordResult(winner, loser) }
+        stepSafely("refresh the sign of arena ${arenaId.name}") { signService.refreshSign(match) }
     }
 
     // Stats failures are reported per participant so one failure never blocks the other's record
@@ -257,9 +265,45 @@ class MatchProgressionService(
         kitPort.applyKit(arenaId, participant.id)
     }
 
-    private fun resetAndRestore(handle: PlayerHandle, ref: BackupRef?) {
-        handle.resetVitals()
-        recovery.restoreToLobby(handle, ref)
+    private fun release(handle: PlayerHandle, ref: BackupRef?, toLobby: Boolean) {
+        if (toLobby) handle.resetVitals()
+        val restored = ref != null && restoreQuietly(handle, ref)
+        if (!restored) {
+            stripQuietly(handle)
+            presentationPort.clearScoreboard(handle.id)
+            logger.severe("Could not restore the inventory for ${handle.name} (${handle.id}); match items removed, any retained backup restores on next login")
+        }
+        if (toLobby) recovery.teleportLobby(handle)
+    }
+
+    private fun restoreQuietly(handle: PlayerHandle, ref: BackupRef): Boolean = try {
+        recovery.restoreNow(handle, ref)
+    } catch (e: PersistenceException) {
+        logger.log(Level.SEVERE, "Could not restore the inventory for ${handle.name} (${handle.id}); backup retained", e)
+        false
+    }
+
+    private fun stripQuietly(handle: PlayerHandle) {
+        try {
+            kitPort.stripKit(handle.id)
+        } catch (e: PersistenceException) {
+            logger.log(Level.SEVERE, "Could not remove match items for ${handle.name} (${handle.id})", e)
+        }
+    }
+
+    private fun pendingOrNull(playerId: Uuid): BackupRef? = try {
+        recovery.findPending(playerId)
+    } catch (e: PersistenceException) {
+        logger.log(Level.SEVERE, "Could not read the pending backup for $playerId; treating it as missing", e)
+        null
+    }
+
+    private fun stepSafely(description: String, block: () -> Unit) {
+        try {
+            block()
+        } catch (e: Exception) {
+            logger.log(Level.SEVERE, "Could not $description; continuing cleanup", e)
+        }
     }
 
     // A dead player cannot be acted on until it respawns, so dead handles defer to next tick

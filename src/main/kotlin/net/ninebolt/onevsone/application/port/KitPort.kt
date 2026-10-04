@@ -10,4 +10,6 @@ interface KitPort {
 
     // call when an arena is removed, or a recreated arena inherits its old kit
     fun forgetKit(arena: Arena.Id)
+
+    fun stripKit(playerId: Uuid)
 }

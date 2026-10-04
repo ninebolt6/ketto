@@ -206,7 +206,7 @@ class InventoryRecoveryServiceTest {
     }
 
     @Test
-    fun `failed restore during finish keeps position and pending backup`() {
+    fun `failed restore during finish strips match items and returns to the lobby`() {
         val app = TestApp(requiredWins = 1)
         val lobby = WorldPosition.new("world", 9.0, 64.0, 9.0)
         app.arenaRepository.lobbyPosition = lobby
@@ -215,10 +215,38 @@ class InventoryRecoveryServiceTest {
 
         app.participation.defeat(p2.id, DefeatCause.FALL)
         app.scheduler.runOneShots()
-        assertTrue(p1.teleports.none { it == lobby })
-        assertTrue(p2.teleports.none { it == lobby })
+
+        assertEquals(setOf(p1.id, p2.id), app.equipment.stripped.toSet())
+        assertTrue(lobby in p1.teleports)
+        assertTrue(lobby in p2.teleports)
         assertNotNull(app.recovery.findPending(p1.id))
         assertNotNull(app.recovery.findPending(p2.id))
+        assertTrue(app.logger.reports.any { it.message.contains("match items removed") })
+    }
+
+    @Test
+    fun `lobby teleport goes to the stored position`() {
+        val app = TestApp()
+        val p = app.players.add("Alice")
+        val lobby = WorldPosition.new("world", 9.0, 64.0, 9.0)
+        app.arenaRepository.lobbyPosition = lobby
+
+        app.recovery.teleportLobby(p)
+
+        assertEquals(listOf(lobby), p.teleports)
+    }
+
+    @Test
+    fun `lobby teleport read failure only warns`() {
+        val app = TestApp()
+        val p = app.players.add("Alice")
+        app.arenaRepository.lobbyPosition = WorldPosition.new("world", 9.0, 64.0, 9.0)
+        app.arenaRepository.failOnLobbyRead = true
+
+        app.recovery.teleportLobby(p)
+
+        assertTrue(p.teleports.isEmpty())
+        assertTrue(app.logger.warnings.any { it.contains("Could not read the lobby") })
     }
 
     @Test
@@ -307,31 +335,6 @@ class InventoryRecoveryServiceTest {
         assertTrue(app.equipment.restored.none { it.playerId == p2.id })
         assertEquals(1, app.equipment.storedBackups.size)
         assertNotNull(app.recovery.findPending(p2.id))
-    }
-
-    @Test
-    fun `restore to lobby leaves the player in place when the restore fails`() {
-        val app = TestApp()
-        val p = app.players.add("Alice")
-        app.equipment.seedBackup(backupRef(p.id, p.name))
-        app.arenaRepository.lobbyPosition = WorldPosition.new("world", 0.0, 64.0, 0.0)
-        app.equipment.failOnRestore = true
-
-        app.recovery.restoreToLobby(p, app.recovery.findPending(p.id)!!)
-
-        assertTrue(p.teleports.isEmpty())
-        assertNotNull(app.recovery.findPending(p.id))
-    }
-
-    @Test
-    fun `restore to lobby without a pending backup teleports to the lobby`() {
-        val app = TestApp()
-        val p = app.players.add("Alice")
-        app.arenaRepository.lobbyPosition = WorldPosition.new("world", 9.0, 64.0, 9.0)
-
-        app.recovery.restoreToLobby(p, null)
-
-        assertEquals(1, p.teleports.size)
     }
 
     @Test

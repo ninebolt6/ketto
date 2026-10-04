@@ -24,6 +24,7 @@ class InMemoryArenaRepository :
     var failOnSave = false
     var failOnLoad = false
     var failOnSignRead = false
+    var failOnLobbyRead = false
 
     override fun loadAll(): List<Arena> {
         if (failOnLoad) throw PersistenceException("load failed")
@@ -46,7 +47,10 @@ class InMemoryArenaRepository :
         names.removeIf { it.equals(id.name, ignoreCase = true) }
     }
 
-    override fun findLobby(): WorldPosition? = lobbyPosition
+    override fun findLobby(): WorldPosition? {
+        if (failOnLobbyRead) throw PersistenceException("lobby read failed")
+        return lobbyPosition
+    }
     override fun setLobby(position: WorldPosition) {
         lobbyPosition = position
     }

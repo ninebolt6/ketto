@@ -16,6 +16,7 @@ import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.uuid.Uuid
 
@@ -142,6 +143,28 @@ class PaperEquipmentTest {
         env.equipment.applyKit(arena, p.uuid)
 
         assertEquals(Material.DIAMOND_SWORD, p.inventory.getItem(0)?.type)
+        assertTrue(p.itemOnCursor.isEmpty)
+        assertTrue(grid.isEmpty())
+    }
+
+    @Test
+    fun `strip kit fails when the player is offline`() {
+        assertFailsWith<PersistenceException> { env.equipment.stripKit(Uuid.random()) }
+    }
+
+    @Test
+    fun `strip kit clears contents armor and transient items`() {
+        val p = env.player("Alice")
+        p.inventory.setItem(0, env.item(Material.IRON_SWORD))
+        p.inventory.chestplate = env.item(Material.IRON_CHESTPLATE)
+        val grid = env.openCraftingGrid(p)
+        grid.setItem(0, env.item(Material.BREAD))
+        p.setItemOnCursor(env.item(Material.BREAD))
+
+        env.equipment.stripKit(p.uuid)
+
+        assertTrue(p.inventory.isEmpty)
+        assertNull(p.inventory.chestplate)
         assertTrue(p.itemOnCursor.isEmpty)
         assertTrue(grid.isEmpty())
     }

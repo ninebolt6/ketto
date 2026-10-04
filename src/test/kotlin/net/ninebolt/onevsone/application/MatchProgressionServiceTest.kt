@@ -4,6 +4,7 @@ import net.ninebolt.onevsone.application.fixtures.TestApp
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.BlockPosition
 import net.ninebolt.onevsone.domain.DefeatCause
+import net.ninebolt.onevsone.domain.WorldPosition
 import net.ninebolt.onevsone.domain.fixtures.arenaId
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
@@ -415,6 +416,8 @@ class MatchProgressionServiceTest {
     @Test
     fun `match finish warns when the winner's backup is missing`() {
         val app = TestApp(requiredWins = 1)
+        val lobby = WorldPosition.new("world", 9.0, 64.0, 9.0)
+        app.arenaRepository.lobbyPosition = lobby
         val (p1, p2) = app.startMatch()
         app.equipment.storedBackups.values.removeIf { it.playerId == p1.id }
 
@@ -422,6 +425,8 @@ class MatchProgressionServiceTest {
         app.scheduler.runOneShots()
 
         assertTrue(app.logger.reports.any { it.message.contains("without a pending backup") })
+        assertTrue(app.equipment.stripped.contains(p1.id))
+        assertTrue(lobby in p1.teleports)
     }
 
     @Test
@@ -436,6 +441,7 @@ class MatchProgressionServiceTest {
 
         assertTrue(app.logger.reports.any { it.message.contains("without a pending backup") })
         assertTrue("respawn" in p2.events)
+        assertTrue(app.equipment.stripped.contains(p2.id))
     }
 
     @Test

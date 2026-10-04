@@ -79,6 +79,13 @@ class PaperEquipment(
         kits[arena] = kit
     }
 
+    override fun stripKit(playerId: Uuid) {
+        val player = lookup.find(playerId)
+            ?: throw PersistenceException("Player $playerId is not available for kit strip")
+        discardTransientItems(player)
+        player.inventory.clear()
+    }
+
     private fun kit(arena: Arena.Id): PaperInventorySnapshot = kits.getOrPut(arena) { kitStore.loadArenaKit(arena.name) }
 
     private fun reclaimTransientItems(player: Player) {

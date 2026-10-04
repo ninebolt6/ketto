@@ -18,6 +18,7 @@ class FakeEquipment(var players: FakePlayers? = null) :
     val kitApplies = mutableListOf<Pair<Arena.Id, Uuid>>()
     val savedKits = mutableListOf<Pair<Arena.Id, Uuid>>()
     val forgottenKits = mutableListOf<Arena.Id>()
+    val stripped = mutableListOf<Uuid>()
     var backupCalls = 0
     var applyCalls = 0
     var failOnBackup: PersistenceException? = null
@@ -25,6 +26,7 @@ class FakeEquipment(var players: FakePlayers? = null) :
     var failOnDiscard = false
     var failOnRestore = false
     var failOnPendingRefs: PersistenceException? = null
+    var failOnFindPending: PersistenceException? = null
 
     override fun backupBeforeMatch(match: MatchId, participants: List<Participant>): List<BackupRef> {
         backupCalls++
@@ -46,7 +48,10 @@ class FakeEquipment(var players: FakePlayers? = null) :
         storedBackups.remove(backup.backupId)
     }
 
-    override fun findPending(playerId: Uuid): BackupRef? = storedBackups.values.firstOrNull { it.playerId == playerId }
+    override fun findPending(playerId: Uuid): BackupRef? {
+        failOnFindPending?.let { throw it }
+        return storedBackups.values.firstOrNull { it.playerId == playerId }
+    }
 
     override fun pendingRefs(): List<BackupRef> {
         failOnPendingRefs?.let { throw it }
@@ -74,5 +79,9 @@ class FakeEquipment(var players: FakePlayers? = null) :
 
     override fun forgetKit(arena: Arena.Id) {
         forgottenKits += arena
+    }
+
+    override fun stripKit(playerId: Uuid) {
+        stripped += playerId
     }
 }

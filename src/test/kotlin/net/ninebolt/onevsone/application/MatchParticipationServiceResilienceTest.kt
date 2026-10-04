@@ -4,10 +4,12 @@ import net.ninebolt.onevsone.application.fixtures.TestApp
 import net.ninebolt.onevsone.application.port.PersistenceException
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.domain.DefeatCause
+import net.ninebolt.onevsone.domain.WorldPosition
 import net.ninebolt.onevsone.domain.fixtures.arenaId
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -116,5 +118,64 @@ class MatchParticipationServiceResilienceTest {
         assertTrue(app.equipment.kitApplies.isEmpty())
         val p3 = app.players.add("Carol")
         assertEquals(JoinOutput.JoinedWaiting, app.participation.join(p3.id, p3.name, arenaId("arena1")))
+    }
+
+    @Test
+    fun `pending lookup failure still records both results and strips kits`() {
+        val app = TestApp(requiredWins = 1)
+        val (p1, p2) = app.startMatch()
+        app.equipment.failOnFindPending = PersistenceException("read failed")
+
+        assertTrue(app.participation.defeat(p2.id, DefeatCause.FALL))
+
+        assertEquals(1, app.statsRepository.stats[p1.id]?.wins)
+        assertEquals(1, app.statsRepository.stats[p2.id]?.losses)
+        assertEquals(setOf(p1.id, p2.id), app.equipment.stripped.toSet())
+        assertTrue(app.logger.reports.any { it.message.contains("without a pending backup") })
+    }
+
+    @Test
+    fun `restore failure strips kits keeps rows and records both results`() {
+        val app = TestApp(requiredWins = 1)
+        val (p1, p2) = app.startMatch()
+        app.equipment.failOnRestore = true
+
+        assertTrue(app.participation.defeat(p2.id, DefeatCause.FALL))
+
+        assertEquals(1, app.statsRepository.stats[p1.id]?.wins)
+        assertEquals(1, app.statsRepository.stats[p2.id]?.losses)
+        assertEquals(setOf(p1.id, p2.id), app.equipment.stripped.toSet())
+        assertEquals(setOf(p1.id, p2.id), app.presentation.clearedScoreboards.toSet())
+        assertNotNull(app.recovery.findPending(p1.id))
+        assertNotNull(app.recovery.findPending(p2.id))
+    }
+
+    @Test
+    fun `lobby read failure still records both results`() {
+        val app = TestApp(requiredWins = 1)
+        val (p1, p2) = app.startMatch()
+        app.arenaRepository.lobbyPosition = WorldPosition.new("world", 9.0, 64.0, 9.0)
+        app.arenaRepository.failOnLobbyRead = true
+
+        assertTrue(app.participation.defeat(p2.id, DefeatCause.FALL))
+
+        assertEquals(1, app.statsRepository.stats[p1.id]?.wins)
+        assertEquals(1, app.statsRepository.stats[p2.id]?.losses)
+        assertTrue(app.equipment.restored.isNotEmpty())
+        assertTrue(app.equipment.stripped.isEmpty())
+        assertTrue(app.logger.warnings.any { it.contains("Could not read the lobby") })
+    }
+
+    @Test
+    fun `sign refresh failure still records both results`() {
+        val app = TestApp(requiredWins = 1)
+        val (p1, p2) = app.startMatch()
+        app.arenaRepository.failOnSignRead = true
+
+        assertTrue(app.participation.defeat(p2.id, DefeatCause.FALL))
+
+        assertEquals(1, app.statsRepository.stats[p1.id]?.wins)
+        assertEquals(1, app.statsRepository.stats[p2.id]?.losses)
+        assertTrue(app.logger.reports.any { it.message.contains("refresh the sign") })
     }
 }
