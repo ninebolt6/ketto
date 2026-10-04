@@ -1,8 +1,8 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
-import io.mockk.every
 import io.mockk.mockk
 import net.kyori.adventure.text.Component
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.CraftingGridMock
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.blockOf
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.interact
@@ -56,7 +56,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import org.mockbukkit.mockbukkit.inventory.SimpleInventoryViewMock
+import org.mockbukkit.mockbukkit.inventory.InventoryViewMock
 import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -186,15 +186,10 @@ class ArenaGuardListenerInteractTest {
         assertEquals(Event.Result.DENY, egg.useItemInHand())
     }
 
-    // InventoryClickEvent resolves raw slots through InventoryView.convertSlot, which SimpleInventoryViewMock leaves unimplemented
-    private fun inventoryView(player: Player, top: Inventory): SimpleInventoryViewMock = object : SimpleInventoryViewMock() {
-        override fun convertSlot(rawSlot: Int): Int = rawSlot
-    }.apply {
-        this.player = player
-        topInventory = top
-    }
+    // SimpleInventoryViewMock throws in convertSlot, which the InventoryClickEvent constructor calls, so views build on the abstract parent
+    private fun inventoryView(player: Player, top: Inventory): InventoryViewMock = object : InventoryViewMock(player, top, player.inventory, top.type) {}
 
-    private fun click(view: SimpleInventoryViewMock) = InventoryClickEvent(
+    private fun click(view: InventoryViewMock) = InventoryClickEvent(
         view,
         InventoryType.SlotType.CONTAINER,
         0,
@@ -202,7 +197,7 @@ class ArenaGuardListenerInteractTest {
         InventoryAction.PICKUP_ALL,
     )
 
-    private fun drag(view: SimpleInventoryViewMock) = InventoryDragEvent(view, null, env.item(Material.STONE), false, emptyMap())
+    private fun drag(view: InventoryViewMock) = InventoryDragEvent(view, null, env.item(Material.STONE), false, emptyMap())
 
     @Test
     fun `foreign inventory clicks and drags cancelled but own inventory allowed`() {
@@ -718,9 +713,7 @@ class ArenaGuardListenerInteractTest {
     @Test
     fun `inventory click on the crafting grid is not cancelled`() {
         val (p1, _) = env.twoPlayerIngame()
-        val crafting = mockk<Inventory>()
-        every { crafting.type } returns InventoryType.CRAFTING
-        val view = inventoryView(p1, crafting)
+        val view = inventoryView(p1, CraftingGridMock())
         val click = click(view)
         env.fire(click)
         assertFalse(click.isCancelled)

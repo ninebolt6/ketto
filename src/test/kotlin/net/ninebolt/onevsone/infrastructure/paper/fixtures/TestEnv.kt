@@ -47,17 +47,15 @@ import org.bukkit.configuration.serialization.ConfigurationSerialization
 import org.bukkit.entity.Player
 import org.bukkit.event.Event
 import org.bukkit.event.HandlerList
-import org.bukkit.event.inventory.InventoryType
 import org.bukkit.inventory.ItemStack
 import org.bukkit.scoreboard.Criteria
-import org.bukkit.scoreboard.DisplaySlot
+import org.bukkit.scoreboard.Objective
 import org.bukkit.scoreboard.RenderType
 import org.bukkit.scoreboard.Scoreboard
 import org.mockbukkit.mockbukkit.MockBukkit
 import org.mockbukkit.mockbukkit.ServerMock
 import org.mockbukkit.mockbukkit.entity.PlayerMock
 import org.mockbukkit.mockbukkit.inventory.ItemStackMock
-import org.mockbukkit.mockbukkit.inventory.SimpleInventoryViewMock
 import org.mockbukkit.mockbukkit.plugin.PluginMock
 import org.mockbukkit.mockbukkit.scoreboard.ObjectiveMock
 import org.mockbukkit.mockbukkit.scoreboard.ScoreMock
@@ -86,12 +84,14 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
             }
         }
         .build()
+
+    // MockBukkit's waitAsyncTasksFinished does not wait for not-yet-started async tasks, so runNow runs the body inline to keep tests deterministic
     val asyncScheduler: AsyncScheduler = mockk(relaxed = true)
 
-    // ScoreMock.customName is unimplemented in MockBukkit 4.15, so only the scoreboard boundary is a narrow stub
-    val scoreboardManager: ScoreboardManagerMock = mockk(relaxed = true)
-    val mainBoard = ScoreboardMock()
+    // ScoreMock.customName is unimplemented in MockBukkit 4.116.3, so the scoreboard boundary subclasses MockBukkit's manager and board
     val boards = mutableListOf<Scoreboard>()
+    val scoreboardManager: ScoreboardManagerMock = ScoreboardManagerStub(boards)
+    val mainBoard: ScoreboardMock = scoreboardManager.mainScoreboard
 
     init {
         // ItemStack.of returns ItemStackMock, so registration is needed for round-trips through YamlConfiguration
@@ -102,22 +102,6 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
             mockk(relaxed = true)
         }
         every { server.scoreboardManager } returns scoreboardManager
-        every { scoreboardManager.mainScoreboard } returns mainBoard
-        every { scoreboardManager.newScoreboard } answers {
-            // ScoreMock.customName is unimplemented in MockBukkit, so objective/score are anonymous subclasses that never call validate
-            val board = spyk(ScoreboardMock())
-            every { board.registerNewObjective(any<String>(), any<Criteria>(), any<Component>()) } answers {
-                object : ObjectiveMock(board, arg(0), arg(2), arg(1), RenderType.INTEGER) {
-                    override fun setDisplaySlot(slot: DisplaySlot?) {}
-                    override fun getScore(entry: String): ScoreMock = object : ScoreMock(this, entry) {
-                        override fun customName(customName: Component?) {}
-                        override fun setScore(score: Int) {}
-                    }
-                }
-            }
-            boards += board
-            board
-        }
     }
 
     val messenger = Messenger.load(File(folder, "messages"), "en", "auto", Logger.getLogger("1vs1-test"))
@@ -300,7 +284,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     // The default player view carries no crafting grid, so tests open a CRAFTING view explicitly
     fun openCraftingGrid(player: Player): CraftingGridMock {
         val grid = CraftingGridMock()
-        player.openInventory(SimpleInventoryViewMock(player, grid, player.inventory, InventoryType.CRAFTING))
+        player.openInventory(grid)
         return grid
     }
 
@@ -311,6 +295,27 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
     fun close() {
         deps.store.close()
         MockBukkit.unmock()
+    }
+}
+
+private class ScoreboardManagerStub(private val boards: MutableList<Scoreboard>) : ScoreboardManagerMock() {
+    override fun getNewScoreboard(): ScoreboardMock = ScoreboardStub().also { boards += it }
+}
+
+// ScoreMock.customName is unimplemented in MockBukkit, so objectives are built here and the registry keeps validate() passing
+private class ScoreboardStub : ScoreboardMock() {
+    private val registered = mutableSetOf<Objective>()
+
+    override fun getObjectives(): MutableSet<Objective> = registered
+
+    override fun registerNewObjective(name: String, criteria: Criteria, displayName: Component?, renderType: RenderType): ObjectiveMock {
+        val objective = object : ObjectiveMock(this, name, displayName, criteria, renderType) {
+            override fun getScore(entry: String): ScoreMock = object : ScoreMock(this, entry) {
+                override fun customName(customName: Component?) {}
+            }
+        }
+        registered += objective
+        return objective
     }
 }
 

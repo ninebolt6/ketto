@@ -1,23 +1,18 @@
 package net.ninebolt.onevsone.infrastructure.paper.message
 
-import io.mockk.every
-import io.mockk.just
-import io.mockk.mockk
-import io.mockk.runs
-import io.mockk.verify
-import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.minimessage.MiniMessage
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import net.ninebolt.onevsone.domain.ArenaState
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.RecordingLogger
 import org.bukkit.configuration.file.YamlConfiguration
-import org.bukkit.entity.Player
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.mockbukkit.mockbukkit.MockBukkit
+import org.mockbukkit.mockbukkit.entity.PlayerMock
 import java.io.File
 import java.util.Locale
+import java.util.UUID
 import java.util.logging.Logger
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -281,13 +276,18 @@ class MessengerTest {
     @Test
     fun `a player whose locale lookup fails falls back to the default language`() {
         val messenger = load()
-        val player = mockk<Player>()
-        every { player.locale() } throws RuntimeException("locale unavailable")
-        every { player.sendMessage(any<Component>()) } just runs
+        val server = MockBukkit.mock()
+        try {
+            val player = object : PlayerMock(server, "Ghost", UUID.randomUUID()) {
+                override fun locale(): Locale = throw RuntimeException("locale unavailable")
+            }
 
-        messenger.send(player, Message.MatchJoined("a1"))
+            messenger.send(player, Message.MatchJoined("a1"))
 
-        verify { player.sendMessage(any<Component>()) }
+            assertTrue(plain.serialize(player.nextComponentMessage()!!).contains("Joined arena: a1"))
+        } finally {
+            MockBukkit.unmock()
+        }
     }
 
     @Test
