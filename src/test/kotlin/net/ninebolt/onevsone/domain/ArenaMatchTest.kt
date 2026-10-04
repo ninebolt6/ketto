@@ -245,17 +245,6 @@ class ArenaMatchTest {
     }
 
     @Test
-    fun `a death defeat is rejected in ROUNDCOUNTDOWN`() {
-        val waiting = ArenaMatch.restored(
-            arenaId("a1"),
-            3,
-            ArenaState.RoundCountdown.of(alice, bob, firstWins = 1, secondWins = 0),
-        )
-        assertEquals(DefeatOutcome.Rejected, waiting.recordDefeat(bob.id, DefeatCause.DEATH).outcome)
-        assertSame(waiting, waiting.recordDefeat(bob.id, DefeatCause.DEATH).match)
-    }
-
-    @Test
     fun `factories reject invalid construction`() {
         assertFailsWith<IllegalArgumentException> {
             ArenaMatch.new(arenaId("a1"), 0)

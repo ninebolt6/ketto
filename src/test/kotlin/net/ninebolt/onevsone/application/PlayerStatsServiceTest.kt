@@ -51,6 +51,19 @@ class PlayerStatsServiceTest {
     }
 
     @Test
+    fun `lookup of a known name without stats returns missing`() {
+        val app = TestApp()
+        val viewer = app.players.add("Viewer")
+        val target = app.players.add("Target")
+        app.players.offlineIds["Target"] = target.id
+
+        var output: StatsOutput? = null
+        app.statsService.lookupStats(viewer.id, "Target", nowNanos = 0) { output = it }
+
+        assertEquals(StatsOutput.Missing, output)
+    }
+
+    @Test
     fun `lookup of an unknown name returns missing`() {
         val app = TestApp()
         val viewer = app.players.add("Viewer")

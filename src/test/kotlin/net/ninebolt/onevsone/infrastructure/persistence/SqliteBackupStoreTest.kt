@@ -98,17 +98,19 @@ class SqliteBackupStoreTest {
     }
 
     @Test
-    fun `pendingFor surfaces a corrupt row as PersistenceException`() = withStore(folder) { store ->
-        val playerId = Uuid.random()
-        store.exec(
-            "INSERT INTO backups(backup_id, match_id, player_uuid, player_name, payload) VALUES (?, ?, ?, ?, ?)",
-            Uuid.random().toString(),
-            "bad",
-            playerId.toString(),
-            "Alice",
-            InventoryPayloadCodec.encode(PaperInventorySnapshot()),
-        )
-        assertFailsWith<PersistenceException> { SqliteBackupStore(store).pendingFor(playerId) }
+    fun `pendingFor surfaces a corrupt row as PersistenceException`() {
+        withStore(folder) { store ->
+            val playerId = Uuid.random()
+            store.exec(
+                "INSERT INTO backups(backup_id, match_id, player_uuid, player_name, payload) VALUES (?, ?, ?, ?, ?)",
+                Uuid.random().toString(),
+                "bad",
+                playerId.toString(),
+                "Alice",
+                InventoryPayloadCodec.encode(PaperInventorySnapshot()),
+            )
+            assertFailsWith<PersistenceException> { SqliteBackupStore(store).pendingFor(playerId) }
+        }
     }
 
     @Test

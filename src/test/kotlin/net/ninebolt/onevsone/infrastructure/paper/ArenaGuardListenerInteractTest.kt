@@ -462,9 +462,13 @@ class ArenaGuardListenerInteractTest {
     @Test
     fun `air interact is not denied while restricted`() {
         val (p1, _) = env.twoPlayerIngame()
-        val event = PlayerInteractEvent(p1, Action.RIGHT_CLICK_AIR, env.item(Material.STONE), null, BlockFace.SELF, EquipmentSlot.HAND)
-        env.fire(event)
-        assertNotEquals(Event.Result.DENY, event.useItemInHand())
+        val withItem = PlayerInteractEvent(p1, Action.RIGHT_CLICK_AIR, env.item(Material.STONE), null, BlockFace.SELF, EquipmentSlot.HAND)
+        env.fire(withItem)
+        assertNotEquals(Event.Result.DENY, withItem.useItemInHand())
+
+        val emptyHand = PlayerInteractEvent(p1, Action.RIGHT_CLICK_AIR, null, null, BlockFace.SELF, EquipmentSlot.HAND)
+        env.fire(emptyHand)
+        assertNotEquals(Event.Result.DENY, emptyHand.useItemInHand())
     }
 
     @Test

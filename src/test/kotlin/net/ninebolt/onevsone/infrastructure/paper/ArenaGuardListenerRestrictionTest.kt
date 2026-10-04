@@ -7,12 +7,17 @@ import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.dropEvent
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.fallIntoVoid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.genericDamage
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.itemEntity
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.placeBlock
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.plainBlock
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.simulation
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.spawn
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import org.bukkit.Location
 import org.bukkit.Material
+import org.bukkit.entity.EntityType
+import org.bukkit.event.player.PlayerAttemptPickupItemEvent
+import org.bukkit.event.player.PlayerInteractEntityEvent
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -110,29 +115,43 @@ class ArenaGuardListenerRestrictionTest {
         val sim = p1.simulation()
         var breakZ = 20
 
-        fun assertState(damageCancelled: Boolean, breakCancelled: Boolean, commandBlocked: Boolean) {
+        fun assertState(
+            damageCancelled: Boolean,
+            breakCancelled: Boolean,
+            commandBlocked: Boolean,
+            pickupCancelled: Boolean,
+            transferCancelled: Boolean,
+        ) {
             val damage = p1.simulateDamage(1.0, genericDamage())
             assertEquals(damageCancelled, damage.isCancelled)
 
             val breaking = sim.breakBlock(env.plainBlock(9, 64, breakZ++))
             assertEquals(breakCancelled, breaking.isCancelled)
 
+            val pickup = PlayerAttemptPickupItemEvent(p1, env.itemEntity(), 0)
+            env.fire(pickup)
+            assertEquals(pickupCancelled, pickup.isCancelled)
+
+            val transfer = PlayerInteractEntityEvent(p1, env.spawn(EntityType.ITEM_FRAME))
+            env.fire(transfer)
+            assertEquals(transferCancelled, transfer.isCancelled)
+
             assertCommandBlocked(p1, commandBlocked)
         }
 
-        assertState(damageCancelled = false, breakCancelled = false, commandBlocked = false)
+        assertState(damageCancelled = false, breakCancelled = false, commandBlocked = false, pickupCancelled = false, transferCancelled = false)
 
         env.join(p1, arena)
-        assertState(damageCancelled = false, breakCancelled = false, commandBlocked = false)
+        assertState(damageCancelled = false, breakCancelled = false, commandBlocked = false, pickupCancelled = false, transferCancelled = false)
 
         val p2 = env.player("Bob")
         env.join(p2, arena)
-        assertState(damageCancelled = false, breakCancelled = false, commandBlocked = true)
+        assertState(damageCancelled = false, breakCancelled = false, commandBlocked = true, pickupCancelled = false, transferCancelled = false)
 
         env.tick(6)
-        assertState(damageCancelled = false, breakCancelled = true, commandBlocked = true)
+        assertState(damageCancelled = false, breakCancelled = true, commandBlocked = true, pickupCancelled = true, transferCancelled = true)
 
         fallIntoVoid(p2)
-        assertState(damageCancelled = true, breakCancelled = true, commandBlocked = true)
+        assertState(damageCancelled = true, breakCancelled = true, commandBlocked = true, pickupCancelled = true, transferCancelled = true)
     }
 }

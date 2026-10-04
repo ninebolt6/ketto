@@ -474,6 +474,47 @@ class MatchProgressionServiceTest {
     }
 
     @Test
+    fun `disabling the arena during the last match start teleport aborts instead of beginning`() {
+        val app = TestApp()
+        val (p1, p2) = app.joinedTwo()
+        p2.onTeleport = {
+            p2.onTeleport = null
+            app.admin.disable("arena1")
+        }
+
+        app.scheduler.tick(6)
+
+        assertEquals(ArenaState.Kind.WAITING, app.state())
+        assertTrue(p1.teleports.isNotEmpty())
+        assertTrue(p2.teleports.isNotEmpty())
+        assertTrue(app.presentation.matchStarts.isEmpty())
+        assertTrue(app.presentation.scoreboards.isEmpty())
+        assertTrue(app.equipment.restored.any { it.playerId == p1.id })
+        assertTrue(app.equipment.restored.any { it.playerId == p2.id })
+        assertTrue(app.logger.reports.isEmpty())
+    }
+
+    @Test
+    fun `removing the arena during the last match start teleport stops without an error`() {
+        val app = TestApp()
+        val (p1, p2) = app.joinedTwo()
+        p2.onTeleport = {
+            p2.onTeleport = null
+            assertNull(app.admin.remove("arena1"))
+        }
+
+        app.scheduler.tick(6)
+
+        assertTrue(p1.teleports.isNotEmpty())
+        assertTrue(p2.teleports.isNotEmpty())
+        assertTrue(app.presentation.matchStarts.isEmpty())
+        assertTrue(app.equipment.restored.any { it.playerId == p1.id })
+        assertTrue(app.equipment.restored.any { it.playerId == p2.id })
+        assertTrue(app.logger.reports.isEmpty())
+        assertNull(app.service.matchOf("arena1"))
+    }
+
+    @Test
     fun `a participant quitting during the match start teleport aborts and restores the opponent`() {
         val app = TestApp()
         val (p1, p2) = app.joinedTwo()

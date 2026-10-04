@@ -104,7 +104,9 @@ class ArenaMatchDefeatTest {
         val m = startedMatch()
         val step = m.recordDefeat(bob.id, DefeatCause.DEATH)
         assertTrue(step.outcome is DefeatOutcome.RoundWon)
-        assertEquals(DefeatOutcome.Rejected, step.match.recordDefeat(bob.id, DefeatCause.DEATH).outcome)
+        val rejected = step.match.recordDefeat(bob.id, DefeatCause.DEATH)
+        assertEquals(DefeatOutcome.Rejected, rejected.outcome)
+        assertSame(step.match, rejected.match)
         assertEquals(1, step.match.winsOf(alice.id))
     }
 
