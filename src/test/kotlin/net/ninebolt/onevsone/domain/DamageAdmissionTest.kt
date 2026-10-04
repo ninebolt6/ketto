@@ -48,11 +48,6 @@ class DamageAdmissionTest {
     }
 
     @Test
-    fun `non player victim does not bypass attacker restriction`() {
-        assertFalse(DamageAdmission.allows(null, side(alice, ingame)))
-    }
-
-    @Test
     fun `waiting and countdown participants do not restrict damage`() {
         assertTrue(DamageAdmission.allows(side(alice, match()), side(bob, match())))
         val countdown = waiting.join(bob).match

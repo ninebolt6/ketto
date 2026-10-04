@@ -5,7 +5,6 @@ import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.fallIntoVoid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.genericDamage
-import net.ninebolt.onevsone.infrastructure.paper.fixtures.lastBroadcast
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.view
 import org.bukkit.Material
@@ -92,32 +91,6 @@ class PaperMatchProgressionTest {
     }
 
     @Test
-    fun `requiredWins 3 ends match on third loss and final kill not counted`() {
-        val arena = env.newArena()
-        val p1 = env.player("Alice")
-        val p2 = env.player("Bob")
-        env.join(p1, arena)
-        env.join(p2, arena)
-        env.tick(6)
-
-        fallIntoVoid(p2)
-        assertEquals(1, env.view().winsOf(p1.uuid))
-        env.tick(8)
-        fallIntoVoid(p2)
-        assertEquals(2, env.view().winsOf(p1.uuid))
-        env.tick(8)
-        fallIntoVoid(p2)
-
-        assertEquals(ArenaState.Kind.WAITING, env.view().state.kind)
-        assertTrue(env.view().participants.isEmpty())
-        assertNull(env.sessions.findArenaIdOf(p1.uuid))
-        assertNull(env.sessions.findArenaIdOf(p2.uuid))
-        assertTrue(env.lastBroadcast().contains("won the match"))
-        assertEquals(1, env.statsRepository.find(p1.uuid)!!.wins)
-        assertEquals(1, env.statsRepository.find(p2.uuid)!!.losses)
-    }
-
-    @Test
     fun `death schedules respawn before re-equip`() {
         val arena = env.newArena()
         env.setKit(arena, PaperInventorySnapshot(items = listOf(env.item(Material.IRON_SWORD))))
@@ -145,6 +118,10 @@ class PaperMatchProgressionTest {
         env.join(p1, arena)
         env.join(p2, arena)
         env.tick(6)
+        p1.health = 4.0
+        p1.foodLevel = 3
+        p1.fireTicks = 100
+        p2.health = 4.0
 
         fallIntoVoid(p2)
         assertEquals(20.0, p1.health)

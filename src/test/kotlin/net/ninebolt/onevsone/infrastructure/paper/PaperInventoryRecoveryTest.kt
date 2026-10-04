@@ -7,6 +7,8 @@ import net.ninebolt.onevsone.domain.Participant
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.backupByName
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.genericDamage
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.opPlayer
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.runCommand
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.view
 import net.ninebolt.onevsone.infrastructure.persistence.PersistedBackup
@@ -17,10 +19,8 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 class PaperInventoryRecoveryTest {
 
@@ -65,10 +65,11 @@ class PaperInventoryRecoveryTest {
     }
 
     @Test
-    fun `empty kit does not grant lobby items`() {
+    fun `empty kit strips lobby items without granting new ones`() {
         val arena = env.newArena()
         val p1 = env.player("Alice")
         val p2 = env.player("Bob")
+        p1.inventory.setItem(0, env.item(Material.BREAD))
         env.join(p1, arena)
         env.join(p2, arena)
         env.tick(6)
@@ -160,7 +161,7 @@ class PaperInventoryRecoveryTest {
         assertEquals(Material.IRON_SWORD, p1.inventory.contents[0]?.type)
         assertEquals(p1.uniqueId.toString(), env.backupByName("Alice")!!.playerUuid)
         assertEquals(p2.uniqueId.toString(), env.backupByName("Bob")!!.playerUuid)
-        env.progression.abort(arena)
+        env.runCommand(env.opPlayer("Op"), "arena", "arena1", "disable")
         assertEquals(Material.APPLE, p1.inventory.contents[0]?.type)
     }
 }

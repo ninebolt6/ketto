@@ -88,6 +88,7 @@ class PaperEquipment(
 
     private fun kit(arena: Arena.Id): PaperInventorySnapshot = kits.getOrPut(arena) { kitStore.loadArenaKit(arena.name) }
 
+    @Suppress("UsePropertyAccessSyntax")
     private fun reclaimTransientItems(player: Player) {
         val inventory = player.inventory
         val cursor = player.itemOnCursor
@@ -105,6 +106,7 @@ class PaperEquipment(
         player.closeInventory()
     }
 
+    @Suppress("UsePropertyAccessSyntax")
     private fun discardTransientItems(player: Player) {
         player.setItemOnCursor(null)
         craftingGrid(player)?.clear()

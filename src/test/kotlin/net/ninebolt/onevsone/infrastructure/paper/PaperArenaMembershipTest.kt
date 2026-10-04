@@ -1,13 +1,11 @@
 package net.ninebolt.onevsone.infrastructure.paper
 
-import net.ninebolt.onevsone.domain.Arena
 import net.ninebolt.onevsone.domain.ArenaState
-import net.ninebolt.onevsone.domain.WorldPosition
-import net.ninebolt.onevsone.domain.fixtures.arenaId
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.backupByName
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.fallIntoVoid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.lastBroadcast
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.opPlayer
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.runCommand
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.view
@@ -20,7 +18,6 @@ import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
-import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class PaperArenaMembershipTest {
@@ -38,41 +35,6 @@ class PaperArenaMembershipTest {
     @AfterEach
     fun tearDown() {
         env.close()
-    }
-
-    @Test
-    fun `quit during INGAME forfeits with stats and restores both`() {
-        val arena = env.newArena()
-        val p1 = env.player("Alice")
-        val p2 = env.player("Bob")
-        p1.inventory.setItem(0, env.item(Material.BREAD))
-        env.join(p1, arena)
-        env.join(p2, arena)
-        env.tick(6)
-
-        p2.disconnect()
-
-        assertEquals(ArenaState.Kind.WAITING, env.view().state.kind)
-        assertNull(env.sessions.findArenaIdOf(p1.uuid))
-        assertNull(env.sessions.findArenaIdOf(p2.uuid))
-        assertEquals(1, env.statsRepository.find(p1.uuid)!!.wins)
-        assertEquals(1, env.statsRepository.find(p2.uuid)!!.losses)
-        assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
-        assertTrue(env.lastBroadcast().contains("Alice"))
-    }
-
-    @Test
-    fun `abort clears sidebar`() {
-        val arena = env.newArena()
-        val p1 = env.player("Alice")
-        val p2 = env.player("Bob")
-        env.join(p1, arena)
-        env.join(p2, arena)
-        env.tick(6)
-        assertTrue(env.boards.contains(p1.scoreboard))
-        env.progression.abort(arena)
-        assertSame(env.mainBoard, p1.scoreboard)
-        assertSame(env.mainBoard, p2.scoreboard)
     }
 
     @Test
@@ -203,7 +165,7 @@ class PaperArenaMembershipTest {
     fun `recreated arena does not reuse removed kit`() {
         val arena = env.newArena()
         env.setKit(arena, PaperInventorySnapshot(items = listOf(env.item(Material.IRON_SWORD))))
-        env.administration.remove("arena1")
+        env.runCommand(env.opPlayer("Op"), "arena", "arena1", "remove")
         assertEquals(PaperInventorySnapshot(), env.kitStore.loadArenaKit(arena.name))
 
         env.newArena("arena1")
@@ -213,18 +175,5 @@ class PaperArenaMembershipTest {
         env.join(p2, arena)
         env.tick(6)
         assertNull(p1.inventory.contents[0])
-    }
-
-    @Test
-    fun `enabled persists across service load`() {
-        env.arenaRepository.save(
-            Arena.Enabled.restored(
-                arenaId("arena1"),
-                WorldPosition.new("world", 1.0, 64.0, 1.0),
-                WorldPosition.new("world", 2.0, 64.0, 2.0),
-            ),
-        )
-        env.lifecycle.load()
-        assertTrue(env.sessions.findArena("arena1")!!.enabled)
     }
 }

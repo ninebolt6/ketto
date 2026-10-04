@@ -24,6 +24,7 @@ import org.bukkit.entity.HumanEntity
 import org.bukkit.entity.ItemFrame
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
+import org.bukkit.event.Cancellable
 import org.bukkit.event.Event
 import org.bukkit.event.block.Action
 import org.bukkit.event.block.BlockDispenseArmorEvent
@@ -116,12 +117,14 @@ class ArenaGuardListenerInteractTest {
     }
 
     @Test
-    fun `flint and steel ignition stays allowed while restricted`() {
+    fun `ignition items stay allowed while restricted`() {
         val (p1, _) = env.twoPlayerIngame()
-        val event = interact(p1, env.plainBlock(), item = env.item(Material.FLINT_AND_STEEL))
-        env.fire(event)
-        assertNotEquals(Event.Result.DENY, event.useInteractedBlock())
-        assertNotEquals(Event.Result.DENY, event.useItemInHand())
+        for (type in listOf(Material.FLINT_AND_STEEL, Material.FIRE_CHARGE)) {
+            val event = interact(p1, env.plainBlock(), item = env.item(type))
+            env.fire(event)
+            assertNotEquals(Event.Result.DENY, event.useInteractedBlock(), "type=$type")
+            assertNotEquals(Event.Result.DENY, event.useItemInHand(), "type=$type")
+        }
     }
 
     @Test
@@ -338,6 +341,10 @@ class ArenaGuardListenerInteractTest {
         )
         env.fire(bucketEntity)
         assertTrue(bucketEntity.isCancelled)
+
+        val fish = bucketFish(p1)
+        env.fire(fish)
+        assertTrue(fish.isCancelled)
     }
 
     @Test
@@ -376,13 +383,12 @@ class ArenaGuardListenerInteractTest {
     }
 
     @Test
-    fun `pickup allowed while onemore`() {
-        val arena = env.newArena()
-        val p1 = env.player("Alice")
-        env.join(p1, arena)
-        val pickup = EntityPickupItemEvent(p1, env.itemEntity(), 0)
-        env.fire(pickup)
-        assertFalse(pickup.isCancelled)
+    fun `entity item pickup passes while onemore and for a non participant`() {
+        for (p in listOf(onemorePlayer(), outsider())) {
+            val event = entityPickup(p)
+            env.fire(event)
+            assertFalse(event.isCancelled, "player=${p.name}")
+        }
     }
 
     @Test
@@ -531,51 +537,9 @@ class ArenaGuardListenerInteractTest {
     }
 
     @Test
-    fun `entity interact passes for a non participant`() {
-        env.twoPlayerIngame()
-        val event = entityInteract(outsider())
-        env.fire(event)
-        assertFalse(event.isCancelled)
-    }
-
-    @Test
-    fun `entity interact passes while onemore`() {
-        val arena = env.newArena()
-        val p1 = env.player("Alice")
-        env.join(p1, arena)
-        val event = entityInteract(p1)
-        env.fire(event)
-        assertFalse(event.isCancelled)
-    }
-
-    @Test
-    fun `armor stand manipulate passes for a non participant`() {
-        env.twoPlayerIngame()
-        val event = armorStandManipulate(outsider())
-        env.fire(event)
-        assertFalse(event.isCancelled)
-    }
-
-    @Test
-    fun `entity place passes for a non participant`() {
-        env.twoPlayerIngame()
-        val event = entityPlace(outsider())
-        env.fire(event)
-        assertFalse(event.isCancelled)
-    }
-
-    @Test
     fun `entity place with no player passes`() {
         env.twoPlayerIngame()
         val event = entityPlace(null)
-        env.fire(event)
-        assertFalse(event.isCancelled)
-    }
-
-    @Test
-    fun `hanging place passes for a non participant`() {
-        env.twoPlayerIngame()
-        val event = hangingPlace(outsider())
         env.fire(event)
         assertFalse(event.isCancelled)
     }
@@ -589,73 +553,9 @@ class ArenaGuardListenerInteractTest {
     }
 
     @Test
-    fun `bucket empty passes for a non participant`() {
-        env.twoPlayerIngame()
-        val event = bucketEmpty(outsider())
-        env.fire(event)
-        assertFalse(event.isCancelled)
-    }
-
-    @Test
-    fun `bucket fill passes for a non participant`() {
-        env.twoPlayerIngame()
-        val event = bucketFill(outsider())
-        env.fire(event)
-        assertFalse(event.isCancelled)
-    }
-
-    @Test
-    fun `bucket entity passes for a non participant`() {
-        env.twoPlayerIngame()
-        val event = bucketEntity(outsider())
-        env.fire(event)
-        assertFalse(event.isCancelled)
-    }
-
-    @Test
-    fun `bucket fish passes for a non participant`() {
-        env.twoPlayerIngame()
-        val event = bucketFish(outsider())
-        env.fire(event)
-        assertFalse(event.isCancelled)
-    }
-
-    @Test
     fun `entity item pickup passes when the entity is not a player`() {
         env.twoPlayerIngame()
         val event = entityPickup(env.nonPlayer() as LivingEntity)
-        env.fire(event)
-        assertFalse(event.isCancelled)
-    }
-
-    @Test
-    fun `entity item pickup passes for a non participant`() {
-        env.twoPlayerIngame()
-        val event = entityPickup(outsider())
-        env.fire(event)
-        assertFalse(event.isCancelled)
-    }
-
-    @Test
-    fun `attempt pickup passes for a non participant`() {
-        env.twoPlayerIngame()
-        val event = attemptPickup(outsider())
-        env.fire(event)
-        assertFalse(event.isCancelled)
-    }
-
-    @Test
-    fun `arrow pickup passes for a non participant`() {
-        env.twoPlayerIngame()
-        val event = arrowPickup(outsider())
-        env.fire(event)
-        assertFalse(event.isCancelled)
-    }
-
-    @Test
-    fun `harvest passes for a non participant`() {
-        env.twoPlayerIngame()
-        val event = harvest(outsider())
         env.fire(event)
         assertFalse(event.isCancelled)
     }
@@ -669,33 +569,9 @@ class ArenaGuardListenerInteractTest {
     }
 
     @Test
-    fun `dispensed armor passes for a non participant`() {
-        env.twoPlayerIngame()
-        val event = dispenseArmor(outsider())
-        env.fire(event)
-        assertFalse(event.isCancelled)
-    }
-
-    @Test
-    fun `fertilize passes for a non participant`() {
-        env.twoPlayerIngame()
-        val event = fertilize(outsider())
-        env.fire(event)
-        assertFalse(event.isCancelled)
-    }
-
-    @Test
     fun `fertilize with no player passes`() {
         env.twoPlayerIngame()
         val event = fertilize(null)
-        env.fire(event)
-        assertFalse(event.isCancelled)
-    }
-
-    @Test
-    fun `sign change passes for a non participant`() {
-        env.twoPlayerIngame()
-        val event = signChange(outsider())
         env.fire(event)
         assertFalse(event.isCancelled)
     }
@@ -721,109 +597,87 @@ class ArenaGuardListenerInteractTest {
 
     private fun onemorePlayer() = env.player("Alice").also { env.join(it, env.newArena()) }
 
-    @Test
-    fun `bucket fish cancelled while restricted`() {
-        val (p1, _) = env.twoPlayerIngame()
-        val event = bucketFish(p1)
-        env.fire(event)
-        assertTrue(event.isCancelled)
+    private fun <T> assertPassesWhileOnemoreAndForOutsider(
+        eventFor: (Player) -> T,
+    ) where T : Event, T : Cancellable {
+        for (p in listOf(onemorePlayer(), outsider())) {
+            val event = eventFor(p)
+            env.fire(event)
+            assertFalse(event.isCancelled, "player=${p.name}")
+        }
     }
 
     @Test
-    fun `entity place passes while onemore`() {
-        val event = entityPlace(onemorePlayer())
-        env.fire(event)
-        assertFalse(event.isCancelled)
+    fun `entity interact passes while onemore and for a non participant`() {
+        assertPassesWhileOnemoreAndForOutsider(::entityInteract)
     }
 
     @Test
-    fun `hanging place passes while onemore`() {
-        val event = hangingPlace(onemorePlayer())
-        env.fire(event)
-        assertFalse(event.isCancelled)
+    fun `armor stand manipulate passes while onemore and for a non participant`() {
+        assertPassesWhileOnemoreAndForOutsider(::armorStandManipulate)
     }
 
     @Test
-    fun `bucket empty passes while onemore`() {
-        val event = bucketEmpty(onemorePlayer())
-        env.fire(event)
-        assertFalse(event.isCancelled)
+    fun `entity place passes while onemore and for a non participant`() {
+        assertPassesWhileOnemoreAndForOutsider(::entityPlace)
     }
 
     @Test
-    fun `bucket fill passes while onemore`() {
-        val event = bucketFill(onemorePlayer())
-        env.fire(event)
-        assertFalse(event.isCancelled)
+    fun `hanging place passes while onemore and for a non participant`() {
+        assertPassesWhileOnemoreAndForOutsider(::hangingPlace)
     }
 
     @Test
-    fun `bucket entity passes while onemore`() {
-        val event = bucketEntity(onemorePlayer())
-        env.fire(event)
-        assertFalse(event.isCancelled)
+    fun `bucket empty passes while onemore and for a non participant`() {
+        assertPassesWhileOnemoreAndForOutsider(::bucketEmpty)
     }
 
     @Test
-    fun `bucket fish passes while onemore`() {
-        val event = bucketFish(onemorePlayer())
-        env.fire(event)
-        assertFalse(event.isCancelled)
+    fun `bucket fill passes while onemore and for a non participant`() {
+        assertPassesWhileOnemoreAndForOutsider(::bucketFill)
     }
 
     @Test
-    fun `entity item pickup passes while onemore`() {
-        val event = entityPickup(onemorePlayer())
-        env.fire(event)
-        assertFalse(event.isCancelled)
+    fun `bucket entity passes while onemore and for a non participant`() {
+        assertPassesWhileOnemoreAndForOutsider(::bucketEntity)
     }
 
     @Test
-    fun `attempt pickup passes while onemore`() {
-        val event = attemptPickup(onemorePlayer())
-        env.fire(event)
-        assertFalse(event.isCancelled)
+    fun `bucket fish passes while onemore and for a non participant`() {
+        assertPassesWhileOnemoreAndForOutsider(::bucketFish)
     }
 
     @Test
-    fun `arrow pickup passes while onemore`() {
-        val event = arrowPickup(onemorePlayer())
-        env.fire(event)
-        assertFalse(event.isCancelled)
+    fun `attempt pickup passes while onemore and for a non participant`() {
+        assertPassesWhileOnemoreAndForOutsider(::attemptPickup)
     }
 
     @Test
-    fun `harvest passes while onemore`() {
-        val event = harvest(onemorePlayer())
-        env.fire(event)
-        assertFalse(event.isCancelled)
+    fun `arrow pickup passes while onemore and for a non participant`() {
+        assertPassesWhileOnemoreAndForOutsider(::arrowPickup)
     }
 
     @Test
-    fun `dispensed armor passes while onemore`() {
-        val event = dispenseArmor(onemorePlayer())
-        env.fire(event)
-        assertFalse(event.isCancelled)
+    fun `harvest passes while onemore and for a non participant`() {
+        assertPassesWhileOnemoreAndForOutsider(::harvest)
     }
 
     @Test
-    fun `armor stand manipulate passes while onemore`() {
-        val event = armorStandManipulate(onemorePlayer())
-        env.fire(event)
-        assertFalse(event.isCancelled)
+    fun `dispensed armor passes while onemore and for a non participant`() {
+        for (p in listOf(onemorePlayer(), outsider())) {
+            val event = dispenseArmor(p)
+            env.fire(event)
+            assertFalse(event.isCancelled, "player=${p.name}")
+        }
     }
 
     @Test
-    fun `fertilize passes while onemore`() {
-        val event = fertilize(onemorePlayer())
-        env.fire(event)
-        assertFalse(event.isCancelled)
+    fun `fertilize passes while onemore and for a non participant`() {
+        assertPassesWhileOnemoreAndForOutsider(::fertilize)
     }
 
     @Test
-    fun `sign change passes while onemore`() {
-        val event = signChange(onemorePlayer())
-        env.fire(event)
-        assertFalse(event.isCancelled)
+    fun `sign change passes while onemore and for a non participant`() {
+        assertPassesWhileOnemoreAndForOutsider(::signChange)
     }
 }

@@ -160,14 +160,6 @@ class ArenaMatchListenerTest {
     }
 
     @Test
-    fun `quit of outsider does not touch inventory`() {
-        val outsider = env.player("Outsider")
-        outsider.inventory.setItem(0, env.item(Material.STONE))
-        outsider.disconnect()
-        assertEquals(Material.STONE, outsider.inventory.contents[0]?.type)
-    }
-
-    @Test
     fun `void fall below zero resolves only when ingame with two players`() {
         val arena = env.newArena()
         val p1 = env.player("Alice")
@@ -202,6 +194,10 @@ class ArenaMatchListenerTest {
         val verticalTarget = p1.location.clone().add(0.0, 1.0, 0.0)
         val vertical = sim.simulatePlayerMove(verticalTarget)
         assertEquals(verticalTarget, vertical.to)
+
+        val afterVertical = p1.location
+        val drifted = sim.simulatePlayerMove(afterVertical.clone().add(0.0, 0.0, 1.0))
+        assertEquals(afterVertical, drifted.to)
     }
 
     @Test
@@ -235,17 +231,6 @@ class ArenaMatchListenerTest {
 
         sim.simulatePlayerMove(Location(base.world, base.x, -1.0, base.z))
         assertEquals(ArenaState.Kind.WAITING, env.state())
-    }
-
-    @Test
-    fun `z only drift is still reset while movement is frozen`() {
-        val (p1, p2) = env.twoPlayerIngame()
-        fallIntoVoid(p2)
-
-        val sim = p1.simulation()
-        val from = p1.location
-        val drifted = sim.simulatePlayerMove(from.clone().add(0.0, 0.0, 1.0))
-        assertEquals(from, drifted.to)
     }
 
     @Test

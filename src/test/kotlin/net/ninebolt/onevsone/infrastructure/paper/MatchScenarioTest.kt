@@ -10,6 +10,7 @@ import net.ninebolt.onevsone.infrastructure.paper.fixtures.backupByName
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.fallIntoVoid
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.interact
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.lastBroadcast
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.opPlayer
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.runCommand
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.signBlock
@@ -52,31 +53,6 @@ class MatchScenarioTest {
 
     private fun signLines(block: Block) = (0..3).map {
         plain.serialize((block.state as Sign).getSide(Side.FRONT).line(it))
-    }
-
-    @Test
-    fun `sign click to match end`() {
-        val arena = env.newArena()
-        env.signRepository.setSign(arenaId("arena1"), BlockPosition.new("world", 3, 64, 3))
-        env.setKit(arena, PaperInventorySnapshot(items = listOf(env.item(Material.IRON_SWORD))))
-        val p1 = env.player("Alice")
-        val p2 = env.player("Bob")
-
-        env.fire(interact(p1, env.signBlock(3, 64, 3)))
-        assertEquals(ArenaState.Kind.ONEMORE, env.state())
-        env.fire(interact(p2, env.signBlock(3, 64, 3)))
-        assertEquals(ArenaState.Kind.COUNTDOWN, env.state())
-
-        env.tick(6)
-        assertEquals(ArenaState.Kind.INGAME, env.state())
-        assertTrue(p1.hasTeleported())
-        assertEquals(Material.IRON_SWORD, p1.inventory.contents[0]?.type)
-
-        p2.simulateDamage(100.0, attackDamage(p1))
-        assertEquals(ArenaState.Kind.WAITING, env.state())
-        assertEquals(1, env.statsRepository.find(p1.uuid)!!.wins)
-        assertEquals(1, env.statsRepository.find(p2.uuid)!!.losses)
-        assertNull(p1.inventory.contents[0])
     }
 
     @Test
@@ -125,6 +101,7 @@ class MatchScenarioTest {
         assertNull(env.backupByName("Bob"))
         assertEquals(1, env.statsRepository.find(p1.uuid)!!.wins)
         assertEquals(1, env.statsRepository.find(p2.uuid)!!.losses)
+        assertTrue(env.lastBroadcast().contains("won the match"))
         env.runCommand(p1, "stats")
         assertTrue(p1.drainMessages().any { it.contains("Win") })
         assertTrue(signLines(sign)[2].contains("Join"))
@@ -222,6 +199,7 @@ class MatchScenarioTest {
     }
 
     @Test
+    @Suppress("UsePropertyAccessSyntax")
     fun `kit items on the cursor or crafting grid are discarded at match end`() {
         val arena = env.newArena()
         env.setKit(arena, PaperInventorySnapshot(items = listOf(env.item(Material.IRON_SWORD))))

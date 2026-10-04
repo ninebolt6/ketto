@@ -9,7 +9,9 @@ import net.ninebolt.onevsone.infrastructure.paper.fixtures.breakBlock
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.interact
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.nonPlayer
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.opPlayer
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.plainBlock
+import net.ninebolt.onevsone.infrastructure.paper.fixtures.runCommand
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.signBlock
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.simulation
 import net.ninebolt.onevsone.infrastructure.paper.fixtures.uuid
@@ -279,7 +281,7 @@ class ArenaSignListenerTest {
         assertTrue(lines()[2].contains("Cannot join"))
         assertTrue(lines()[3].contains("Disabled"))
 
-        env.administration.enable("arena1")
+        env.runCommand(env.opPlayer("Op"), "arena", "arena1", "enable")
         assertTrue(lines()[2].contains("Join"))
         assertTrue(lines()[3].contains("Waiting"))
     }

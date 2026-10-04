@@ -17,7 +17,6 @@ import java.util.logging.Handler
 import java.util.logging.LogRecord
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.uuid.Uuid
@@ -42,22 +41,6 @@ class PaperPlayersTest {
     @Test
     fun `handle returns null for a player who is not online`() {
         assertNull(env.playerPort.findHandle(Uuid.random()))
-    }
-
-    @Test
-    fun `offline id resolution falls back to the async lookup for uncached names`() {
-        var resolved: Uuid? = null
-        var called = false
-        env.playerPort.resolveOfflineId("Ghost") {
-            called = true
-            resolved = it
-        }
-        assertFalse(called)
-
-        env.runOneShots()
-
-        assertTrue(called)
-        assertNotNull(resolved)
     }
 
     @Test

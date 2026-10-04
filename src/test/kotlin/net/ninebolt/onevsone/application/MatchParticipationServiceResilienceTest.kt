@@ -94,7 +94,7 @@ class MatchParticipationServiceResilienceTest {
         assertEquals(1, app.statsRepository.stats[p2.id]?.losses)
         assertNull(app.statsRepository.stats[p1.id])
         assertEquals(2, app.equipment.restored.size)
-        assertTrue(app.logger.reports.any { it.message.startsWith("Failed to record win") })
+        assertTrue(app.logger.reports.any { it.message.startsWith("Failed to record win") && it.thrown is PersistenceException })
     }
 
     @Test

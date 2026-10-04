@@ -101,6 +101,7 @@ class PaperEquipmentTest {
     }
 
     @Test
+    @Suppress("UsePropertyAccessSyntax")
     fun `backup reclaims the crafting matrix and discards the result`() {
         val p = env.player("Alice")
         val grid = env.openCraftingGrid(p)
@@ -119,6 +120,7 @@ class PaperEquipmentTest {
     }
 
     @Test
+    @Suppress("UsePropertyAccessSyntax")
     fun `restore discards items on the cursor and in the crafting grid`() {
         val p = env.player("Alice")
         val ref = storeBackup(p)
@@ -135,6 +137,7 @@ class PaperEquipmentTest {
     }
 
     @Test
+    @Suppress("UsePropertyAccessSyntax")
     fun `apply kit discards items on the cursor and in the crafting grid`() {
         val arena = env.newArena()
         val p = env.player("Alice")
@@ -156,6 +159,7 @@ class PaperEquipmentTest {
     }
 
     @Test
+    @Suppress("UsePropertyAccessSyntax")
     fun `strip kit clears contents armor and transient items`() {
         val p = env.player("Alice")
         p.inventory.setItem(0, env.item(Material.IRON_SWORD))
