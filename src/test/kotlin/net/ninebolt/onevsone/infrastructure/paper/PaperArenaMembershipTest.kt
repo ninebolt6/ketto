@@ -180,6 +180,26 @@ class PaperArenaMembershipTest {
     }
 
     @Test
+    fun `disconnect without a quit event during countdown aborts the match`() {
+        val arena = env.newArena()
+        val p1 = env.player("Alice")
+        val p2 = env.player("Bob")
+        p1.inventory.setItem(0, env.item(Material.BREAD))
+        env.join(p1, arena)
+        env.join(p2, arena)
+        assertEquals(ArenaState.Kind.COUNTDOWN, env.view().state.kind)
+
+        env.disconnectWithoutQuitHandler(p2)
+        env.tick()
+
+        assertEquals(ArenaState.Kind.WAITING, env.view().state.kind)
+        assertNull(env.registry.arenaOf(p1.uuid))
+        assertNull(env.registry.arenaOf(p2.uuid))
+        assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
+        assertNull(env.backupByName("Alice"))
+    }
+
+    @Test
     fun `recreated arena does not reuse removed kit`() {
         val arena = env.newArena()
         env.setKit(arena, PaperInventorySnapshot(items = listOf(env.item(Material.IRON_SWORD))))
