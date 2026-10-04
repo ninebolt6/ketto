@@ -1,0 +1,43 @@
+package net.ninebolt.ketto.application
+
+import net.ninebolt.ketto.application.port.ArenaRepository
+import net.ninebolt.ketto.application.port.PersistenceException
+import net.ninebolt.ketto.domain.ArenaState
+import java.util.logging.Level
+import java.util.logging.Logger
+
+class ArenaLifecycleService(
+    private val sessions: ArenaSessions,
+    private val arenaRepository: ArenaRepository,
+    private val signService: ArenaSignService,
+    private val recovery: InventoryRecoveryService,
+    private val progression: MatchProgressionService,
+    private val logger: Logger,
+) {
+
+    fun load() {
+        val loaded = try {
+            arenaRepository.loadAll()
+        } catch (e: PersistenceException) {
+            logger.log(Level.WARNING, "Arena definitions are unreadable; no arenaRepository loaded this session", e)
+            emptyList()
+        }
+        loaded.forEach { arena ->
+            sessions.installArena(arena)
+            try {
+                signService.refreshSign(arena.id, ArenaState.Waiting)
+            } catch (e: PersistenceException) {
+                logger.log(Level.WARNING, "Could not update sign for arena ${arena.id.name}; continuing startup", e)
+            }
+        }
+    }
+
+    fun shutdown() {
+        sessions.matches().forEach { match ->
+            val arenaId = match.arenaId
+            progression.cancelCountdown(arenaId)
+            sessions.transact(arenaId) { it.abort() }
+        }
+        recovery.restoreAllOnline()
+    }
+}

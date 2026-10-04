@@ -1,0 +1,178 @@
+package net.ninebolt.ketto.infrastructure.paper
+
+import net.ninebolt.ketto.application.port.BackupRef
+import net.ninebolt.ketto.application.port.PersistenceException
+import net.ninebolt.ketto.domain.MatchId
+import net.ninebolt.ketto.domain.Participant
+import net.ninebolt.ketto.infrastructure.paper.fixtures.ArenaPlayerMock
+import net.ninebolt.ketto.infrastructure.paper.fixtures.TestEnv
+import net.ninebolt.ketto.infrastructure.paper.fixtures.uuid
+import net.ninebolt.ketto.infrastructure.persistence.PersistedBackup
+import org.bukkit.Material
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import java.io.File
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+import kotlin.uuid.Uuid
+
+class PaperEquipmentTest {
+
+    @TempDir
+    lateinit var folder: File
+
+    private lateinit var env: TestEnv
+
+    @BeforeEach
+    fun setup() {
+        env = TestEnv(folder)
+    }
+
+    @AfterEach
+    fun tearDown() {
+        env.close()
+    }
+
+    private fun storeBackup(p: ArenaPlayerMock): BackupRef {
+        p.inventory.setItem(0, env.item(Material.DIAMOND))
+        p.inventory.chestplate = env.item(Material.DIAMOND_CHESTPLATE)
+        val snapshot = PaperInventorySnapshot.capture(p.inventory)
+        p.inventory.clear()
+        p.inventory.armorContents = arrayOfNulls(4)
+        val ref = BackupRef.new(MatchId.new(), p.uuid, p.name)
+        env.backupStore.saveBackups(listOf(PersistedBackup(ref, snapshot)))
+        return ref
+    }
+
+    @Test
+    fun `backup fails when a participant is offline`() {
+        assertFailsWith<PersistenceException> {
+            env.equipment.backupBeforeMatch(MatchId.new(), listOf(Participant.new("Ghost")))
+        }
+    }
+
+    @Test
+    fun `restore fails when nothing is stored for the backup`() {
+        val p = env.player("Alice")
+        val ref = BackupRef.new(MatchId.new(), p.uuid, "Alice")
+        assertFailsWith<PersistenceException> { env.equipment.restore(ref) }
+    }
+
+    @Test
+    fun `restore fails when the backed up player is offline`() {
+        val p = env.player("Alice")
+        val ref = env.equipment.backupBeforeMatch(MatchId.new(), listOf(Participant.new(p.uuid, "Alice"))).single()
+        env.disconnectWithoutQuitHandler(p)
+        assertFailsWith<PersistenceException> { env.equipment.restore(ref) }
+    }
+
+    @Test
+    fun `restore applies the persisted backup when no snapshot is pending`() {
+        val p = env.player("Alice")
+        val ref = storeBackup(p)
+        env.equipment.restore(ref)
+        assertEquals(Material.DIAMOND, p.inventory.getItem(0)?.type)
+        assertEquals(Material.DIAMOND_CHESTPLATE, p.inventory.chestplate?.type)
+    }
+
+    @Test
+    fun `apply kit fails when the player is offline`() {
+        val arena = env.newArena()
+        assertFailsWith<PersistenceException> { env.equipment.applyKit(arena, Uuid.random()) }
+    }
+
+    @Test
+    fun `save kit fails when the player is offline`() {
+        val arena = env.newArena()
+        assertFailsWith<PersistenceException> { env.equipment.saveKit(arena, Uuid.random()) }
+    }
+
+    @Test
+    fun `apply kit loads the stored kit when none is cached`() {
+        val arena = env.newArena()
+        val p = env.player("Alice")
+        env.kitStore.saveArenaKit(arena.name, PaperInventorySnapshot(items = listOf(env.item(Material.DIAMOND_SWORD))))
+        env.equipment.applyKit(arena, p.uuid)
+        assertEquals(Material.DIAMOND_SWORD, p.inventory.getItem(0)?.type)
+    }
+
+    @Test
+    @Suppress("UsePropertyAccessSyntax")
+    fun `backup reclaims the crafting matrix and discards the result`() {
+        val p = env.player("Alice")
+        val grid = env.openCraftingGrid(p)
+        grid.matrix = arrayOf(env.item(Material.APPLE), null, null, null)
+        grid.result = env.item(Material.STICK)
+        p.setItemOnCursor(env.item(Material.GOLD_INGOT))
+
+        val ref = env.equipment.backupBeforeMatch(MatchId.new(), listOf(Participant.new(p.uuid, "Alice"))).single()
+
+        val snapshot = env.backupStore.backupFor(ref)!!.snapshot
+        assertTrue(snapshot.items.any { it?.type == Material.APPLE })
+        assertTrue(snapshot.items.any { it?.type == Material.GOLD_INGOT })
+        assertTrue(snapshot.items.none { it?.type == Material.STICK })
+        assertTrue(p.itemOnCursor.isEmpty)
+        assertTrue(grid.isEmpty())
+    }
+
+    @Test
+    @Suppress("UsePropertyAccessSyntax")
+    fun `restore discards items on the cursor and in the crafting grid`() {
+        val p = env.player("Alice")
+        val ref = storeBackup(p)
+        val grid = env.openCraftingGrid(p)
+        grid.matrix = arrayOf(env.item(Material.IRON_SWORD), null, null, null)
+        grid.result = env.item(Material.STICK)
+        p.setItemOnCursor(env.item(Material.IRON_SWORD))
+
+        env.equipment.restore(ref)
+
+        assertEquals(Material.DIAMOND, p.inventory.getItem(0)?.type)
+        assertTrue(p.itemOnCursor.isEmpty)
+        assertTrue(grid.isEmpty())
+    }
+
+    @Test
+    @Suppress("UsePropertyAccessSyntax")
+    fun `apply kit discards items on the cursor and in the crafting grid`() {
+        val arena = env.newArena()
+        val p = env.player("Alice")
+        env.kitStore.saveArenaKit(arena.name, PaperInventorySnapshot(items = listOf(env.item(Material.DIAMOND_SWORD))))
+        val grid = env.openCraftingGrid(p)
+        grid.matrix = arrayOf(env.item(Material.BREAD), null, null, null)
+        p.setItemOnCursor(env.item(Material.BREAD))
+
+        env.equipment.applyKit(arena, p.uuid)
+
+        assertEquals(Material.DIAMOND_SWORD, p.inventory.getItem(0)?.type)
+        assertTrue(p.itemOnCursor.isEmpty)
+        assertTrue(grid.isEmpty())
+    }
+
+    @Test
+    fun `strip kit fails when the player is offline`() {
+        assertFailsWith<PersistenceException> { env.equipment.stripKit(Uuid.random()) }
+    }
+
+    @Test
+    @Suppress("UsePropertyAccessSyntax")
+    fun `strip kit clears contents armor and transient items`() {
+        val p = env.player("Alice")
+        p.inventory.setItem(0, env.item(Material.IRON_SWORD))
+        p.inventory.chestplate = env.item(Material.IRON_CHESTPLATE)
+        val grid = env.openCraftingGrid(p)
+        grid.matrix = arrayOf(env.item(Material.BREAD), null, null, null)
+        p.setItemOnCursor(env.item(Material.BREAD))
+
+        env.equipment.stripKit(p.uuid)
+
+        assertTrue(p.inventory.isEmpty)
+        assertNull(p.inventory.chestplate)
+        assertTrue(p.itemOnCursor.isEmpty)
+        assertTrue(grid.isEmpty())
+    }
+}

@@ -1,0 +1,22 @@
+package net.ninebolt.ketto.infrastructure.paper.command
+
+import net.ninebolt.ketto.application.ArenaAdministrationService
+import net.ninebolt.ketto.infrastructure.paper.message.Message
+import net.ninebolt.ketto.infrastructure.paper.message.Messenger
+import org.bukkit.entity.Player
+import kotlin.uuid.toKotlinUuid
+
+internal class ArenaKitSetCommand(
+    private val administration: ArenaAdministrationService,
+    private val messenger: Messenger,
+) {
+
+    fun execute(player: Player, arenaName: String) {
+        val id = administration.findArenaId(arenaName) ?: run {
+            messenger.send(player, Message.ArenaNotFound)
+            return
+        }
+        administration.setKit(id, player.uniqueId.toKotlinUuid())
+        messenger.send(player, Message.ArenaKitSet(id.name))
+    }
+}

@@ -1,10 +1,10 @@
 # yaml-language-server: \$schema=https://www.schemastore.org/bukkit-plugin.json
-name: 1vs1
+name: ketto
 version: "${version}"
-main: net.ninebolt.onevsone.OneVsOnePlugin
+main: net.ninebolt.ketto.KettoPlugin
 api-version: "${apiVersion}"
 
 permissions:
-  1vs1.admin:
-    description: Administrative 1vs1 commands
+  ketto.admin:
+    description: Administrative ketto commands
     default: op

@@ -4,7 +4,7 @@
 
 - Dependency direction is `infrastructure → application → domain` (inward
   only). Wire dependencies manually in
-  `OneVsOnePlugin` (the composition root); application code reaches the
+  `KettoPlugin` (the composition root); application code reaches the
   outside only through interfaces declared in `port/`
 - One repository port method is one atomic persistence unit; cross-table
   writes are grouped inside the implementation. Application code never opens

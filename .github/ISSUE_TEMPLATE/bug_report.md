@@ -20,7 +20,7 @@ labels: bug
 ## Environment
 
 - Server version (`/version`): <!-- e.g. Paper 1.21.4 -->
-- Plugin version (`/version 1vs1`):
+- Plugin version (`/version ketto`):
 - Other plugins that might interfere:
 
 ## Logs / screenshots
