@@ -16,6 +16,7 @@ import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 import kotlin.uuid.Uuid
 
 class PaperEquipmentTest {
@@ -96,5 +97,52 @@ class PaperEquipmentTest {
         env.kitStore.saveArenaKit(arena.name, PaperInventorySnapshot(items = listOf(env.item(Material.DIAMOND_SWORD))))
         env.equipment.applyKit(arena, p.uuid)
         assertEquals(Material.DIAMOND_SWORD, p.inventory.getItem(0)?.type)
+    }
+
+    @Test
+    fun `backup reclaims items on the cursor and in the crafting grid`() {
+        val p = env.player("Alice")
+        val grid = env.openCraftingGrid(p)
+        grid.setItem(0, env.item(Material.APPLE))
+        p.setItemOnCursor(env.item(Material.GOLD_INGOT))
+
+        val ref = env.equipment.backupBeforeMatch(MatchId.new(), listOf(Participant.new(p.uuid, "Alice"))).single()
+
+        val snapshot = env.backupStore.backupFor(ref)!!.snapshot
+        assertTrue(snapshot.items.any { it?.type == Material.APPLE })
+        assertTrue(snapshot.items.any { it?.type == Material.GOLD_INGOT })
+        assertTrue(p.itemOnCursor.isEmpty)
+        assertTrue(grid.isEmpty())
+    }
+
+    @Test
+    fun `restore discards items on the cursor and in the crafting grid`() {
+        val p = env.player("Alice")
+        val ref = storeBackup(p)
+        val grid = env.openCraftingGrid(p)
+        grid.setItem(0, env.item(Material.IRON_SWORD))
+        p.setItemOnCursor(env.item(Material.IRON_SWORD))
+
+        env.equipment.restore(ref)
+
+        assertEquals(Material.DIAMOND, p.inventory.getItem(0)?.type)
+        assertTrue(p.itemOnCursor.isEmpty)
+        assertTrue(grid.isEmpty())
+    }
+
+    @Test
+    fun `apply kit discards items on the cursor and in the crafting grid`() {
+        val arena = env.newArena()
+        val p = env.player("Alice")
+        env.kitStore.saveArenaKit(arena.name, PaperInventorySnapshot(items = listOf(env.item(Material.DIAMOND_SWORD))))
+        val grid = env.openCraftingGrid(p)
+        grid.setItem(0, env.item(Material.BREAD))
+        p.setItemOnCursor(env.item(Material.BREAD))
+
+        env.equipment.applyKit(arena, p.uuid)
+
+        assertEquals(Material.DIAMOND_SWORD, p.inventory.getItem(0)?.type)
+        assertTrue(p.itemOnCursor.isEmpty)
+        assertTrue(grid.isEmpty())
     }
 }

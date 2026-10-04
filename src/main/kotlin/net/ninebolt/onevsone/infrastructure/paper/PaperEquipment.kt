@@ -11,6 +11,9 @@ import net.ninebolt.onevsone.infrastructure.persistence.PersistedBackup
 import net.ninebolt.onevsone.infrastructure.persistence.SqliteBackupStore
 import net.ninebolt.onevsone.infrastructure.persistence.SqliteKitStore
 import org.bukkit.entity.Player
+import org.bukkit.event.inventory.InventoryType
+import org.bukkit.inventory.Inventory
+import org.bukkit.inventory.ItemStack
 import kotlin.uuid.Uuid
 
 class PaperEquipment(
@@ -30,6 +33,7 @@ class PaperEquipment(
         val captured = participants.map { participant ->
             val player = lookup.find(participant.id)
                 ?: throw PersistenceException("Player ${participant.name} (${participant.id}) is not available for inventory backup")
+            reclaimTransientItems(player)
             PersistedBackup(
                 BackupRef.new(
                     matchId = match,
@@ -48,6 +52,7 @@ class PaperEquipment(
             ?: throw PersistenceException("No stored backup ${backup.backupId} for ${backup.playerName}")
         val player = lookup.find(backup.playerId)
             ?: throw PersistenceException("Player ${backup.playerName} is not available for restore")
+        discardTransientItems(player)
         snapshot.apply(player.inventory)
     }
 
@@ -62,6 +67,7 @@ class PaperEquipment(
     override fun applyKit(arena: Arena.Id, playerId: Uuid) {
         val player = lookup.find(playerId)
             ?: throw PersistenceException("Player $playerId is not available for kit apply")
+        discardTransientItems(player)
         kit(arena).apply(player.inventory)
     }
 
@@ -74,4 +80,39 @@ class PaperEquipment(
     }
 
     private fun kit(arena: Arena.Id): PaperInventorySnapshot = kits.getOrPut(arena) { kitStore.loadArenaKit(arena.name) }
+
+    private fun reclaimTransientItems(player: Player) {
+        val inventory = player.inventory
+        val cursor = player.itemOnCursor
+        if (!cursor.isEmpty) {
+            dropOverflow(player, inventory.addItem(cursor))
+            player.setItemOnCursor(null)
+        }
+        craftingGrid(player)?.let { grid ->
+            // The result slot is derived from the material slots, so it is cleared instead of reclaimed
+            for (slot in 0 until grid.size - 1) {
+                val item = grid.getItem(slot) ?: continue
+                dropOverflow(player, inventory.addItem(item))
+                grid.setItem(slot, null)
+            }
+            grid.setItem(grid.size - 1, null)
+        }
+        player.closeInventory()
+    }
+
+    private fun discardTransientItems(player: Player) {
+        player.setItemOnCursor(null)
+        craftingGrid(player)?.clear()
+        player.closeInventory()
+    }
+
+    // The view's top inventory is nullable only under MockBukkit, whose default CRAFTING view carries none
+    private fun craftingGrid(player: Player): Inventory? {
+        val top = player.openInventory.topInventory as Inventory?
+        return top?.takeIf { it.type == InventoryType.CRAFTING }
+    }
+
+    private fun dropOverflow(player: Player, leftovers: Map<Int, ItemStack>) {
+        leftovers.values.forEach { player.world.dropItemNaturally(player.location, it) }
+    }
 }

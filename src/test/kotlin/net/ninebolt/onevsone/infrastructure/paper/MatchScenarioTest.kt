@@ -220,4 +220,52 @@ class MatchScenarioTest {
         env.tick(6)
         assertEquals(ArenaState.Kind.INGAME, env.state())
     }
+
+    @Test
+    fun `kit items on the cursor or crafting grid are discarded at match end`() {
+        val arena = env.newArena()
+        env.setKit(arena, PaperInventorySnapshot(items = listOf(env.item(Material.IRON_SWORD))))
+        val p1 = env.player("Alice")
+        val p2 = env.player("Bob")
+        p1.inventory.setItem(0, env.item(Material.BREAD))
+        env.join(p1, arena)
+        env.join(p2, arena)
+        env.tick(6)
+        assertEquals(ArenaState.Kind.INGAME, env.state())
+        assertEquals(Material.IRON_SWORD, p1.inventory.contents[0]?.type)
+
+        val grid = env.openCraftingGrid(p1)
+        grid.setItem(0, env.item(Material.IRON_SWORD))
+        p1.setItemOnCursor(env.item(Material.IRON_SWORD))
+
+        p2.disconnect()
+        env.runOneShots()
+
+        assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
+        assertTrue(p1.itemOnCursor.isEmpty)
+        assertTrue(grid.isEmpty)
+        assertNull(env.backupByName("Alice"))
+    }
+
+    @Test
+    fun `items left in the crafting grid during countdown are restored after the match`() {
+        val arena = env.newArena()
+        env.setKit(arena, PaperInventorySnapshot(items = listOf(env.item(Material.IRON_SWORD))))
+        val p1 = env.player("Alice")
+        val p2 = env.player("Bob")
+        env.join(p1, arena)
+        env.join(p2, arena)
+        assertEquals(ArenaState.Kind.COUNTDOWN, env.state())
+
+        val grid = env.openCraftingGrid(p1)
+        grid.setItem(0, env.item(Material.APPLE))
+        env.tick(6)
+        assertEquals(ArenaState.Kind.INGAME, env.state())
+
+        p2.disconnect()
+        env.runOneShots()
+
+        assertEquals(Material.APPLE, p1.inventory.contents[0]?.type)
+        assertTrue(grid.isEmpty)
+    }
 }
