@@ -8,8 +8,8 @@ plugins {
 }
 
 group = "net.ninebolt"
-// Release builds override with -PreleaseVersion=<tag without "v">
-version = (findProperty("releaseVersion") as String?) ?: "1.0.0"
+// Release builds pass -Prelease; the pushed tag must equal "v" + version
+version = "1.0.0-alpha.1" + if (hasProperty("release")) "" else "-SNAPSHOT"
 
 val mcApiVersion = "1.21.3"
 
@@ -91,4 +91,11 @@ tasks.jar {
         },
     )
     exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
+}
+
+tasks.register("printVersion") {
+    val v = project.version.toString()
+    doLast {
+        println(v)
+    }
 }

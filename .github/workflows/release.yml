@@ -7,6 +7,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -23,8 +27,25 @@ jobs:
         with:
           cache-provider: basic
 
+      - name: Verify tag matches project version
+        run: |
+          VERSION="$(./gradlew -q printVersion -Prelease)"
+          if [ "${GITHUB_REF_NAME}" != "v${VERSION}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match version ${VERSION} in build.gradle.kts"
+            exit 1
+          fi
+
+      - name: Fail if release already exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            echo "::error::Release ${GITHUB_REF_NAME} already exists; bump version in build.gradle.kts"
+            exit 1
+          fi
+
       - name: Build
-        run: ./gradlew clean build -PreleaseVersion="${GITHUB_REF_NAME#v}" --warning-mode all
+        run: ./gradlew clean build -Prelease --warning-mode all
 
       - name: Publish release
         env:
