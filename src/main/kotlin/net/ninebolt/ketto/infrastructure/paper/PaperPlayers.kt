@@ -103,7 +103,12 @@ private class PaperPlayerHandle(
     override fun prepareForMatch() {
         player.gameMode = GameMode.SURVIVAL
         player.allowFlight = false
+        clearPotionEffects()
         resetVitals()
+    }
+
+    override fun clearPotionEffects() {
+        player.activePotionEffects.forEach { player.removePotionEffect(it.type) }
     }
 
     override fun teleport(position: WorldPosition) {

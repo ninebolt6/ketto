@@ -16,6 +16,7 @@ class FakePlayers : PlayerPort {
         var positionValue: WorldPosition = WorldPosition.new("world", 0.0, 64.0, 0.0)
         val teleports = mutableListOf<WorldPosition>()
         val events = mutableListOf<String>()
+        var potionEffectsCleared = 0
         var onTeleport: (() -> Unit)? = null
         var onRespawn: (() -> Unit)? = null
 
@@ -34,6 +35,10 @@ class FakePlayers : PlayerPort {
 
         override fun prepareForMatch() {
             if (!dead) events += "prepare"
+        }
+
+        override fun clearPotionEffects() {
+            potionEffectsCleared++
         }
 
         override fun teleport(position: WorldPosition) {

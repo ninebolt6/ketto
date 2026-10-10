@@ -22,6 +22,7 @@ interface PlayerHandle {
     // no-op while dead
     fun resetVitals()
     fun prepareForMatch()
+    fun clearPotionEffects()
 
     // failures (e.g. an unloaded world) only warn in the adapter
     fun teleport(position: WorldPosition)

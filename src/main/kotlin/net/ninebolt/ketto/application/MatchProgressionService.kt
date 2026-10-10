@@ -270,6 +270,7 @@ class MatchProgressionService(
         val restored = ref != null && restoreQuietly(handle, ref)
         if (!restored) {
             stripQuietly(handle)
+            handle.clearPotionEffects()
             presentationPort.clearScoreboard(handle.id)
             logger.severe("Could not restore the inventory for ${handle.name} (${handle.id}); match items removed, any retained backup restores on next login")
         }
