@@ -9,6 +9,7 @@ import net.ninebolt.ketto.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.ketto.infrastructure.paper.fixtures.uuid
 import net.ninebolt.ketto.infrastructure.persistence.PersistedBackup
 import org.bukkit.Material
+import org.bukkit.inventory.EquipmentSlot
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -16,7 +17,6 @@ import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.uuid.Uuid
 
@@ -39,7 +39,7 @@ class PaperEquipmentTest {
 
     private fun storeBackup(p: ArenaPlayerMock): BackupRef {
         p.inventory.setItem(0, env.item(Material.DIAMOND))
-        p.inventory.chestplate = env.item(Material.DIAMOND_CHESTPLATE)
+        p.inventory.setItem(EquipmentSlot.CHEST, env.item(Material.DIAMOND_CHESTPLATE))
         val snapshot = PaperInventorySnapshot.capture(p.inventory)
         p.inventory.clear()
         p.inventory.armorContents = arrayOfNulls(4)
@@ -76,7 +76,7 @@ class PaperEquipmentTest {
         val ref = storeBackup(p)
         env.equipment.restore(ref)
         assertEquals(Material.DIAMOND, p.inventory.getItem(0)?.type)
-        assertEquals(Material.DIAMOND_CHESTPLATE, p.inventory.chestplate?.type)
+        assertEquals(Material.DIAMOND_CHESTPLATE, p.inventory.getItem(EquipmentSlot.CHEST).type)
     }
 
     @Test
@@ -163,7 +163,7 @@ class PaperEquipmentTest {
     fun `strip kit clears contents armor and transient items`() {
         val p = env.player("Alice")
         p.inventory.setItem(0, env.item(Material.IRON_SWORD))
-        p.inventory.chestplate = env.item(Material.IRON_CHESTPLATE)
+        p.inventory.setItem(EquipmentSlot.CHEST, env.item(Material.IRON_CHESTPLATE))
         val grid = env.openCraftingGrid(p)
         grid.matrix = arrayOf(env.item(Material.BREAD), null, null, null)
         p.setItemOnCursor(env.item(Material.BREAD))
@@ -171,7 +171,7 @@ class PaperEquipmentTest {
         env.equipment.stripKit(p.uuid)
 
         assertTrue(p.inventory.isEmpty)
-        assertNull(p.inventory.chestplate)
+        assertTrue(p.inventory.getItem(EquipmentSlot.CHEST).isEmpty)
         assertTrue(p.itemOnCursor.isEmpty)
         assertTrue(grid.isEmpty())
     }

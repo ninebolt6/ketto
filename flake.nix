@@ -10,9 +10,6 @@
     let
       systems = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" ];
       forAllSystems = nixpkgs.lib.genAttrs systems;
-      lib = nixpkgs.lib;
-      javaMajor = lib.head (lib.splitString "."
-        (lib.removeSuffix "\n" (builtins.readFile ./.java-version)));
     in
     {
       devShells = forAllSystems (system:
@@ -20,7 +17,7 @@
         in {
           default = pkgs.mkShell {
             packages = [
-              pkgs.${"temurin-bin-${javaMajor}"}
+              pkgs.temurin-bin-25
               actrun.packages.${system}.default
               pkgs.lefthook
             ];
