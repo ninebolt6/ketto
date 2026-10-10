@@ -594,4 +594,39 @@ class MatchProgressionServiceTest {
         assertEquals(2, app.equipment.restored.size)
         assertTrue(app.logger.reports.any { it.message.contains("Countdown tick failed") })
     }
+
+    @Test
+    fun `match finish clears potion effects of both participants`() {
+        val app = TestApp(requiredWins = 1)
+        val (p1, p2) = app.startMatch()
+
+        assertTrue(app.participation.defeat(p2.id, DefeatCause.DEATH))
+        app.scheduler.runOneShots()
+
+        assertTrue(p1.potionEffectsCleared > 0)
+        assertTrue(p2.potionEffectsCleared > 0)
+    }
+
+    @Test
+    fun `forfeit clears potion effects of an online loser`() {
+        val app = TestApp()
+        val (_, p2) = app.startMatch()
+
+        app.participation.quit(p2.id)
+
+        assertTrue(p2.potionEffectsCleared > 0)
+    }
+
+    @Test
+    fun `match finish clears potion effects even when the winner's backup is missing`() {
+        val app = TestApp(requiredWins = 1)
+        val (p1, p2) = app.startMatch()
+        app.equipment.storedBackups.values.removeIf { it.playerId == p1.id }
+
+        assertTrue(app.participation.defeat(p2.id, DefeatCause.DEATH))
+        app.scheduler.runOneShots()
+
+        assertTrue(app.equipment.stripped.contains(p1.id))
+        assertTrue(p1.potionEffectsCleared > 0)
+    }
 }

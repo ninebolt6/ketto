@@ -46,6 +46,7 @@ class InventoryRecoveryService(
             logger.log(Level.SEVERE, "Could not restore inventory for ${handle.name} (${handle.id}); backup retained", e)
             return false
         }
+        handle.clearPotionEffects()
         presentationPort.clearScoreboard(handle.id)
         return true
     }

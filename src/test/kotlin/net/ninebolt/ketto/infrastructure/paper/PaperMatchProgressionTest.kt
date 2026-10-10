@@ -8,6 +8,8 @@ import net.ninebolt.ketto.infrastructure.paper.fixtures.genericDamage
 import net.ninebolt.ketto.infrastructure.paper.fixtures.uuid
 import net.ninebolt.ketto.infrastructure.paper.fixtures.view
 import org.bukkit.Material
+import org.bukkit.potion.PotionEffect
+import org.bukkit.potion.PotionEffectType
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -130,5 +132,40 @@ class PaperMatchProgressionTest {
         assertEquals(20.0, p2.health)
         assertSame(env.mainBoard, p1.scoreboard)
         assertSame(env.mainBoard, p2.scoreboard)
+    }
+
+    @Test
+    fun `match start clears potion effects brought into the arena`() {
+        val arena = env.newArena()
+        val p1 = env.player("Alice")
+        val p2 = env.player("Bob")
+        p1.addPotionEffect(PotionEffect(PotionEffectType.STRENGTH, 20 * 60, 1))
+        env.join(p1, arena)
+        env.join(p2, arena)
+
+        env.tick(6)
+
+        assertEquals(ArenaState.Kind.INGAME, env.view().state.kind)
+        assertTrue(p1.activePotionEffects.isEmpty())
+    }
+
+    @Test
+    fun `finish clears potion effects gained during the match`() {
+        env.close()
+        env = TestEnv(folder, requiredWins = 1)
+        val arena = env.newArena()
+        val p1 = env.player("Alice")
+        val p2 = env.player("Bob")
+        env.join(p1, arena)
+        env.join(p2, arena)
+        env.tick(6)
+        p1.addPotionEffect(PotionEffect(PotionEffectType.STRENGTH, 20 * 60, 1))
+        p2.addPotionEffect(PotionEffect(PotionEffectType.SPEED, 20 * 60, 1))
+
+        fallIntoVoid(p2)
+
+        assertEquals(ArenaState.Kind.WAITING, env.view().state.kind)
+        assertTrue(p1.activePotionEffects.isEmpty())
+        assertTrue(p2.activePotionEffects.isEmpty())
     }
 }

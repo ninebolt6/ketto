@@ -13,6 +13,8 @@ import net.ninebolt.ketto.infrastructure.paper.fixtures.uuid
 import net.ninebolt.ketto.infrastructure.paper.fixtures.view
 import net.ninebolt.ketto.infrastructure.persistence.PersistedBackup
 import org.bukkit.Material
+import org.bukkit.potion.PotionEffect
+import org.bukkit.potion.PotionEffectType
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -21,6 +23,7 @@ import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class PaperInventoryRecoveryTest {
 
@@ -163,5 +166,21 @@ class PaperInventoryRecoveryTest {
         assertEquals(p2.uniqueId.toString(), env.backupByName("Bob")!!.playerUuid)
         env.runCommand(env.opPlayer("Op"), "arena", "arena1", "disable")
         assertEquals(Material.APPLE, p1.inventory.contents[0]?.type)
+    }
+
+    @Test
+    fun `forfeit by quit clears potion effects of the loser`() {
+        val arena = env.newArena()
+        val p1 = env.player("Alice")
+        val p2 = env.player("Bob")
+        env.join(p1, arena)
+        env.join(p2, arena)
+        env.tick(6)
+        p2.addPotionEffect(PotionEffect(PotionEffectType.STRENGTH, 20 * 60, 1))
+
+        p2.disconnect()
+
+        assertEquals(ArenaState.Kind.WAITING, env.view().state.kind)
+        assertTrue(p2.activePotionEffects.isEmpty())
     }
 }
