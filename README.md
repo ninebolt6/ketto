@@ -3,9 +3,10 @@
 A 1-on-1 arena PvP plugin for Paper servers.
 
 Two players join a match by clicking a join sign. The plugin backs up their
-inventories, applies the arena kit, teleports them to the arena spawns, and
+inventories, clears their potion effects, applies the arena kit, teleports them to the arena spawns, and
 runs rounds until one player reaches `required-wins` wins. When the match ends, inventories are
-restored and players return to the lobby.
+restored, potion effects are cleared again, and players return to the lobby. Potion effects are not
+backed up, so effects active before the match are not restored.
 
 ## Features
 
