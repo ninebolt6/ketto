@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
@@ -11,7 +12,12 @@ group = "net.ninebolt"
 // Release builds pass -Prelease; the pushed tag must equal "v" + version
 version = "1.0.0-alpha.1" + if (hasProperty("release")) "" else "-SNAPSHOT"
 
-val mcApiVersion = "1.21.3"
+val paperNext = providers.gradleProperty("paperNext").isPresent
+
+// Paper 1.21.x servers run on Java 21; Paper 26.x servers run on Java 25
+val jvmRelease = if (paperNext) 25 else 21
+
+val mcApiVersion = "1.21.11"
 
 repositories {
     mavenCentral()
@@ -19,12 +25,12 @@ repositories {
 }
 
 dependencies {
-    compileOnly(libs.paper.api)
+    compileOnly(if (paperNext) libs.next.paper.api else libs.paper.api)
     // Provided by Paper at runtime; declared explicitly to avoid implicit reliance on transitive deps
     compileOnly(libs.adventure.minimessage)
 
-    testImplementation(libs.mockbukkit)
-    testImplementation(libs.paper.api)
+    testImplementation(if (paperNext) libs.next.mockbukkit else libs.mockbukkit)
+    testImplementation(if (paperNext) libs.next.paper.api else libs.paper.api)
     testImplementation(libs.adventure.serializer.plain)
     testImplementation(libs.kotlin.test.junit5)
     testImplementation(libs.junit.jupiter)
@@ -35,15 +41,20 @@ dependencies {
 }
 
 kotlin {
-    jvmToolchain(21)
     compilerOptions {
         allWarningsAsErrors = true
+        jvmTarget = JvmTarget.fromTarget(jvmRelease.toString())
         freeCompilerArgs.addAll(
             "-Wextra",
             "-Xjspecify-annotations=strict",
             "-Xconsistent-data-class-copy-visibility",
+            "-Xjdk-release=$jvmRelease",
         )
     }
+}
+
+tasks.withType<JavaCompile>().configureEach {
+    options.release = jvmRelease
 }
 
 ktlint {
