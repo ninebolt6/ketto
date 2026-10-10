@@ -22,7 +22,6 @@ dependencies {
     compileOnly(libs.paper.api)
     // Provided by Paper at runtime; declared explicitly to avoid implicit reliance on transitive deps
     compileOnly(libs.adventure.minimessage)
-    compileOnly(libs.sqlite.jdbc)
 
     testImplementation(libs.mockbukkit)
     testImplementation(libs.paper.api)
@@ -32,7 +31,7 @@ dependencies {
     testRuntimeOnly(libs.junit.platform.launcher)
     testImplementation(libs.mockk)
     testImplementation(libs.archunit)
-    testImplementation(libs.sqlite.jdbc)
+    testRuntimeOnly(libs.sqlite.jdbc)
 }
 
 kotlin {
