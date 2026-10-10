@@ -4,6 +4,9 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: "io.papermc.paper:paper-api"
+        versions: ["1.21.x"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
