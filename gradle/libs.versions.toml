@@ -1,5 +1,5 @@
 [versions]
-kotlin = "2.4.20"
+kotlin = "2.4.21"
 paper = "1.21.11-R0.1-SNAPSHOT"
 next-paper = "26.2.build.111-stable"
 sqlite = "3.53.4.0"
