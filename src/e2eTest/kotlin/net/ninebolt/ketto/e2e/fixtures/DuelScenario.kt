@@ -75,13 +75,13 @@ class DuelScenario(val server: PaperServer) {
         error("Alice did not defeat Bob after twelve attacks: ${alice.messages}\n${server.logTail()}")
     }
 
-    fun awaitRestored(bot: Bot, item: String) {
-        awaitInventoryRestored(bot, item)
+    fun awaitRestored(bot: Bot, item: String, count: Int) {
+        awaitInventoryRestored(bot, item, count)
         server.awaitPosition(bot, lobby)
     }
 
-    fun awaitInventoryRestored(bot: Bot, item: String) {
-        server.awaitItem(bot, "hotbar.0", item)
+    fun awaitInventoryRestored(bot: Bot, item: String, count: Int) {
+        server.awaitItem(bot, "hotbar.0", "$item[count=$count]")
         server.awaitNoItem(bot, "minecraft:diamond_sword")
     }
 
