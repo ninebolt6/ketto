@@ -13,34 +13,24 @@ import org.geysermc.mcprotocollib.network.factory.ClientNetworkSessionFactory
 import org.geysermc.mcprotocollib.network.packet.Packet
 import org.geysermc.mcprotocollib.protocol.MinecraftProtocol
 import org.geysermc.mcprotocollib.protocol.data.ProtocolState
-import org.geysermc.mcprotocollib.protocol.data.game.entity.Effect
 import org.geysermc.mcprotocollib.protocol.data.game.entity.RotationOrigin
 import org.geysermc.mcprotocollib.protocol.data.game.entity.`object`.Direction
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.HandPreference
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PositionElement
-import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack
 import org.geysermc.mcprotocollib.protocol.data.game.setting.ChatVisibility
 import org.geysermc.mcprotocollib.protocol.data.game.setting.ParticleStatus
 import org.geysermc.mcprotocollib.protocol.packet.common.clientbound.ClientboundPingPacket
 import org.geysermc.mcprotocollib.protocol.packet.common.serverbound.ServerboundClientInformationPacket
 import org.geysermc.mcprotocollib.protocol.packet.common.serverbound.ServerboundPongPacket
 import org.geysermc.mcprotocollib.protocol.packet.configuration.clientbound.ClientboundSelectKnownPacks
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundDisguisedChatPacket
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundLoginPacket
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundPlayerChatPacket
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundRespawnPacket
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundRemoveMobEffectPacket
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundUpdateMobEffectPacket
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundPlayerLookAtPacket
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundPlayerPositionPacket
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundSetHealthPacket
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundContainerSetContentPacket
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundContainerSetSlotPacket
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundSetPlayerInventoryPacket
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundChunkBatchFinishedPacket
-import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatAckPacket
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatCommandPacket
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundClientTickEndPacket
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundPlayerLoadedPacket
@@ -49,7 +39,6 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.Serve
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundMovePlayerPosRotPacket
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundSwingPacket
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundUseItemOnPacket
-import org.geysermc.mcprotocollib.protocol.packet.login.clientbound.ClientboundLoginFinishedPacket
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
@@ -73,10 +62,6 @@ class Bot internal constructor(private val server: PaperServer, val name: String
         private set
 
     @Volatile
-    var uuid: UUID = UUID.nameUUIDFromBytes("OfflinePlayer:$name".toByteArray(Charsets.UTF_8))
-        private set
-
-    @Volatile
     var position: Position? = null
         private set
 
@@ -89,20 +74,8 @@ class Bot internal constructor(private val server: PaperServer, val name: String
         private set
 
     @Volatile
-    var autoRespawn = true
-
-    @Volatile
     var loaded = false
         private set
-
-    @Volatile
-    var inventory: Map<Int, Item> = emptyMap()
-        private set
-
-    @Volatile
-    private var effects: Map<Effect, ActiveEffect> = emptyMap()
-    val activeEffects: Map<Effect, ActiveEffect>
-        get() = effects.filterValues { it.expiresAtNanos == null || it.expiresAtNanos > System.nanoTime() }
 
     private val receivedMessages = CopyOnWriteArrayList<String>()
     val messages: List<String>
@@ -110,6 +83,7 @@ class Bot internal constructor(private val server: PaperServer, val name: String
 
     private val executor = Executors.newSingleThreadScheduledExecutor { task -> Thread(task, "bot-$name").apply { isDaemon = true } }
     private val sequence = AtomicInteger()
+    private val uuid = UUID.nameUUIDFromBytes("OfflinePlayer:$name".toByteArray(Charsets.UTF_8))
     private val protocol = MinecraftProtocol(GameProfile(uuid, name), null)
     private val session = ClientNetworkSessionFactory.factory().setAddress(server.host, server.port)
         .setProtocol(protocol).setPacketHandlerExecutor(executor).create()
@@ -161,11 +135,6 @@ class Bot internal constructor(private val server: PaperServer, val name: String
 
     private fun receive(packet: Packet) {
         when (packet) {
-            is ClientboundLoginFinishedPacket -> {
-                uuid = packet.profile.id
-                appendLog("Login finished: $uuid")
-            }
-
             is ClientboundSelectKnownPacks -> {
                 session.send(
                     ServerboundClientInformationPacket(
@@ -201,12 +170,11 @@ class Bot internal constructor(private val server: PaperServer, val name: String
                 val previous = health
                 health = packet.health
                 appendLog("Health: $health")
-                if (health <= 0 && (previous > 0 || previous.isNaN()) && autoRespawn) respawn()
+                if (health <= 0 && (previous > 0 || previous.isNaN())) respawn()
             }
 
             is ClientboundRespawnPacket -> {
                 loaded = false
-                effects = emptyMap()
                 appendLog("Respawned")
             }
 
@@ -215,31 +183,6 @@ class Bot internal constructor(private val server: PaperServer, val name: String
             is ClientboundChunkBatchFinishedPacket -> session.send(ServerboundChunkBatchReceivedPacket(16f))
 
             is ClientboundSystemChatPacket -> chat(serializer.serialize(packet.content))
-
-            is ClientboundDisguisedChatPacket -> chat(serializer.serialize(packet.message))
-
-            is ClientboundPlayerChatPacket -> {
-                chat(packet.unsignedContent?.let(serializer::serialize) ?: packet.content)
-                session.send(ServerboundChatAckPacket(1))
-            }
-
-            is ClientboundContainerSetContentPacket -> if (packet.containerId == 0) {
-                inventory = packet.items.mapIndexedNotNull { index, item -> snapshot(item)?.let { index to it } }.toMap()
-            }
-
-            is ClientboundContainerSetSlotPacket -> when (packet.containerId) {
-                0 -> updateSlot(packet.slot, packet.item)
-                -2 -> updateSlot(menuSlot(packet.slot), packet.item)
-            }
-
-            is ClientboundSetPlayerInventoryPacket -> updateSlot(menuSlot(packet.slot), packet.contents)
-
-            is ClientboundUpdateMobEffectPacket -> if (packet.entityId == entityId) {
-                val expiry = if (packet.duration < 0) null else System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(packet.duration * 50L)
-                effects = effects + (packet.effect to ActiveEffect(packet.amplifier, expiry))
-            }
-
-            is ClientboundRemoveMobEffectPacket -> if (packet.entityId == entityId) effects = effects - packet.effect
         }
     }
 
@@ -265,22 +208,6 @@ class Bot internal constructor(private val server: PaperServer, val name: String
         session.send(ServerboundMovePlayerPosRotPacket(true, false, position.x, position.y, position.z, position.yaw, position.pitch))
     }
 
-    private fun updateSlot(slot: Int, stack: ItemStack?) {
-        val item = snapshot(stack)
-        inventory = if (item == null) inventory - slot else inventory + (slot to item)
-    }
-
-    private fun snapshot(stack: ItemStack?): Item? = stack?.takeIf { it.amount > 0 }?.let { Item(it.id, it.amount) }
-
-    private fun menuSlot(slot: Int): Int = when (slot) {
-        in 0..8 -> slot + 36
-        in 36..39 -> 44 - slot
-        40 -> 45
-        else -> slot
-    }
-
-    fun itemCount(id: Int): Int = inventory.values.filter { it.id == id }.sumOf { it.count }
-
     fun command(command: String) {
         require(command.isNotBlank() && !command.startsWith('/')) { "Commands must not start with a slash" }
         send(ServerboundChatCommandPacket(command))
@@ -298,7 +225,7 @@ class Bot internal constructor(private val server: PaperServer, val name: String
         appendLog("Attack: ${other.name}")
     }
 
-    fun respawn() {
+    private fun respawn() {
         send(BotProtocol.respawn())
         appendLog("Requested respawn")
     }
@@ -379,8 +306,4 @@ class Bot internal constructor(private val server: PaperServer, val name: String
     data class Position(val x: Double, val y: Double, val z: Double, val yaw: Float, val pitch: Float)
 
     class MessageMark internal constructor(internal val owner: Bot, internal val index: Int)
-
-    data class Item(val id: Int, val count: Int)
-
-    data class ActiveEffect(val amplifier: Int, val expiresAtNanos: Long?)
 }

@@ -1,7 +1,7 @@
-import net.ninebolt.ketto.buildlogic.PreparePaper
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.powerassert.gradle.PowerAssertCompilationFilter
+import xyz.jpenilla.runpaper.task.RunServer
 
 plugins {
     `jvm-test-suite`
@@ -9,6 +9,23 @@ plugins {
     alias(libs.plugins.kotlin.power.assert)
     alias(libs.plugins.ktlint.gradle)
     alias(libs.plugins.kover)
+    alias(libs.plugins.run.paper)
+}
+
+abstract class PreparePaper : RunServer() {
+    @get:OutputFile
+    abstract val paperJar: RegularFileProperty
+
+    @TaskAction
+    override fun exec() {
+        super.exec()
+        val jar = classpath.singleFile
+        val target = paperJar.get().asFile
+        jar.copyTo(target, overwrite = true)
+        val resolved = "Paper ${version.get()} build ${jar.nameWithoutExtension}"
+        logger.lifecycle(resolved)
+        target.resolveSibling("paper-build.txt").writeText("$resolved\n")
+    }
 }
 
 val paperNext = providers.gradleProperty("paperNext").isPresent
@@ -23,16 +40,19 @@ val (e2ePaperVersion, e2ePaperBuild) = if (paperNext) {
     val match = requireNotNull(Regex("""(\d+\.\d+(?:\.\d+)?)-R\d+\.\d+-SNAPSHOT""").matchEntire(version)) {
         "Invalid paper version '$version': expected <version>-R<revision>-SNAPSHOT"
     }
-    match.groupValues[1] to libs.versions.e2e.paper.build.get()
+    match.groupValues[1] to null
 }
-val e2ePaperDirectory = gradle.gradleUserHomeDir.resolve("caches/ketto-e2e/paper-$e2ePaperVersion-$e2ePaperBuild")
+val e2ePaperDirectory = layout.buildDirectory.dir("paper-e2e/$e2ePaperVersion")
 
 val e2ePrepare = tasks.register<PreparePaper>("e2ePrepare") {
     group = "verification"
-    description = "Download, verify and patch the pinned Paper server for E2E tests"
-    paperVersion.set(e2ePaperVersion)
-    paperBuild.set(e2ePaperBuild)
-    serverDirectory.set(e2ePaperDirectory)
+    description = "Prepare Paper for E2E tests using run-paper"
+    minecraftVersion(e2ePaperVersion)
+    e2ePaperBuild?.let { build(it.toInt()) }
+    runDirectory.set(e2ePaperDirectory)
+    paperJar.set(e2ePaperDirectory.map { it.file("paper.jar") })
+    systemProperty("paperclip.patchonly", "true")
+    outputs.upToDateWhen { false }
 }
 
 testing {
@@ -49,7 +69,7 @@ testing {
                 testTask.configure {
                     dependsOn(tasks.jar, e2ePrepare)
                     systemProperty("ketto.e2e.pluginJar", tasks.jar.get().archiveFile.get().asFile.absolutePath)
-                    systemProperty("ketto.e2e.paperDirectory", e2ePaperDirectory.absolutePath)
+                    systemProperty("ketto.e2e.paperDirectory", e2ePaperDirectory.get().asFile.absolutePath)
                     systemProperty("ketto.e2e.directory", layout.buildDirectory.dir("e2e").get().asFile.absolutePath)
                     outputs.upToDateWhen { false }
                     maxParallelForks = 1

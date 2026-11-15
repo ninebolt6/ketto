@@ -69,11 +69,13 @@ jobs:
         with:
           cache-provider: basic
 
-      - name: Cache prepared Paper
+      - name: Cache Paper downloads
         uses: actions/cache@v5
         with:
-          path: ~/.gradle/caches/ketto-e2e
-          key: ${{ runner.os }}-paper-java${{ matrix.java }}-${{ hashFiles('gradle/libs.versions.toml') }}
+          path: ~/.gradle/caches/run-task-jars/paper
+          key: ${{ runner.os }}-run-paper-java${{ matrix.java }}-${{ hashFiles('gradle/libs.versions.toml') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ${{ runner.os }}-run-paper-java${{ matrix.java }}-${{ hashFiles('gradle/libs.versions.toml') }}-
 
       - name: E2E tests
         run: ./gradlew e2eTest ${{ matrix.gradle-args }}

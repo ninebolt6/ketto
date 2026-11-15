@@ -69,6 +69,7 @@ Distinguish harness failures from plugin failures before changing either.
 Each test writes `build/e2e/<Class>/<method>/`:
 
 - `server.log`: startup, plugin lifecycle, commands, joins, and exceptions.
+- `paper-build.txt`: resolved Paper version/build for reproducing this run.
 - `rcon.log`: setup commands and authoritative assertion responses.
 - `bots/<name>.log`: connection/configuration events, teleports, health, chat,
   actions, and message-wait boundaries.
@@ -84,11 +85,13 @@ build or a page that merely loads. CI uploads these diagnostics on failure.
 ## Version bumps and gotchas
 
 - Update `paper` and `next-paper` in `gradle/libs.versions.toml`: E2E derives
-  server versions from both and the next build from `next-paper`. Stable needs
-  its separate `e2e-paper-build` pin because the API SNAPSHOT does not pin a build.
+  server versions from both and pins the next build from `next-paper`. Stable
+  resolves the latest build on every run; record `paper-build.txt` with results.
   Update MCProtocolLib pins (`mcprotocollib`, `next-mcprotocollib`) as appropriate.
-  Verify the chosen builds in the Paper Fill API. Preparation verifies SHA-256 and reuses
-  `~/.gradle/caches/ketto-e2e`; per-test servers share patched server libraries.
+  run-paper verifies SHA-256 and caches downloads in
+  `~/.gradle/caches/run-task-jars/paper`. Preparation always runs and disables
+  run-paper's update-check interval, so cached downloads do not freeze latest.
+  Per-test servers share patched libraries from `build/paper-e2e/`.
 - Keep protocol API differences in `src/e2eTest/kotlin-paper` and
   `src/e2eTest/kotlin-paperNext`, selected by `paperNext`; keep common behavior
   single-source. Attack packets and respawn enum names currently differ.

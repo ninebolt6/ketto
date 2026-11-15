@@ -38,6 +38,7 @@ class PaperServer(val directory: Path) : AutoCloseable {
         }
         val prepared = Path.of(requiredProperty("ketto.e2e.paperDirectory"))
         Files.copy(prepared.resolve("paper.jar"), directory.resolve("paper.jar"), StandardCopyOption.REPLACE_EXISTING)
+        Files.copy(prepared.resolve("paper-build.txt"), directory.resolve("paper-build.txt"), StandardCopyOption.REPLACE_EXISTING)
         listOf("libraries", "versions", "cache").forEach { name ->
             prepared.resolve(name).createDirectories()
             Files.createSymbolicLink(directory.resolve(name), prepared.resolve(name))

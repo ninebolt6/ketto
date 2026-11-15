@@ -18,8 +18,10 @@ E2E is separate from `check`/`build`; the first run needs network access to
 `fill.papermc.io` and Mojang to prepare Paper.
 
 E2E server versions come from `paper` / `next-paper` in `gradle/libs.versions.toml`.
-The next server build also comes from `next-paper`; stable uses `e2e-paper-build`
-because its API SNAPSHOT does not pin a server build.
+The next server build also comes from `next-paper`; stable resolves the latest
+build on each run through run-paper. Downloads are cached in
+`~/.gradle/caches/run-task-jars/paper`; prepared libraries live in `build/paper-e2e/`.
+Each test records the resolved version/build in its `paper-build.txt` evidence.
 
 Two build variants exist. The default compiles against stable Paper and emits
 that line's bytecode target even on newer JDKs; `-PpaperNext` swaps in the
