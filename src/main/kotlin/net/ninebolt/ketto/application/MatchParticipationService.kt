@@ -91,7 +91,7 @@ class MatchParticipationService(
         val handle = playerPort.findHandle(playerId) ?: return
         // A login can arrive dead; revive first so the restore lands on a live player
         handle.respawn()
-        recovery.restoreNow(handle, ref)
+        if (recovery.restoreNow(handle, ref)) recovery.teleportLobby(handle)
     }
 
     fun defeat(playerId: Uuid, cause: DefeatCause): Boolean {

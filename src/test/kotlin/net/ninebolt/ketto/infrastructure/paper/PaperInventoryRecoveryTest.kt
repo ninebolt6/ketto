@@ -4,6 +4,7 @@ import net.ninebolt.ketto.application.port.BackupRef
 import net.ninebolt.ketto.domain.ArenaState
 import net.ninebolt.ketto.domain.MatchId
 import net.ninebolt.ketto.domain.Participant
+import net.ninebolt.ketto.domain.WorldPosition
 import net.ninebolt.ketto.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.ketto.infrastructure.paper.fixtures.backupByName
 import net.ninebolt.ketto.infrastructure.paper.fixtures.genericDamage
@@ -82,6 +83,8 @@ class PaperInventoryRecoveryTest {
 
     @Test
     fun `pending restore applied on join and discarded`() {
+        val lobby = WorldPosition.new("world", 9.0, 64.0, 9.0)
+        env.lobbyRepository.setLobby(lobby)
         val participant = Participant.new("Alice")
         val p = env.player("Alice", participant.id)
         p.disconnect()
@@ -94,6 +97,24 @@ class PaperInventoryRecoveryTest {
         p.reconnect()
         assertNull(p.inventory.contents[0])
         assertNull(env.backupByName("Alice"))
+        assertEquals(lobby, p.toWorldPosition())
+    }
+
+    @Test
+    fun `pending restore with an unloaded lobby world still restores inventory`() {
+        env.lobbyRepository.setLobby(WorldPosition.new("unloaded", 9.0, 64.0, 9.0))
+        val p = env.player("Alice")
+        val location = p.toWorldPosition()
+        p.disconnect()
+        p.inventory.setItem(0, env.item(Material.STONE))
+        val ref = BackupRef.new(MatchId.new(), p.uuid, p.name)
+        env.backupStore.saveBackups(listOf(PersistedBackup(ref, PaperInventorySnapshot())))
+
+        p.reconnect()
+
+        assertNull(p.inventory.contents[0])
+        assertNull(env.backupByName("Alice"))
+        assertEquals(location, p.toWorldPosition())
     }
 
     @Test
