@@ -70,7 +70,7 @@ jobs:
           cache-provider: basic
 
       - name: Cache Paper downloads
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.gradle/caches/run-task-jars/paper
           key: ${{ runner.os }}-run-paper-java${{ matrix.java }}-${{ hashFiles('gradle/libs.versions.toml') }}-${{ github.run_id }}-${{ github.run_attempt }}
