@@ -7,10 +7,21 @@ Issues and pull requests are welcome.
 ```sh
 ./gradlew clean build --warning-mode all      # compile + tests + jar
 ./gradlew clean build -PpaperNext             # build/test against the next Paper line
+./gradlew e2eTest                             # real Paper server + headless player scenarios
+./gradlew -PpaperNext e2eTest                 # real-server scenarios on the next Paper line
 nix develop                                   # dev shell with the project JDK, actrun, lefthook
 actrun workflow run .github/workflows/ci.yml  # run CI locally
 actrun lint                                   # static check of workflows
 ```
+
+E2E is separate from `check`/`build`; the first run needs network access to
+`fill.papermc.io` and Mojang to prepare Paper.
+
+E2E server versions come from `paper` / `next-paper` in `gradle/libs.versions.toml`.
+The next server build also comes from `next-paper`; stable resolves the latest
+build on each run through run-paper. Downloads are cached in
+`~/.gradle/caches/run-task-jars/paper`; prepared libraries live in `build/paper-e2e/`.
+Each test records the resolved version/build in its `paper-build.txt` evidence.
 
 Two build variants exist. The default compiles against stable Paper and emits
 that line's bytecode target even on newer JDKs; `-PpaperNext` swaps in the
