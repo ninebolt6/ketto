@@ -1,18 +1,57 @@
+import net.ninebolt.ketto.buildlogic.PreparePaper
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.powerassert.gradle.PowerAssertCompilationFilter
 
 plugins {
+    `jvm-test-suite`
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.power.assert)
     alias(libs.plugins.ktlint.gradle)
     alias(libs.plugins.kover)
 }
 
+val paperNext = providers.gradleProperty("paperNext").isPresent
+val e2ePaperVersion = if (paperNext) libs.versions.e2e.next.paper.version.get() else libs.versions.e2e.paper.version.get()
+val e2ePaperBuild = if (paperNext) libs.versions.e2e.next.paper.build.get() else libs.versions.e2e.paper.build.get()
+val e2ePaperDirectory = gradle.gradleUserHomeDir.resolve("caches/ketto-e2e/paper-$e2ePaperVersion-$e2ePaperBuild")
+
+val e2ePrepare = tasks.register<PreparePaper>("e2ePrepare") {
+    group = "verification"
+    description = "Download, verify and patch the pinned Paper server for E2E tests"
+    paperVersion.set(e2ePaperVersion)
+    paperBuild.set(e2ePaperBuild)
+    serverDirectory.set(e2ePaperDirectory)
+}
+
+testing {
+    suites {
+        register<JvmTestSuite>("e2eTest") {
+            useJUnitJupiter(libs.versions.junit.get())
+            dependencies {
+                implementation(libs.kotlin.test.junit5)
+                implementation(if (paperNext) libs.next.mcprotocollib else libs.mcprotocollib)
+                implementation(libs.adventure.serializer.plain)
+                runtimeOnly(libs.junit.platform.launcher)
+            }
+            targets.all {
+                testTask.configure {
+                    dependsOn(tasks.jar, e2ePrepare)
+                    systemProperty("ketto.e2e.pluginJar", tasks.jar.get().archiveFile.get().asFile.absolutePath)
+                    systemProperty("ketto.e2e.paperDirectory", e2ePaperDirectory.absolutePath)
+                    systemProperty("ketto.e2e.directory", layout.buildDirectory.dir("e2e").get().asFile.absolutePath)
+                    outputs.upToDateWhen { false }
+                    maxParallelForks = 1
+                    testLogging { events("passed", "failed", "skipped") }
+                }
+            }
+        }
+    }
+}
+
 group = "net.ninebolt"
 // Release builds pass -Prelease; the pushed tag must equal "v" + version
 version = "1.0.0-alpha.1" + if (hasProperty("release")) "" else "-SNAPSHOT"
-
-val paperNext = providers.gradleProperty("paperNext").isPresent
 
 // Paper 1.21.x servers run on Java 21; Paper 26.x servers run on Java 25
 val jvmRelease = if (paperNext) 25 else 21
@@ -22,6 +61,14 @@ val mcApiVersion = "1.21.11"
 repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/")
+    maven("https://repo.opencollab.dev/maven-releases/") {
+        content {
+            includeGroup("org.geysermc.mcprotocollib")
+            includeGroup("org.cloudburstmc")
+            includeGroup("org.cloudburstmc.math")
+            includeGroup("com.nukkitx.fastutil")
+        }
+    }
 }
 
 dependencies {
@@ -41,6 +88,9 @@ dependencies {
 }
 
 kotlin {
+    sourceSets.named("e2eTest") {
+        kotlin.srcDir(if (paperNext) "src/e2eTest/kotlin-paperNext" else "src/e2eTest/kotlin-paper")
+    }
     compilerOptions {
         allWarningsAsErrors = true
         jvmTarget = JvmTarget.fromTarget(jvmRelease.toString())
@@ -61,8 +111,20 @@ ktlint {
     version.set(libs.versions.ktlint.engine.get())
 }
 
+kover {
+    currentProject {
+        sources {
+            excludedSourceSets.add("e2eTest")
+        }
+        instrumentation {
+            disabledForTestTasks.add("e2eTest")
+        }
+    }
+}
+
 @OptIn(ExperimentalKotlinGradlePluginApi::class)
 powerAssert {
+    compilationFilter.set(PowerAssertCompilationFilter { it.name == "test" || it.name == "e2eTest" })
     functions = listOf(
         "kotlin.assert",
         "kotlin.test.assertEquals",
