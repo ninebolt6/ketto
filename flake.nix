@@ -3,7 +3,10 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    actrun.url = "github:mizchi/actrun";
+    actrun = {
+      url = "https://github.com/mizchi/actrun/releases/download/v0.32.0/mizchi-actrun-0.32.0.tgz";
+      flake = false;
+    };
   };
 
   outputs = { nixpkgs, actrun, ... }:
@@ -18,7 +21,13 @@
           default = pkgs.mkShell {
             packages = [
               pkgs.temurin-bin-25
-              actrun.packages.${system}.default
+              (pkgs.writeShellApplication {
+                name = "actrun";
+                runtimeInputs = [ pkgs.nodejs pkgs.git ];
+                text = ''
+                  exec node ${actrun}/dist/actrun.js "$@"
+                '';
+              })
               pkgs.lefthook
             ];
             shellHook = ''
