@@ -40,7 +40,8 @@
   tests use MockBukkit via `TestEnv` (listeners self-register on creation).
   Isolated persistence tests may use `@TempDir` without a server
 - E2E tests in `src/e2eTest` use real Paper servers and MCProtocolLib bots.
-  Drive actions through `Bot`; RCON is only for setup and assertions
+  run-paper prepares latest stable-line / pinned next-line builds; each test
+  records `paper-build.txt`. Drive actions through `Bot`; RCON is only for setup and assertions
 - Verify observable behavior changes with E2E after MockBukkit tests pass;
   follow [.agents/skills/e2e-verify/SKILL.md](.agents/skills/e2e-verify/SKILL.md)
 - Drive event-driven behavior through real player actions (`disconnect()`,
