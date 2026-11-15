@@ -12,8 +12,19 @@ plugins {
 }
 
 val paperNext = providers.gradleProperty("paperNext").isPresent
-val e2ePaperVersion = if (paperNext) libs.versions.e2e.next.paper.version.get() else libs.versions.e2e.paper.version.get()
-val e2ePaperBuild = if (paperNext) libs.versions.e2e.next.paper.build.get() else libs.versions.e2e.paper.build.get()
+val (e2ePaperVersion, e2ePaperBuild) = if (paperNext) {
+    val version = libs.versions.next.paper.get()
+    val match = requireNotNull(Regex("""(\d+\.\d+(?:\.\d+)?)\.build\.(\d+)-stable""").matchEntire(version)) {
+        "Invalid next-paper version '$version': expected <version>.build.<build>-stable"
+    }
+    match.groupValues[1] to match.groupValues[2]
+} else {
+    val version = libs.versions.paper.get()
+    val match = requireNotNull(Regex("""(\d+\.\d+(?:\.\d+)?)-R\d+\.\d+-SNAPSHOT""").matchEntire(version)) {
+        "Invalid paper version '$version': expected <version>-R<revision>-SNAPSHOT"
+    }
+    match.groupValues[1] to libs.versions.e2e.paper.build.get()
+}
 val e2ePaperDirectory = gradle.gradleUserHomeDir.resolve("caches/ketto-e2e/paper-$e2ePaperVersion-$e2ePaperBuild")
 
 val e2ePrepare = tasks.register<PreparePaper>("e2ePrepare") {

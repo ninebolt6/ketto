@@ -83,10 +83,11 @@ build or a page that merely loads. CI uploads these diagnostics on failure.
 
 ## Version bumps and gotchas
 
-- Update both line-specific Paper version/build pins (`e2e-paper-*`,
-  `e2e-next-paper-*`) and MCProtocolLib pins (`mcprotocollib`,
-  `next-mcprotocollib`) in `gradle/libs.versions.toml` as appropriate. Verify the
-  chosen builds in the Paper Fill API. Preparation verifies SHA-256 and reuses
+- Update `paper` and `next-paper` in `gradle/libs.versions.toml`: E2E derives
+  server versions from both and the next build from `next-paper`. Stable needs
+  its separate `e2e-paper-build` pin because the API SNAPSHOT does not pin a build.
+  Update MCProtocolLib pins (`mcprotocollib`, `next-mcprotocollib`) as appropriate.
+  Verify the chosen builds in the Paper Fill API. Preparation verifies SHA-256 and reuses
   `~/.gradle/caches/ketto-e2e`; per-test servers share patched server libraries.
 - Keep protocol API differences in `src/e2eTest/kotlin-paper` and
   `src/e2eTest/kotlin-paperNext`, selected by `paperNext`; keep common behavior
