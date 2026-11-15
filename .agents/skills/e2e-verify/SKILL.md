@@ -108,5 +108,5 @@ build or a page that merely loads. CI uploads these diagnostics on failure.
 - Before a crash-recovery kill, use `save-all flush` to persist in-match player
   data. Then `kill()`/`start()` the same server directory and reconnect through
   the bots; otherwise old player data can make inventory recovery appear to work.
-- Bot auto-respawn defaults to enabled; disable it explicitly when testing death
-  screens or deferred recovery. Use bounded waits, not indefinite loops.
+- Bots always auto-respawn; scenarios cannot hold a bot on a death screen.
+  Use bounded waits, not indefinite loops.
