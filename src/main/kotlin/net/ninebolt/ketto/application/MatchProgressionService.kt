@@ -135,7 +135,7 @@ class MatchProgressionService(
             } else {
                 // Losers who died via quit arrive here dead, so do not defer on a dead check
                 playerPort.findHandle(loser.id)?.let { h ->
-                    release(h, loserRef, toLobby = cause != DefeatCause.FORFEIT)
+                    release(h, loserRef, toLobby = true)
                 }
             }
         }

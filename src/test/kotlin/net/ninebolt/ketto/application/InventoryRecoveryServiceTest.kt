@@ -22,6 +22,36 @@ class InventoryRecoveryServiceTest {
     private fun backupRef(id: Uuid, name: String, match: MatchId = MatchId.new()) = BackupRef.new(match, id, name)
 
     @Test
+    fun `dead pending player respawns and restores before returning to the lobby`() {
+        val app = TestApp()
+        val lobby = WorldPosition.new("world", 9.0, 64.0, 9.0)
+        app.arenaRepository.lobbyPosition = lobby
+        val p = app.players.add("Alice")
+        p.dead = true
+        app.equipment.seedBackup(backupRef(p.id, p.name))
+
+        app.participation.restorePending(p.id)
+
+        assertEquals(listOf("respawn", "restore", "teleport"), p.events)
+        assertEquals(listOf(lobby), p.teleports)
+        assertNull(app.recovery.findPending(p.id))
+    }
+
+    @Test
+    fun `pending login recovery without a lobby restores inventory and warns`() {
+        val app = TestApp()
+        val p = app.players.add("Alice")
+        app.equipment.seedBackup(backupRef(p.id, p.name))
+
+        app.participation.restorePending(p.id)
+
+        assertEquals(1, app.equipment.restored.size)
+        assertNull(app.recovery.findPending(p.id))
+        assertTrue(p.teleports.isEmpty())
+        assertTrue(app.logger.warnings.any { it.contains("Lobby is not set") })
+    }
+
+    @Test
     fun `shutdown retains pending records when the backup listing fails`() {
         val app = TestApp()
         val ref = backupRef(Uuid.random(), "Alice")
@@ -78,6 +108,8 @@ class InventoryRecoveryServiceTest {
     @Test
     fun `offline participant retains pending restore for next login`() {
         val app = TestApp()
+        val lobby = WorldPosition.new("world", 9.0, 64.0, 9.0)
+        app.arenaRepository.lobbyPosition = lobby
         val (_, p2) = app.startMatch()
         app.players.disconnect(p2)
         app.progression.abort(arenaId("arena1"))
@@ -89,6 +121,7 @@ class InventoryRecoveryServiceTest {
         assertEquals(2, app.equipment.restored.size)
         assertTrue(app.equipment.storedBackups.isEmpty())
         assertNull(app.recovery.findPending(p2.id))
+        assertEquals(lobby, p2.teleports.last())
     }
 
     @Test
@@ -125,6 +158,8 @@ class InventoryRecoveryServiceTest {
     @Test
     fun `restore failure retains the pending backup and record`() {
         val app = TestApp()
+        val lobby = WorldPosition.new("world", 9.0, 64.0, 9.0)
+        app.arenaRepository.lobbyPosition = lobby
         val p = app.players.add("Alice")
         val ref = backupRef(p.id, "Alice")
         app.equipment.seedBackup(ref)
@@ -133,9 +168,11 @@ class InventoryRecoveryServiceTest {
         app.participation.restorePending(p.id)
         assertTrue(app.equipment.restored.isEmpty())
         assertNotNull(app.recovery.findPending(p.id))
+        assertTrue(p.teleports.isEmpty())
         app.equipment.failOnRestore = false
         app.participation.restorePending(p.id)
         assertEquals(1, app.equipment.restored.size)
+        assertEquals(listOf(lobby), p.teleports)
     }
 
     @Test

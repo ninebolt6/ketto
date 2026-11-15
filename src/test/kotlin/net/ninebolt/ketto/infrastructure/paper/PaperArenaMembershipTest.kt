@@ -1,6 +1,7 @@
 package net.ninebolt.ketto.infrastructure.paper
 
 import net.ninebolt.ketto.domain.ArenaState
+import net.ninebolt.ketto.domain.WorldPosition
 import net.ninebolt.ketto.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.ketto.infrastructure.paper.fixtures.backupByName
 import net.ninebolt.ketto.infrastructure.paper.fixtures.fallIntoVoid
@@ -108,6 +109,8 @@ class PaperArenaMembershipTest {
 
     @Test
     fun `quit during ROUNDCOUNTDOWN forfeits and the round resume never fires`() {
+        val lobby = WorldPosition.new("world", 9.0, 64.0, 9.0)
+        env.lobbyRepository.setLobby(lobby)
         val arena = env.newArena()
         env.setKit(arena, PaperInventorySnapshot(items = listOf(env.item(Material.IRON_SWORD))))
         val p1 = env.player("Alice")
@@ -135,6 +138,8 @@ class PaperArenaMembershipTest {
 
         p1.reconnect()
         assertEquals(Material.BREAD, p1.inventory.contents[0]?.type)
+        assertEquals(lobby, p1.toWorldPosition())
+        assertEquals(lobby, p2.toWorldPosition())
 
         // The round-resume timer was still pending at the quit and must not restart the finished match
         env.tick(8)

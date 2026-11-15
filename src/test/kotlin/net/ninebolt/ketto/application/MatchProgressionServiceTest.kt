@@ -287,15 +287,18 @@ class MatchProgressionServiceTest {
     }
 
     @Test
-    fun `forfeit restores an online loser without a vitals reset`() {
+    fun `forfeit restores an online loser and returns them to the lobby`() {
         val app = TestApp()
+        val lobby = WorldPosition.new("world", 9.0, 64.0, 9.0)
+        app.arenaRepository.lobbyPosition = lobby
         val (_, p2) = app.startMatch()
 
         app.participation.quit(p2.id)
 
         assertEquals(ArenaState.Kind.WAITING, app.state())
         assertTrue(app.equipment.restored.any { it.playerId == p2.id })
-        assertTrue("vitals" !in p2.events)
+        assertTrue("vitals" in p2.events)
+        assertEquals(lobby, p2.teleports.last())
         assertTrue(app.presentation.fireworks.isEmpty())
     }
 
