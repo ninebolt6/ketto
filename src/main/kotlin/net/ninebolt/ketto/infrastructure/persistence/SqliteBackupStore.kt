@@ -3,6 +3,7 @@ package net.ninebolt.ketto.infrastructure.persistence
 import net.ninebolt.ketto.application.port.BackupRef
 import net.ninebolt.ketto.domain.MatchId
 import net.ninebolt.ketto.infrastructure.paper.PaperInventorySnapshot
+import org.bukkit.GameMode
 import java.sql.ResultSet
 import java.util.logging.Logger
 import kotlin.uuid.Uuid
@@ -22,7 +23,7 @@ class SqliteBackupStore(
                     backup.ref.matchId.value.toString(),
                     backup.ref.playerId.toString(),
                     backup.ref.playerName,
-                    InventoryPayloadCodec.encode(backup.snapshot),
+                    BackupPayloadCodec.encode(backup),
                 )
             }
         }
@@ -56,8 +57,13 @@ class SqliteBackupStore(
     }
 
     fun backupFor(ref: BackupRef): PersistedBackup? = store.queryOne("SELECT payload FROM backups WHERE backup_id = ?", ref.backupId.toString()) { row ->
-        PersistedBackup(ref, InventoryPayloadCodec.decode(row.getString("payload")))
+        BackupPayloadCodec.decode(row.getString("payload"), ref)
     }
 }
 
-data class PersistedBackup(val ref: BackupRef, val snapshot: PaperInventorySnapshot)
+data class PersistedBackup(
+    val ref: BackupRef,
+    val snapshot: PaperInventorySnapshot,
+    val gameMode: GameMode? = null,
+    val allowFlight: Boolean? = null,
+)
