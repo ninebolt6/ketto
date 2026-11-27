@@ -265,10 +265,10 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         server.scheduler.performTicks(1)
     }
 
-    fun newArena(name: String = "arena1", enabled: Boolean = true): Arena.Id {
+    fun newArena(name: String = "arena1", enabled: Boolean = true, spawnWorldName: String = "world"): Arena.Id {
         val id = arenaId(name)
-        val spawn1 = WorldPosition.new("world", 1.0, 64.0, 1.0)
-        val spawn2 = WorldPosition.new("world", 2.0, 64.0, 2.0)
+        val spawn1 = WorldPosition.new(spawnWorldName, 1.0, 64.0, 1.0)
+        val spawn2 = WorldPosition.new(spawnWorldName, 2.0, 64.0, 2.0)
         val arena = if (enabled) {
             Arena.Enabled.restored(id, spawn1, spawn2)
         } else {
