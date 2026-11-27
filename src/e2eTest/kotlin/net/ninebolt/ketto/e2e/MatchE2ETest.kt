@@ -21,6 +21,9 @@ class MatchE2ETest {
         duel.awaitRestored(duel.bob, "minecraft:apple", count = 5)
         duel.assertStats(duel.alice, wins = 1, losses = 0)
         duel.assertStats(duel.bob, wins = 0, losses = 1)
+        val japaneseViewer = server.bot("Viewer", locale = "ja_jp")
+        japaneseViewer.commandExpect("ketto stats Alice", "Win: 1")
+        japaneseViewer.awaitMessage(description = "Japanese W/L ratio label") { it.contains("W/L(比率): 1.00") }
         duel.assertJoinableAgain()
     }
 

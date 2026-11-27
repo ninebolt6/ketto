@@ -49,7 +49,7 @@ MATCH_CHAMPION: "<yellow>アリーナ: <arena>で<red><name>が優勝しまし�
 
 STATS_WIN: "<red>Win: <aqua><wins>"
 STATS_LOSS: "<red>Lose: <aqua><losses>"
-STATS_RATIO: "<red>W/L(勝率): <aqua><ratio>"
+STATS_RATIO: "<red>W/L(比率): <aqua><ratio>"
 STATS_NONE: "<red>Statsが存在しません"
 STATS_COOLDOWN: "<red>戦績の検索は連続で実行できません。しばらく待ってください"
 

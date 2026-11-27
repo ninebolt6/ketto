@@ -13,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
+import java.util.Locale
 import kotlin.test.assertTrue
 import kotlin.uuid.Uuid
 
@@ -52,6 +53,15 @@ class StatsCommandTest {
         assertTrue(msgs.any { it.contains("Win: 3") })
         assertTrue(msgs.any { it.contains("Lose: 0") })
         assertTrue(msgs.any { it.contains("W/L(ratio): 3.00") })
+    }
+
+    @Test
+    fun `stats labels the win-loss ratio in Japanese`() {
+        val p = env.player("Alice")
+        p.setLocale(Locale.JAPAN)
+        env.writeStats(p.uuid, 2, 1)
+        env.runCommand(p, "stats")
+        assertTrue(p.drainMessages().any { it.contains("W/L(比率): 2.00") })
     }
 
     @Test
