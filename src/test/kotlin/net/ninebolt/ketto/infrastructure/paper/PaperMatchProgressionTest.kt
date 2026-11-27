@@ -4,6 +4,7 @@ import net.ninebolt.ketto.domain.ArenaState
 import net.ninebolt.ketto.domain.BlockPosition
 import net.ninebolt.ketto.domain.fixtures.arenaId
 import net.ninebolt.ketto.infrastructure.paper.fixtures.TestEnv
+import net.ninebolt.ketto.infrastructure.paper.fixtures.assertFired
 import net.ninebolt.ketto.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.ketto.infrastructure.paper.fixtures.fallIntoVoid
 import net.ninebolt.ketto.infrastructure.paper.fixtures.genericDamage
@@ -12,6 +13,7 @@ import net.ninebolt.ketto.infrastructure.paper.fixtures.signBlock
 import net.ninebolt.ketto.infrastructure.paper.fixtures.uuid
 import net.ninebolt.ketto.infrastructure.paper.fixtures.view
 import org.bukkit.Material
+import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.potion.PotionEffect
 import org.bukkit.potion.PotionEffectType
 import org.junit.jupiter.api.AfterEach
@@ -78,6 +80,9 @@ class PaperMatchProgressionTest {
         val p2 = env.player("Bob")
         env.fire(interact(p1, block))
         env.fire(interact(p2, block))
+        assertEquals(ArenaState.Kind.COUNTDOWN, env.view().state.kind)
+        env.assertFired<PlayerInteractEvent> { it.player == p1 }
+        env.assertFired<PlayerInteractEvent> { it.player == p2 }
 
         env.server.unloadWorld(spawnWorld, true)
         env.tick(6)
