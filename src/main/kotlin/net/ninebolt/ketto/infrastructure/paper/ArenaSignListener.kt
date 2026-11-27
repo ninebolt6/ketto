@@ -1,5 +1,6 @@
 package net.ninebolt.ketto.infrastructure.paper
 
+import com.destroystokyo.paper.event.block.BlockDestroyEvent
 import net.ninebolt.ketto.application.ArenaSignService
 import net.ninebolt.ketto.application.JoinOutput
 import net.ninebolt.ketto.application.MatchParticipationService
@@ -52,6 +53,13 @@ class ArenaSignListener(
     @EventHandler
     fun onBlockExplode(event: BlockExplodeEvent) {
         event.blockList().removeIf(::isRegisteredSign)
+    }
+
+    @EventHandler
+    fun onDestroy(event: BlockDestroyEvent) {
+        if (isRegisteredSign(event.block)) {
+            event.isCancelled = true
+        }
     }
 
     private fun isRegisteredSign(block: Block): Boolean = block.state is Sign && signService.findSignOwner(block.toBlockPosition()) != null

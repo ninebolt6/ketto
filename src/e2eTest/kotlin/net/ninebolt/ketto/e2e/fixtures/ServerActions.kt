@@ -64,6 +64,12 @@ fun PaperServer.placeSign(sign: SignBlock) {
     command("setblock ${sign.x} ${sign.y} ${sign.z} minecraft:oak_wall_sign[facing=south]")
 }
 
+fun PaperServer.awaitBlock(x: Int, y: Int, z: Int, block: String) {
+    await("block $x $y $z is $block") {
+        command("execute if block $x $y $z $block").contains("Test passed")
+    }
+}
+
 fun PaperServer.awaitSign(sign: SignBlock, vararg text: String) {
     await("sign contains ${text.toList()}") {
         val response = (1..3).joinToString("\n") { line ->
