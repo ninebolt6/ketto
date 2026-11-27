@@ -72,7 +72,7 @@ default-language: en
 required-wins: 3
 ```
 
-Additional languages can be added as `messages/<lang>.yaml`.
+Additional languages can be added as `messages/<lang>.yaml`. The bundled language files are copied there on first startup and then treated as local customizations; plugin updates only append new keys. To pick up corrected bundled wording, merge that key manually or remove the file after backing up any custom edits.
 
 Build instructions and contribution flow live in [CONTRIBUTING.md](CONTRIBUTING.md).
 
