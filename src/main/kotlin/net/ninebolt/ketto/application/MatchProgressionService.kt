@@ -8,6 +8,7 @@ import net.ninebolt.ketto.application.port.PlayerHandle
 import net.ninebolt.ketto.application.port.PlayerPort
 import net.ninebolt.ketto.application.port.PresentationPort
 import net.ninebolt.ketto.application.port.SchedulerPort
+import net.ninebolt.ketto.application.port.WorldPort
 import net.ninebolt.ketto.domain.Arena
 import net.ninebolt.ketto.domain.ArenaMatch
 import net.ninebolt.ketto.domain.ArenaState
@@ -26,6 +27,7 @@ class MatchProgressionService(
     private val statsService: PlayerStatsService,
     private val kitPort: KitPort,
     private val playerPort: PlayerPort,
+    private val worldPort: WorldPort,
     private val schedulerPort: SchedulerPort,
     private val presentationPort: PresentationPort,
     private val recovery: InventoryRecoveryService,
@@ -162,6 +164,7 @@ class MatchProgressionService(
 
     internal fun startInitialCountdown(arenaId: Arena.Id, epoch: Long) {
         runCountdown(arenaId, epoch, ticks = 5) {
+            if (abortIfSpawnWorldsMissing(arenaId, online.map { it.first })) return@runCountdown true
             if (remaining > 0) {
                 presentationPort.countdownTick(participantIds, remaining)
                 return@runCountdown false
@@ -258,6 +261,15 @@ class MatchProgressionService(
         val remaining: Int,
     ) {
         val participantIds: List<Uuid> get() = match.participants.map { it.id }
+    }
+
+    private fun abortIfSpawnWorldsMissing(arenaId: Arena.Id, slotted: List<SlottedParticipant>): Boolean {
+        val arena = sessions.findEnabledArena(arenaId) ?: return false
+        val missing = slotted.map { arena.spawn(it.slot).world }.distinct().filterNot(worldPort::isLoaded)
+        if (missing.isEmpty()) return false
+        logger.warning("Spawn world ${missing.joinToString()} for arena ${arenaId.name} is not loaded; match aborted")
+        abort(arenaId)
+        return true
     }
 
     private fun rearm(arenaId: Arena.Id, participant: SlottedParticipant, handle: PlayerHandle) {

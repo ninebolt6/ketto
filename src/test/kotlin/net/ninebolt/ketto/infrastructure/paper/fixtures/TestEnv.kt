@@ -31,6 +31,7 @@ import net.ninebolt.ketto.infrastructure.paper.PaperPlayerLookup
 import net.ninebolt.ketto.infrastructure.paper.PaperPlayers
 import net.ninebolt.ketto.infrastructure.paper.PaperPresentation
 import net.ninebolt.ketto.infrastructure.paper.PaperScheduler
+import net.ninebolt.ketto.infrastructure.paper.PaperWorlds
 import net.ninebolt.ketto.infrastructure.paper.command.KettoCommand
 import net.ninebolt.ketto.infrastructure.paper.message.Messenger
 import net.ninebolt.ketto.infrastructure.persistence.SqliteArenaRepository
@@ -178,7 +179,7 @@ class TestEnv(val folder: File, val requiredWins: Int = 3) {
         val statsService = PlayerStatsService(statsRepository, playerPort, logger)
         val progression = MatchProgressionService(
             sessions, signService, statsService,
-            equipment, playerPort, schedulerPort, presentation, recovery, logger,
+            equipment, playerPort, PaperWorlds(server), schedulerPort, presentation, recovery, logger,
         )
         val participation = MatchParticipationService(
             sessions,

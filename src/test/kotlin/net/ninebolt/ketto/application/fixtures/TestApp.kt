@@ -22,6 +22,7 @@ class TestApp(val requiredWins: Int = 3) {
     val arenaRepository = InMemoryArenaRepository()
     val statsRepository = InMemoryPlayerStatsRepository()
     val players = FakePlayers()
+    val worlds = FakeWorlds()
     val equipment = FakeEquipment(players)
     val scheduler = FakeScheduler()
     val presentation = RecordingPresentation()
@@ -29,7 +30,7 @@ class TestApp(val requiredWins: Int = 3) {
     val signService = ArenaSignService(sessions, arenaRepository, presentation)
     val statsService = PlayerStatsService(statsRepository, players, logger)
     val progression = MatchProgressionService(
-        sessions, signService, statsService, equipment, players, scheduler, presentation, recovery, logger,
+        sessions, signService, statsService, equipment, players, worlds, scheduler, presentation, recovery, logger,
     )
     val participation = MatchParticipationService(
         sessions,

@@ -149,6 +149,25 @@ class MatchProgressionServiceTest {
     }
 
     @Test
+    fun `the countdown aborts before backups when the spawn world is unloaded`() {
+        val app = TestApp()
+        val (p1, p2) = app.joinedTwo()
+        app.worlds.unloaded += "world"
+
+        app.scheduler.tick(6)
+
+        assertEquals(ArenaState.Kind.WAITING, app.state())
+        assertNull(app.sessions.findArenaIdOf(p1.id))
+        assertNull(app.sessions.findArenaIdOf(p2.id))
+        assertEquals(0, app.equipment.backupCalls)
+        assertTrue(p1.teleports.isEmpty())
+        assertTrue(p2.teleports.isEmpty())
+        assertTrue(app.presentation.matchStarts.isEmpty())
+        assertTrue(app.presentation.scoreboards.isEmpty())
+        assertTrue(app.logger.warnings.any { it.contains("not loaded") })
+    }
+
+    @Test
     fun `the countdown waits while the first player is dead`() {
         val app = TestApp()
         val (p1, _) = app.joinedTwo()

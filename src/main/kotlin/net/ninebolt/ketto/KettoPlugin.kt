@@ -19,6 +19,7 @@ import net.ninebolt.ketto.infrastructure.paper.PaperPlayerLookup
 import net.ninebolt.ketto.infrastructure.paper.PaperPlayers
 import net.ninebolt.ketto.infrastructure.paper.PaperPresentation
 import net.ninebolt.ketto.infrastructure.paper.PaperScheduler
+import net.ninebolt.ketto.infrastructure.paper.PaperWorlds
 import net.ninebolt.ketto.infrastructure.paper.PluginSettings
 import net.ninebolt.ketto.infrastructure.paper.command.KettoCommand
 import net.ninebolt.ketto.infrastructure.paper.message.LanguageFiles
@@ -108,6 +109,7 @@ private class PluginModule(
         statsService = statsService,
         kitPort = equipment,
         playerPort = players,
+        worldPort = PaperWorlds(plugin.server),
         schedulerPort = PaperScheduler(plugin),
         presentationPort = presentation,
         recovery = recovery,
