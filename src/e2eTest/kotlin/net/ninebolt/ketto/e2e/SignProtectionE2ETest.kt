@@ -39,6 +39,8 @@ class SignProtectionE2ETest {
         server.awaitBlock(1, 65, -1, "minecraft:stone")
         breaker.dig(-1, 66, -1, Direction.DOWN)
         server.awaitBlock(-1, 66, -1, "minecraft:air")
+        server.awaitBlock(-1, 65, -1, "minecraft:piston[extended=false]")
+        server.awaitBlock(0, 65, -1, "minecraft:air")
         server.waitTicks(4)
         server.awaitBlock(duel.sign.x, duel.sign.y, duel.sign.z, "minecraft:oak_wall_sign")
         server.awaitSign(duel.sign, "e2e", "Join", "Waiting")
