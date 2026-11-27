@@ -96,6 +96,20 @@ class PaperEquipmentTest {
     }
 
     @Test
+    fun `restore returns flight permission independent of creative mode`() {
+        val p = env.player("Alice")
+        p.gameMode = GameMode.SURVIVAL
+        p.allowFlight = true
+        val ref = env.equipment.backupBeforeMatch(MatchId.new(), listOf(Participant.new(p.uuid, "Alice"))).single()
+
+        p.allowFlight = false
+        env.equipment.restore(ref)
+
+        assertEquals(GameMode.SURVIVAL, p.gameMode)
+        assertTrue(p.allowFlight)
+    }
+
+    @Test
     fun `apply kit fails when the player is offline`() {
         val arena = env.newArena()
         assertFailsWith<PersistenceException> { env.equipment.applyKit(arena, Uuid.random()) }
