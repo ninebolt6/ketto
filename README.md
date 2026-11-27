@@ -12,7 +12,7 @@ effects active before the match are not restored.
 ## Features
 
 - Multiple arenas, each with two spawn points and a custom kit
-- Join signs protected from destruction while registered
+- Join signs protected from destruction while registered, even when their supporting block is removed
 - First-to-`required-wins` rounds with round countdowns and a scoreboard
 - Inventory backup/restore with recovery for interrupted matches
 - Per-player win/lose stats (`/ketto stats`)
