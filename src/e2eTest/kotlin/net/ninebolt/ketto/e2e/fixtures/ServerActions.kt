@@ -1,5 +1,6 @@
 package net.ninebolt.ketto.e2e.fixtures
 
+import java.sql.DriverManager
 import java.time.Duration
 import kotlin.math.abs
 
@@ -70,6 +71,17 @@ fun PaperServer.awaitSign(sign: SignBlock, vararg text: String) {
             command("data get block ${sign.x} ${sign.y} ${sign.z} front_text.messages[$line]")
         }
         text.all(response::contains)
+    }
+}
+
+fun PaperServer.markArenaWorldMissing(world: String, arena: String = "e2e") {
+    DriverManager.getConnection("jdbc:sqlite:${pluginDirectory.resolve("data.db")}").use { connection ->
+        connection.prepareStatement("UPDATE arenas SET spawn1_world = ?, spawn2_world = ? WHERE name = ?").use { statement ->
+            statement.setString(1, world)
+            statement.setString(2, world)
+            statement.setString(3, arena)
+            check(statement.executeUpdate() == 1)
+        }
     }
 }
 

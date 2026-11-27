@@ -8,12 +8,12 @@ import net.ninebolt.ketto.e2e.fixtures.awaitNoItem
 import net.ninebolt.ketto.e2e.fixtures.awaitPosition
 import net.ninebolt.ketto.e2e.fixtures.awaitSign
 import net.ninebolt.ketto.e2e.fixtures.commandExpect
+import net.ninebolt.ketto.e2e.fixtures.markArenaWorldMissing
 import net.ninebolt.ketto.e2e.fixtures.standAt
 import net.ninebolt.ketto.e2e.fixtures.waitTicks
 import org.geysermc.mcprotocollib.protocol.data.game.entity.`object`.Direction
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import java.sql.DriverManager
 
 @ExtendWith(PaperServerExtension::class)
 class MatchE2ETest {
@@ -21,7 +21,7 @@ class MatchE2ETest {
     fun `sign joins do not start a match when the arena world is missing`(server: PaperServer) {
         val duel = DuelScenario(server)
         server.stop()
-        markArenaWorldMissing(server, "missing-world")
+        server.markArenaWorldMissing("missing-world")
         server.start()
         duel.reconnectPlayers()
         server.standAt(duel.alice, duel.lobby, facing = duel.sign)
@@ -95,16 +95,5 @@ class MatchE2ETest {
         server.standAt(duel.alice, duel.lobby, facing = duel.sign)
         server.standAt(duel.bob, duel.lobby, facing = duel.sign)
         duel.joinAndStart()
-    }
-
-    private fun markArenaWorldMissing(server: PaperServer, world: String) {
-        DriverManager.getConnection("jdbc:sqlite:${server.pluginDirectory.resolve("data.db")}").use { connection ->
-            connection.prepareStatement("UPDATE arenas SET spawn1_world = ?, spawn2_world = ? WHERE name = ?").use { statement ->
-                statement.setString(1, world)
-                statement.setString(2, world)
-                statement.setString(3, "e2e")
-                check(statement.executeUpdate() == 1)
-            }
-        }
     }
 }
