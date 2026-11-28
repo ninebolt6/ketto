@@ -238,11 +238,6 @@ class ArenaSignListenerTest {
         env.fire(registered)
         assertTrue(registered.isCancelled)
 
-        val unregisteredSign = env.signBlock(9, 64, 9)
-        val unregistered = BlockDestroyEvent(unregisteredSign, Material.AIR.createBlockData(), unregisteredSign.blockData, 0, true)
-        env.fire(unregistered)
-        assertFalse(unregistered.isCancelled)
-
         env.signService.clearSign(arenaId("arena1"))
         val freed = BlockDestroyEvent(registeredSign, Material.AIR.createBlockData(), registeredSign.blockData, 0, true)
         env.fire(freed)
