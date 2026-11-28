@@ -59,6 +59,19 @@ fun PaperServer.awaitNoItem(bot: Bot, item: String) {
     }
 }
 
+fun PaperServer.awaitGameMode(bot: Bot, gameMode: String) {
+    await("${bot.name} is $gameMode") {
+        command("execute if entity @a[name=${bot.name},gamemode=$gameMode]").contains("Test passed")
+    }
+}
+
+fun PaperServer.awaitFlight(bot: Bot, allowed: Boolean) {
+    val serialized = if (allowed) "1b" else "0b"
+    await("${bot.name} flight allowed is $allowed") {
+        command("data get entity ${bot.name} abilities.mayfly").contains(serialized)
+    }
+}
+
 fun PaperServer.placeSign(sign: SignBlock) {
     command("setblock ${sign.x} ${sign.y} ${sign.z - 1} minecraft:stone")
     command("setblock ${sign.x} ${sign.y} ${sign.z} minecraft:oak_wall_sign[facing=south]")

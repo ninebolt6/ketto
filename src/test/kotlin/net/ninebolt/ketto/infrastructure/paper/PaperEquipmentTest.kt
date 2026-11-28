@@ -8,6 +8,7 @@ import net.ninebolt.ketto.infrastructure.paper.fixtures.ArenaPlayerMock
 import net.ninebolt.ketto.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.ketto.infrastructure.paper.fixtures.uuid
 import net.ninebolt.ketto.infrastructure.persistence.PersistedBackup
+import org.bukkit.GameMode
 import org.bukkit.Material
 import org.bukkit.inventory.EquipmentSlot
 import org.junit.jupiter.api.AfterEach
@@ -77,6 +78,35 @@ class PaperEquipmentTest {
         env.equipment.restore(ref)
         assertEquals(Material.DIAMOND, p.inventory.getItem(0)?.type)
         assertEquals(Material.DIAMOND_CHESTPLATE, p.inventory.getItem(EquipmentSlot.CHEST).type)
+    }
+
+    @Test
+    fun `restore returns the backed up game mode and flight permission`() {
+        val p = env.player("Alice")
+        p.gameMode = GameMode.CREATIVE
+        p.allowFlight = true
+        val ref = env.equipment.backupBeforeMatch(MatchId.new(), listOf(Participant.new(p.uuid, "Alice"))).single()
+
+        p.gameMode = GameMode.SURVIVAL
+        p.allowFlight = false
+        env.equipment.restore(ref)
+
+        assertEquals(GameMode.CREATIVE, p.gameMode)
+        assertTrue(p.allowFlight)
+    }
+
+    @Test
+    fun `restore returns flight permission independent of creative mode`() {
+        val p = env.player("Alice")
+        p.gameMode = GameMode.SURVIVAL
+        p.allowFlight = true
+        val ref = env.equipment.backupBeforeMatch(MatchId.new(), listOf(Participant.new(p.uuid, "Alice"))).single()
+
+        p.allowFlight = false
+        env.equipment.restore(ref)
+
+        assertEquals(GameMode.SURVIVAL, p.gameMode)
+        assertTrue(p.allowFlight)
     }
 
     @Test
