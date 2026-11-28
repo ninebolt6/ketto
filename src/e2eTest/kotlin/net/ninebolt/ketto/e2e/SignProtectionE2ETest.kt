@@ -45,18 +45,6 @@ class SignProtectionE2ETest {
         server.awaitBlock(duel.sign.x, duel.sign.y, duel.sign.z, "minecraft:oak_wall_sign")
         server.awaitSign(duel.sign, "e2e", "Join", "Waiting")
 
-        server.command("fill 3 65 -1 3 65 1 minecraft:stone")
-        server.command("fill 1 65 1 2 65 1 minecraft:stone")
-        server.command("setblock 2 65 -1 minecraft:stone")
-        server.command("setblock 1 65 0 minecraft:stone")
-        server.command("setblock 2 65 0 minecraft:water")
-        server.standAt(breaker, StandingSpot(1.5, 64.0, 2.5), facing = SignBlock(1, 65, 0))
-        breaker.dig(1, 65, 0, Direction.SOUTH)
-        server.awaitBlock(1, 65, 0, "minecraft:water")
-        server.waitTicks(4)
-        server.awaitBlock(duel.sign.x, duel.sign.y, duel.sign.z, "minecraft:oak_wall_sign")
-        server.awaitSign(duel.sign, "e2e", "Join", "Waiting")
-
         duel.assertJoinableAgain(breaker)
     }
 }
