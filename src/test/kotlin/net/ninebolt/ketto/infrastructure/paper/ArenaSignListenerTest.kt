@@ -1,5 +1,6 @@
 package net.ninebolt.ketto.infrastructure.paper
 
+import com.destroystokyo.paper.event.block.BlockDestroyEvent
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import net.ninebolt.ketto.domain.Arena
 import net.ninebolt.ketto.domain.BlockPosition
@@ -16,6 +17,7 @@ import net.ninebolt.ketto.infrastructure.paper.fixtures.signBlock
 import net.ninebolt.ketto.infrastructure.paper.fixtures.simulation
 import net.ninebolt.ketto.infrastructure.paper.fixtures.uuid
 import org.bukkit.ExplosionResult
+import org.bukkit.Material
 import org.bukkit.block.BlockFace
 import org.bukkit.block.Sign
 import org.bukkit.block.sign.Side
@@ -224,6 +226,22 @@ class ArenaSignListenerTest {
         val blockExplode = BlockExplodeEvent(sign, sign.state, mutableListOf(sign, plain), 0f, ExplosionResult.DESTROY)
         env.fire(blockExplode)
         assertEquals(listOf(plain), blockExplode.blockList())
+    }
+
+    @Test
+    fun `registered sign survives indirect destruction until unregistered`() {
+        env.newArena()
+        env.signRepository.setSign(arenaId("arena1"), BlockPosition.new("world", 3, 64, 3))
+        val registeredSign = env.signBlock(3, 64, 3)
+
+        val registered = BlockDestroyEvent(registeredSign, Material.AIR.createBlockData(), registeredSign.blockData, 0, true)
+        env.fire(registered)
+        assertTrue(registered.isCancelled)
+
+        env.signService.clearSign(arenaId("arena1"))
+        val freed = BlockDestroyEvent(registeredSign, Material.AIR.createBlockData(), registeredSign.blockData, 0, true)
+        env.fire(freed)
+        assertFalse(freed.isCancelled)
     }
 
     @Test

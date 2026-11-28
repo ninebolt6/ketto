@@ -17,6 +17,7 @@ import org.geysermc.mcprotocollib.protocol.data.game.entity.RotationOrigin
 import org.geysermc.mcprotocollib.protocol.data.game.entity.`object`.Direction
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.Hand
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.HandPreference
+import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PlayerAction
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PositionElement
 import org.geysermc.mcprotocollib.protocol.data.game.setting.ChatVisibility
 import org.geysermc.mcprotocollib.protocol.data.game.setting.ParticleStatus
@@ -37,6 +38,7 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.Serverbound
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundAcceptTeleportationPacket
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundChunkBatchReceivedPacket
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundMovePlayerPosRotPacket
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundPlayerActionPacket
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundSwingPacket
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundUseItemOnPacket
 import java.nio.file.Files
@@ -217,6 +219,12 @@ class Bot internal constructor(private val server: PaperServer, val name: String
     fun useBlock(x: Int, y: Int, z: Int, face: Direction = Direction.UP) {
         send(ServerboundUseItemOnPacket(Vector3i.from(x, y, z), face, Hand.MAIN_HAND, 0.5f, 0.5f, 0.5f, false, false, sequence.incrementAndGet()))
         send(ServerboundSwingPacket(Hand.MAIN_HAND))
+    }
+
+    fun dig(x: Int, y: Int, z: Int, face: Direction = Direction.UP) {
+        send(ServerboundPlayerActionPacket(PlayerAction.START_DIGGING, Vector3i.from(x, y, z), face, sequence.incrementAndGet()))
+        send(ServerboundSwingPacket(Hand.MAIN_HAND))
+        appendLog("Dig: $x $y $z")
     }
 
     fun attack(other: Bot) {

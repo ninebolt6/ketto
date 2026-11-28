@@ -1,10 +1,12 @@
 package net.ninebolt.ketto.infrastructure.paper
 
+import com.destroystokyo.paper.event.block.BlockDestroyEvent
 import net.ninebolt.ketto.application.ArenaSignService
 import net.ninebolt.ketto.application.JoinOutput
 import net.ninebolt.ketto.application.MatchParticipationService
 import net.ninebolt.ketto.infrastructure.paper.message.Message
 import net.ninebolt.ketto.infrastructure.paper.message.Messenger
+import org.bukkit.Tag
 import org.bukkit.block.Block
 import org.bukkit.block.Sign
 import org.bukkit.entity.Player
@@ -54,7 +56,14 @@ class ArenaSignListener(
         event.blockList().removeIf(::isRegisteredSign)
     }
 
-    private fun isRegisteredSign(block: Block): Boolean = block.state is Sign && signService.findSignOwner(block.toBlockPosition()) != null
+    @EventHandler
+    fun onDestroy(event: BlockDestroyEvent) {
+        if (isRegisteredSign(event.block)) {
+            event.isCancelled = true
+        }
+    }
+
+    private fun isRegisteredSign(block: Block): Boolean = Tag.ALL_SIGNS.isTagged(block.type) && block.state is Sign && signService.findSignOwner(block.toBlockPosition()) != null
 
     private fun renderJoin(player: Player, arenaName: String, output: JoinOutput) {
         when (output) {
