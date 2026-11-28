@@ -54,7 +54,7 @@ import kotlin.io.path.readLines
 import kotlin.math.atan2
 import kotlin.math.sqrt
 
-class Bot internal constructor(private val server: PaperServer, val name: String) : AutoCloseable {
+class Bot internal constructor(private val server: PaperServer, val name: String, private val locale: String) : AutoCloseable {
     val log: Path = server.directory.resolve("bots/$name.log")
 
     @Volatile
@@ -138,10 +138,10 @@ class Bot internal constructor(private val server: PaperServer, val name: String
             is ClientboundSelectKnownPacks -> {
                 session.send(
                     ServerboundClientInformationPacket(
-                        "en_us", 2, ChatVisibility.FULL, true, emptyList(), HandPreference.RIGHT_HAND, false, true, ParticleStatus.MINIMAL,
+                        locale, 2, ChatVisibility.FULL, true, emptyList(), HandPreference.RIGHT_HAND, false, true, ParticleStatus.MINIMAL,
                     ),
                 )
-                appendLog("Configured locale en_us")
+                appendLog("Configured locale $locale")
             }
 
             is ClientboundLoginPacket -> {
@@ -300,7 +300,7 @@ class Bot internal constructor(private val server: PaperServer, val name: String
 
     fun reconnect(): Bot {
         disconnect()
-        return server.bot(name)
+        return server.bot(name, locale)
     }
 
     data class Position(val x: Double, val y: Double, val z: Double, val yaw: Float, val pitch: Float)

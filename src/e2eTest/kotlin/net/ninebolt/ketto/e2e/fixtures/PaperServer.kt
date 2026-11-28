@@ -117,9 +117,9 @@ class PaperServer(val directory: Path) : AutoCloseable {
         return response
     }
 
-    fun bot(name: String): Bot {
+    fun bot(name: String, locale: String = "en_us"): Bot {
         check(process?.isAlive == true) { "Start Paper before connecting a bot" }
-        return Bot(this, name).also {
+        return Bot(this, name, locale).also {
             bots.add(it)
             it.connect()
         }
