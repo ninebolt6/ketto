@@ -87,12 +87,11 @@ fun PaperServer.awaitSign(sign: SignBlock, vararg text: String) {
     }
 }
 
-fun PaperServer.markArenaWorldMissing(world: String, arena: String = "e2e") {
+fun PaperServer.markArenaWorldMissing(world: String) {
     DriverManager.getConnection("jdbc:sqlite:${pluginDirectory.resolve("data.db")}").use { connection ->
-        connection.prepareStatement("UPDATE arenas SET spawn1_world = ?, spawn2_world = ? WHERE name = ?").use { statement ->
+        connection.prepareStatement("UPDATE arenas SET spawn1_world = ?, spawn2_world = ? WHERE name = 'e2e'").use { statement ->
             statement.setString(1, world)
             statement.setString(2, world)
-            statement.setString(3, arena)
             check(statement.executeUpdate() == 1)
         }
     }

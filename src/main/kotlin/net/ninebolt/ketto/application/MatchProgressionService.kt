@@ -164,7 +164,7 @@ class MatchProgressionService(
 
     internal fun startInitialCountdown(arenaId: Arena.Id, epoch: Long) {
         runCountdown(arenaId, epoch, ticks = 5) {
-            if (abortIfSpawnWorldsMissing(arenaId, online.map { it.first })) return@runCountdown true
+            if (abortIfSpawnWorldsMissing(arenaId)) return@runCountdown true
             if (remaining > 0) {
                 presentationPort.countdownTick(participantIds, remaining)
                 return@runCountdown false
@@ -263,9 +263,9 @@ class MatchProgressionService(
         val participantIds: List<Uuid> get() = match.participants.map { it.id }
     }
 
-    private fun abortIfSpawnWorldsMissing(arenaId: Arena.Id, slotted: List<SlottedParticipant>): Boolean {
+    private fun abortIfSpawnWorldsMissing(arenaId: Arena.Id): Boolean {
         val arena = sessions.findEnabledArena(arenaId) ?: return false
-        val missing = slotted.map { arena.spawn(it.slot).world }.distinct().filterNot(worldPort::isLoaded)
+        val missing = listOf(arena.spawn1.world, arena.spawn2.world).distinct().filterNot(worldPort::isLoaded)
         if (missing.isEmpty()) return false
         logger.warning("Spawn world ${missing.joinToString()} for arena ${arenaId.name} is not loaded; match aborted")
         abort(arenaId)

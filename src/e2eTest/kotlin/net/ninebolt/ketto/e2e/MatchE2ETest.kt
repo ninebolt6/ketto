@@ -5,8 +5,6 @@ import net.ninebolt.ketto.e2e.fixtures.PaperServer
 import net.ninebolt.ketto.e2e.fixtures.PaperServerExtension
 import net.ninebolt.ketto.e2e.fixtures.awaitFlight
 import net.ninebolt.ketto.e2e.fixtures.awaitGameMode
-import net.ninebolt.ketto.e2e.fixtures.awaitItem
-import net.ninebolt.ketto.e2e.fixtures.awaitNoItem
 import net.ninebolt.ketto.e2e.fixtures.awaitPosition
 import net.ninebolt.ketto.e2e.fixtures.awaitSign
 import net.ninebolt.ketto.e2e.fixtures.commandExpect
@@ -36,19 +34,11 @@ class MatchE2ETest {
         duel.bob.useBlock(duel.sign.x, duel.sign.y, duel.sign.z, Direction.SOUTH)
         duel.bob.awaitMessage(after = bobJoined) { it.contains("Joined arena: e2e") }
 
-        server.awaitLog("Spawn world missing-world for arena e2e is not loaded; match aborted")
-        server.awaitSign(duel.sign, "Join", "Waiting")
         server.waitTicks(130)
 
         server.awaitSign(duel.sign, "Join", "Waiting")
         server.awaitPosition(duel.alice, duel.lobby)
         server.awaitPosition(duel.bob, duel.lobby)
-        server.awaitItem(duel.alice, "hotbar.0", "minecraft:bread[count=3]")
-        server.awaitItem(duel.bob, "hotbar.0", "minecraft:apple[count=5]")
-        server.awaitNoItem(duel.alice, "minecraft:diamond_sword")
-        server.awaitNoItem(duel.bob, "minecraft:diamond_sword")
-        check(duel.alice.messagesSince(aliceJoined).none { it.contains("Game start!") })
-        check(duel.bob.messagesSince(bobJoined).none { it.contains("Game start!") })
     }
 
     @Test

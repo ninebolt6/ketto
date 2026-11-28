@@ -41,8 +41,7 @@ Drop the jar into `plugins/` and restart the server.
 ```
 
 Players then right-click the sign to join. First click waits for an opponent;
-a second player starts the countdown. If an arena spawn world is not loaded,
-the countdown aborts before the match starts and both players stay where they are.
+a second player starts the countdown.
 
 ## Commands
 

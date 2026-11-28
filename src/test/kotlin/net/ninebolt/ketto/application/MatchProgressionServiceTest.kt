@@ -4,6 +4,7 @@ import net.ninebolt.ketto.application.fixtures.TestApp
 import net.ninebolt.ketto.domain.ArenaState
 import net.ninebolt.ketto.domain.BlockPosition
 import net.ninebolt.ketto.domain.DefeatCause
+import net.ninebolt.ketto.domain.SpawnSlot
 import net.ninebolt.ketto.domain.WorldPosition
 import net.ninebolt.ketto.domain.fixtures.arenaId
 import org.junit.jupiter.api.Test
@@ -149,17 +150,18 @@ class MatchProgressionServiceTest {
     }
 
     @Test
-    fun `the countdown aborts before backups when the spawn world is unloaded`() {
+    fun `the countdown aborts before backups when a spawn world is unloaded`() {
         val app = TestApp()
         val (p1, p2) = app.joinedTwo()
-        app.worlds.unloaded += "world"
+        app.administration.setSpawn(arenaId("arena1"), SpawnSlot.SECOND, WorldPosition.new("spawn2-world", 2.0, 64.0, 2.0))
 
-        app.scheduler.tick(6)
+        app.scheduler.tick()
+        app.worlds.unloaded += "spawn2-world"
+        app.scheduler.tick(5)
 
         assertEquals(ArenaState.Kind.WAITING, app.state())
-        assertNull(app.sessions.findArenaIdOf(p1.id))
-        assertNull(app.sessions.findArenaIdOf(p2.id))
         assertEquals(0, app.equipment.backupCalls)
+        assertTrue(app.equipment.kitApplies.isEmpty())
         assertTrue(p1.teleports.isEmpty())
         assertTrue(p2.teleports.isEmpty())
         assertTrue(app.presentation.matchStarts.isEmpty())

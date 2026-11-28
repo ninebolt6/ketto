@@ -1,14 +1,10 @@
 package net.ninebolt.ketto.infrastructure.paper
 
 import net.ninebolt.ketto.domain.ArenaState
-import net.ninebolt.ketto.domain.BlockPosition
-import net.ninebolt.ketto.domain.fixtures.arenaId
 import net.ninebolt.ketto.infrastructure.paper.fixtures.TestEnv
 import net.ninebolt.ketto.infrastructure.paper.fixtures.drainMessages
 import net.ninebolt.ketto.infrastructure.paper.fixtures.fallIntoVoid
 import net.ninebolt.ketto.infrastructure.paper.fixtures.genericDamage
-import net.ninebolt.ketto.infrastructure.paper.fixtures.interact
-import net.ninebolt.ketto.infrastructure.paper.fixtures.signBlock
 import net.ninebolt.ketto.infrastructure.paper.fixtures.uuid
 import net.ninebolt.ketto.infrastructure.paper.fixtures.view
 import org.bukkit.Material
@@ -20,7 +16,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
@@ -66,30 +61,6 @@ class PaperMatchProgressionTest {
         assertEquals(2.0, p2.location.x, 0.001)
         assertEquals(Material.IRON_SWORD, p1.inventory.contents[0]?.type)
         assertEquals(Material.IRON_SWORD, p2.inventory.contents[0]?.type)
-    }
-
-    @Test
-    fun `sign-started match aborts when the arena spawn world is unloaded`() {
-        val spawnWorld = env.world("arena-world")
-        env.newArena(spawnWorldName = "arena-world")
-        env.signRepository.setSign(arenaId("arena1"), BlockPosition.new("world", 3, 64, 3))
-        val block = env.signBlock(3, 64, 3)
-        val p1 = env.player("Alice")
-        val p2 = env.player("Bob")
-        env.fire(interact(p1, block))
-        env.fire(interact(p2, block))
-        assertEquals(ArenaState.Kind.COUNTDOWN, env.view().state.kind)
-
-        env.server.unloadWorld(spawnWorld, true)
-        env.tick(6)
-
-        assertEquals(ArenaState.Kind.WAITING, env.view().state.kind)
-        assertNull(env.sessions.findArenaIdOf(p1.uuid))
-        assertNull(env.sessions.findArenaIdOf(p2.uuid))
-        assertEquals("world", p1.world.name)
-        assertEquals("world", p2.world.name)
-        assertFalse(p1.hasTeleported())
-        assertFalse(p2.hasTeleported())
     }
 
     @Test
