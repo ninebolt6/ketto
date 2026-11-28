@@ -5,13 +5,42 @@ import net.ninebolt.ketto.e2e.fixtures.PaperServer
 import net.ninebolt.ketto.e2e.fixtures.PaperServerExtension
 import net.ninebolt.ketto.e2e.fixtures.awaitFlight
 import net.ninebolt.ketto.e2e.fixtures.awaitGameMode
+import net.ninebolt.ketto.e2e.fixtures.awaitPosition
+import net.ninebolt.ketto.e2e.fixtures.awaitSign
 import net.ninebolt.ketto.e2e.fixtures.commandExpect
+import net.ninebolt.ketto.e2e.fixtures.markArenaWorldMissing
 import net.ninebolt.ketto.e2e.fixtures.standAt
+import net.ninebolt.ketto.e2e.fixtures.waitTicks
+import org.geysermc.mcprotocollib.protocol.data.game.entity.`object`.Direction
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 
 @ExtendWith(PaperServerExtension::class)
 class MatchE2ETest {
+    @Test
+    fun `sign joins do not start a match when the arena world is missing`(server: PaperServer) {
+        val duel = DuelScenario(server)
+        server.stop()
+        server.markArenaWorldMissing("missing-world")
+        server.start()
+        duel.reconnectPlayers()
+        server.standAt(duel.alice, duel.lobby, facing = duel.sign)
+        server.standAt(duel.bob, duel.lobby, facing = duel.sign)
+
+        val aliceJoined = duel.alice.markMessages()
+        duel.alice.useBlock(duel.sign.x, duel.sign.y, duel.sign.z, Direction.SOUTH)
+        duel.alice.awaitMessage(after = aliceJoined) { it.contains("Joined arena: e2e") }
+        val bobJoined = duel.bob.markMessages()
+        duel.bob.useBlock(duel.sign.x, duel.sign.y, duel.sign.z, Direction.SOUTH)
+        duel.bob.awaitMessage(after = bobJoined) { it.contains("Joined arena: e2e") }
+
+        server.waitTicks(130)
+
+        server.awaitSign(duel.sign, "Join", "Waiting")
+        server.awaitPosition(duel.alice, duel.lobby)
+        server.awaitPosition(duel.bob, duel.lobby)
+    }
+
     @Test
     fun `players complete a match and recover their pre-match state at the lobby`(server: PaperServer) {
         val duel = DuelScenario(server)

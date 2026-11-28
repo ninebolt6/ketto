@@ -63,6 +63,7 @@ testing {
                 implementation(libs.kotlin.test.junit5)
                 implementation(if (paperNext) libs.next.mcprotocollib else libs.mcprotocollib)
                 implementation(libs.adventure.serializer.plain)
+                runtimeOnly(libs.sqlite.jdbc)
                 runtimeOnly(libs.junit.platform.launcher)
             }
             targets.all {
