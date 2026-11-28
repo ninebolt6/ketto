@@ -44,7 +44,6 @@ class PaperServer(val directory: Path) : AutoCloseable {
             Files.createSymbolicLink(directory.resolve(name), prepared.resolve(name))
         }
         Files.copy(Path.of(requiredProperty("ketto.e2e.pluginJar")), directory.resolve("plugins/ketto.jar"))
-        Files.copy(Path.of(requiredProperty("ketto.e2e.abilitiesPluginJar")), directory.resolve("plugins/e2eabilities.jar"))
         directory.resolve("eula.txt").writeText("eula=true\n")
         val properties = Properties().apply {
             putAll(

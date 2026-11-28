@@ -42,10 +42,6 @@ val (e2ePaperVersion, e2ePaperBuild) = if (paperNext) {
     }
     match.groupValues[1] to null
 }
-// Paper 1.21.x servers run on Java 21; Paper 26.x servers run on Java 25
-val jvmRelease = if (paperNext) 25 else 21
-
-val mcApiVersion = "1.21.11"
 val e2ePaperDirectory = layout.buildDirectory.dir("paper-e2e/$e2ePaperVersion")
 
 val e2ePrepare = tasks.register<PreparePaper>("e2ePrepare") {
@@ -57,17 +53,6 @@ val e2ePrepare = tasks.register<PreparePaper>("e2ePrepare") {
     paperJar.set(e2ePaperDirectory.map { it.file("paper.jar") })
     systemProperty("paperclip.patchonly", "true")
     outputs.upToDateWhen { false }
-}
-
-val e2eAbilities = sourceSets.create("e2eAbilities")
-val e2eAbilitiesJar = tasks.register<Jar>("e2eAbilitiesJar") {
-    archiveBaseName.set("e2eabilities")
-    archiveVersion.set("")
-    destinationDirectory.set(layout.buildDirectory.dir("e2eabilities"))
-    val apiVersion = mcApiVersion
-    inputs.property("apiVersion", apiVersion)
-    from(e2eAbilities.output)
-    filesMatching("plugin.yml") { expand("apiVersion" to apiVersion) }
 }
 
 testing {
@@ -82,9 +67,8 @@ testing {
             }
             targets.all {
                 testTask.configure {
-                    dependsOn(tasks.jar, e2ePrepare, e2eAbilitiesJar)
+                    dependsOn(tasks.jar, e2ePrepare)
                     systemProperty("ketto.e2e.pluginJar", tasks.jar.get().archiveFile.get().asFile.absolutePath)
-                    systemProperty("ketto.e2e.abilitiesPluginJar", e2eAbilitiesJar.flatMap { it.archiveFile }.get().asFile.absolutePath)
                     systemProperty("ketto.e2e.paperDirectory", e2ePaperDirectory.get().asFile.absolutePath)
                     systemProperty("ketto.e2e.directory", layout.buildDirectory.dir("e2e").get().asFile.absolutePath)
                     outputs.upToDateWhen { false }
@@ -99,6 +83,11 @@ testing {
 group = "net.ninebolt"
 // Release builds pass -Prelease; the pushed tag must equal "v" + version
 version = "1.0.0-alpha.1" + if (hasProperty("release")) "" else "-SNAPSHOT"
+
+// Paper 1.21.x servers run on Java 21; Paper 26.x servers run on Java 25
+val jvmRelease = if (paperNext) 25 else 21
+
+val mcApiVersion = "1.21.11"
 
 repositories {
     mavenCentral()
@@ -115,7 +104,6 @@ repositories {
 
 dependencies {
     compileOnly(if (paperNext) libs.next.paper.api else libs.paper.api)
-    add("e2eAbilitiesCompileOnly", if (paperNext) libs.next.paper.api else libs.paper.api)
     // Provided by Paper at runtime; declared explicitly to avoid implicit reliance on transitive deps
     compileOnly(libs.adventure.minimessage)
 
