@@ -3,18 +3,19 @@
 A 1-on-1 arena PvP plugin for Paper servers.
 
 Two players join a match by clicking a join sign. The plugin backs up their
-inventories, clears their potion effects, applies the arena kit, teleports them
-to the arena spawns, and runs rounds until one player reaches `required-wins`
-wins. When the match ends, inventories are restored, potion effects are cleared
-again, and players return to the lobby. Potion effects are not backed up, so
-effects active before the match are not restored.
+inventories, game modes, and flight permissions, clears their potion effects,
+applies the arena kit, teleports them to the arena spawns, and runs rounds
+until one player reaches `required-wins` wins. When the match ends, each
+player's inventory, game mode, and flight permission are restored, potion
+effects are cleared again, and players return to the lobby. Potion effects
+are not backed up, so effects active before the match are not restored.
 
 ## Features
 
 - Multiple arenas, each with two spawn points and a custom kit
 - Join signs protected from destruction while registered
 - First-to-`required-wins` rounds with round countdowns and a scoreboard
-- Inventory backup/restore with recovery for interrupted matches
+- Inventory, game mode, and flight backup/restore with recovery for interrupted matches
 - Per-player win/lose stats (`/ketto stats`)
 - Messages localized to each player's client locale
 

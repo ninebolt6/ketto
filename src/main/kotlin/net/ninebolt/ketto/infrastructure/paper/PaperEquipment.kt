@@ -41,6 +41,8 @@ class PaperEquipment(
                     playerName = participant.name,
                 ),
                 PaperInventorySnapshot.capture(player.inventory),
+                player.gameMode,
+                player.allowFlight,
             )
         }
         backupStore.saveBackups(captured)
@@ -48,12 +50,14 @@ class PaperEquipment(
     }
 
     override fun restore(backup: BackupRef) {
-        val snapshot = backupStore.backupFor(backup)?.snapshot
+        val persisted = backupStore.backupFor(backup)
             ?: throw PersistenceException("No stored backup ${backup.backupId} for ${backup.playerName}")
         val player = lookup.find(backup.playerId)
             ?: throw PersistenceException("Player ${backup.playerName} is not available for restore")
         discardTransientItems(player)
-        snapshot.apply(player.inventory)
+        persisted.snapshot.apply(player.inventory)
+        persisted.gameMode?.let { player.gameMode = it }
+        persisted.allowFlight?.let { player.allowFlight = it }
     }
 
     override fun discard(backup: BackupRef) {
